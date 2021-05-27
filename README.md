@@ -6,8 +6,6 @@ Haplotype-aware detection of copy number variations in scRNA-Seq
 usage: armadillo.r [-h] [--sample SAMPLE] [--vcf VCF] [--AD AD] [--DP DP]
                    [--barcodes BARCODES] [--pvcf PVCF] [--out OUT]
 
-Process some integers
-
 optional arguments:
   -h, --help           show this help message and exit
   --sample SAMPLE      sample name
