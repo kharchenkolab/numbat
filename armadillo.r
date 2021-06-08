@@ -273,7 +273,8 @@ p1 = ggplot(
     theme(
         legend.position = 'none',
         panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA)
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.text.x = element_text(size = 6)
     ) +
     facet_grid(cut_2~CHROM, scale = 'free_x', space = 'free_x')
 
@@ -288,7 +289,8 @@ p2 = ggplot(
     theme(
         legend.position = 'none',
         panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA)
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.text.x = element_text(size = 6)
     ) +
     facet_grid(cut_2~CHROM, scale = 'free_x', space = 'free_x') +
     scale_color_manual(values = c('gray', 'red', 'darkred'))
@@ -399,33 +401,14 @@ p3 = ggplot(
     theme(
         legend.position = 'none',
         panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA)
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.text.x = element_text(size = 6)
     ) +
     facet_grid(cut_2~CHROM, scale = 'free_x', space = 'free_x') 
 
 # run HMM
 Obs = pseudobulk_cut2 %>%
     filter(DP >= 10)
-
-# states
-N = c("theta_up", "neu", "theta_down")
-
-# probabilty to stay in the same state
-p_0 = 1-1e-5
-# probability of phase switch
-p_s = 0.1
-
-# transition matrix
-A <- matrix(
-    c(p_0 * (1-p_s), 1 - p_0, p_0 * p_s, 
-     (1-p_0)/2, p_0, (1-p_0)/2,
-     p_0 * p_s, 1-p_0, p_0 * (1 - p_s)),
-    ncol = length(N),
-    byrow = TRUE
-)
-
-# intitial probabilities
-prior = rep(1/length(N), length(N))
 
 Obs = Obs %>% 
     group_by(CHROM, cut_2) %>%
@@ -452,14 +435,83 @@ p4 = ggplot(
     theme(
         legend.position = 'none',
         panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA)
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.text.x = element_text(size = 6)
     ) +
     facet_grid(cut_2~CHROM, scale = 'free_x', space = 'free_x') +
     scale_color_manual(values = c('gray', 'red', 'darkred'))
 
-panel = p1/p2/p3/p4 + plot_layout(heights = c(1,1,2,2))
+## level 3
+pseudobulk_cut3 = df %>%
+    filter(GT %in% c('1|0', '0|1')) %>%
+    rename(cut = cut_3) %>%
+    group_by(snp_id, cut) %>%
+    summarise(
+        AD = sum(AD),
+        DP = sum(DP),
+        AR = AD/DP,
+        .groups = 'drop'
+    ) %>%
+    left_join(
+        vcf_phased %>% select(CHROM, POS, REF, ALT, snp_id, GT, gene, gene_start, gene_end),
+        by = "snp_id"
+    ) %>%
+    arrange(CHROM, POS) %>%
+    mutate(snp_index = as.integer(factor(snp_id, unique(snp_id)))) %>%
+    ungroup() %>%
+    mutate(pBAF = ifelse(GT == '1|0', AR, 1-AR)) %>%
+    mutate(pAD = ifelse(GT == '1|0', AD, DP - AD))
 
-ggsave(glue('{args$out}/BAF_cut2_{sample}.png'), panel, width = 18, height = 7.5, dpi = 300)
+p5 = ggplot(
+        pseudobulk_cut3 %>% filter(DP >= 10),
+        aes(x = snp_index, y = AR, color = GT)
+    ) +
+    geom_point(size = 1, alpha = 0.5) +
+    theme_classic() +
+    theme(
+        legend.position = 'none',
+        panel.spacing = unit(0, 'mm'),
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.text.x = element_text(size = 6)
+    ) +
+    facet_grid(cut~CHROM, scale = 'free_x', space = 'free_x') 
+
+# run HMM
+Obs = pseudobulk_cut3 %>%
+    filter(DP >= 10) %>%
+    group_by(CHROM, cut) %>%
+    mutate(
+        state = HiddenMarkov::Viterbi(HiddenMarkov::dthmm(
+            x = pAD, 
+            Pi = A, 
+            delta = prior, 
+            distn = "bbinom",
+            pm = list(alpha=c(10,10,6), beta=c(6,10,10)),
+            pn = list(size = DP),
+            discrete=TRUE))
+    ) %>%
+    mutate(state = c('1' = 'theta_up', '2' = 'neutral', '3' = 'theta_down')[state])
+
+p6 = ggplot(
+        Obs %>% filter(DP >= 10),
+        aes(x = snp_index, y = pBAF, color = state)
+    ) +
+    geom_point(
+        size = 0.5, alpha = 0.5
+    ) +
+    theme_classic() +
+    theme(
+        legend.position = 'none',
+        panel.spacing = unit(0, 'mm'),
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.text.x = element_text(size = 6)
+    ) +
+    facet_grid(cut~CHROM, scale = 'free_x', space = 'free_x') +
+    scale_color_manual(values = c('gray', 'red', 'darkred'))
+
+panel = p1/p2/p3/p4/p5/p6 + plot_layout(heights = c(1,1,2,2,3,3))
+
+ggsave(glue('{args$out}/BAF_cut2_{sample}.png'), panel, width = 18, height = 15, dpi = 300)
 
 ## cell annotations
 cell_annot = readRDS('/home/meisl/neuroblastoma/conos/cell.annotation.rds')
