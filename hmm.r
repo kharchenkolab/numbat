@@ -52,7 +52,7 @@ Viterbi.dthmm.inhom <- function (object, ...){
     for (i in 2:n) {
         matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
         nu[i, ] <- apply(matrixnu + logPi[[i]], 2, max) +
-                      dfunc(x=x[i], object$pm, HiddenMarkov:::getj(object$pn, i), log=TRUE)
+            log(dfunc(x=x[i], object$pm, HiddenMarkov:::getj(object$pn, i)))
     }
     
 #     if (any(nu[n, ] == -Inf)) 
@@ -215,13 +215,13 @@ Viterbi.dthmm.mv.inhom <- function (object, ...){
     nu[1, ] = log(object$delta)
         
     if (!is.na(x[1])) {
-        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, HiddenMarkov:::getj(object$pn, 1), log=TRUE)
+        nu[1, ] = nu[1, ] + log(dfunc(x=x[1], object$pm, HiddenMarkov:::getj(object$pn, 1)))
     }
     
     if (!is.na(x2[1])) {
-        nu[1, ] = nu[1, ] + dfunc2(x=x2[1], object$pm2, HiddenMarkov:::getj(object$pn2, 1), log=TRUE)
+        nu[1, ] = nu[1, ] + log(dfunc2(x=x2[1], object$pm2, HiddenMarkov:::getj(object$pn2, 1)))
     }
-        
+            
     logPi <- lapply(object$Pi, log)
 
     for (i in 2:n) {
@@ -230,19 +230,75 @@ Viterbi.dthmm.mv.inhom <- function (object, ...){
         nu[i, ] = apply(matrixnu + logPi[[i]], 2, max)
             
         if (!is.na(x[i])) {
-            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, HiddenMarkov:::getj(object$pn, i), log=TRUE)
+            nu[i, ] = nu[i, ] + log(dfunc(x=x[i], object$pm, HiddenMarkov:::getj(object$pn, i)))
         }
         
         if (!is.na(x2[i])) {
-            nu[i, ] = nu[i, ] + dfunc2(x=x2[i], object$pm2, HiddenMarkov:::getj(object$pn2, i), log=TRUE)
+            nu[i, ] = nu[i, ] + log(dfunc2(x=x2[i], object$pm2, HiddenMarkov:::getj(object$pn2, i)))
         }
     }
-        
-#     if (any(nu[n, ] == -Inf)) 
-#         stop("Problems With Underflow")
+    
+#     display(head(nu, 100))
+#     display(dim(nu))
+
     y[n] <- which.max(nu[n, ])
     for (i in seq(n - 1, 1, -1)) y[i] <- which.max(logPi[[i+1]][, y[i+1]] + nu[i, ])
     return(y)
+}
+
+
+run_hmm_mv_inhom_norm = function(pAD, DP, p_s, logFC, sd, mu_neu, mu_del, mu_amp, p_0 = 1-1e-5, prior = NULL) {
+    
+    # states
+    states = c("1" = "neu", "2" = "del_up", "3" = "del_down", "4" = "loh_up",
+               "5" = "loh_down", "6" = "amp_up", "7" = "amp_down")
+
+    # intitial probabilities
+    if (is.null(prior)) {
+        w = 1/(1-p_0)
+        prior = c((1 + w)/(length(states) + w), rep(1/(length(states) + w), length(states) - 1)) 
+    }
+    
+    # transition matrices
+    calc_trans_mat = function(p_s, p_0, n_states) {
+        matrix(
+            c(
+                p_0, rep((1-p_0)/6, 6),
+                (1-p_0)/5, p_0 * (1 - p_s), p_0 * p_s, rep((1-p_0)/5, 4),
+                (1-p_0)/5, p_0 * p_s, p_0 * (1 - p_s), rep((1-p_0)/5, 4),
+                rep((1-p_0)/5, 3), p_0 * (1 - p_s), p_0 * p_s, rep((1-p_0)/5, 2),
+                rep((1-p_0)/5, 3), p_0 * p_s, p_0 * (1 - p_s), rep((1-p_0)/5, 2),
+                rep((1-p_0)/5, 5), p_0 * (1 - p_s), p_0 * p_s,
+                rep((1-p_0)/5, 5), p_0 * p_s, p_0 * (1 - p_s)
+            ),
+            ncol = n_states,
+            byrow = TRUE
+        )
+    }
+    
+    As = lapply(
+        p_s,
+        function(p_s) {calc_trans_mat(p_s, p_0, n_states = length(states))}
+    )
+        
+    hmm = HiddenMarkov::dthmm(
+        x = pAD, 
+        Pi = As, 
+        delta = prior, 
+        distn = "bbinom",
+        pm = list(alpha = c(10, rep(c(10, 6), 3)), beta = c(10, rep(c(6, 10), 3))),
+        pn = list(size = DP),
+        discrete = TRUE
+    )
+
+    hmm$distn2 = 'norm'
+    hmm$x2 = logFC
+    hmm$pm2 = list(mean = c(mu_neu, rep(mu_del, 2), rep(mu_neu, 2), rep(mu_amp, 2)))
+    hmm$pn2 = list(sd = sd)
+    
+    class(hmm) = 'dthmm.mv.inhom'
+
+    return(states[as.character(HiddenMarkov::Viterbi(hmm))])
 }
 
 run_hmm_mv_inhom = function(pAD, DP, exp, p_s, sigma, mu_neu, mu_del, mu_gain, p_0 = 1-1e-5, prior = NULL) {
@@ -297,4 +353,172 @@ run_hmm_mv_inhom = function(pAD, DP, exp, p_s, sigma, mu_neu, mu_del, mu_gain, p
 
     return(states[as.character(HiddenMarkov::Viterbi(hmm))])
 }
+
+
+run_hmm_mv_inhom_laplace = function(pAD, DP, exp, p_s, scale, mu_neu, mu_del, mu_amp, p_0 = 1-1e-5, kappa_neu, kappa_del, kappa_amp, prior = NULL) {
+    
+    # states
+    states = c("1" = "neu", "2" = "del_up", "3" = "del_down", "4" = "loh_up",
+               "5" = "loh_down", "6" = "amp_up", "7" = "amp_down")
+
+    # intitial probabilities
+    if (is.null(prior)) {
+        w = 1/(1-p_0)
+        prior = c((1 + w)/(length(states) + w), rep(1/(length(states) + w), length(states) - 1)) 
+    }
+    
+    # transition matrices
+    calc_trans_mat = function(p_s, p_0, n_states) {
+        matrix(
+            c(
+                p_0, rep((1-p_0)/6, 6),
+                (1-p_0)/5, p_0 * (1 - p_s), p_0 * p_s, rep((1-p_0)/5, 4),
+                (1-p_0)/5, p_0 * p_s, p_0 * (1 - p_s), rep((1-p_0)/5, 4),
+                rep((1-p_0)/5, 3), p_0 * (1 - p_s), p_0 * p_s, rep((1-p_0)/5, 2),
+                rep((1-p_0)/5, 3), p_0 * p_s, p_0 * (1 - p_s), rep((1-p_0)/5, 2),
+                rep((1-p_0)/5, 5), p_0 * (1 - p_s), p_0 * p_s,
+                rep((1-p_0)/5, 5), p_0 * p_s, p_0 * (1 - p_s)
+            ),
+            ncol = n_states,
+            byrow = TRUE
+        )
+    }
+    
+    As = lapply(
+        p_s,
+        function(p_s) {calc_trans_mat(p_s, p_0, n_states = length(states))}
+    )
+        
+    hmm = HiddenMarkov::dthmm(
+        x = pAD, 
+        Pi = As, 
+        delta = prior, 
+        distn = "bbinom",
+        pm = list(alpha = c(10, rep(c(10, 6), 3)), beta = c(10, rep(c(6, 10), 3))),
+        pn = list(size = DP),
+        discrete = TRUE
+    )
+
+    hmm$distn2 = 'alaplace'
+    hmm$x2 = exp
+    hmm$pm2 = list(location = c(mu_neu, rep(mu_del, 2), rep(mu_neu, 2), rep(mu_amp, 2)), scale = rep(scale, 7), kappa = c(kappa_neu, rep(kappa_del, 2), rep(kappa_neu, 2), rep(kappa_amp, 2)))
+    
+    class(hmm) = 'dthmm.mv.inhom'
+
+    return(states[as.character(HiddenMarkov::Viterbi(hmm))])
+}
+
+Viterbi.dthmm.mv.inhom.pois <- function (object, ...){
+
+    x <- object$x
+    dfunc <- HiddenMarkov:::makedensity(object$distn)
+    
+    x2 <- object$x2
+    dfunc2 <- HiddenMarkov:::makedensity(object$distn2)
+
+    n <- length(x)
+    m <- nrow(object$Pi[[1]])
+    nu <- matrix(NA, nrow = n, ncol = m)
+    y <- rep(NA, n)
+    
+    
+    nu[1, ] = log(object$delta)
+        
+    if (!is.na(x[1])) {
+        nu[1, ] = nu[1, ] + log(
+            dfunc(x=x[1], object$pm, HiddenMarkov:::getj(object$pn, 1))
+        )
+    }
+    
+    if (!is.na(x2[1])) {
+        nu[1, ] = nu[1, ] + log(
+            dfunc2(x=x2[1], Map('*', object$pm2, HiddenMarkov:::getj(object$pn2, 1)))
+        )
+    }
+        
+    logPi <- lapply(object$Pi, log)
+
+    for (i in 2:n) {
+        matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
+        
+        nu[i, ] = apply(matrixnu + logPi[[i]], 2, max)
+            
+        if (!is.na(x[i])) {
+            nu[i, ] = nu[i, ] + log(
+                dfunc(x=x[i], object$pm, HiddenMarkov:::getj(object$pn, i))
+            )
+        }
+        
+        if (!is.na(x2[i])) {
+            nu[i, ] = nu[i, ] + log(
+                dfunc2(x=x2[i], Map('*', object$pm2, HiddenMarkov:::getj(object$pn2, i)))
+            )
+        }
+    }
+              
+    y[n] <- which.max(nu[n, ])
+
+    for (i in seq(n - 1, 1, -1)) y[i] <- which.max(logPi[[i+1]][, y[i+1]] + nu[i, ])
+        
+    return(y)
+}
+
+
+
+run_hmm_mv_inhom_pois = function(pAD, DP, p_s, Y_j, lambda_j, d_total, phi_neu, phi_del, phi_amp, p_0 = 1-1e-5, prior = NULL) {
+    
+    # states
+    states = c("1" = "neu", "2" = "del_up", "3" = "del_down", "4" = "loh_up",
+               "5" = "loh_down", "6" = "amp_up", "7" = "amp_down")
+
+    # intitial probabilities
+    if (is.null(prior)) {
+        w = 1/(1-p_0)
+        prior = c((1 + w)/(length(states) + w), rep(1/(length(states) + w), length(states) - 1)) 
+    }
+    
+    # transition matrices
+    calc_trans_mat = function(p_s, p_0, n_states) {
+        matrix(
+            c(
+                p_0, rep((1-p_0)/6, 6),
+                (1-p_0)/5, p_0 * (1 - p_s), p_0 * p_s, rep((1-p_0)/5, 4),
+                (1-p_0)/5, p_0 * p_s, p_0 * (1 - p_s), rep((1-p_0)/5, 4),
+                rep((1-p_0)/5, 3), p_0 * (1 - p_s), p_0 * p_s, rep((1-p_0)/5, 2),
+                rep((1-p_0)/5, 3), p_0 * p_s, p_0 * (1 - p_s), rep((1-p_0)/5, 2),
+                rep((1-p_0)/5, 5), p_0 * (1 - p_s), p_0 * p_s,
+                rep((1-p_0)/5, 5), p_0 * p_s, p_0 * (1 - p_s)
+            ),
+            ncol = n_states,
+            byrow = TRUE
+        )
+    }
+    
+    As = lapply(
+        p_s,
+        function(p_s) {calc_trans_mat(p_s, p_0, n_states = length(states))}
+    )
+        
+    hmm = HiddenMarkov::dthmm(
+        x = pAD, 
+        Pi = As, 
+        delta = prior, 
+        distn = "bbinom",
+        pm = list(alpha = c(10, rep(c(10, 6), 3)), beta = c(10, rep(c(6, 10), 3))),
+        pn = list(size = DP),
+        discrete = TRUE
+    )
+
+    hmm$distn2 = 'nbinom'
+    hmm$x2 = Y_j
+    hmm$pm2 = list(mu = c(phi_neu, rep(phi_del, 2), rep(phi_neu, 2), rep(phi_amp, 2)), size = rep(3, 7))
+    hmm$pn2 = list(size = lambda_j * d_total)
+    
+    class(hmm) = 'dthmm.mv.inhom.pois'
+
+    return(states[as.character(HiddenMarkov::Viterbi(hmm))])
+}
+
+
+
 
