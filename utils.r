@@ -1,5 +1,4 @@
 source('~/Armadillo/hmm.r')
-require(LaplacesDemon)
 
 annotate_segs = function(snps, segs_union) {
     
@@ -452,136 +451,19 @@ mu_mle_roll = function(x_vec, lambda_vec, h) {
     )
 }
 
-process_exp_fc2 = function(count_mat, depths, cell_annot, gtf_transcript) {
+process_exp_fc = function(count_mat, cell_annot, gtf_transcript, verbose = TRUE) {
     
     ref_cells = cell_annot %>% filter(group == 'ref') %>% pull(cell)
     obs_cells = cell_annot %>% filter(group == 'obs') %>% pull(cell)
-        
-    names(depths) = str_remove(names(depths), paste0(sample, '_'))
-    colnames(count_mat) = str_remove(colnames(count_mat), paste0(sample, '_'))
     
     count_mat = count_mat[,colnames(count_mat) %in% cell_annot$cell]
-    depths = depths[names(depths) %in% cell_annot$cell]
-    
-    genes_annotated = intersect(gtf_transcript$gene, rownames(count_mat))
-    count_mat = count_mat[genes_annotated,]
-    count_mat = count_mat[rowSums(count_mat) > 0,]
-
-    depth_ref = sum(depths[ref_cells])
-    depth_obs = sum(depths[obs_cells])
-
-    # lambda matrices
-#     lambda_mat = sapply(
-#         1:length(depths),
-#         function (i) {
-#             count_mat[,i]/depths[i]
-#         }
-#     )
-
-#     colnames(lambda_mat) = colnames(count_mat)
-
-#     lambda_mat_ref = lambda_mat[,colnames(lambda_mat) %in% ref_cells]
-#     lambda_mat_obs = lambda_mat[,colnames(lambda_mat) %in% obs_cells]
-
-    # count matrices
-    count_mat_ref = count_mat[,colnames(count_mat) %in% ref_cells]
-    count_mat_obs = count_mat[,colnames(count_mat) %in% obs_cells, drop = FALSE]
-    
-    lambdas_ref = rowSums(count_mat_ref)/depth_ref
-    lambdas_obs = rowSums(count_mat_obs)/depth_obs
-    
-    # filter for mutually expressed genes
-#     min_both = 0
-    
-#     mut_expressed = (rowSums(count_mat_ref)/depth_ref * 1e6 > min_both & rowSums(count_mat_obs)/depth_obs * 1e6 > min_both) |
-#         (rowMeans(lambda_mat_ref) > mean(lambda_mat_ref[lambda_mat_ref != 0])) |
-#         (rowMeans(lambda_mat_obs) > mean(lambda_mat_obs[lambda_mat_obs != 0]))
-    
-#     mut_expressed = rowSums(count_mat) > 0
-
-#     count_mat_ref = count_mat_ref[mut_expressed,]
-#     count_mat_obs = count_mat_obs[mut_expressed,]
-
-    display(nrow(count_mat))
-    
-    bulk_ref = count_mat_ref %>%
-        rowSums() %>%
-        data.frame() %>%
-        setNames('Y_ref') %>%
-        tibble::rownames_to_column('gene') %>%
-        mutate(lambda_ref = (Y_ref/depth_ref)) %>%
-        left_join(gtf_transcript, by = "gene") %>%
-        mutate(d_obs = depth_obs)
-
-    bulk_obs = count_mat_obs %>%
-        rowSums() %>%
-        data.frame() %>%
-        setNames('Y_obs') %>%
-        tibble::rownames_to_column('gene') %>%
-        mutate(lambda_obs = (Y_obs/depth_obs)) %>%
-        left_join(gtf_transcript, by = "gene") %>%
-        mutate(d_ref = depth_ref)
-    
-    bulk_all = bulk_obs %>% left_join(bulk_ref)
-
-    # annotate using GTF
-    bulk_all = bulk_all %>%
-        mutate(gene = droplevels(factor(gene, gtf_transcript$gene))) %>%
-        mutate(gene_index = as.integer(gene)) %>%
-        arrange(gene) %>%
-        mutate(CHROM = factor(CHROM)) %>%
-        group_by(CHROM) %>%
-        mutate(
-            logFC = log2(lambda_obs) - log2(lambda_ref),
-            logFC = ifelse(is.infinite(logFC), NA, logFC),
-            logFC_pad = log2(lambda_obs * 1e6 + 1) - log2(lambda_ref * 1e6 + 1),
-            mu_mle_roll = mu_mle_roll(logFC, lambda_ref, h = 50),
-            phi_hat_roll = phi_hat_roll(Y_obs, lambda_ref, depth_obs, h = 50)
-        )%>%
-        ungroup()
-    
-    sigma_hat = sd(bulk_all$logFC)
-    
-    bulk_all = bulk_all %>%
-        mutate(sd = lambda_ref^(-1/4)/10) %>%
-        mutate(
-            precision_j = (n() * sigma_hat^(-2))*sqrt(lambda_ref)/sum(sqrt(lambda_ref)),
-            sd_j = precision_j ^ (-1/2)
-        )
-    
-    return(bulk_all)
-}
-
-
-process_exp_fc = function(count_mat, depths, cell_annot, gtf_transcript) {
-    
-    ref_cells = cell_annot %>% filter(group == 'ref') %>% pull(cell)
-    obs_cells = cell_annot %>% filter(group == 'obs') %>% pull(cell)
-        
-    names(depths) = str_remove(names(depths), paste0(sample, '_'))
-    colnames(count_mat) = str_remove(colnames(count_mat), paste0(sample, '_'))
-    
-    count_mat = count_mat[,colnames(count_mat) %in% cell_annot$cell]
-    depths = depths[names(depths) %in% cell_annot$cell]
     
     genes_annotated = intersect(gtf_transcript$gene, rownames(count_mat))
     count_mat = count_mat[genes_annotated,]
 
+    depths = colSums(count_mat)
     depth_ref = sum(depths[ref_cells])
     depth_obs = sum(depths[obs_cells])
-
-    # lambda matrices
-#     lambda_mat = sapply(
-#         1:length(depths),
-#         function (i) {
-#             count_mat[,i]/depths[i]
-#         }
-#     )
-
-#     colnames(lambda_mat) = colnames(count_mat)
-
-#     lambda_mat_ref = lambda_mat[,colnames(lambda_mat) %in% ref_cells]
-#     lambda_mat_obs = lambda_mat[,colnames(lambda_mat) %in% obs_cells]
 
     # count matrices
     count_mat_ref = count_mat[,colnames(count_mat) %in% ref_cells]
@@ -599,8 +481,16 @@ process_exp_fc = function(count_mat, depths, cell_annot, gtf_transcript) {
     
     count_mat_ref = count_mat_ref[mut_expressed,]
     count_mat_obs = count_mat_obs[mut_expressed,]
+    lambdas_ref = lambdas_ref[mut_expressed]
+    
+    lambda_mat_obs = sapply(
+        colnames(count_mat_obs),
+        function (i) {
+            count_mat_obs[,i]/depths[i]
+        }
+    )
 
-    display(nrow(count_mat_obs))
+    if(verbose){display(nrow(count_mat_obs))}
     
     bulk_ref = count_mat_ref %>%
         rowSums() %>%
@@ -620,7 +510,7 @@ process_exp_fc = function(count_mat, depths, cell_annot, gtf_transcript) {
         left_join(gtf_transcript, by = "gene") %>%
         mutate(d_ref = depth_ref)
 
-    bulk_all = bulk_obs %>% left_join(bulk_ref)
+    bulk_all = bulk_obs %>% left_join(bulk_ref) %>% suppressMessages
 
     # annotate using GTF
     bulk_all = bulk_all %>%
@@ -630,18 +520,22 @@ process_exp_fc = function(count_mat, depths, cell_annot, gtf_transcript) {
         mutate(CHROM = factor(CHROM)) %>%
         mutate(
             logFC = log2(lambda_obs) - log2(lambda_ref),
+            lnFC = log(lambda_obs) - log(lambda_ref),
             logFC = ifelse(is.infinite(logFC), NA, logFC),
+            lnFC = ifelse(is.infinite(lnFC), NA, lnFC),
             logFC_pad = log2(lambda_obs * 1e6 + 1) - log2(lambda_ref * 1e6 + 1)
         ) %>%
         group_by(CHROM) %>%
 #         filter(logFC < 5 & logFC > -5) %>%
         mutate(
-            mu_mle_roll = mu_mle_roll(logFC, lambda_ref, h = 50),
+#             mu_mle_roll = mu_mle_roll(logFC, lambda_ref, h = 50),
             phi_hat_roll = phi_hat_roll(Y_obs, lambda_ref, depth_obs, h = 50)
         ) %>%
         ungroup()
     
-    return(bulk_all)
+    return(list('bulk' = bulk_all, 'lambda_mat_obs' = lambda_mat_obs, 
+                'lambdas_ref' = lambdas_ref, 'count_mat_obs' = count_mat_obs,
+               'depth_obs' = depth_obs))
 }
 
 
@@ -649,78 +543,9 @@ cnv_colors = scale_color_manual(
     values = c("neu" = "gray", "del_up" = "royalblue", "del_down" = "darkblue", 
                "loh_up" = "darkgreen", "loh_down" = "olivedrab4",
                "amp_up" = "red", "amp_down" = "tomato3",
+               "bamp" = "salmon", "bdel" = "skyblue",
               "amp" = "darkred", "loh" = "darkgreen", "del" = "darkblue", "neu2" = "gray30")
 )
-
-plot_hmm = function(Obs_cut, dot_size = 0.8, exp_limit = 1, rollmean = FALSE, k = 51) {
-    
-    segs_cut = Obs_cut %>% group_by(CHROM, cut, seg, cnv_state) %>%
-        filter(state != 'neu') %>%
-        mutate(haplo = case_when(
-            str_detect(state, 'up') ~ 'major',
-            str_detect(state, 'down') ~ 'minor',
-#             state == 'neu' & pBAF >= 0.5 ~ 'major',
-#             T ~ 'minor'
-        )) %>%
-        summarise(
-            exp = mean(exp, na.rm = TRUE),
-            AF_major = median(pBAF[haplo == 'major']),
-            AF_minor = median(pBAF[haplo == 'minor']),
-            seg_start = min(snp_index),
-            seg_end = max(snp_index),
-            .groups = 'drop'
-        ) %>%
-        mutate(exp = ifelse(exp > exp_limit | exp < -exp_limit, NA, exp))
-    
-    exp_roll = Obs_cut %>% group_by(CHROM, cut) %>%
-        mutate(
-            exp = caTools::runmean(exp, k = k, align = 'center')) %>%
-        mutate(exp = ifelse(exp > exp_limit | exp < -exp_limit, NA, exp)) %>%
-        mutate(cnv_state = ifelse(cnv_state == 'neu', 'neu2', cnv_state))
-
-    p = ggplot(
-        Obs_cut %>% 
-            mutate(exp = ifelse(exp > exp_limit | exp < -exp_limit, NA, exp)) %>%
-            reshape2::melt(measure.vars = c('exp', 'pBAF')),
-        aes(x = snp_index, y = value, color = state)
-    ) +
-    geom_point(size = dot_size, alpha = 0.5, pch = 16) +
-#     geom_segment(
-#         inherit.aes = FALSE,
-#         data = segs_cut %>% mutate(variable = 'pBAF'),
-#         aes(y = AF_major, yend = AF_major, x = seg_start, xend = seg_end, color = cnv_state),
-#         lineend = 'round',
-#         size = 0.8
-#     ) +
-#     geom_segment(
-#         inherit.aes = FALSE,
-#         data = segs_cut %>% mutate(variable = 'pBAF'),
-#         aes(y = AF_minor, yend = AF_minor, x = seg_start, xend = seg_end, color = cnv_state),
-#         lineend = 'round',
-#         size = 0.8
-#     ) +
-#     geom_segment(
-#         inherit.aes = FALSE,
-#         data = segs_cut %>% mutate(variable = 'exp'),
-#         aes(y = exp, yend = exp, x = seg_start, xend = seg_end, color = cnv_state),
-#         lineend = 'round',
-#         size = 0.8
-#     ) +
-    geom_line(
-        inherit.aes = FALSE,
-        data = exp_roll %>% mutate(variable = 'exp'),
-        aes(x = snp_index, y = exp, color = cnv_state, group = '1')
-    ) +
-    theme_classic() +
-    theme(
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA)
-    ) +
-    facet_grid(cut + variable ~ CHROM, scale = 'free', space = 'free_x') +
-    cnv_colors
-    
-    return(p)
-}
 
 
 plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10) {
@@ -730,20 +555,22 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10) {
             mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
             mutate(pBAF = ifelse(DP >= min_depth, pBAF, NA)) %>%
             reshape2::melt(measure.vars = c('logFC', 'pBAF')),
-        aes(x = snp_index, y = value, color = state)
+        aes(x = snp_index, y = value, color = state),
+        na.rm=TRUE
     ) +
     geom_point(size = dot_size, alpha = 0.5, pch = 16) +
     geom_hline(data = data.frame(variable = 'logFC'), aes(yintercept = 0), color = 'gray30', linetype = 'dashed') +
     geom_line(
         inherit.aes = FALSE,
         data = Obs %>% mutate(variable = 'logFC'),
-        aes(x = snp_index, y = mu_mle_roll, group = '1'),
+        aes(x = snp_index, y = log2(phi_mle_roll), group = '1'),
         color = 'darkred'
     ) +
     theme_classic() +
     theme(
         panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA)
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.background = element_blank()
     ) +
     facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
     cnv_colors
@@ -947,85 +774,11 @@ preprocess_data = function(
     return(list('df_obs' = df_obs, 'df_ref' = df_ref))
 }
 
-process_exp = function(exp_mat, cell_annot, controls, gtf_transcript, minMeanBoth = 0, window = 51) {
-    
-    # Normal reference
-    ref_cells = cell_annot %>% filter(group == 'ref') %>% pull(cell)
-    obs_cells = cell_annot %>% filter(group == 'obs') %>% pull(cell)
-
-    ref_mat = exp_mat[rownames(exp_mat) %in% ref_cells,]
-    obs_mat = exp_mat[rownames(exp_mat) %in% obs_cells,]
-
-    obs_mat = t(obs_mat)
-    ref_mat = t(ref_mat)
-
-    gexp.ref.init = ref_mat
-    gexp.sc.init = obs_mat
-
-    # insersect gene list
-    vi <- intersect(rownames(gexp.sc.init), rownames(gexp.ref.init))
-    
-    gexp.sc <- gexp.sc.init[vi,]
-    gexp.ref <- gexp.ref.init[vi,,drop=FALSE]
-
-    # compute thresholds
-    minMeanTest=mean(gexp.sc.init[gexp.sc.init!=0])
-    minMeanRef=mean(gexp.ref.init[gexp.ref.init!=0])
-
-    # Filter for highly expressed genes
-    vi <- (rowMeans(gexp.sc) > minMeanBoth & rowMeans(gexp.ref) > minMeanBoth) |
-        rowMeans(gexp.sc) > minMeanTest | rowMeans(gexp.ref) > minMeanRef
-
-    gexp.sc <- gexp.sc[vi,]
-    gexp.ref <- gexp.ref[vi,,drop=FALSE]
-
-    cat(paste0(sum(vi), " genes passed filtering ... \n"))
-
-    # log-transform
-    gexp.sc = log2(gexp.sc + 1)
-    gexp.ref = log2(gexp.ref + 1)
-
-    # scaling for library size
-#     gexp.sc <- scale(gexp.sc)
-#     gexp.ref <- scale(gexp.ref)
-
-    # substract reference background
-    refmean <- rowMeans(gexp.ref)
-    gexp.norm <- gexp.sc - refmean
-
-    gexp.norm = gexp.norm %>% as.data.frame() %>%
-        tibble::rownames_to_column('gene') %>%
-#         setNames(str_remove(colnames(.), paste0(sample, '_'))) %>%
-        inner_join(gtf_transcript, by = "gene") %>%
-        mutate(gene = droplevels(factor(gene, gtf_transcript$gene))) %>%
-        mutate(gene_index = as.integer(gene)) %>% 
-        mutate(CHROM = as.integer(CHROM)) %>%
-        arrange(CHROM, gene)
-
-    gexp.norm.long = gexp.norm %>% 
-        reshape2::melt(
-            id.var = c('gene', 'gene_index', 'region', 'gene_start', 'gene_end', 'CHROM', 'length'),
-            variable.name = 'cell',
-            value.name = 'exp')    
-
-    gexp.norm.long = gexp.norm.long %>% 
-        group_by(cell, CHROM) %>%
-#         arrange(gene) %>%
-        mutate(exp_rollmean = caTools::runmean(exp, k = window, align = "center")) %>%
-        ungroup()
-
-    gexp.norm.long = gexp.norm.long %>% 
-        left_join(
-            cell_annot,
-            by = 'cell'
-        )
-    
-    return(list('gexp.norm' = gexp.norm, 'gexp.norm.long' = gexp.norm.long, 'gexp.ref' = gexp.ref))
-}
-
 calc_cluster_tree = function(exp_mat, cell_annot) {
     
-    cell_dict = cell_annot %>% {setNames(.$cell_type, .$cell)}
+    exp_mat = exp_mat[,colMeans(exp_mat) > 0]
+        
+    cell_dict = cell_annot %>% filter(group == 'obs') %>% {setNames(.$cell_type, .$cell)}
 
     exp_mat = exp_mat %>% data.frame() %>%
         tibble::rownames_to_column('cell') %>%
@@ -1042,13 +795,38 @@ calc_cluster_tree = function(exp_mat, cell_annot) {
     
 }
 
-analyze_node_iter = function(Obs, p_0, prior = NULL) {
+phi_mle = function(Y_obs, lambda_ref, d, alpha, beta, lower = 0.2, upper = 5) {
     
-    Obs = Obs %>% 
-        mutate(
-            lnFC = log(lambda_obs/lambda_ref),
-            state = 'neu'
-        )
+    res = stats4::mle(
+        minuslogl = function(phi) {
+            res = -sum(dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE))
+            return(res)
+        },
+        start = 1,
+        lower = lower,
+        upper = upper
+    )
+    
+    return(res)
+}
+
+phi_mle_roll = function(Y_obs, lambda_ref, alpha, beta, d_obs, h) {
+    n = length(Y_obs)
+    sapply(
+        1:n,
+        function(c) {
+            slice = max(c - h - 1, 1):min(c + h, n)
+            phi_mle(Y_obs[slice], lambda_ref[slice], unique(d_obs), alpha, beta)@coef
+        }
+    )
+}
+
+analyze_bulk_poilog = function(Obs, p_0, prior = NULL, exp_only = FALSE) {
+    
+    # doesn't work with 0s in the ref
+    Obs = Obs %>% filter(lambda_ref != 0)
+    
+    Obs = Obs %>% mutate(state = 'neu')
     
     converge = FALSE
     
@@ -1069,18 +847,330 @@ analyze_node_iter = function(Obs, p_0, prior = NULL) {
             group_by(CHROM) %>%
             mutate(
                 state = run_hmm_mv_inhom_poilog(
-                    pAD, DP, p_s, Y_obs, lambda_ref, d_obs,
+                    pAD = pAD,
+                    DP = DP, 
+                    p_s = p_s, 
+                    Y_obs = Y_obs, 
+                    lambda_ref = lambda_ref, 
+                    d_total = d_obs,
                     phi_neu = exp(mu_hat),
                     phi_del = exp(qnorm(0.4, mean = mu_hat, sd = sigma_hat)),
                     phi_amp = exp(qnorm(0.6, mean = mu_hat, sd = sigma_hat)),
                     sigma = sigma_hat,
-                    p_0, 
-                    prior)
+                    p_0 = p_0, 
+                    prior = prior,
+                    exp_only = exp_only
+                )
         )
         
         converge = all(state_old == Obs$state)
         
     }
     
+    mu_hat = mean(Obs$lnFC[Obs$state == 'neu'], na.rm = TRUE)
+    sigma_hat = sd(Obs$lnFC[Obs$state == 'neu'], na.rm = TRUE)
+    
+    Obs = Obs %>% 
+        mutate(cnv_state = str_remove(state, '_down|_up')) %>%
+        group_by(CHROM) %>%
+        arrange(snp_index) %>%
+        mutate(boundary = c(0, cnv_state[2:length(cnv_state)] != cnv_state[1:(length(cnv_state)-1)])) %>%
+        group_by(CHROM) %>%
+        mutate(seg = paste0(CHROM, '_', cumsum(boundary))) %>%
+        arrange(CHROM) %>%
+        mutate(seg = factor(seg, unique(seg))) %>%
+        ungroup()
+    
     return(Obs)
+}
+
+l_gpois = function(Y_obs, lambda_ref, d, alpha, beta, phi = 1) {
+    sum(dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE))
+}
+
+fit_gpois = function(Y_obs, lambda_ref, d) {
+    
+    res = stats4::mle(
+        minuslogl = function(alpha, beta) {
+            -l_gpois(Y_obs, lambda_ref, d, alpha, beta)
+        },
+        start = c(1, 1),
+        lower = c(0.02, 0.02),
+        upper = c(5, 5)
+    )
+    
+    return(res)
+}
+
+
+analyze_bulk_gpois = function(Obs, p_0, gamma = 16, bal_cnv = FALSE, prior = NULL, exp_only = FALSE, verbose = TRUE) {
+    
+    # doesn't work with 0s in the ref
+    Obs = Obs %>% filter(lambda_ref != 0 | is.na(gene)) 
+    
+    Obs = Obs %>% mutate(cnv_state = 'neu')
+    
+    converge = FALSE
+    
+    i = 0
+    
+    while (!converge) {
+        
+        i = i + 1
+        
+        # need to fit gpois directly, otherwise might be skewed by lib size
+#         fit = Obs %>% 
+#             filter(!is.na(Y_obs) & state == 'neu' & lambda_obs != 0) %>%
+#             {MASS::fitdistr(.$lambda_obs/.$lambda_ref, densfun = 'gamma', lower = c(0.1,0.1), upper = c(5,5))}
+        
+#         alpha_hat = fit$estimate['shape']
+#         beta_hat = fit$estimate['rate']
+        
+        # update parameters
+        fit = Obs %>%
+            filter(!is.na(Y_obs) & cnv_state == 'neu') %>%
+            {fit_gpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+                
+        alpha_hat = fit@coef[1]
+        beta_hat = fit@coef[2]
+        
+        if (i > 1) {
+            p_0 = 1 - mean(Obs$boundary)
+        }
+        
+        if (verbose) {
+            display(glue('iteration {i}, alpha {signif(alpha_hat, 3)}, beta {signif(beta_hat, 3)}, t {signif(1-p_0, 3)}'))
+        }
+        
+        state_old = Obs$cnv_state
+        
+        if (bal_cnv) {
+            Obs = Obs %>% 
+                group_by(CHROM) %>%
+                mutate(state = 
+                    run_hmm_mv_inhom_gpois2(
+                        pAD = pAD,
+                        DP = DP, 
+                        p_s = p_s,
+                        Y_obs = Y_obs, 
+                        lambda_ref = lambda_ref, 
+                        d_total = na.omit(unique(d_obs)),
+                        phi_neu = 1,
+                        phi_del = 2^(-0.25),
+                        phi_amp = 2^(0.25),
+                        phi_bamp = 2^(0.5),
+                        phi_bdel = 2^(-0.5),
+                        alpha = alpha_hat,
+                        beta = beta_hat,
+                        p_0 = p_0,
+                        gamma = gamma,
+                        prior = prior,
+                        exp_only = exp_only
+                    )
+                )
+            
+        } else {
+            Obs = Obs %>% 
+                group_by(CHROM) %>%
+                mutate(state = 
+                    run_hmm_mv_inhom_gpois(
+                        pAD = pAD,
+                        DP = DP, 
+                        p_s = p_s,
+                        Y_obs = Y_obs, 
+                        lambda_ref = lambda_ref, 
+                        d_total = na.omit(unique(d_obs)),
+                        phi_neu = 1,
+                        phi_del = 2^(-0.25),
+                        phi_amp = 2^(0.25),
+                        alpha = alpha_hat,
+                        beta = beta_hat,
+                        p_0 = p_0,
+                        gamma = gamma,
+                        prior = prior,
+                        exp_only = exp_only
+                    )
+                )
+            
+        }
+        
+        Obs = Obs %>% 
+            mutate(cnv_state = str_remove(state, '_down|_up')) %>%
+            group_by(CHROM) %>%
+            arrange(snp_index) %>%
+            mutate(boundary = c(0, cnv_state[2:length(cnv_state)] != cnv_state[1:(length(cnv_state)-1)])) %>%
+            group_by(CHROM) %>%
+            mutate(seg = paste0(CHROM, '_', cumsum(boundary))) %>%
+            arrange(CHROM) %>%
+            mutate(seg = factor(seg, unique(seg))) %>%
+            ungroup()
+        
+        converge = all(state_old == Obs$cnv_state)
+        
+    }
+    
+    Obs = Obs %>% 
+        select(-any_of('phi_mle_roll')) %>%
+        left_join(
+        Obs %>% 
+            group_by(CHROM) %>%
+            filter(!is.na(Y_obs)) %>%
+            mutate(
+                phi_mle_roll = phi_mle_roll(
+                    Y_obs, lambda_ref, alpha_hat, beta_hat, d_obs, h = 50)
+            ) %>%
+            select(phi_mle_roll, CHROM, gene),
+        by = c('CHROM', 'gene')
+    )
+    
+    return(Obs)
+}
+
+# est = Obs %>% filter(!is.na(Y_obs) & state == 'neu') %>% {fit_poilog(.$Y_obs, .$lambda_ref, .$d_obs)}
+
+# mu_hat = est['mu']
+# sigma_hat = est['sigma']
+
+fit_poilog = function(Y_obs, lambda_ref, d_obs) {
+    
+    res = stats4::mle(
+        minuslogl = function(mu, sigma) poilog_loglik(Y_obs, lambda_ref, d_obs, mu, sigma),
+        start = c('mu' = 1, 'sigma' = 1),
+        lower = c('mu' = -2, 'sigma' = 0.1),
+        upper = c('mu' = 2, 'sigma' = 3)
+    )
+    
+    return(res@coef)
+}
+
+poilog_loglik = function(Y_obs, lambda_ref, d_obs, mu, sigma) {
+    
+    ps = mapply(
+        function(Y, size) {
+            sads::dpoilog(Y, mu = size, sig = sigma, log = TRUE)
+        },
+        size = log(lambda_ref * d_obs * exp(mu)),
+        Y = Y_obs
+    )
+    
+    # the poilog function has underflow problems with log
+    ps = ifelse(is.infinite(ps), -1000, ps)
+            
+    return(-sum(ps))
+}
+
+calc_theta_mle = function(pAD, DP, p_s, lower = 0, upper = 0.49) {
+    res = optim(
+        0.25, 
+        function(theta) {-calc_alelle_lik(pAD, DP, p_s, theta)},
+        method = 'L-BFGS-B',
+        lower = lower, upper = upper)
+    return(list('theta_mle' = res$par, 'l' = -res$value))
+}
+
+get_bulk = function(count_mat, df, cell_annot, gtf_transcript, min_depth = 2) {
+    
+    ref_cells = cell_annot[cell_annot$group == 'ref',]$cell
+    obs_cells = cell_annot[cell_annot$group == 'obs',]$cell
+    
+    gexp_bulk = process_exp_fc(
+        count_mat,
+        cell_annot,
+        gtf_transcript)$bulk
+            
+    combine_bulk(
+        df = df %>% filter(cell %in% obs_cells),
+        gexp_bulk = gexp_bulk,
+        min_depth = min_depth
+    )
+}
+
+combine_bulk = function(df, gexp_bulk, min_depth = 2) {
+    
+    pseudobulk = df %>%
+        filter(GT %in% c('1|0', '0|1')) %>%
+        group_by(snp_id, CHROM, POS, REF, ALT, GT, gene) %>%
+        summarise(
+            AD = sum(AD),
+            DP = sum(DP),
+            AR = AD/DP,
+            .groups = 'drop'
+        ) %>%
+        arrange(CHROM, POS) %>%
+        mutate(snp_index = as.integer(factor(snp_id, unique(snp_id)))) %>%
+        ungroup() %>%
+        filter(DP >= min_depth) %>%
+        mutate(pBAF = ifelse(GT == '1|0', AR, 1-AR)) %>%
+        mutate(pAD = ifelse(GT == '1|0', AD, DP - AD)) %>%
+        mutate(CHROM = factor(CHROM, unique(CHROM))) %>%
+        arrange(CHROM, POS) %>%
+        group_by(CHROM) %>%
+        filter(n() > 1) %>%
+        mutate(inter_snp_dist = c(NA, POS[2:length(POS)] - POS[1:(length(POS)-1)])) %>%
+        mutate(p_s = switch_prob(inter_snp_dist)) %>%
+        ungroup()
+
+    Obs = pseudobulk %>% 
+        full_join(
+            gexp_bulk,
+            by = c("CHROM", "gene")
+        ) %>%
+        mutate(
+            snp_id = ifelse(is.na(snp_id), gene, snp_id),
+            # levels will be missing if not expressed
+            gene = factor(gene, levels(gexp_bulk$gene)),
+            POS = ifelse(is.na(POS), gene_start, POS),
+            # phase switch is forbidden if not heteroSNP
+            p_s = ifelse(is.na(p_s), 0, p_s)
+        ) %>%
+        arrange(CHROM, POS) %>%
+        filter(!(CHROM == 6 & POS < 33480577 & POS > 28510120)) %>%
+        group_by(CHROM) %>%
+        mutate(snp_index = as.integer(factor(snp_id, unique(snp_id)))) %>%
+        ungroup()
+
+    # get rid of duplicate gene expression values
+    Obs = Obs %>% 
+        group_by(CHROM, gene) %>%
+        mutate(
+            Y_obs = ifelse(
+                !is.na(gene) & n() > 1,
+                c(unique(Y_obs), rep(NA, n()-1)), Y_obs
+            )
+        ) %>%
+        ungroup() %>% 
+        mutate(
+            lambda_obs = Y_obs/d_obs,
+            logFC = log2(lambda_obs/lambda_ref),
+            lnFC = log(lambda_obs/lambda_ref)
+        ) %>%
+        mutate_at(
+            c('logFC', 'lnFC'),
+            function(x) ifelse(is.infinite(x), NA, x)
+        )
+    
+    return(Obs)
+    
+}
+
+permute_phi_vec = function(lambda_mat_obs, lambda_ref, n_perm) {
+    perm_sample = replicate(
+        n = n_perm, {
+            
+            n_cells = ncol(lambda_mat_obs)
+            n_genes = nrow(lambda_mat_obs)
+            
+            swap_index = sample(1:n_genes, size = n_genes/2, replace = FALSE)
+
+            lambda_mat_ref = matrix(lambda_ref, ncol = n_cells, nrow = n_genes)
+            
+            lambda_mat_obs_perm = lambda_mat_obs
+            lambda_mat_ref_perm = lambda_mat_ref
+            lambda_mat_obs_perm[swap_index,] = lambda_mat_ref[swap_index,]
+            lambda_mat_ref_perm[swap_index,] = lambda_mat_obs[swap_index,]
+            
+            phi_perm = colSums(lambda_mat_obs_perm)/colSums(lambda_mat_ref_perm)
+    })
+        
+    return(perm_sample)
 }
