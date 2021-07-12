@@ -111,51 +111,6 @@ run_hmm_inhom = function(pAD, DP, p_s, p_0 = 1-1e-5, prior = NULL) {
 }
 
 
-calc_alelle_lik = function(pAD, DP, p_s, theta) {
-    
-    # states
-    states = c("theta_up", "theta_down")
-    
-    # transition matrices
-    calc_trans_mat = function(p_s, p_0) {
-        matrix(
-            c(1 - p_s, p_s,
-              p_s, 1 - p_s),
-            ncol = 2,
-            byrow = TRUE
-        )
-    }
-    
-    As = lapply(
-        p_s,
-        function(p_s) {calc_trans_mat(p_s, p_0)}
-    )
-    
-    # intitial probabilities
-    prior = c(0.5, 0.5)
-    
-    alpha_up = (0.5 + theta) * 16
-    beta_up = (0.5 - theta) * 16
-    alpha_down = beta_up
-    beta_down = alpha_up
-        
-    hmm = HiddenMarkov::dthmm(
-        x = pAD, 
-        Pi = As, 
-        delta = prior, 
-        distn = "bbinom",
-        pm = list(alpha=c(alpha_up, alpha_down), beta=c(beta_up, beta_down)),
-        pn = list(size = DP),
-        discrete = TRUE)
-
-    class(hmm) = 'dthmm.inhom'
-        
-    solution = HiddenMarkov::Viterbi(hmm)
-        
-    return(solution$max.loglik)
-}
-
-
 ############ time homogenous multivariate HMM ############
 
 Viterbi.dthmm.mv <- function (object, ...){
