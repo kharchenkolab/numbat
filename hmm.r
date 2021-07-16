@@ -437,7 +437,9 @@ run_hmm_mv_inhom_gpois = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, phi_
 
     # intitial probabilities
     if (is.null(prior)) {
-        w = 1/(1-p_0)
+        w = 1/(1-p_0) 
+        # encourage CNV from telomeres
+        w = w/100
         prior = c((1 + w)/(length(states) + w), rep(1/(length(states) + w), length(states) - 1)) 
     }
     
@@ -494,7 +496,7 @@ run_hmm_mv_inhom_gpois = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, phi_
 }
 
 
-run_hmm_mv_inhom_gpois2 = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, phi_neu, phi_del, phi_amp, phi_bamp, phi_bdel, alpha, beta, p_0 = 1-1e-5, gamma = 16, prior = NULL, exp_only = FALSE) {
+run_hmm_mv_inhom_gpois2 = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.5), phi_bdel = 2^(-0.5), alpha = 1, beta = 1, p_0 = 1-1e-5, gamma = 16, prior = NULL, exp_only = FALSE, allele_only = FALSE) {
     
     # states
     states = c("1" = "neu", "2" = "del_up", "3" = "del_down", "4" = "loh_up",
@@ -502,13 +504,19 @@ run_hmm_mv_inhom_gpois2 = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, phi
 
     # intitial probabilities
     if (is.null(prior)) {
-        w = 1/(1-p_0)
-        prior = c((1 + w)/(length(states) + w), rep(1/(length(states) + w), length(states) - 1)) 
+        w = 1/(1-p_0) 
+        # encourage CNV from telomeres
+        w = w/100
+        prior = c((1 + w)/(length(states) + w), rep(1/(length(states) + w), length(states) - 1))
     }
     
     if (exp_only) {
         pAD = rep(NA, length(pAD))
         p_s = rep(0, length(p_s))
+    }
+    
+    if (allele_only) {
+        Y_obs = rep(NA, length(Y_obs))
     }
     
     # transition matrices
