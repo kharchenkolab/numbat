@@ -1,553 +1,419 @@
-#!/usr/bin/env Rscript
+source('~/Armadillo/hmm.r')
+source('~/Armadillo/utils.r')
+########################### Main ############################
 
-library(argparse, quietly = T)
-library(ggplot2, quietly = T)
-library(dplyr, quietly = T)
-library(Matrix, quietly = T)
-library(data.table, quietly = T)
-library(stringr, quietly = T)
-library(patchwork, quietly = T)
-library(glue, quietly = T)
-library(ggforce, quietly = T)
-library(vcfR, quietly = T)
-library(ggpubr, quietly = T)
-library(extraDistr, quietly = T)
-
-parser <- ArgumentParser(description='Process some integers')
-parser$add_argument('--sample', type = "character", help = "sample name")
-parser$add_argument('--vcf', type = "character", help = "pileup VCF")
-parser$add_argument('--AD', type = "character", help = "allele count matrix")
-parser$add_argument('--DP', type = "character", help = "total depth matrix")
-parser$add_argument('--barcodes', type = "character", help = "total depth matrix")
-parser$add_argument('--pvcf', type = "character", help = "phased VCFs directory")
-parser$add_argument('--out', type = "character", help = "output directory")
-
-# parser$add_argument('gtf', type = "character")
-args <- parser$parse_args()
-print(args)
-
-dir.create(args$out)
-
-cat('Analyzing', args$sample, '\n')
-
-sample = args$sample
-
-
-######## Preprocessing #########
-chr_lengths = fread('~/ref/hg38.chrom.sizes.txt') %>% setNames(c('CHROM', 'CHROM_SIZE')) %>%
-    mutate(CHROM = str_remove(CHROM, 'chr'))
-
-# read in GTF
-gtf = fread('~/ref/hg38.refGene.gtf')
-cols = c('CHROM', 'source', 'biotype', 'start', 'end', 'a', 'strand', 'b', 'info')
-colnames(gtf) = cols
-
-gtf = gtf %>% filter(CHROM %in% paste0('chr', 1:22))
-
-transcript_regions = gtf %>% filter(biotype == 'transcript') %>%
-    mutate(region = paste0(CHROM, ':', start, '-', end)) %>%
-    pull(region) %>%
-    unique %>% bedr::bedr.sort.region(verbose = F)
-
-cat('Reading in snp count matrix..', '\n')
-
-vcf = fread(args$vcf) %>% rename(CHROM = `#CHROM`)
-
-vcf = vcf %>%
-    mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
-    tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
-    mutate_at(c('AD', 'DP', 'OTH'), as.integer)
-
-vcf = vcf %>% mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_'))
-
-AD = readMM(args$AD)
-DP = readMM(args$DP)
-cell_barcodes = fread(args$barcodes, header = F) %>% pull(V1)
-
-DP = as.data.frame(summary(DP)) %>%
-    mutate(
-        cell = cell_barcodes[j],
-        snp_id = vcf$snp_id[i]
-    ) %>%
-    select(-i, -j) %>%
-    rename(DP = x) %>%
-    select(cell, snp_id, DP)
-
-AD = as.data.frame(summary(AD)) %>%
-    mutate(
-        cell = cell_barcodes[j],
-        snp_id = vcf$snp_id[i]
-    ) %>%
-    select(-i, -j) %>%
-    rename(AD = x) %>%
-    select(cell, snp_id, AD)
-
-df = DP %>% left_join(AD, by = c("cell", "snp_id")) %>%
-    mutate(AD = ifelse(is.na(AD), 0, AD))
-
-df = df %>% left_join(
-    vcf %>% rename(AD_all = AD, DP_all = DP, OTH_all = OTH),
-    by = 'snp_id')
-
-df = df %>% mutate(
-        AR = AD/DP,
-        AR_all = AD_all/DP_all
-    )
-
-df = df %>% filter(DP_all > 1 & OTH_all == 0)
-
-df = df %>% mutate(
-    snp_index = as.integer(factor(snp_id, unique(snp_id))),
-    cell_index = as.integer(factor(cell, sample(unique(cell))))
-)
-
-# read. inphased VCF
-cat('Reading in phased VCF..', '\n')
-
-vcf_phased = lapply(1:22, function(chr) {
-    fread(glue('{args$pvcf}/{sample}_chr{chr}_phased.vcf.gz')) %>%
-    rename(CHROM = `#CHROM`) %>%
-    mutate(CHROM = str_remove(CHROM, 'chr'))   
-}) %>% Reduce(rbind, .) %>%
-mutate(CHROM = factor(CHROM, unique(CHROM)))
-
-vcf_phased = vcf_phased %>% mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
-    tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
-    mutate_at(c('AD', 'DP', 'OTH'), as.integer)
-
-vcf_phased = vcf_phased %>% mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_')) %>%
-    mutate(GT = get(sample))
-
-vcf_phased = vcf_phased %>% mutate(region = paste0('chr', CHROM, ':', POS, '-', format(POS+1, scientific = F, trim = T)))
-
-# intersect with gene model
-vcf_phased_regions = vcf_phased %>%
-    pull(region) %>%
-    bedr::bedr.sort.region(verbose = F)
-
-overlap_transcript = bedr::bedr(
-    input = list(a = vcf_phased_regions, b = transcript_regions), 
-    method = "intersect", 
-    params = "-loj -sorted",
-    verbose = F
-) %>% filter(V4 != '.')
-
-# annotate SNP by gene
-cat("Annotating SNPs by gene..", '\n')
-
-vcf_phased = vcf_phased %>% left_join(
-    overlap_transcript %>%
-        rename(start = V5, end = V6) %>%
-        mutate(start = as.integer(start), end = as.integer(end)) %>%
-        left_join(
-            gtf %>% filter(biotype == 'transcript') %>% distinct(start, end, `.keep_all` = TRUE) %>%
-            mutate(gene = str_extract(info, '(?<=gene_name \\").*(?=\\";)')) %>%
-            select(start, end, gene),
-            by = c('start', 'end')
+#' @param exp_mat scaled expression matrix
+armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, verbose = TRUE) {
+    
+    #### 1. Build expression tree ####
+    
+    if (verbose) {
+        display('Building expression tree ..')
+    }
+    
+    tree = calc_cluster_tree(count_mat, cell_annot)
+    
+    # internal nodes
+    nodes = get_internal_nodes(as.dendrogram(tree), '0', data.frame())
+    
+    # add terminal modes
+    nodes = nodes %>% rbind(
+        data.frame(
+            node = cell_annot %>% filter(group != 'ref') %>% pull(cell_type) %>% unique
         ) %>%
-    arrange(index, gene) %>%
-    distinct(index, `.keep_all` = T),
-    by = c('region' = 'index')
-) %>% rename(gene_start = start, gene_end = end)
+        mutate(cluster = node)
+    )
+    
+    # convert to list
+    nodes = nodes %>%
+        group_by(node) %>%
+        summarise(
+            members = list(cluster)
+        ) %>%
+        {setNames(.$members, .$node)} %>%
+        lapply(function(members) {
 
+            node = list(
+                members = members,
+                cells = cell_annot %>% filter(cell_type %in% members) %>% pull(cell)
+            ) %>%
+            inset('size', length(.$cells))
 
-# add annotation to cell counts and pseudobulk
-cat('Aggregating into pseudobulk..', '\n')
+            return(node)
+        })
+    
+    nodes = lapply(names(nodes), function(n) {nodes[[n]] %>% inset('label', n)}) %>% setNames(names(nodes))
+    
+    nodes = nodes %>% extract(map(., 'size') > 300)
+    
+    #### 2. Run pseudobulk HMM ####
+    
+    if (verbose) {
+        display('Running HMMs ..')
+    }
+            
+    bulk_all = mclapply(
+            nodes,
+            mc.cores = ncores,
+            function(node) {
 
-df = df %>% left_join(vcf_phased %>% select(snp_id, gene, gene_start, gene_end, GT), by = 'snp_id') 
-df = df %>% mutate(CHROM = factor(CHROM, unique(CHROM)))
+                bulk = get_bulk(
+                    count_mat = count_mat[,node$cells],
+                    df = df %>% filter(cell %in% node$cells),
+                    lambdas_ref = lambdas_ref,
+                    gtf_transcript = gtf_transcript
+                ) %>%
+                mutate(node = node$label) %>%
+                analyze_bulk_gpois(t = t, verbose = TRUE)
 
-pseudobulk = df %>% distinct(snp_index, .keep_all = TRUE) %>% 
-    mutate(CHROM = factor(CHROM, unique(CHROM))) %>%
-    select(-cell, -AD, -DP, -AR) %>% 
-    rename(AD = AD_all, DP = DP_all, OTH = OTH_all, AR = AR_all) %>%
-    arrange(CHROM, POS) %>%
-    mutate(snp_index = 1:n())
+                return(bulk)
+        }) %>%
+        bind_rows() %>%
+        arrange(CHROM, POS) %>%
+        mutate(snp_id = factor(snp_id, unique(snp_id))) %>%
+        mutate(snp_index = as.integer(snp_id)) %>%
+        arrange(node)
+    
+    # plot HMMs
+    options(warn = -1)
+    plot_list = bulk_all %>%
+        split(.$node) %>%
+        lapply(
+            function(node_bulk) {
+                node = unique(node_bulk$node)
 
-# plot SNP densities
-D = vcf_phased %>% 
-    mutate(genotype = ifelse(GT == '1|1', '1/1', '0/1')) %>%
-    count(CHROM, genotype) %>%
-    dcast(CHROM ~ genotype) %>%
-    mutate(total = `0/1` + `1/1`) %>%
-    left_join(chr_lengths) %>%
-    mutate(
-        het = `0/1`/CHROM_SIZE * 1e6,
-        hom = `1/1`/CHROM_SIZE * 1e6
-    ) %>%
-    melt(
-        measure.vars = c('het', 'hom'),
-        variable.name = 'genotype',
-        value.name = 'snp_density'
-    ) %>%
-    mutate(CHROM = factor(CHROM, unique(CHROM)))
+                p = plot_psbulk(node_bulk) + 
+                    theme(
+                        title = element_text(size = 8),
+                        axis.text.x = element_blank(),
+                        axis.title = element_blank()
+                    ) +
+                    ggtitle(paste0(node, '(n=', nodes[[node]]$size, ')', ': ', paste0(nodes[[node]]$members, collapse = ', ')))
 
-p = ggplot(
-        D,
-        aes(x = CHROM, y = snp_density, fill = genotype)
-    ) +
-    geom_col() +
-    theme_bw() +
-    ylab('SNPs/Mb')
-
-ggsave(glue('{args$out}/snp_density_{sample}.png'), p, width = 7, height = 3, dpi = 200)
-
-# plot phased BAF
-D = pseudobulk %>%
-    filter(DP >= 20) %>%
-    filter(AR > 0.1 & AR < 0.9) %>%
-    filter(!is.na(GT)) %>%
-    mutate(CHROM = factor(CHROM, unique(CHROM))) %>%
-    arrange(CHROM, POS) %>%
-    mutate(snp_index = 1:n()) 
-
-p = ggplot(
-    D,
-    aes(x = snp_index, y = AR, color = GT)
-) +
-geom_point(size = 1, alpha = 0.5) +
-theme_classic() +
-theme(
-    legend.position = 'none'
-) +
-facet_wrap(~CHROM, nrow = 3, scale = 'free_x') 
-
-ggsave(glue('{args$out}/BAF_{sample}.png'), p, width = 12, height = 5, dpi = 300)
-
-######## All cell HMM #########
-cat('Running HMM on all cells', '\n')
-Obs = pseudobulk %>%
-    filter(DP >= 10) %>%
-    filter(GT %in% c('1|0', '0|1')) %>%
-    mutate(pBAF = ifelse(GT == '1|0', AR, 1-AR)) %>%
-    mutate(pAD = ifelse(GT == '1|0', AD, DP - AD)) %>%
-    mutate(CHROM = factor(CHROM, unique(CHROM))) %>%
-    arrange(CHROM, POS) %>%
-    group_by(CHROM) %>%
-    mutate(snp_index = 1:n()) %>%
-    ungroup
-
-# states
-N = c("theta_up", "neu", "theta_down")
-
-# probabilty to stay in the same state
-p_0 = 1-1e-5
-# probability of phase switch
-p_s = 0.1
-
-# transition matrix
-A <- matrix(
-    c(p_0 * (1-p_s), 1 - p_0, p_0 * p_s, 
-     (1-p_0)/2, p_0, (1-p_0)/2,
-     p_0 * p_s, 1-p_0, p_0 * (1 - p_s)),
-    ncol = length(N),
-    byrow = TRUE
-)
-
-# intitial probabilities
-prior = rep(1/length(N), length(N))
-
-Obs = Obs %>% 
-    group_by(CHROM) %>%
-    mutate(
-        state = HiddenMarkov::Viterbi(HiddenMarkov::dthmm(
-            x = pAD, 
-            Pi = A, 
-            delta = prior, 
-            distn = "bbinom",
-            pm = list(alpha=c(10,10,6), beta=c(6,10,10)),
-            pn = list(size = DP),
-            discrete=TRUE))
-    ) %>%
-    mutate(state = c('1' = 'theta_up', '2' = 'neutral', '3' = 'theta_down')[state])
-
-# plot result
-p1 = ggplot(
-        Obs %>% filter(DP >= 10) %>% mutate(cut_2 = 'All'),
-        aes(x = snp_index, y = AR, color = GT)
-    ) +
-    geom_point(
-        size = 0.5, alpha = 0.5
-    ) +
-    theme_classic() +
-    theme(
-        legend.position = 'none',
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.text.x = element_text(size = 6)
-    ) +
-    facet_grid(cut_2~CHROM, scale = 'free_x', space = 'free_x')
-
-p2 = ggplot(
-        Obs %>% filter(DP >= 10) %>% mutate(cut_2 = 'All'),
-        aes(x = snp_index, y = pBAF, color = state)
-    ) +
-    geom_point(
-        size = 0.5, alpha = 0.5
-    ) +
-    theme_classic() +
-    theme(
-        legend.position = 'none',
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.text.x = element_text(size = 6)
-    ) +
-    facet_grid(cut_2~CHROM, scale = 'free_x', space = 'free_x') +
-    scale_color_manual(values = c('gray', 'red', 'darkred'))
-
-# ggsave(glue('{args$out}/HMM_all_{sample}.png'), p, width = 12, height = 3.5, dpi = 300)
-
-######## Clustering #########
-df = df %>% 
-    select(-any_of('GT_MAF')) %>%
-    left_join(
-    pseudobulk %>%
-    filter(GT %in% c('1|0', '0|1')) %>%
-    filter(DP >= 10) %>%
-    mutate(GT_MAF = ifelse(AR >= 0.5, '1|0', '0|1')) %>%
-    select(snp_id, GT_MAF),
-    by = "snp_id"
-) %>%
-mutate(MAF = ifelse(GT_MAF == '1|0', AR, 1-AR))
-
-D = df %>%
-    filter(!is.na(MAF)) %>%
-    filter(DP_all >= 30) %>%
-    group_by(CHROM) %>%
-    mutate(
-        snp_index = as.integer(factor(snp_id, unique(snp_id)))
-    ) %>%
-    ungroup() %>%
-    mutate(cell = factor(cell, unique(cell)))
-
-mat = df %>% filter(!is.na(MAF)) %>%
-    filter(DP_all >= 30) %>%
-    reshape2::dcast(snp_id ~ cell, value.var = 'MAF') %>%
-    tibble::column_to_rownames('snp_id')
-
-mat.smooth = apply(mat, 2, caTools::runmean, k = 100)
-
-row.names(mat.smooth) = row.names(mat)
-
-D_smooth = mat.smooth %>% reshape2::melt() %>%
-    setNames(c('snp_id', 'cell', 'MAF')) %>%
-    mutate(snp_id = as.character(snp_id), cell = as.character(cell)) %>%
-    filter(!is.na(MAF)) %>% 
-    left_join(
-        D %>% distinct(snp_id, CHROM, snp_index),
-        by = "snp_id"
+                return(p)
+            }
+        )
+    options(warn = 0)
+    
+    
+    #### 3. Find consensus CNVs ####
+    
+    if (verbose) {
+        display('Finding consensus CNVs ..')
+    }
+    
+    segs_all = bulk_all %>% 
+        filter(cnv_state != 'neu') %>%
+        split(.$node) %>%
+        mclapply(
+            mc.cores = ncores,
+            function(bulk_node) {
+                node = unique(bulk_node$node)
+                bulk_node %>% retest_cnv() %>% mutate(node = node)
+            }
+        ) %>%
+        bind_rows()
+        
+    segs_consensus = get_segs_consensus(segs_all) 
+    
+    res = list(
+        'tree' = tree,
+        'nodes' = nodes,
+        'bulk_all' = bulk_all,
+        'plot_list' = plot_list,
+        'segs_all' = segs_all,
+        'G' = G,
+        'segs_consensus' = segs_consensus
+    )
+    
+    return(res)
+    
+    #### 4. Per-cell CNV evaluations ####
+    
+    if (verbose) {
+        display('Calculating per-cell CNV posteriors ..')
+    }
+    
+    priors = list(
+        'amp' = c('11' = 1/2, '20' = 0, '10' = 0, '21' = 1/4, '31' = 1/4, '22' = 0, '00' = 0),
+        'del' = c('11' = 1/2, '20' = 0, '10' = 0, '21' = 0, '31' = 0, '22' = 0, '00' = 0),
+        'loh' = c('11' = 1/2, '20' = 1/2, '10' = 0, '21' = 0, '31' = 0, '22' = 0, '00' = 0),
+        'bamp' = c('11' = 1/2, '20' = 0, '10' = 0, '21' = 0, '31' = 0, '22' = 1/2, '00' = 0),
+        'bdel' = c('11' = 1/2, '20' = 0, '10' = 0, '21' = 0, '31' = 0, '22' = 0, '00' = 1/2)
     )
 
-dist_mat_file = glue('{args$out}/dist_mat_{sample}.tsv')
-
-if (file.exists(dist_mat_file)) {
-    cat('Using existing distance matrix..', '\n')
-    d = fread(dist_mat_file)
-    d = as.dist(as.matrix(d))
-} else {
-    cat('Computing distance matrix..', '\n')
-    d = amap::Dist(t(mat.smooth), nbproc = 20)
-    fwrite(as.matrix(d), dist_mat_file, sep = '\t')
+    pi = lapply(priors, log)
+    
+    exp_post = exp_post %>% 
+        rowwise() %>%
+        mutate(
+            l = matrixStats::logSumExp(c(l11 + pi[[cnv_state]]['11'], l10 + pi[[cnv_state]]['10'], l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])),
+            p_amp = exp(matrixStats::logSumExp(c(l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])) - l),
+            p_amp_mul = exp(l31 + pi[[cnv_state]]['31'] - l),
+            p_amp_sin = exp(l21 + pi[[cnv_state]]['21'] - l),
+            p_neu = exp(l11 + pi[[cnv_state]]['11'] - l),
+            p_del = exp(l10 + pi[[cnv_state]]['10'] - l),
+            l_amp = matrixStats::logSumExp(c(l21 + log(0.5), l31 + log(0.5))),
+            l_del = l10,
+            l_n = l11,
+            l_t = ifelse(cnv_state == 'amp', l_amp, l_del)
+        ) %>%
+        ungroup()
+    
+    # alele posteriors
+    snp_seg = bulk_all %>%
+        filter(!is.na(pAD)) %>%
+        mutate(haplo = case_when(
+            str_detect(state, 'up') ~ 'major',
+            str_detect(state, 'down') ~ 'minor',
+            T ~ ifelse(pBAF > 0.5, 'major', 'minor')
+        )) %>%
+        select(snp_id, snp_index, node, seg, haplo) %>%
+        inner_join(
+            segs_consensus,
+            by = c('node', 'seg')
+        )
+    
+    allele_sc = df %>%
+        mutate(pAD = ifelse(GT == '1|0', AD, DP - AD)) %>%
+        select(-snp_index) %>% 
+        inner_join(
+            snp_seg %>% select(snp_id, snp_index, haplo, seg = seg_cons, cnv_state),
+            by = c('snp_id')
+        ) %>%
+        mutate(
+            major_count = ifelse(haplo == 'major', pAD, DP - pAD),
+            minor_count = DP - major_count,
+            MAF = major_count/DP
+        ) %>%
+        group_by(cell, CHROM) %>% 
+        arrange(cell, CHROM, POS) %>%
+        mutate(
+            n_chrom_snp = n(),
+            inter_snp_dist = ifelse(n_chrom_snp > 1, c(NA, POS[2:length(POS)] - POS[1:(length(POS)-1)]), NA)
+        ) %>%
+        ungroup() %>%
+        filter(inter_snp_dist > 250 | is.na(inter_snp_dist))
+    
+    allele_post = allele_sc %>%
+        group_by(cell, seg, cnv_state) %>%
+        summarise(
+            major = sum(major_count),
+            minor = sum(minor_count),
+            total = major + minor,
+            MAF = major/total,
+            .groups = 'drop'
+        ) %>%
+        rowwise() %>%
+        mutate(
+            l11 = dbinom(major, total, p = 0.5, log = TRUE),
+            l10 = dbinom(major, total, p = 0.9, log = TRUE),
+            l21 = dbinom(major, total, p = 0.66, log = TRUE),
+            l31 = dbinom(major, total, p = 0.75, log = TRUE),
+            l = matrixStats::logSumExp(c(l11 + pi[[cnv_state]]['11'], l10 + pi[[cnv_state]]['10'], l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])),
+            p_amp = exp(matrixStats::logSumExp(c(l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])) - l),
+            p_amp_mul = exp(l31 + pi[[cnv_state]]['31'] - l),
+            p_amp_sin = exp(l21 + pi[[cnv_state]]['21'] - l),
+            p_neu = exp(l11 + pi[[cnv_state]]['11'] - l),
+            p_del = exp(l10 + pi[[cnv_state]]['10'] - l),
+            p_imbalance = exp(matrixStats::logSumExp(c(l10 + pi[[cnv_state]]['10'], l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])) - l),
+            l_amp = matrixStats::logSumExp(c(l21 + log(0.5), l31 + log(0.5))),
+            l_del = l10,
+            l_n = l11,
+            l_t = ifelse(cnv_state == 'amp', l_amp, l_del)
+        ) %>%
+        ungroup()
+    
+    # joint posteriors
+    joint_post = exp_post %>%
+        rename(l_n_exp = l_n, l_t_exp = l_t, l_exp = l) %>%
+        full_join(
+            allele_post %>% select(
+                cell, seg, l_n_ar = l_n, l_t_ar = l_t, l_ar = l,
+                n_snp = total
+            ),
+            c("cell", "seg")
+        ) %>%
+        mutate(cnv_state = tidyr::replace_na(cnv_state, 'loh')) %>%
+        mutate_at(
+            c('l_n_ar', 'l_t_ar', 'l_n_exp', 'l_t_exp', 'l_exp', 'l_ar'),
+            function(x) tidyr::replace_na(x, 0)
+        ) %>%
+        rowwise() %>%
+        mutate(
+            l_n = l_n_exp + l_n_ar,
+            l_t = l_t_exp + l_t_ar,
+            l = matrixStats::logSumExp(c(l_n + log(0.5), l_t + log(0.5))),
+            p_t = exp(l_t + log(0.5) - l),
+            p_t_ar = exp(l_t_ar + log(0.5) - l_ar),
+            p_t_exp = exp(l_t_exp + log(0.5) - l_exp)
+        ) %>%
+        ungroup() %>%
+        left_join(cell_annot, by = 'cell')
+    
+    if (verbose) {
+        display('All done!')
+    }
+    
+    res = list(
+        'tree' = tree,
+        'nodes' = nodes,
+        'bulk_all' = bulk_all,
+        'plot_list' = plot_list,
+        'segs_all' = segs_all,
+        'segs_filtered' = segs_filtered,
+        'graph' = G,
+        'segs_consensus' = segs_consensus,
+        'exp_post' = exp_post,
+        'allele_post' = allele_post,
+        'joint_post' = joint_post
+    )
+    
+    return(res)
 }
 
-d[is.na(d)] <- 0
-d[is.nan(d)] <- 0
-d[is.infinite(d)] <- 0
+get_segs_consensus = function(segs_all) {
+            
+    # resolve overlapping calls by graph
+    V = segs_all %>% mutate(vertex = 1:n(), .before = 'CHROM')
 
-hc <- hclust(d, method="ward.D2")
+    E = segs_all %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                   end = .$seg_end)
+        )} %>%
+        GenomicRanges::findOverlaps(., .) %>%
+        as.data.frame %>%
+        setNames(c('from', 'to')) %>% 
+        filter(from != to)
 
-cluster_cuts = data.frame(
-    sapply(1:5, function(h){cutree(hc, k = h)})
-) %>%
-setNames(str_replace(names(.), 'X', 'cut_')) %>% 
-tibble::rownames_to_column('cell')
+    G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
 
-df = df %>% 
-    left_join(
-        cluster_cuts,
-        by = "cell"
-    )
+    segs_all = segs_all %>% mutate(group = igraph::components(G)$membership)
 
-png(file = glue("{args$out}/clusters_{sample}.png"), width = 800, height = 500)
-plot(hc, hang = -1, cex = 0.1)
-dev.off()
+    segs_consensus = segs_all %>% arrange(CHROM, group, -LLR) %>% distinct(group, `.keep_all` = TRUE) 
+    
+    segs_consensus = fill_neu_segs(segs_consensus)
+    
+    return(segs_consensus)
+}
 
-######## cluster-specific HMM ##########
-pseudobulk_cut2 = df %>%
-    filter(GT %in% c('1|0', '0|1')) %>%
-    group_by(snp_id, cut_2) %>%
-    summarise(
-        AD = sum(AD),
-        DP = sum(DP),
-        AR = AD/DP,
-        .groups = 'drop'
+
+
+# retrieve neutral segments
+fill_neu_segs = function(segs_consensus) {
+    
+    chrom_sizes = fread('~/ref/hg38.chrom.sizes.txt') %>% 
+            set_names(c('CHROM', 'LEN')) %>%
+            mutate(CHROM = str_remove(CHROM, 'chr')) %>%
+            filter(CHROM %in% 1:22) %>%
+            mutate(CHROM = as.integer(CHROM))
+    
+    segs_consensus = c(
+            segs_consensus %>% {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$seg_start,
+                       end = .$seg_end)
+            )},
+            chrom_sizes %>% {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = 1,
+                       end = .$LEN)
+            )}
+        ) %>%
+        GenomicRanges::disjoin() %>%
+        as.data.frame() %>%
+        select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
+        left_join(
+            segs_consensus,
+            by = c("CHROM", "seg_start", "seg_end")
+        ) %>%
+        mutate(cnv_state = tidyr::replace_na(cnv_state, 'neu')) %>%
+        group_by(CHROM) %>%
+        mutate(seg_cons = paste0(CHROM, '_', 1:n())) %>%
+        ungroup() %>%
+        mutate(CHROM = as.factor(CHROM))
+    
+    return(segs_consensus)
+}
+
+get_exp_post = function(segs_consensus, count_mat, lambdas_ref, priors) {
+
+    gene_seg = GenomicRanges::findOverlaps(
+            gtf_transcript %>% {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$gene_start,
+                       end = .$gene_end)
+            )}, 
+            segs_consensus %>% {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$seg_start,
+                       end = .$seg_end)
+            )}
+        ) %>%
+        as.data.frame() %>%
+        set_names(c('gene_index', 'seg_index')) %>%
+        left_join(
+            gtf_transcript %>% mutate(gene_index = 1:n()),
+            by = c('gene_index')
+        ) %>%
+        mutate(CHROM = as.factor(CHROM)) %>%
+        left_join(
+            segs_consensus %>% mutate(seg_index = 1:n()),
+            by = c('seg_index', 'CHROM')
+        ) %>%
+        distinct(gene, `.keep_all` = TRUE) 
+
+    exp_sc = count_mat %>%
+        as.data.frame() %>%
+        tibble::rownames_to_column('gene') %>% 
+        mutate(lambda_ref = lambdas_ref[gene]) %>%
+        filter(lambda_ref > 0) %>%
+        left_join(
+            gene_seg %>% select(gene, seg = seg_cons, cnv_state),
+            by = "gene"
+        )
+    
+    cells = colnames(count_mat)
+    
+    exp_post = mclapply(
+        cells,
+        mc.cores = ncores,
+        function(cell) {
+            exp_sc[,c('gene', 'lambda_ref', 'seg', 'cnv_state', cell)] %>%
+            set_names(c('gene', 'lambda_ref', 'seg', 'cnv_state', 'Y_obs')) %>%
+            get_exp_likelihoods() %>%
+            mutate(cell = cell)
+        }
     ) %>%
-    left_join(
-        vcf_phased %>% select(CHROM, POS, REF, ALT, snp_id, GT, gene, gene_start, gene_end),
-        by = "snp_id"
-    ) %>%
-    arrange(CHROM, POS) %>%
-    mutate(snp_index = as.integer(factor(snp_id, unique(snp_id)))) %>%
-    ungroup() %>%
-    mutate(pBAF = ifelse(GT == '1|0', AR, 1-AR)) %>%
-    mutate(pAD = ifelse(GT == '1|0', AD, DP - AD))
+    bind_rows() %>%
+    mutate(seg = factor(seg, gtools::mixedsort(unique(seg))))
 
-p3 = ggplot(
-        pseudobulk_cut2 %>% filter(DP >= 10),
-        aes(x = snp_index, y = AR, color = GT)
-    ) +
-    geom_point(size = 1, alpha = 0.5) +
-    theme_classic() +
-    theme(
-        legend.position = 'none',
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.text.x = element_text(size = 6)
-    ) +
-    facet_grid(cut_2~CHROM, scale = 'free_x', space = 'free_x') 
-
-# run HMM
-Obs = pseudobulk_cut2 %>%
-    filter(DP >= 10)
-
-Obs = Obs %>% 
-    group_by(CHROM, cut_2) %>%
-    mutate(
-        state = HiddenMarkov::Viterbi(HiddenMarkov::dthmm(
-            x = pAD, 
-            Pi = A, 
-            delta = prior, 
-            distn = "bbinom",
-            pm = list(alpha=c(10,10,6), beta=c(6,10,10)),
-            pn = list(size = DP),
-            discrete=TRUE))
-    ) %>%
-    mutate(state = c('1' = 'theta_up', '2' = 'neutral', '3' = 'theta_down')[state])
-
-p4 = ggplot(
-        Obs %>% filter(DP >= 10),
-        aes(x = snp_index, y = pBAF, color = state)
-    ) +
-    geom_point(
-        size = 0.5, alpha = 0.5
-    ) +
-    theme_classic() +
-    theme(
-        legend.position = 'none',
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.text.x = element_text(size = 6)
-    ) +
-    facet_grid(cut_2~CHROM, scale = 'free_x', space = 'free_x') +
-    scale_color_manual(values = c('gray', 'red', 'darkred'))
-
-## level 3
-pseudobulk_cut3 = df %>%
-    filter(GT %in% c('1|0', '0|1')) %>%
-    rename(cut = cut_3) %>%
-    group_by(snp_id, cut) %>%
-    summarise(
-        AD = sum(AD),
-        DP = sum(DP),
-        AR = AD/DP,
-        .groups = 'drop'
-    ) %>%
-    left_join(
-        vcf_phased %>% select(CHROM, POS, REF, ALT, snp_id, GT, gene, gene_start, gene_end),
-        by = "snp_id"
-    ) %>%
-    arrange(CHROM, POS) %>%
-    mutate(snp_index = as.integer(factor(snp_id, unique(snp_id)))) %>%
-    ungroup() %>%
-    mutate(pBAF = ifelse(GT == '1|0', AR, 1-AR)) %>%
-    mutate(pAD = ifelse(GT == '1|0', AD, DP - AD))
-
-p5 = ggplot(
-        pseudobulk_cut3 %>% filter(DP >= 10),
-        aes(x = snp_index, y = AR, color = GT)
-    ) +
-    geom_point(size = 1, alpha = 0.5) +
-    theme_classic() +
-    theme(
-        legend.position = 'none',
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.text.x = element_text(size = 6)
-    ) +
-    facet_grid(cut~CHROM, scale = 'free_x', space = 'free_x') 
-
-# run HMM
-Obs = pseudobulk_cut3 %>%
-    filter(DP >= 10) %>%
-    group_by(CHROM, cut) %>%
-    mutate(
-        state = HiddenMarkov::Viterbi(HiddenMarkov::dthmm(
-            x = pAD, 
-            Pi = A, 
-            delta = prior, 
-            distn = "bbinom",
-            pm = list(alpha=c(10,10,6), beta=c(6,10,10)),
-            pn = list(size = DP),
-            discrete=TRUE))
-    ) %>%
-    mutate(state = c('1' = 'theta_up', '2' = 'neutral', '3' = 'theta_down')[state])
-
-p6 = ggplot(
-        Obs %>% filter(DP >= 10),
-        aes(x = snp_index, y = pBAF, color = state)
-    ) +
-    geom_point(
-        size = 0.5, alpha = 0.5
-    ) +
-    theme_classic() +
-    theme(
-        legend.position = 'none',
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.text.x = element_text(size = 6)
-    ) +
-    facet_grid(cut~CHROM, scale = 'free_x', space = 'free_x') +
-    scale_color_manual(values = c('gray', 'red', 'darkred'))
-
-panel = p1/p2/p3/p4/p5/p6 + plot_layout(heights = c(1,1,2,2,3,3))
-
-ggsave(glue('{args$out}/BAF_cut2_{sample}.png'), panel, width = 18, height = 15, dpi = 300)
-
-## cell annotations
-cell_annot = readRDS('/home/meisl/neuroblastoma/conos/cell.annotation.rds')
-
-cell_annot = data.frame(
-        cell = names(cell_annot),
-        cell_type = unname(cell_annot)
-    ) %>%
-    filter(str_detect(cell, sample)) %>%
-    mutate(cell = str_remove(cell, paste0(sample, '_')))
-
-df = df %>% left_join(
-    cell_annot,
-    by = "cell"
-) 
-
-p = ggplot(
-    df %>% distinct(cell, `.keep_all` = TRUE) %>%
-        count(cut_2, cell_type) %>%
-        group_by(cut_2) %>%
-        mutate(prop = n/sum(n)) %>%
-        ungroup,
-    aes(x = cell_type, y = factor(cut_2, c(2, 1)), fill = prop, label = n)
-) +
-geom_tile() +
-geom_text(size = 2) +
-theme_classic() +
-scale_fill_gradient(low = 'white', high = 'red') +
-theme(
-    axis.text.x = element_text(angle = 30, hjust = 1),
-    legend.position = 'top'
-) +
-ylab('Cluster')
-
-ggsave(glue('{args$out}/celltypes_cut2_{sample}.png'), p, width = 6, height = 2.5, dpi = 300)
-
-## save cell-level dataframe
-fwrite(df, glue('{args$out}/df_{sample}.tsv'), sep = '\t')
-
+    pi = lapply(priors, log)
+    
+    exp_post = exp_post %>% 
+        rowwise() %>%
+        mutate(
+            l = matrixStats::logSumExp(
+                c(l11 + pi[[cnv_state]]['11'],
+                  l20 + pi[[cnv_state]]['20'],
+                  l10 + pi[[cnv_state]]['10'],
+                  l21 + pi[[cnv_state]]['21'],
+                  l31 + pi[[cnv_state]]['31'],
+                  l22 + pi[[cnv_state]]['22'],
+                  l00 + pi[[cnv_state]]['00']
+                 )
+            ),
+            p_amp = exp(matrixStats::logSumExp(c(l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])) - l),
+            p_amp_sin = exp(l21 + pi[[cnv_state]]['21'] - l),
+            p_amp_mul = exp(l31 + pi[[cnv_state]]['31'] - l),
+            p_neu = exp(l11 + pi[[cnv_state]]['11'] - l),
+            p_del = exp(l10 + pi[[cnv_state]]['10'] - l),
+            p_loh = exp(l20 + pi[[cnv_state]]['20'] - l),
+            p_bamp = exp(l22 + pi[[cnv_state]]['22'] - l),
+            p_bdel = exp(l22 + pi[[cnv_state]]['00'] - l)
+        ) %>%
+        ungroup()
+    
+    return(exp_post)
+}

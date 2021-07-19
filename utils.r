@@ -1,5 +1,3 @@
-source('~/Armadillo/hmm.r')
-
 ########################### Data processing ############################
 
 process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = TRUE) {
@@ -272,134 +270,57 @@ combine_bulk = function(df, gexp_bulk, min_depth = 2) {
 
 ########################### Analysis ############################
 
-analyze_bulk_gpois = function(Obs, p_0, gamma = 16, bal_cnv = FALSE, prior = NULL, exp_only = FALSE, allele_only = FALSE, update_t = TRUE, verbose = TRUE) {
+analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, exp_only = FALSE, allele_only = FALSE, verbose = TRUE) {
     
     # doesn't work with 0s in the ref
     Obs = Obs %>% filter(lambda_ref != 0 | is.na(gene)) 
+    
+    x = find_diploid(Obs, gamma = gamma, verbose = verbose)
+    
+    Obs = x$bulk
+    bal_cnv = x$bamp
+    
+    fit = Obs %>%
+            filter(!is.na(Y_obs)) %>%
+            filter(logFC < 8 & logFC > -8) %>%
+            filter(diploid) %>%
+            {fit_gpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+            
+    alpha_hat = fit@coef[1]
+    beta_hat = fit@coef[2]
         
-    # define diploid regions
-    Obs = Obs %>% group_by(CHROM) %>%
+    Obs = Obs %>% 
+        group_by(CHROM) %>%
         mutate(state = 
-            run_hmm_mv_inhom_gpois2(
+            run_hmm_mv_inhom_gpois(
                 pAD = pAD,
                 DP = DP, 
                 p_s = p_s,
                 Y_obs = Y_obs, 
                 lambda_ref = lambda_ref, 
-                d_total = 0,
-                p_0 = p_0,
-                allele_only = TRUE
+                d_total = na.omit(unique(d_obs)),
+                phi_neu = 1,
+                phi_del = 2^(-0.25),
+                phi_amp = 2^(0.25),
+                phi_bamp = 2^(0.25),
+                phi_bdel = 2^(-0.25),
+                alpha = alpha_hat,
+                beta = beta_hat,
+                t = t,
+                gamma = gamma,
+                prior = prior,
+                bal_cnv = bal_cnv,
+                exp_only = exp_only,
+                allele_only = allele_only
             )
-        ) %>% ungroup()
-    
-    diploid_regions = find_diploid_regions(Obs)
-    
-    Obs = Obs %>% mutate(cnv_state = ifelse(seg %in% diploid_regions, 'neu', 'aberrant'))
-    
-    if (verbose) {
-        display(glue('diploid regions: {paste0(diploid_regions, collapse = ",")}'))
-    }
-    
-    converge = FALSE
-    
-    i = 0
-    max_iter = 10
-    
-    while (!(converge | i > max_iter)) {
-        
-        i = i + 1
-        
-        # update parameters
-        fit = Obs %>%
-            # exclude outliers
-            filter(logFC < 8 & logFC > -8) %>%
-            filter(!is.na(Y_obs) & cnv_state == 'neu') %>%
-            {fit_gpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+        ) %>% 
+        annot_segs %>%
+        ungroup()
             
-        alpha_hat = fit@coef[1]
-        beta_hat = fit@coef[2]
-        
-        if (i > 1 & update_t) {
-            p_0 = 1 - max(sum(Obs$boundary), 1)/nrow(Obs)
-        }
-        
-        if (verbose) {
-            display(glue('iteration {i}, alpha {signif(alpha_hat, 3)}, beta {signif(beta_hat, 3)}, t {signif(1-p_0, 3)}'))
-        }
-        
-        state_old = Obs$cnv_state
-        
-        if (bal_cnv) {
-            Obs = Obs %>% 
-                group_by(CHROM) %>%
-                mutate(state = 
-                    run_hmm_mv_inhom_gpois2(
-                        pAD = pAD,
-                        DP = DP, 
-                        p_s = p_s,
-                        Y_obs = Y_obs, 
-                        lambda_ref = lambda_ref, 
-                        d_total = na.omit(unique(d_obs)),
-                        phi_neu = 1,
-                        phi_del = 2^(-0.25),
-                        phi_amp = 2^(0.25),
-                        phi_bamp = 2^(0.5),
-                        phi_bdel = 2^(-0.5),
-                        alpha = alpha_hat,
-                        beta = beta_hat,
-                        p_0 = p_0,
-                        gamma = gamma,
-                        prior = prior,
-                        exp_only = exp_only,
-                        allele_only = allele_only
-                    )
-                ) %>% ungroup()
-            
-        } else {
-            Obs = Obs %>% 
-                group_by(CHROM) %>%
-                mutate(state = 
-                    run_hmm_mv_inhom_gpois(
-                        pAD = pAD,
-                        DP = DP, 
-                        p_s = p_s,
-                        Y_obs = Y_obs, 
-                        lambda_ref = lambda_ref, 
-                        d_total = na.omit(unique(d_obs)),
-                        phi_neu = 1,
-                        phi_del = 2^(-0.25),
-                        phi_amp = 2^(0.25),
-                        alpha = alpha_hat,
-                        beta = beta_hat,
-                        p_0 = p_0,
-                        gamma = gamma,
-                        prior = prior,
-                        exp_only = exp_only,
-                        allele_only = allele_only
-                    )
-                ) %>% ungroup()
-            
-        }
-        
-        Obs = Obs %>% 
-            mutate(cnv_state = str_remove(state, '_down|_up')) %>%
-            group_by(CHROM) %>%
-            arrange(CHROM, snp_index) %>%
-            mutate(boundary = c(0, cnv_state[2:length(cnv_state)] != cnv_state[1:(length(cnv_state)-1)])) %>%
-            group_by(CHROM) %>%
-            mutate(seg = paste0(CHROM, '_', cumsum(boundary))) %>%
-            arrange(CHROM) %>%
-            mutate(seg = factor(seg, unique(seg))) %>%
-            ungroup()
-        
-        converge = all(state_old == Obs$cnv_state)
-        
-    }
-    
     if (verbose) {
         display('Finishing')
     }
-        
+            
     Obs = Obs %>% 
         select(-any_of('phi_mle_roll')) %>%
         left_join(
@@ -414,14 +335,41 @@ analyze_bulk_gpois = function(Obs, p_0, gamma = 16, bal_cnv = FALSE, prior = NUL
         by = c('CHROM', 'gene')
     )
     
-    Obs = Obs %>% mutate(alpha = alpha_hat, beta = beta_hat)
+    Obs = Obs %>% mutate(alpha = alpha_hat, beta = beta_hat) 
 
-    
     return(Obs)
 }
 
+annot_segs = function(Obs) {
+    Obs = Obs %>% 
+            mutate(cnv_state = str_remove(state, '_down|_up')) %>%
+            group_by(CHROM) %>%
+            arrange(CHROM, snp_index) %>%
+            mutate(boundary = c(0, cnv_state[2:length(cnv_state)] != cnv_state[1:(length(cnv_state)-1)])) %>%
+            group_by(CHROM) %>%
+            mutate(seg = paste0(CHROM, '_', cumsum(boundary))) %>%
+            arrange(CHROM) %>%
+            mutate(seg = factor(seg, unique(seg))) %>%
+            ungroup()
+}
 
-find_diploid_regions = function(bulk, debug = F) {
+find_diploid = function(bulk, gamma = 20, t = 1e-5, fc_min = 1.25, debug = F, verbose = T) {
+    
+    # define diploid regions
+    bulk = bulk %>% group_by(CHROM) %>%
+        mutate(state = 
+            run_hmm_mv_inhom_gpois(
+                pAD = pAD,
+                DP = DP, 
+                p_s = p_s,
+                Y_obs = Y_obs, 
+                lambda_ref = lambda_ref, 
+                d_total = 0,
+                t = t,
+                allele_only = TRUE
+            )
+        ) %>% ungroup() %>%
+        annot_segs()
     
     bulk_balanced = bulk %>% 
         filter(state == 'neu') %>% 
@@ -440,48 +388,53 @@ find_diploid_regions = function(bulk, debug = F) {
     tests = data.frame()
     
     options(warn = -1)
-    for (i in segs$seg) {
-        for (j in segs$seg) {
-            tests = rbind(
-                tests,
-                data.frame(
-                    i = i,
-                    j = j,
-                    p = ks.test(x = bulk_balanced$FC[bulk_balanced$seg == i], y = bulk_balanced$FC[bulk_balanced$seg == j])$p.value
-                )
-            )
-        }       
-    }
+    tests = t(combn(as.character(segs$seg), 2)) %>% 
+        as.data.frame() %>%
+        set_names(c('i', 'j')) %>%
+        rowwise() %>%
+        mutate(
+            p = ks.test(x = bulk_balanced$FC[bulk_balanced$seg == i],
+                        y = bulk_balanced$FC[bulk_balanced$seg == j])$p.value
+        ) %>%
+        ungroup()
     options(warn = 0)
     
     # build graph
     V = segs
 
-    E = tests %>% 
-        filter(p > 0.01) %>%
-        filter(i > j)
+    E = tests %>% filter(p > 0.01) 
 
     G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
     
     # find confident diploid clique
-    cliques = igraph::largest_cliques(G)
+    cliques = igraph::maximal.cliques(G)
 
     FC = sapply(cliques, function(c) {
         bulk_balanced %>% filter(seg %in% names(c)) %>% {phi_hat_seg(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
     })
-
-    diploid_clique = which.min(FC)
     
-    diploid_segs = names(cliques[[diploid_clique]])
-    
-    if (debug) {
-        options(repr.plot.width = 4, repr.plot.height = 4, repr.plot.res = 200)
-        par(mar=c(0,0,0,0)+.1)
-        plot(G, vertex.size = 30, vertex.label.cex = 1)
-        display(FC)
+    # seperation needs to be clear (2 vs 4 copy)
+    if (max(FC)/min(FC) > fc_min) {
+        if (verbose) {display('quadruploid state found!')}
+        diploid_segs = names(cliques[[which.min(FC)]])
+        bamp = TRUE
+    } else {
+        diploid_segs = segs$seg
+        bamp = FALSE
     }
     
-    return(diploid_segs)
+    if (verbose) {
+        display(glue('diploid regions: {paste0(gtools::mixedsort(diploid_segs), collapse = ",")}'))
+    }
+    
+    bulk = bulk %>% mutate(diploid = seg %in% diploid_segs)
+    
+    if (debug) {
+        return(list('G' = G, 'tests' = tests, 'segs' = segs, 'FC' = FC,
+                    'bulk_balanced' = bulk_balanced, 'bulk' = bulk))
+    }
+    
+    return(list('bulk' = bulk, 'bamp' = bamp))
     
 }
 
@@ -532,19 +485,25 @@ phi_hat_roll = function(y_vec, lambda_vec, depth, h) {
 }
 
 
-phi_mle = function(Y_obs, lambda_ref, d, alpha, beta, lower = 0.2, upper = 10) {
+calc_phi_mle = function(Y_obs, lambda_ref, d, alpha, beta, lower = 0.2, upper = 10) {
+    
+    if (length(Y_obs) == 0) {
+        return(1)
+    }
+        
+    start = max(min(1, upper), lower)
     
     res = stats4::mle(
         minuslogl = function(phi) {
             res = -sum(dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE))
             return(res)
         },
-        start = 1,
+        start = start,
         lower = lower,
         upper = upper
     )
     
-    return(res)
+    return(res@coef)
 }
 
 phi_mle_roll = function(Y_obs, lambda_ref, alpha, beta, d_obs, h) {
@@ -553,7 +512,7 @@ phi_mle_roll = function(Y_obs, lambda_ref, alpha, beta, d_obs, h) {
         1:n,
         function(c) {
             slice = max(c - h - 1, 1):min(c + h, n)
-            phi_mle(Y_obs[slice], lambda_ref[slice], unique(d_obs), alpha, beta)@coef
+            calc_phi_mle(Y_obs[slice], lambda_ref[slice], unique(d_obs), alpha, beta)
         }
     )
 }
@@ -582,12 +541,68 @@ LLR_exp = function(Y_obs, lambda_ref, d, alpha, beta) {
         return(0)
     }
     
-    phi_mle = phi_mle(Y_obs, lambda_ref, d, alpha, beta)@coef
+    phi_mle = calc_phi_mle(Y_obs, lambda_ref, d, alpha, beta)
     l_1 = l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi_mle)
     l_0 = l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = 1)
     return(l_1 - l_0)
 }
 
+retest_cnv = function(bulk) {
+    
+    G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5) %>% log
+    
+    theta_min = 0.08
+    delta_phi_min = 0.15
+    
+    seg_annot = bulk %>% 
+        group_by(CHROM, seg, cnv_state) %>%
+        filter(state != 'neu') %>%
+        summarise(
+            n_genes = length(na.omit(unique(gene))),
+            n_snps = sum(!is.na(pAD)),
+            seg_start = min(POS),
+            seg_end = max(POS),
+            phi_mle = calc_phi_mle(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta)),
+            phi_mle_amp = max(phi_mle, 1 + delta_phi_min),
+            phi_mle_del = min(phi_mle, 1 - delta_phi_min),
+            phi_mle_neu = min(max(phi_mle, 1 - delta_phi_min), 1 + delta_phi_min),
+            l_x_a = l_gpois(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), phi = phi_mle_amp),
+            l_x_d = l_gpois(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), phi = phi_mle_del),
+            l_x_n = l_gpois(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), phi = phi_mle_neu),
+            l_x_cnv = max(l_x_a, l_x_d),
+            theta_mle = calc_theta_mle(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)])$theta_mle,
+            theta_mle_neu = min(theta_mle, theta_min),
+            theta_mle_amp = max(min(theta_mle, 0.25), theta_min),
+            theta_mle_del = max(theta_mle, theta_min),
+            l_y_n = calc_alelle_lik(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta = theta_mle_neu),
+            l_y_d = calc_alelle_lik(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta = theta_mle_del),
+            l_y_a = calc_alelle_lik(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta = theta_mle_amp),
+            l_y_cnv = max(l_y_a, l_y_d),
+            Z = matrixStats::logSumExp(
+                c(G['20'] + l_x_n + l_y_d,
+                 G['10'] + l_x_d + l_y_d,
+                 G['21'] + l_x_a + l_y_a,
+                 G['31'] + l_x_a + l_y_a,
+                 G['22'] + l_x_a + l_y_n, 
+                 G['00'] + l_x_d + l_y_n)),
+            LLR_loh = G['20'] + l_x_n + l_y_d - Z,
+            LLR_amp = matrixStats::logSumExp(c(G['21'] + l_x_a + l_y_a, G['31'] + l_x_a + l_y_a)) - Z,
+            LLR_del = G['10'] + l_x_d + l_y_d - Z,
+            LLR_bamp = G['22'] + l_x_a + l_y_n - Z,
+            LLR_bdel = G['00'] + l_x_d + l_y_n - Z,
+            p_loh = exp(LLR_loh),
+            p_amp = exp(LLR_amp),
+            p_del = exp(LLR_del),
+            p_bamp = exp(LLR_bamp),
+            p_bdel = exp(LLR_bdel),
+#             LLR_allele = l_y_cnv - l_y_n,
+#             LLR_exp = l_x_cnv - l_x_n,
+#             LLR = LLR_exp + LLR_allele,
+            .groups = 'drop'
+        )
+
+    return(seg_annot)
+}
 
 walk_tree = function(den, cut_prefix, cuts, segs_tested, gexp.norm.long, df, p_cutoff = 0.01, min_depth = 10) {
     
@@ -687,13 +702,13 @@ calc_cluster_tree = function(count_mat, cell_annot) {
     
 }
 
-calc_alelle_lik = function(pAD, DP, p_s, theta) {
-    
+calc_allele_lik = function(pAD, DP, p_s, theta, gamma = 20) {
+            
     # states
     states = c("theta_up", "theta_down")
-    
+        
     # transition matrices
-    calc_trans_mat = function(p_s, p_0) {
+    calc_trans_mat = function(p_s) {
         matrix(
             c(1 - p_s, p_s,
               p_s, 1 - p_s),
@@ -704,14 +719,14 @@ calc_alelle_lik = function(pAD, DP, p_s, theta) {
     
     As = lapply(
         p_s,
-        function(p_s) {calc_trans_mat(p_s, p_0)}
+        function(p_s) {calc_trans_mat(p_s)}
     )
     
     # intitial probabilities
     prior = c(0.5, 0.5)
     
-    alpha_up = (0.5 + theta) * 16
-    beta_up = (0.5 - theta) * 16
+    alpha_up = (0.5 + theta) * gamma
+    beta_up = (0.5 - theta) * gamma
     alpha_down = beta_up
     beta_down = alpha_up
         
@@ -727,14 +742,14 @@ calc_alelle_lik = function(pAD, DP, p_s, theta) {
     class(hmm) = 'dthmm.inhom'
         
     solution = HiddenMarkov::Viterbi(hmm)
-        
+                
     return(solution$max.loglik)
 }
 
 calc_theta_mle = function(pAD, DP, p_s, lower = 0, upper = 0.49) {
     res = optim(
         0.25, 
-        function(theta) {-calc_alelle_lik(pAD, DP, p_s, theta)},
+        function(theta) {-calc_allele_lik(pAD, DP, p_s, theta)},
         method = 'L-BFGS-B',
         lower = lower, upper = upper)
     return(list('theta_mle' = res$par, 'l' = -res$value))
@@ -747,12 +762,12 @@ LLR_allele = function(pAD, DP, p_s) {
     }
     
     l_1 = calc_theta_mle(pAD, DP, p_s)$l
-    l_0 = calc_alelle_lik(pAD, DP, p_s, 0)
+    l_0 = calc_allele_lik(pAD, DP, p_s, 0)
     return(l_1 - l_0)
 }
 
 # multi-state model
-get_exp_post = function(exp_sc, pi) {
+get_exp_likelihoods = function(exp_sc) {
     
     depth_obs = sum(exp_sc$Y_obs)
         
@@ -763,16 +778,19 @@ get_exp_post = function(exp_sc, pi) {
     beta = fit@coef[2]
         
     res = exp_sc %>% 
-        filter(cnv_state %in% c('del', 'amp')) %>%
+        filter(cnv_state %in% c('del', 'amp', 'bamp', 'bdel')) %>%
         group_by(seg) %>%
         summarise(
             n = n(),
             cnv_state = unique(cnv_state),
-            phi_mle = phi_mle(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 0.1, upper = 10)@coef,
+            phi_mle = calc_phi_mle(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 0.1, upper = 10),
             l11 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 1),
+            l20 = l11,
             l10 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 0.5),
             l21 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 1.5),
-            l31 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 2)
+            l31 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 2),
+            l22 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 2),
+            l00 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 0.25)
         ) %>%
         mutate(alpha = alpha, beta = beta)
     
@@ -841,383 +859,4 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10) {
     cnv_colors
     
     return(p)
-}
-
-
-########################### Main ############################
-
-#' @param exp_mat scaled expression matrix
-armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, p_0 = 1e-6, verbose = TRUE) {
-    
-    #### 1. Build expression tree ####
-    
-    if (verbose) {
-        display('Building expression tree ..')
-    }
-    
-    tree = calc_cluster_tree(count_mat, cell_annot)
-    
-    # internal nodes
-    nodes = get_internal_nodes(as.dendrogram(tree), '0', data.frame())
-    
-    # add terminal modes
-    nodes = nodes %>% rbind(
-        data.frame(
-            node = cell_annot %>% filter(group != 'ref') %>% pull(cell_type) %>% unique
-        ) %>%
-        mutate(cluster = node)
-    )
-    
-    # convert to list
-    nodes = nodes %>%
-        group_by(node) %>%
-        summarise(
-            members = list(cluster)
-        ) %>%
-        {setNames(.$members, .$node)} %>%
-        lapply(function(members) {
-
-            node = list(
-                members = members,
-                cells = cell_annot %>% filter(cell_type %in% members) %>% pull(cell)
-            ) %>%
-            inset('size', length(.$cells))
-
-            return(node)
-        })
-    
-    nodes = lapply(names(nodes), function(n) {nodes[[n]] %>% inset('label', n)}) %>% setNames(names(nodes))
-    
-    nodes = nodes %>% extract(map(., 'size') > 300)
-    
-    #### 2. Run pseudobulk HMM ####
-    
-    if (verbose) {
-        display('Running HMMs ..')
-    }
-            
-    bulk_all = mclapply(
-            nodes,
-            mc.cores = ncores,
-            function(node) {
-
-                bulk = get_bulk(
-                    count_mat = count_mat[,node$cells],
-                    df = df %>% filter(cell %in% node$cells),
-                    lambdas_ref = lambdas_ref,
-                    gtf_transcript = gtf_transcript
-                ) %>%
-                mutate(node = node$label) %>%
-                analyze_bulk_gpois(p_0 = p_0, verbose = TRUE)
-
-                return(bulk)
-        }) %>%
-        Reduce(rbind, .) %>%
-        arrange(CHROM, POS) %>%
-        mutate(snp_id = factor(snp_id, unique(snp_id))) %>%
-        mutate(snp_index = as.integer(snp_id)) %>%
-        arrange(node)
-    
-    #### 3. Find consensus CNVs ####
-    
-    if (verbose) {
-        display('Finding consensus CNVs ..')
-    }
-        
-    segs_all = bulk_all %>% 
-        filter(cnv_state != 'neu') %>%
-        split(.$node) %>%
-        mclapply(
-            mc.cores = ncores,
-            function(bulk_node) {          
-                bulk_node %>% 
-                filter(cnv_state != 'neu') %>%
-                group_by(CHROM, seg, cnv_state, node) %>%
-                summarise(
-                    n_genes = length(na.omit(unique(gene))),
-                    n_snps = sum(!is.na(pAD)),
-                    seg_start = min(POS),
-                    seg_end = max(POS),
-                    LLR_exp = LLR_exp(
-                        Y_obs[!is.na(Y_obs)],
-                        lambda_ref[!is.na(Y_obs)],
-                        unique(na.omit(d_obs)),
-                        unique(alpha_hat),
-                        unique(beta_hat)
-                    ),
-                    LLR_allele = LLR_allele(
-                        pAD[!is.na(pAD)],
-                        DP[!is.na(pAD)],
-                        p_s[!is.na(pAD)]
-                    ),
-                    LLR = LLR_exp + LLR_allele
-                ) %>%
-                ungroup()       
-            }
-        ) %>%
-        bind_rows()
-    
-    # plot HMMs
-    options(warn = -1)
-    plot_list = bulk_all %>%
-        split(.$node) %>%
-        lapply(
-            function(node_bulk) {
-                node = unique(node_bulk$node)
-
-                p = plot_psbulk(node_bulk) + 
-                    theme(
-                        title = element_text(size = 8),
-                        axis.text.x = element_blank(),
-                        axis.title = element_blank()
-                    ) +
-                    ggtitle(paste0(node, '(n=', nodes[[node]]$size, ')', ': ', paste0(nodes[[node]]$members, collapse = ', ')))
-
-                return(p)
-            }
-        )
-    options(warn = 0)
-        
-    segs_filtered = segs_all %>% filter(LLR_allele > 10)
-    
-    # resolve overlapping calls by graph
-    V = segs_filtered %>% mutate(vertex = 1:n(), .before = 'CHROM')
-
-    E = segs_filtered %>% {GenomicRanges::GRanges(
-            seqnames = .$CHROM,
-            IRanges::IRanges(start = .$seg_start,
-                   end = .$seg_end)
-        )} %>%
-        GenomicRanges::findOverlaps(., .) %>%
-        as.data.frame %>%
-        setNames(c('from', 'to')) %>% 
-        filter(from != to)
-
-    G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
-
-    segs_filtered = segs_filtered %>% mutate(group = igraph::components(G)$membership)
-    
-    segs_consensus = segs_filtered %>% arrange(CHROM, group, -LLR) %>% distinct(group, `.keep_all` = TRUE) 
-    
-    #### 4. Per-cell CNV evaluations ####
-    
-    if (verbose) {
-        display('Calculating per-cell CNV posteriors ..')
-    }
-    
-    chrom_sizes = fread('~/ref/hg38.chrom.sizes.txt') %>% 
-        set_names(c('CHROM', 'LEN')) %>%
-        mutate(CHROM = str_remove(CHROM, 'chr')) %>%
-        filter(CHROM %in% 1:22) %>%
-        mutate(CHROM = as.integer(CHROM))
-
-    segs_consensus = c(
-            segs_consensus %>% {GenomicRanges::GRanges(
-                seqnames = .$CHROM,
-                IRanges::IRanges(start = .$seg_start,
-                       end = .$seg_end)
-            )},
-            chrom_sizes %>% {GenomicRanges::GRanges(
-                seqnames = .$CHROM,
-                IRanges::IRanges(start = 1,
-                       end = .$LEN)
-            )}
-        ) %>%
-        GenomicRanges::disjoin() %>%
-        as.data.frame() %>%
-        select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
-        left_join(
-            segs_consensus,
-            by = c("CHROM", "seg_start", "seg_end")
-        ) %>%
-        mutate(cnv_state = tidyr::replace_na(cnv_state, 'neu')) %>%
-        group_by(CHROM) %>%
-        mutate(seg_cons = paste0(CHROM, '_', 1:n())) %>%
-        ungroup() %>%
-        mutate(CHROM = as.integer(CHROM))
-    
-    # gene expression posteriors
-    gene_seg = GenomicRanges::findOverlaps(
-            gtf_transcript %>% {GenomicRanges::GRanges(
-                seqnames = .$CHROM,
-                IRanges::IRanges(start = .$gene_start,
-                       end = .$gene_end)
-            )}, 
-            segs_consensus %>% {GenomicRanges::GRanges(
-                seqnames = .$CHROM,
-                IRanges::IRanges(start = .$seg_start,
-                       end = .$seg_end)
-            )}
-        ) %>%
-        as.data.frame() %>%
-        set_names(c('gene_index', 'seg_index')) %>%
-        left_join(
-            gtf_transcript %>% mutate(gene_index = 1:n()),
-            by = c('gene_index')
-        ) %>%
-        left_join(
-            segs_consensus %>% mutate(seg_index = 1:n()),
-            by = c('seg_index', 'CHROM')
-        ) %>%
-        distinct(gene, `.keep_all` = TRUE) 
-    
-    cells = colnames(count_mat)
-
-    exp_sc = count_mat %>%
-        as.data.frame() %>%
-        tibble::rownames_to_column('gene') %>% 
-        mutate(lambda_ref = lambdas_ref[gene]) %>%
-        filter(lambda_ref > 0) %>%
-        left_join(
-            gene_seg %>% select(gene, seg = seg_cons, cnv_state),
-            by = "gene"
-        )
-    
-    priors = list(
-        'amp' = c('21' = 1/4, '31' = 1/4, '11' = 1/2, '10' = 0),
-        'del' = c('21' = 0, '31' = 0, '11' = 1/2, '10' = 1/2),
-        'loh' = c('21' = 0, '31' = 0, '11' = 1/2, '10' = 1/2),
-        'neu' = c('21' = 1/6, '31' = 1/6, '11' = 1/3, '10' = 1/3)
-    )
-
-    pi = lapply(priors, log)
-
-    exp_post = mclapply(
-            cells,
-            mc.cores = ncores,
-            function(cell) {
-                exp_sc[,c('gene', 'lambda_ref', 'seg', 'cnv_state', cell)] %>%
-                set_names(c('gene', 'lambda_ref', 'seg', 'cnv_state', 'Y_obs')) %>%
-                get_exp_post(pi) %>%
-                mutate(cell = cell)
-            }
-        ) %>%
-        bind_rows()
-    
-    exp_post = exp_post %>% 
-        rowwise() %>%
-        mutate(
-            l = matrixStats::logSumExp(c(l11 + pi[[cnv_state]]['11'], l10 + pi[[cnv_state]]['10'], l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])),
-            p_amp = exp(matrixStats::logSumExp(c(l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])) - l),
-            p_amp_mul = exp(l31 + pi[[cnv_state]]['31'] - l),
-            p_amp_sin = exp(l21 + pi[[cnv_state]]['21'] - l),
-            p_neu = exp(l11 + pi[[cnv_state]]['11'] - l),
-            p_del = exp(l10 + pi[[cnv_state]]['10'] - l),
-            l_amp = matrixStats::logSumExp(c(l21 + log(0.5), l31 + log(0.5))),
-            l_del = l10,
-            l_n = l11,
-            l_t = ifelse(cnv_state == 'amp', l_amp, l_del)
-        ) %>%
-        ungroup()
-    
-    # alele posteriors
-    snp_seg = bulk_all %>%
-        filter(!is.na(pAD)) %>%
-        mutate(haplo = case_when(
-            str_detect(state, 'up') ~ 'major',
-            str_detect(state, 'down') ~ 'minor',
-            T ~ ifelse(pBAF > 0.5, 'major', 'minor')
-        )) %>%
-        select(snp_id, snp_index, node, seg, haplo) %>%
-        inner_join(
-            segs_consensus,
-            by = c('node', 'seg')
-        )
-    
-    allele_sc = df %>%
-        mutate(pAD = ifelse(GT == '1|0', AD, DP - AD)) %>%
-        select(-snp_index) %>% 
-        inner_join(
-            snp_seg %>% select(snp_id, snp_index, haplo, seg = seg_cons, cnv_state),
-            by = c('snp_id')
-        ) %>%
-        mutate(
-            major_count = ifelse(haplo == 'major', pAD, DP - pAD),
-            minor_count = DP - major_count,
-            MAF = major_count/DP
-        ) %>%
-        group_by(cell, CHROM) %>% 
-        arrange(cell, CHROM, POS) %>%
-        mutate(
-            n_chrom_snp = n(),
-            inter_snp_dist = ifelse(n_chrom_snp > 1, c(NA, POS[2:length(POS)] - POS[1:(length(POS)-1)]), NA)
-        ) %>%
-        ungroup() %>%
-        filter(inter_snp_dist > 250 | is.na(inter_snp_dist))
-    
-    allele_post = allele_sc %>%
-        group_by(cell, seg, cnv_state) %>%
-        summarise(
-            major = sum(major_count),
-            minor = sum(minor_count),
-            total = major + minor,
-            MAF = major/total,
-            .groups = 'drop'
-        ) %>%
-        rowwise() %>%
-        mutate(
-            l11 = dbinom(major, total, p = 0.5, log = TRUE),
-            l10 = dbinom(major, total, p = 0.9, log = TRUE),
-            l21 = dbinom(major, total, p = 0.66, log = TRUE),
-            l31 = dbinom(major, total, p = 0.75, log = TRUE),
-            l = matrixStats::logSumExp(c(l11 + pi[[cnv_state]]['11'], l10 + pi[[cnv_state]]['10'], l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])),
-            p_amp = exp(matrixStats::logSumExp(c(l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])) - l),
-            p_amp_mul = exp(l31 + pi[[cnv_state]]['31'] - l),
-            p_amp_sin = exp(l21 + pi[[cnv_state]]['21'] - l),
-            p_neu = exp(l11 + pi[[cnv_state]]['11'] - l),
-            p_del = exp(l10 + pi[[cnv_state]]['10'] - l),
-            p_imbalance = exp(matrixStats::logSumExp(c(l10 + pi[[cnv_state]]['10'], l21 + pi[[cnv_state]]['21'], l31 + pi[[cnv_state]]['31'])) - l),
-            l_amp = matrixStats::logSumExp(c(l21 + log(0.5), l31 + log(0.5))),
-            l_del = l10,
-            l_n = l11,
-            l_t = ifelse(cnv_state == 'amp', l_amp, l_del)
-        ) %>%
-        ungroup()
-    
-    # joint posteriors
-    joint_post = exp_post %>%
-        rename(l_n_exp = l_n, l_t_exp = l_t, l_exp = l) %>%
-        full_join(
-            allele_post %>% select(
-                cell, seg, l_n_ar = l_n, l_t_ar = l_t, l_ar = l,
-                n_snp = total
-            ),
-            c("cell", "seg")
-        ) %>%
-        mutate(cnv_state = tidyr::replace_na(cnv_state, 'loh')) %>%
-        mutate_at(
-            c('l_n_ar', 'l_t_ar', 'l_n_exp', 'l_t_exp', 'l_exp', 'l_ar'),
-            function(x) tidyr::replace_na(x, 0)
-        ) %>%
-        rowwise() %>%
-        mutate(
-            l_n = l_n_exp + l_n_ar,
-            l_t = l_t_exp + l_t_ar,
-            l = matrixStats::logSumExp(c(l_n + log(0.5), l_t + log(0.5))),
-            p_t = exp(l_t + log(0.5) - l),
-            p_t_ar = exp(l_t_ar + log(0.5) - l_ar),
-            p_t_exp = exp(l_t_exp + log(0.5) - l_exp)
-        ) %>%
-        ungroup() %>%
-        left_join(cell_annot, by = 'cell')
-    
-    if (verbose) {
-        display('All done!')
-    }
-    
-    res = list(
-        'nodes' = nodes,
-        'segs_filtered' = segs_filtered,
-        'segs_all' = segs_all,
-        'segs_consensus' = segs_consensus,
-        'bulk_all' = bulk_all,
-        'tree' = tree,
-        'plot_list' = plot_list,
-        'graph' = G,
-        'joint_post' = joint_post,
-        'exp_post' = exp_post,
-        'allele_post' = allele_post
-    )
-    
-    return(res)
 }
