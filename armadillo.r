@@ -95,7 +95,6 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
         )
     options(warn = 0)
     
-    
     #### 3. Find consensus CNVs ####
     
     if (verbose) {
@@ -103,18 +102,13 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     }
     
     segs_all = bulk_all %>% 
-        filter(cnv_state != 'neu') %>%
-        split(.$node) %>%
-        mclapply(
-            mc.cores = ncores,
-            function(bulk_node) {
-                node = unique(bulk_node$node)
-                bulk_node %>% retest_cnv() %>% mutate(node = node)
-            }
-        ) %>%
-        bind_rows()
+        filter(state != 'neu') %>%
+        distinct(node, CHROM, seg, cnv_state, cnv_state_post, seg_start, seg_end,
+                 theta_mle, phi_mle, p_loh, p_del, p_amp, p_bamp, p_bdel, LLR, LLR_ar)
+    
+    segs_filtered = segs_all %>% filter(!(LLR_ar < 10 & cnv_state %in% c('del', 'amp') & (phi_mle > 2 | phi_mle < 0.5)))
         
-    segs_consensus = get_segs_consensus(segs_all) 
+    segs_consensus = resolve_cnvs(segs_filtered)
     
     res = list(
         'tree' = tree,
@@ -122,7 +116,7 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
         'bulk_all' = bulk_all,
         'plot_list' = plot_list,
         'segs_all' = segs_all,
-        'G' = G,
+        'segs_filtered' = segs_filtered,
         'segs_consensus' = segs_consensus
     )
     
@@ -272,7 +266,7 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     return(res)
 }
 
-get_segs_consensus = function(segs_all) {
+resolve_cnvs = function(segs_all) {
             
     # resolve overlapping calls by graph
     V = segs_all %>% mutate(vertex = 1:n(), .before = 'CHROM')

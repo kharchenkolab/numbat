@@ -270,7 +270,7 @@ combine_bulk = function(df, gexp_bulk, min_depth = 2) {
 
 ########################### Analysis ############################
 
-analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, exp_only = FALSE, allele_only = FALSE, verbose = TRUE) {
+analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, exp_only = FALSE, allele_only = FALSE, retest = TRUE, verbose = TRUE) {
     
     # doesn't work with 0s in the ref
     Obs = Obs %>% filter(lambda_ref != 0 | is.na(gene)) 
@@ -300,8 +300,8 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, 
                 lambda_ref = lambda_ref, 
                 d_total = na.omit(unique(d_obs)),
                 phi_neu = 1,
-                phi_del = 2^(-0.25),
                 phi_amp = 2^(0.25),
+                phi_del = 2^(-0.25),
                 phi_bamp = 2^(0.25),
                 phi_bdel = 2^(-0.25),
                 alpha = alpha_hat,
@@ -316,9 +316,30 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, 
         ) %>% 
         annot_segs %>%
         ungroup()
-            
+    
+    Obs = Obs %>% mutate(alpha = alpha_hat, beta = beta_hat, gamma = gamma)
+    
+    if (retest) {
+        
+        if (verbose) {
+            display('Retesting CNVs..')
+        }
+
+        segs_post = retest_cnv(Obs)
+
+        Obs = Obs %>% 
+            left_join(segs_post, by = c('seg', 'CHROM')) %>%
+            mutate(cnv_state_post = tidyr::replace_na(cnv_state_post, 'neu')) %>%
+            mutate(state_post = ifelse(
+                cnv_state_post %in% c('amp', 'del', 'loh'),
+                paste0(cnv_state_post, '_', str_extract(state, 'up|down')),
+                cnv_state_post
+            ))
+        
+    }
+    
     if (verbose) {
-        display('Finishing')
+        display('Finishing..')
     }
             
     Obs = Obs %>% 
@@ -335,8 +356,6 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, 
         by = c('CHROM', 'gene')
     )
     
-    Obs = Obs %>% mutate(alpha = alpha_hat, beta = beta_hat) 
-
     return(Obs)
 }
 
@@ -547,15 +566,49 @@ LLR_exp = function(Y_obs, lambda_ref, d, alpha, beta) {
     return(l_1 - l_0)
 }
 
+approx_lik_exp = function(Y_obs, lambda_ref, d_obs, alpha, beta, lower, upper, step_size = 0.01) {
+    
+    if (length(Y_obs) == 0) {
+        return(0)
+    }
+    
+    phi_grid = seq(lower, upper, step_size)
+        
+    l_grid = sapply(phi_grid, function(phi) {
+        l_gpois(Y_obs, lambda_ref, d_obs, alpha, beta, phi = phi)
+    })
+    
+    l = matrixStats::logSumExp(l_grid)
+    
+    return(l)
+}
+
+approx_lik_ar = function(pAD, DP, p_s, lower, upper, step_size = 0.01, gamma = 16) {
+    
+    if (length(pAD) == 0) {
+        return(0)
+    }
+    
+    theta_grid = seq(lower, upper, step_size)
+        
+    l_grid = sapply(theta_grid, function(theta) {
+        calc_alelle_lik(pAD, DP, p_s, theta = theta, gamma = gamma)
+    })
+    
+    l = matrixStats::logSumExp(l_grid)
+    
+    return(l)
+}
+
 retest_cnv = function(bulk) {
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5) %>% log
     
-    theta_min = 0.08
+    theta_min = 0.065
     delta_phi_min = 0.15
     
-    seg_annot = bulk %>% 
-        group_by(CHROM, seg, cnv_state) %>%
+    segs_post = bulk %>% 
+        group_by(CHROM, seg) %>%
         filter(state != 'neu') %>%
         summarise(
             n_genes = length(na.omit(unique(gene))),
@@ -563,21 +616,13 @@ retest_cnv = function(bulk) {
             seg_start = min(POS),
             seg_end = max(POS),
             phi_mle = calc_phi_mle(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta)),
-            phi_mle_amp = max(phi_mle, 1 + delta_phi_min),
-            phi_mle_del = min(phi_mle, 1 - delta_phi_min),
-            phi_mle_neu = min(max(phi_mle, 1 - delta_phi_min), 1 + delta_phi_min),
-            l_x_a = l_gpois(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), phi = phi_mle_amp),
-            l_x_d = l_gpois(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), phi = phi_mle_del),
-            l_x_n = l_gpois(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), phi = phi_mle_neu),
-            l_x_cnv = max(l_x_a, l_x_d),
-            theta_mle = calc_theta_mle(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)])$theta_mle,
-            theta_mle_neu = min(theta_mle, theta_min),
-            theta_mle_amp = max(min(theta_mle, 0.25), theta_min),
-            theta_mle_del = max(theta_mle, theta_min),
-            l_y_n = calc_alelle_lik(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta = theta_mle_neu),
-            l_y_d = calc_alelle_lik(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta = theta_mle_del),
-            l_y_a = calc_alelle_lik(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta = theta_mle_amp),
-            l_y_cnv = max(l_y_a, l_y_d),
+            theta_mle = calc_theta_mle(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)]),
+            l_x_n = approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), lower = 1 - delta_phi_min, upper = 1 + delta_phi_min),
+            l_x_a = approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), lower = 1 + delta_phi_min, upper = 5),
+            l_x_d = approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), lower = 0.1, upper = 1 - delta_phi_min),
+            l_y_n = approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), lower = 0, upper = theta_min),
+            l_y_d = approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), lower = theta_min, upper = 0.49),
+            l_y_a = approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), lower = theta_min, upper = 0.375),
             Z = matrixStats::logSumExp(
                 c(G['20'] + l_x_n + l_y_d,
                  G['10'] + l_x_d + l_y_d,
@@ -585,23 +630,22 @@ retest_cnv = function(bulk) {
                  G['31'] + l_x_a + l_y_a,
                  G['22'] + l_x_a + l_y_n, 
                  G['00'] + l_x_d + l_y_n)),
-            LLR_loh = G['20'] + l_x_n + l_y_d - Z,
-            LLR_amp = matrixStats::logSumExp(c(G['21'] + l_x_a + l_y_a, G['31'] + l_x_a + l_y_a)) - Z,
-            LLR_del = G['10'] + l_x_d + l_y_d - Z,
-            LLR_bamp = G['22'] + l_x_a + l_y_n - Z,
-            LLR_bdel = G['00'] + l_x_d + l_y_n - Z,
-            p_loh = exp(LLR_loh),
-            p_amp = exp(LLR_amp),
-            p_del = exp(LLR_del),
-            p_bamp = exp(LLR_bamp),
-            p_bdel = exp(LLR_bdel),
-#             LLR_allele = l_y_cnv - l_y_n,
-#             LLR_exp = l_x_cnv - l_x_n,
-#             LLR = LLR_exp + LLR_allele,
+            p_loh = exp(G['20'] + l_x_n + l_y_d - Z),
+            p_amp = exp(matrixStats::logSumExp(c(G['21'] + l_x_a + l_y_a, G['31'] + l_x_a + l_y_a)) - Z),
+            p_del = exp(G['10'] + l_x_d + l_y_d - Z),
+            p_bamp = exp(G['22'] + l_x_a + l_y_n - Z),
+            p_bdel = exp(G['00'] + l_x_d + l_y_n - Z),
+            LLR_ar = l_y_d - l_y_n,
+            LLR = Z - (l_x_n + l_y_n),
             .groups = 'drop'
-        )
+        ) %>%
+        rowwise() %>%
+        mutate(cnv_state_post = c('loh', 'amp', 'del', 'bamp', 'bdel')[
+            which.max(c(p_loh, p_amp, p_del, p_bamp, p_bdel))
+        ]) %>%
+        ungroup()
 
-    return(seg_annot)
+    return(segs_post)
 }
 
 walk_tree = function(den, cut_prefix, cuts, segs_tested, gexp.norm.long, df, p_cutoff = 0.01, min_depth = 10) {
@@ -747,24 +791,19 @@ calc_allele_lik = function(pAD, DP, p_s, theta, gamma = 20) {
 }
 
 calc_theta_mle = function(pAD, DP, p_s, lower = 0, upper = 0.49) {
+    
+    if(length(pAD) == 0) {
+        return(0)
+    }
+    
     res = optim(
         0.25, 
         function(theta) {-calc_allele_lik(pAD, DP, p_s, theta)},
         method = 'L-BFGS-B',
         lower = lower, upper = upper)
-    return(list('theta_mle' = res$par, 'l' = -res$value))
+    return(res$par)
 }
 
-LLR_allele = function(pAD, DP, p_s) {
-    
-    if (length(pAD) <= 1) {
-        return(0)
-    }
-    
-    l_1 = calc_theta_mle(pAD, DP, p_s)$l
-    l_0 = calc_allele_lik(pAD, DP, p_s, 0)
-    return(l_1 - l_0)
-}
 
 # multi-state model
 get_exp_likelihoods = function(exp_sc) {
@@ -830,7 +869,6 @@ cnv_colors = scale_color_manual(
               "amp" = "darkred", "loh" = "darkgreen", "del" = "darkblue", "neu2" = "gray30")
 )
 
-
 plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10) {
     
     p = ggplot(
@@ -838,7 +876,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10) {
             mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
             mutate(pBAF = ifelse(DP >= min_depth, pBAF, NA)) %>%
             reshape2::melt(measure.vars = c('logFC', 'pBAF')),
-        aes(x = snp_index, y = value, color = state),
+        aes(x = snp_index, y = value, color = state_post),
         na.rm=TRUE
     ) +
     geom_point(size = dot_size, alpha = 0.5, pch = 16) +
@@ -856,7 +894,8 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10) {
         strip.background = element_blank()
     ) +
     facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
-    cnv_colors
+    cnv_colors +
+    guides(color = guide_legend(""))
     
     return(p)
 }
