@@ -290,6 +290,7 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, 
     beta_hat = fit@coef[2]
         
     Obs = Obs %>% 
+        select(-any_of('gamma')) %>%
         group_by(CHROM) %>%
         mutate(state = 
             run_hmm_mv_inhom_gpois(
@@ -618,11 +619,13 @@ retest_cnv = function(bulk) {
             phi_mle = calc_phi_mle(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta)),
             theta_mle = calc_theta_mle(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)]),
             l_x_n = approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), lower = 1 - delta_phi_min, upper = 1 + delta_phi_min),
-            l_x_a = approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), lower = 1 + delta_phi_min, upper = 5),
+            l_x_a = approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), lower = 1 + delta_phi_min, upper = 3),
             l_x_d = approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), lower = 0.1, upper = 1 - delta_phi_min),
             l_y_n = approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), lower = 0, upper = theta_min),
-            l_y_d = approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), lower = theta_min, upper = 0.49),
             l_y_a = approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), lower = theta_min, upper = 0.375),
+            l_y_d = matrixStats::logSumExp(c(l_y_a, 
+                approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), lower = 0.375, upper = 0.499)
+            )),
             Z = matrixStats::logSumExp(
                 c(G['20'] + l_x_n + l_y_d,
                  G['10'] + l_x_d + l_y_d,
@@ -801,8 +804,11 @@ calc_theta_mle = function(pAD, DP, p_s, lower = 0, upper = 0.49) {
         function(theta) {-calc_allele_lik(pAD, DP, p_s, theta)},
         method = 'L-BFGS-B',
         lower = lower, upper = upper)
+    
     return(res$par)
 }
+
+
 
 
 # multi-state model
@@ -828,11 +834,18 @@ get_exp_likelihoods = function(exp_sc) {
             l10 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 0.5),
             l21 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 1.5),
             l31 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 2),
-            l22 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 2),
-            l00 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 0.25)
+            l22 = l31,
+            l00 = l10,
+#             l11 = approx_lik_exp(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 0.75, upper = 1.25),
+#             l20 = l11,
+#             l10 = approx_lik_exp(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 0.1, upper = 0.75),
+#             l21 = approx_lik_exp(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 1.25, upper = 1.75),
+#             l31 = approx_lik_exp(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 1.75, upper = 3.5),
+#             l22 = l31,
+#             l00 = l10
         ) %>%
         mutate(alpha = alpha, beta = beta)
-    
+        
     return(res)
 }
 

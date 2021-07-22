@@ -159,6 +159,28 @@ forward.inhom = function (obj, ...) {
     return(LL)
 }
 
+# calc_alelle_lik = function (pAD, DP, p_s, theta, gamma = 16) {
+#     states = c("theta_up", "theta_down")
+#     calc_trans_mat = function(p_s) {
+#         matrix(c(1 - p_s, p_s, p_s, 1 - p_s), ncol = 2, byrow = TRUE)
+#     }
+#     As = lapply(p_s, function(p_s) {
+#         calc_trans_mat(p_s)
+#     })
+#     prior = c(0.5, 0.5)
+#     alpha_up = (0.5 + theta) * gamma
+#     beta_up = (0.5 - theta) * gamma
+#     alpha_down = beta_up
+#     beta_down = alpha_up
+#     hmm = HiddenMarkov::dthmm(x = pAD, Pi = As, delta = prior, 
+#         distn = "bbinom", pm = list(alpha = c(alpha_up, alpha_down), 
+#             beta = c(beta_up, beta_down)), pn = list(size = DP), 
+#         discrete = TRUE)
+#     class(hmm) = "dthmm.inhom"
+#     solution = HiddenMarkov::Viterbi(hmm)
+#     return(solution$max.loglik)
+# }
+                             
 calc_alelle_lik = function (pAD, DP, p_s, theta, gamma = 16) {
     states = c("theta_up", "theta_down")
     calc_trans_mat = function(p_s) {
@@ -177,8 +199,8 @@ calc_alelle_lik = function (pAD, DP, p_s, theta, gamma = 16) {
             beta = c(beta_up, beta_down)), pn = list(size = DP), 
         discrete = TRUE)
     class(hmm) = "dthmm.inhom"
-    LL = HiddenMarkov::Viterbi(hmm)
-    return(solution$max.loglik)
+    LL = forward.inhom(hmm)
+    return(LL)
 }
 
 
@@ -274,40 +296,108 @@ run_hmm_mv = function(pAD, DP, exp, sigma, mu_neu, mu_del, mu_gain, p_0 = 1-1e-5
 }
 
 ############ time inhomogenous multivariate HMM ############
-Viterbi.dthmm.mv.inhom.gpois <- function (obj, ...){
+# Viterbi.dthmm.mv.inhom.gpois <- function (obj, ...){
 
-    x <- obj$x
-    p_x <- HiddenMarkov:::makedensity(obj$distn)
+#     x <- obj$x
+#     p_x <- HiddenMarkov:::makedensity(obj$distn)
     
-    y <- obj$y
-    p_y <- HiddenMarkov:::makedensity(obj$distn_y)
+#     y <- obj$y
+#     p_y <- HiddenMarkov:::makedensity(obj$distn_y)
+
+#     n <- length(x)
+#     m <- nrow(obj$Pi[[1]])
+#     nu <- matrix(NA, nrow = n, ncol = m)
+#     mu <- matrix(NA, nrow = n, ncol = m + 1)
+#     y <- rep(NA, n)
+    
+    
+#     nu[1, ] = log(obj$delta)
+    
+        
+#     if (!is.na(x[1])) {
+#         nu[1, ] = nu[1, ] + p_x(x=x[1], obj$pm, HiddenMarkov:::getj(obj$pn, 1), log = TRUE)
+#     }
+    
+#     if (!is.na(y[1])) {
+
+#         nu[1, ] = nu[1, ] + p_y(
+#             x = y[1],
+#             list('shape' = obj$alpha),
+#             list('rate' = obj$beta/(obj$phi * obj$d * obj$lambda_star[1])),
+#             log = TRUE
+#         )
+        
+#     }
+            
+#     logPi <- lapply(obj$Pi, log)
+
+#     for (i in 2:n) {
+#         matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
+        
+#         nu[i, ] = apply(matrixnu + logPi[[i]], 2, max)
+            
+#         if (!is.na(x[i])) {
+#             nu[i, ] = nu[i, ] + p_x(x=x[i], obj$pm, HiddenMarkov:::getj(obj$pn, i), log = TRUE)
+#         }
+        
+#         if (!is.na(y[i])) {
+#             nu[i, ] = nu[i, ] + p_y(
+#                 x = y[i],
+#                 list('shape' = obj$alpha),
+#                 list('rate' = obj$beta/(obj$phi * obj$d * obj$lambda_star[i])),
+#                 log = TRUE
+#             )
+            
+#         }
+#     }
+    
+#     display(tail(nu, 50))
+    
+# #     if (any(nu[n, ] == -Inf)) {
+# #         stop("Problems With Underflow")
+# #     }
+# #     display(head(mu, 100))
+              
+#     y[n] <- which.max(nu[n, ])
+
+#     for (i in seq(n - 1, 1, -1)) y[i] <- which.max(logPi[[i+1]][, y[i+1]] + nu[i, ])
+        
+#     return(y)
+# }
+Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
+
+    x <- object$x
+    dfunc <- HiddenMarkov:::makedensity(object$distn)
+    
+    x2 <- object$x2
+    dfunc2 <- HiddenMarkov:::makedensity(object$distn2)
 
     n <- length(x)
-    m <- nrow(obj$Pi[[1]])
+    m <- nrow(object$Pi[[1]])
     nu <- matrix(NA, nrow = n, ncol = m)
     mu <- matrix(NA, nrow = n, ncol = m + 1)
     y <- rep(NA, n)
     
     
-    nu[1, ] = log(obj$delta)
+    nu[1, ] = log(object$delta)
     
         
     if (!is.na(x[1])) {
-        nu[1, ] = nu[1, ] + p_x(x=x[1], obj$pm, HiddenMarkov:::getj(obj$pn, 1), log = TRUE)
+        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, HiddenMarkov:::getj(object$pn, 1), log = TRUE)
     }
     
-    if (!is.na(y[1])) {
+    if (!is.na(x2[1])) {
 
-        nu[1, ] = nu[1, ] + p_y(
-            x = y[1],
-            list('shape' = obj$alpha),
-            list('rate' = obj$beta/(obj$phi * obj$d * obj$lambda_star[1])),
+        nu[1, ] = nu[1, ] + dfunc2(
+            x = x2[1],
+            list('shape' = object$alpha),
+            list('rate' = object$beta/(object$phi * object$d * object$lambda_star[1])),
             log = TRUE
         )
         
     }
             
-    logPi <- lapply(obj$Pi, log)
+    logPi <- lapply(object$Pi, log)
 
     for (i in 2:n) {
         matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
@@ -315,14 +405,14 @@ Viterbi.dthmm.mv.inhom.gpois <- function (obj, ...){
         nu[i, ] = apply(matrixnu + logPi[[i]], 2, max)
             
         if (!is.na(x[i])) {
-            nu[i, ] = nu[i, ] + p_x(x=x[i], obj$pm, HiddenMarkov:::getj(obj$pn, i), log = TRUE)
+            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, HiddenMarkov:::getj(object$pn, i), log = TRUE)
         }
         
-        if (!is.na(y[i])) {
-            nu[i, ] = nu[i, ] + p_y(
-                x = y[i],
-                list('shape' = obj$alpha),
-                list('rate' = obj$beta/(obj$phi * obj$d * obj$lambda_star[i])),
+        if (!is.na(x2[i])) {
+            nu[i, ] = nu[i, ] + dfunc2(
+                x = x2[i],
+                list('shape' = object$alpha),
+                list('rate' = object$beta/(object$phi * object$d * object$lambda_star[i])),
                 log = TRUE
             )
             
@@ -340,6 +430,7 @@ Viterbi.dthmm.mv.inhom.gpois <- function (obj, ...){
         
     return(y)
 }
+
 
 get_trans_probs = function(t, w) {
     
@@ -490,8 +581,8 @@ run_hmm_mv_inhom_gpois = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, bal_
         discrete = TRUE
     )
     
-    hmm$distn_y = 'gpois'
-    hmm$y = Y_obs
+    hmm$distn2 = 'gpois'
+    hmm$x2 = Y_obs
     hmm$phi = c(phi_neu, rep(phi_del, 2), rep(phi_neu, 2), rep(phi_amp, 2), phi_bamp, phi_bdel)
     hmm$alpha = alpha
     hmm$beta = beta
@@ -503,7 +594,7 @@ run_hmm_mv_inhom_gpois = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, bal_
     if (debug) {
         return(hmm)
     }
-
+    
     return(states[as.character(HiddenMarkov::Viterbi(hmm))])
 }
 
