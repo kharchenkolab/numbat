@@ -1,11 +1,42 @@
 ########################### Data processing ############################
 
+# take in a reference matrix, decide which one is best 
+choose_ref = function(count_mat_obs, count_mat_ref, gtf_transcript, debug = F) {
+    
+    errs = apply(count_mat_ref, 2, function(lambdas_ref) {
+            
+            genes_common = gtf_transcript$gene %>% 
+                intersect(rownames(count_mat_obs)) %>%
+                intersect(names(lambdas_ref)[lambdas_ref > 0])
+
+            Y_obs = rowSums(count_mat_obs)[genes_common]
+            lambdas_ref = lambdas_ref[genes_common]
+
+            tibble(
+                l_total = sum(dpois(x = Y_obs, lambda = lambdas_ref * sum(Y_obs), log = TRUE)),
+                mse = mean((log2((Y_obs/sum(Y_obs) + 1e-6)/lambdas_ref))^2),
+                n = length(genes_common)
+            ) %>%
+            mutate(l_bar = l_total/n)
+
+        }) %>% 
+        bind_rows() %>%
+        mutate(ref = colnames(count_mat_ref))
+    
+    if (debug) {
+        return(errs)
+    }
+
+    return(errs$ref[which.min(-errs$l_bar)])
+    
+}
+
 process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = TRUE) {
     
     genes_annotated = gtf_transcript$gene %>% 
-        intersect(rownames(count_mat)) %>%
+        intersect(rownames(count_mat_obs)) %>%
         intersect(names(lambdas_ref))
-
+    
     count_mat_obs = count_mat_obs[genes_annotated,]
     lambdas_ref = lambdas_ref[genes_annotated]
 
@@ -35,7 +66,7 @@ process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = 
         mutate(lambda_ref = lambdas_ref[gene]) %>%
         mutate(d_obs = depth_obs) %>%
         left_join(gtf_transcript, by = "gene") 
-
+    
     # annotate using GTF
     bulk_obs = bulk_obs %>%
         mutate(gene = droplevels(factor(gene, gtf_transcript$gene))) %>%
@@ -182,15 +213,17 @@ preprocess_data = function(
     return(list('df_obs' = df_obs, 'df_ref' = df_ref))
 }
 
-get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 2) {
+get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 2, verbose = FALSE) {
+
+    
     
     gexp_bulk = process_exp_fc(
         count_mat,
         lambdas_ref,
         gtf_transcript,
-        verbose = FALSE
-        )$bulk %>%
-        filter(logFC < 8 & logFC > -8)
+        verbose = verbose
+    )$bulk %>%
+    filter(logFC < 8 & logFC > -8)
             
     combine_bulk(
         df = df,
@@ -272,6 +305,10 @@ combine_bulk = function(df, gexp_bulk, min_depth = 2) {
 
 analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, exp_only = FALSE, allele_only = FALSE, retest = TRUE, verbose = TRUE) {
     
+    if (!is.numeric(t)) {
+        stop('transition probability is not numeric')
+    }
+    
     # doesn't work with 0s in the ref
     Obs = Obs %>% filter(lambda_ref != 0 | is.na(gene)) 
     
@@ -290,7 +327,7 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, 
     beta_hat = fit@coef[2]
         
     Obs = Obs %>% 
-        select(-any_of('gamma')) %>%
+        select(-any_of(c('gamma'))) %>%
         group_by(CHROM) %>%
         mutate(state = 
             run_hmm_mv_inhom_gpois(
@@ -317,9 +354,35 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, 
         ) %>% 
         annot_segs %>%
         ungroup()
+
+    Obs = Obs %>%
+        mutate(alpha = alpha_hat, beta = beta_hat, gamma = gamma) %>%
+        mutate(haplo_post = case_when(
+            str_detect(state, 'up') ~ 'major',
+            str_detect(state, 'down') ~ 'minor',
+            T ~ ifelse(pBAF > 0.5, 'major', 'minor')
+        )) %>% 
+        mutate(
+            major_count = ifelse(haplo_post == 'major', pAD, DP - pAD),
+            minor_count = DP - major_count
+        )
     
-    Obs = Obs %>% mutate(alpha = alpha_hat, beta = beta_hat, gamma = gamma)
+    # rolling theta estimates
+    Obs = Obs %>%
+        select(-any_of('theta_hat_roll')) %>%
+        left_join(
+            Obs %>% 
+                group_by(CHROM) %>%
+                filter(!is.na(pAD)) %>%
+                mutate(theta_hat_roll = theta_hat_roll(major_count, minor_count, h = 100)) %>%
+                select(theta_hat_roll, CHROM, snp_id),
+            by = c('CHROM', 'snp_id')
+        ) %>%
+        group_by(CHROM) %>%
+        mutate(theta_hat_roll = zoo::na.locf(theta_hat_roll, na.rm=FALSE)) %>%
+        ungroup()
     
+
     if (retest) {
         
         if (verbose) {
@@ -327,8 +390,9 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, 
         }
 
         segs_post = retest_cnv(Obs)
-
+        
         Obs = Obs %>% 
+            select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM')])) %>%
             left_join(segs_post, by = c('seg', 'CHROM')) %>%
             mutate(cnv_state_post = tidyr::replace_na(cnv_state_post, 'neu')) %>%
             mutate(state_post = ifelse(
@@ -342,21 +406,25 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, bal_cnv = TRUE, prior = NULL, 
     if (verbose) {
         display('Finishing..')
     }
-            
+    
+    # rolling phi estimates
     Obs = Obs %>% 
         select(-any_of('phi_mle_roll')) %>%
         left_join(
-        Obs %>% 
-            group_by(CHROM) %>%
-            filter(!is.na(Y_obs)) %>%
-            mutate(
-                phi_mle_roll = phi_mle_roll(
-                    Y_obs, lambda_ref, alpha_hat, beta_hat, d_obs, h = 50)
-            ) %>%
-            select(phi_mle_roll, CHROM, gene),
+            Obs %>% 
+                group_by(CHROM) %>%
+                filter(!is.na(Y_obs)) %>%
+                mutate(
+                    phi_mle_roll = phi_mle_roll(
+                        Y_obs, lambda_ref, alpha_hat, beta_hat, d_obs, h = 50)
+                ) %>%
+                select(phi_mle_roll, CHROM, gene),
         by = c('CHROM', 'gene')
-    )
-    
+    ) %>%
+    group_by(CHROM) %>%
+    mutate(phi_mle_roll = zoo::na.locf(phi_mle_roll, na.rm=FALSE)) %>%
+    ungroup()
+
     return(Obs)
 }
 
@@ -504,6 +572,24 @@ phi_hat_roll = function(y_vec, lambda_vec, depth, h) {
     )
 }
 
+theta_hat_seg = function(major_count, minor_count) {
+    major_total = sum(major_count)
+    minor_total = sum(minor_count)
+    MAF = major_total/(major_total + minor_total)
+    return(MAF - 0.5)
+}
+
+theta_hat_roll = function(major_count, minor_count, h) {
+    n = length(major_count)
+    sapply(
+        1:n,
+        function(c) {
+            slice = max(c - h - 1, 1):min(c + h, n)
+            theta_hat_seg(major_count[slice], minor_count[slice])
+        }
+    )
+}
+
 
 calc_phi_mle = function(Y_obs, lambda_ref, d, alpha, beta, lower = 0.2, upper = 10) {
     
@@ -555,91 +641,44 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
     return(res)
 }
 
-LLR_exp = function(Y_obs, lambda_ref, d, alpha, beta) {
-    
-    if (length(Y_obs) == 0) {
-        return(0)
-    }
-    
-    phi_mle = calc_phi_mle(Y_obs, lambda_ref, d, alpha, beta)
-    l_1 = l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi_mle)
-    l_0 = l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = 1)
-    return(l_1 - l_0)
-}
-
-approx_lik_exp = function(Y_obs, lambda_ref, d_obs, alpha, beta, lower, upper, step_size = 0.01) {
-    
-    if (length(Y_obs) == 0) {
-        return(0)
-    }
-    
-    phi_grid = seq(lower, upper, step_size)
-        
-    l_grid = sapply(phi_grid, function(phi) {
-        l_gpois(Y_obs, lambda_ref, d_obs, alpha, beta, phi = phi)
-    })
-    
-    l = matrixStats::logSumExp(l_grid)
-    
-    return(l)
-}
-
-approx_lik_ar = function(pAD, DP, p_s, lower, upper, step_size = 0.01, gamma = 16) {
-    
-    if (length(pAD) == 0) {
-        return(0)
-    }
-    
-    theta_grid = seq(lower, upper, step_size)
-        
-    l_grid = sapply(theta_grid, function(theta) {
-        calc_alelle_lik(pAD, DP, p_s, theta = theta, gamma = gamma)
-    })
-    
-    l = matrixStats::logSumExp(l_grid)
-    
-    return(l)
-}
-
 retest_cnv = function(bulk) {
     
-    G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5) %>% log
+    G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     
     theta_min = 0.065
     delta_phi_min = 0.15
     
     segs_post = bulk %>% 
+        filter(cnv_state != 'neu') %>%
         group_by(CHROM, seg) %>%
-        filter(state != 'neu') %>%
         summarise(
             n_genes = length(na.omit(unique(gene))),
             n_snps = sum(!is.na(pAD)),
             seg_start = min(POS),
             seg_end = max(POS),
-            phi_mle = calc_phi_mle(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta)),
-            theta_mle = calc_theta_mle(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)]),
-            l_x_n = approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), lower = 1 - delta_phi_min, upper = 1 + delta_phi_min),
-            l_x_a = approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), lower = 1 + delta_phi_min, upper = 3),
-            l_x_d = approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), lower = 0.1, upper = 1 - delta_phi_min),
-            l_y_n = approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), lower = 0, upper = theta_min),
-            l_y_a = approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), lower = theta_min, upper = 0.375),
-            l_y_d = matrixStats::logSumExp(c(l_y_a, 
-                approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), lower = 0.375, upper = 0.499)
-            )),
-            Z = matrixStats::logSumExp(
-                c(G['20'] + l_x_n + l_y_d,
-                 G['10'] + l_x_d + l_y_d,
-                 G['21'] + l_x_a + l_y_a,
-                 G['31'] + l_x_a + l_y_a,
-                 G['22'] + l_x_a + l_y_n, 
-                 G['00'] + l_x_d + l_y_n)),
-            p_loh = exp(G['20'] + l_x_n + l_y_d - Z),
-            p_amp = exp(matrixStats::logSumExp(c(G['21'] + l_x_a + l_y_a, G['31'] + l_x_a + l_y_a)) - Z),
-            p_del = exp(G['10'] + l_x_d + l_y_d - Z),
-            p_bamp = exp(G['22'] + l_x_a + l_y_n - Z),
-            p_bdel = exp(G['00'] + l_x_d + l_y_n - Z),
-            LLR_ar = l_y_d - l_y_n,
-            LLR = Z - (l_x_n + l_y_n),
+            theta_hat = theta_hat_seg(major_count[!is.na(major_count)], minor_count[!is.na(minor_count)]),
+            approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = theta_hat),
+            L_y_n = pnorm.range(0, theta_min, theta_mle, theta_sigma),
+            L_y_d = pnorm.range(theta_min, 0.499, theta_mle, theta_sigma),
+            L_y_a = pnorm.range(theta_min, 0.375, theta_mle, theta_sigma),
+            approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta)),
+            L_x_n = pnorm.range(1 - delta_phi_min, 1 + delta_phi_min, phi_mle, phi_sigma),
+            L_x_d = pnorm.range(0.1, 1 - delta_phi_min, phi_mle, phi_sigma),
+            L_x_a = pnorm.range(1 + delta_phi_min, 3, phi_mle, phi_sigma),
+            Z = sum(G['20'] * L_x_n * L_y_d,
+                    G['10'] * L_x_d * L_y_d,
+                    G['21'] * L_x_a * L_y_a,
+                    G['31'] * L_x_a * L_y_a,
+                    G['22'] * L_x_a * L_y_n, 
+                    G['00'] * L_x_d * L_y_n),
+            p_loh = (G['20'] * L_x_n * L_y_d)/Z,
+            p_amp = ((G['31'] + G['21']) * L_x_a * L_y_a)/Z,
+            p_del = (G['10'] * L_x_d * L_y_d)/Z,
+            p_bamp = (G['22'] * L_x_a * L_y_n)/Z,
+            p_bdel = (G['00'] * L_x_d * L_y_n)/Z,
+            LLR_x = calc_exp_LLR(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), unique(alpha), unique(beta), phi_mle),
+            LLR_y = calc_allele_LLR(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta_mle),
+            LLR = LLR_x + LLR_y,
             .groups = 'drop'
         ) %>%
         rowwise() %>%
@@ -649,6 +688,60 @@ retest_cnv = function(bulk) {
         ungroup()
 
     return(segs_post)
+}
+
+approx_lik_ar = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 0.25, gamma = 20) {
+    
+    if (length(pAD) == 0) {
+        return(tibble('theta_mle' = 0, 'theta_sigma' = 0))
+    }
+
+    fit = optim(
+        start, 
+        function(theta) {-calc_allele_lik(pAD, DP, p_s, theta, gamma)},
+        method = 'L-BFGS-B',
+        lower = lower,
+        upper = upper,
+        hessian = TRUE
+#         control = list('factr' = 1e-4/(.Machine$double.eps))
+    )
+    
+    mu = fit$par
+    sigma = sqrt(as.numeric(1/(fit$hessian)))
+    
+    return(tibble('theta_mle' = mu, 'theta_sigma' = sigma))
+}
+
+approx_lik_exp = function(Y_obs, lambda_ref, d, alpha, beta, lower = 0.2, upper = 10, start = 1) {
+    
+    if (length(Y_obs) == 0) {
+        return(tibble('phi_mle' = 1, 'phi_sigma' = 0))
+    }
+    
+    start = max(min(1, upper), lower)
+    
+    fit = optim(
+        start,
+        function(phi) {
+            -l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi)
+        },
+        method = 'L-BFGS-B',
+        lower = lower,
+        upper = upper,
+        hessian = TRUE
+    )
+
+    mu = fit$par
+    sigma = sqrt(as.numeric(1/(fit$hessian)))
+    
+    return(tibble('phi_mle' = mu, 'phi_sigma' = sigma))
+}
+
+pnorm.range = function(lower, upper, mu, sd) {
+    if (sd == 0) {
+        return(1)
+    }
+    pnorm(upper, mu, sd) - pnorm(lower, mu, sd)
 }
 
 walk_tree = function(den, cut_prefix, cuts, segs_tested, gexp.norm.long, df, p_cutoff = 0.01, min_depth = 10) {
@@ -722,94 +815,64 @@ walk_tree = function(den, cut_prefix, cuts, segs_tested, gexp.norm.long, df, p_c
         return(res)
     }
 }
-    
 
-calc_cluster_tree = function(count_mat, cell_annot) {
-    
-    exp_mat = t(count_mat/colSums(count_mat))
-    
-    exp_mat = exp_mat[,colSums(exp_mat) > 0]
-        
-    cell_dict = cell_annot %>% filter(group == 'obs') %>% {setNames(.$cell_type, .$cell)}
 
-    exp_mat = exp_mat %>% data.frame() %>%
-        tibble::rownames_to_column('cell') %>%
-        mutate(cell_type = cell_dict[cell]) %>%
-        filter(!is.na(cell_type)) %>%
-        select(-cell)
+calc_cluster_dist = function(count_mat, cell_annot) {
 
-    exp_mat_clust = aggregate(select(exp_mat, -cell_type), list('cell_type' = exp_mat$cell_type), mean) %>%
-        tibble::column_to_rownames('cell_type')
+    cells = intersect(colnames(count_mat), cell_annot$cell)
     
+    count_mat = count_mat %>% extract(,cells)
+    cell_annot = cell_annot %>% filter(cell %in% cells)
+    
+    cell_dict = cell_annot %>% {setNames(.$cell_type, .$cell)} %>% droplevels()
+    cell_dict = cell_dict[cells]
+    M = model.matrix(~ 0 + cell_dict) %>% set_colnames(levels(cell_dict))
+    count_mat_clust = count_mat %*% M
+    count_mat_clust = count_mat_clust[rowSums(count_mat_clust) > 0,]
+    exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% set_colnames(colnames(count_mat_clust))
     exp_mat_clust = log10(exp_mat_clust * 1e6 + 1)
+
+    dist_mat = 1-cor(exp_mat_clust)
     
-    tree = hclust(as.dist(1-cor(t(exp_mat_clust))), method = "ward.D2")
-    
-    return(tree)
+    return(dist_mat)
     
 }
 
-calc_allele_lik = function(pAD, DP, p_s, theta, gamma = 20) {
-            
-    # states
-    states = c("theta_up", "theta_down")
-        
-    # transition matrices
-    calc_trans_mat = function(p_s) {
-        matrix(
-            c(1 - p_s, p_s,
-              p_s, 1 - p_s),
-            ncol = 2,
-            byrow = TRUE
-        )
-    }
-    
-    As = lapply(
-        p_s,
-        function(p_s) {calc_trans_mat(p_s)}
-    )
-    
-    # intitial probabilities
-    prior = c(0.5, 0.5)
-    
-    alpha_up = (0.5 + theta) * gamma
-    beta_up = (0.5 - theta) * gamma
-    alpha_down = beta_up
-    beta_down = alpha_up
-        
-    hmm = HiddenMarkov::dthmm(
-        x = pAD, 
-        Pi = As, 
-        delta = prior, 
-        distn = "bbinom",
-        pm = list(alpha=c(alpha_up, alpha_down), beta=c(beta_up, beta_down)),
-        pn = list(size = DP),
-        discrete = TRUE)
-
-    class(hmm) = 'dthmm.inhom'
-        
-    solution = HiddenMarkov::Viterbi(hmm)
-                
-    return(solution$max.loglik)
-}
-
-calc_theta_mle = function(pAD, DP, p_s, lower = 0, upper = 0.49) {
+calc_theta_mle = function(pAD, DP, p_s, lower = 0.01, upper = 0.49, start = 0.25, gamma = 20) {
     
     if(length(pAD) == 0) {
         return(0)
     }
     
     res = optim(
-        0.25, 
-        function(theta) {-calc_allele_lik(pAD, DP, p_s, theta)},
+        start, 
+        function(theta) {-calc_allele_lik(pAD, DP, p_s, theta, gamma)},
         method = 'L-BFGS-B',
-        lower = lower, upper = upper)
+        lower = lower,
+        upper = upper,
+        control = list('factr' = 0.001/(.Machine$double.eps))
+    )
     
     return(res$par)
 }
 
+calc_allele_LLR = function(pAD, DP, p_s, theta_mle, gamma = 20) {
+    if (length(pAD) == 0) {
+        return(0)
+    }
+    l_1 = calc_allele_lik(pAD, DP, p_s, theta = theta_mle) 
+    l_0 = calc_allele_lik(pAD, DP, p_s, theta = 0)
+    return(l_1 - l_0)
+}
 
-
+calc_exp_LLR = function(Y_obs, lambda_ref, depth_obs, alpha, beta, phi_mle) {
+    if (length(Y_obs) == 0) {
+        return(0)
+    }
+    l_1 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = phi_mle)
+    l_0 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 1)
+    return(l_1 - l_0)
+}
 
 # multi-state model
 get_exp_likelihoods = function(exp_sc) {
@@ -879,7 +942,7 @@ cnv_colors = scale_color_manual(
                "loh_up" = "darkgreen", "loh_down" = "olivedrab4",
                "amp_up" = "red", "amp_down" = "tomato3",
                "bamp" = "salmon", "bdel" = "skyblue",
-              "amp" = "darkred", "loh" = "darkgreen", "del" = "darkblue", "neu2" = "gray30")
+              "amp" = "darkred", "loh" = "#34d834", "del" = "darkblue", "neu2" = "gray30")
 )
 
 plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10) {
@@ -898,7 +961,8 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10) {
         inherit.aes = FALSE,
         data = Obs %>% mutate(variable = 'logFC'),
         aes(x = snp_index, y = log2(phi_mle_roll), group = '1'),
-        color = 'darkred'
+        color = 'darkred',
+        size = 0.35
     ) +
     theme_classic() +
     theme(
@@ -907,8 +971,232 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10) {
         strip.background = element_blank()
     ) +
     facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
+    # geom_ribbon(
+    #     inherit.aes = FALSE,
+    #     data = Obs %>% filter(cnv_state_post != 'neu') %>% mutate(variable = 'pBAF'),
+    #     aes(x = snp_index, ymin = 0.5 - theta_hat_roll, ymax = 0.5 + theta_hat_roll, fill = cnv_state_post),
+    #     fill = NA,
+    #     alpha = 0.2,
+    #     color = 'white',
+    #     size = 0.25
+    # ) +
     cnv_colors +
-    guides(color = guide_legend(""))
+    guides(color = guide_legend(""), fill = FALSE)
     
     return(p)
+}
+
+plot_exp = function(gexp_bulk, exp_limit = 3) {
+    ggplot(
+        gexp_bulk,
+        aes(x = gene_index, y = logFC)
+    ) +
+    theme_classic() +
+    geom_point(size = 1, color = 'gray', alpha = 0.8, pch = 16) +
+    theme(
+        panel.spacing = unit(0, 'mm'),
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.background = element_blank()
+    ) +
+    facet_grid(~CHROM, space = 'free_x', scale = 'free_x') +
+    geom_hline(yintercept = 0, color = 'gray30', linetype = 'dashed') +
+    geom_line(
+        inherit.aes = FALSE,
+        aes(x = gene_index, y = log2(phi_hat_roll), group = '1'),
+        color = 'darkred',
+        size = 0.35
+    ) +
+    ylim(-exp_limit, exp_limit)
+}
+
+plot_cnv_post = function(segs_consensus) {
+    segs_consensus %>% 
+        filter(cnv_state != 'neu') %>%
+        mutate(seg_label = paste0(seg, '_', cnv_state_post)) %>%
+        mutate(seg_label = factor(seg_label, unique(seg_label))) %>%
+        reshape2::melt(measure.vars = c('p_loh', 'p_amp', 'p_del', 'p_bamp', 'p_bdel'), value.name = 'p') %>%
+        ggplot(
+            aes(x = seg_label, y = variable, fill = p, label = round(p, 2))
+        ) +
+        theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+        geom_tile() +
+        geom_text(color = 'white')
+}
+
+
+plot_cnv_cell = function(joint_post, n_sample = 100, rev_cnv = F, rev_cell = F, mut_clust = NULL) {
+    
+    cell_group_order = c('Adrenergic', 'SCP-like', 'Mesenchymal', 'Endothelial', 'Mast', 'Myofibroblasts', 'Immune')
+    
+    joint_post = joint_post %>% 
+        mutate(p_cnv_y = exp(Z_cnv_y - Z_y)) %>%
+        mutate(cell_group = case_when(
+            cell_type %in% c('Th', 'NK', 'Tcyto', 'Monocytes', 'B', 'Treg', 'pDC', 'Plasma', 'mDC', 'Macrophages', 'ILC3') ~ 'Immune',
+            T ~ as.character(cell_type)
+        )) %>%
+        mutate(cell_group = factor(cell_group, cell_group_order))
+    
+    tree_cnv = joint_post %>% 
+        reshape2::dcast(seg ~ cell, value.var = 'p_cnv') %>%
+        tibble::column_to_rownames('seg') %>%
+        dist() %>%
+        hclust
+    
+    if (rev_cnv) {tree_cnv = rev(tree_cnv)}
+    
+    cnv_order = tree_cnv %>% {.$labels[.$order]}
+    
+    cell_order = joint_post %>% 
+            group_by(cell_group) %>%
+            do(
+                reshape2::dcast(., cell ~ seg, value.var = 'p_cnv') %>%
+                tibble::column_to_rownames('cell') %>%
+                dist() %>%
+                hclust %>%
+                {.$labels[.$order]} %>%
+                as.data.frame()
+            ) %>%
+            set_names(c('cell_group', 'cell'))
+    
+    if (rev_cell) {cell_order = cell_order %>% arrange(-row_number())}
+    
+    cnv_clusters = dendextend::cutree(tree_cnv, 2) 
+    
+    joint_post_cell = joint_post %>% 
+        mutate(cluster = cnv_clusters[seg]) %>%
+        rbind(
+            mutate(., cluster = 'all')
+        ) %>%
+        group_by(cell, cell_group, cluster) %>%
+        summarise_at(
+            vars(contains('Z_')),
+            sum
+        ) %>%
+        rowwise() %>%
+        mutate(
+            Z = matrixStats::logSumExp(c(Z_cnv, Z_n)),
+            Z_x = matrixStats::logSumExp(c(Z_cnv_x, Z_n_x)),
+            Z_y = matrixStats::logSumExp(c(Z_cnv_y, Z_n_y)),
+            p_cnv = exp(Z_cnv - Z),
+            p_n = exp(Z_n - Z),
+            p_cnv_x = exp(Z_cnv_x - Z_x),
+            p_n_x = exp(Z_n_x - Z_x),
+            p_cnv_y = exp(Z_cnv_y - Z_y),
+            p_n_y = exp(Z_n_y - Z_y),
+        ) %>%
+        ungroup() %>%
+        mutate(
+            p_cnv = 1 - p.adjust(p_n, method = 'BH'),
+            p_cnv_x = 1 - p.adjust(p_n_x, method = 'BH'),
+            p_cnv_y = 1 - p.adjust(p_n_y, method = 'BH')
+        )
+    
+    D = joint_post %>% 
+        mutate(cluster = 'segment') %>%
+        bind_rows(
+            joint_post_cell %>% 
+                reshape2::melt(measure.vars = c('p_cnv_x', 'p_cnv_y', 'p_cnv'), value.name = 'p_cnv') %>%
+                mutate(seg_label = c('p_cnv' = 'joint', 'p_cnv_x' = 'expr', 'p_cnv_y' = 'allele')[as.character(variable)]) %>%
+                filter(seg_label == 'joint' | cluster == 'all') %>%
+                select(seg_label, cell, cell_group, p_cnv, cluster) %>%
+                arrange(seg_label)
+        ) %>%
+        mutate(seg = factor(seg, cnv_order)) %>%
+        arrange(seg) %>%
+        mutate(seg_label = factor(seg_label, unique(seg_label))) %>%
+        mutate(cell = factor(cell, cell_order$cell)) %>%
+        group_by(cell_group) %>%
+        filter(cell %in% sample(unique(cell), min(n_sample, length(unique(cell))))) %>%
+        ungroup()
+    
+    p = ggplot(
+            D %>% filter(cluster %in% c('segment')),
+            aes(x = cell, y = seg_label, fill = p_cnv)
+        ) +
+        geom_tile() +
+        theme_classic() +
+        scale_y_discrete(expand = expansion(0)) +
+        scale_x_discrete(expand = expansion(0)) +
+        theme(
+            panel.spacing = unit(0.1, 'mm'),
+            panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
+            panel.background = element_rect(fill = 'skyblue'),
+            strip.background = element_blank(),
+            axis.text.x = element_blank(),
+            strip.text = element_text(angle = 90, size = 8, vjust = 0.5)
+        ) +
+        facet_grid(cluster~cell_group, scale = 'free', space = 'free') +
+        scale_fill_gradient2(low = 'skyblue', high = 'red', mid = 'skyblue', midpoint = 0.5, limits = c(0,1)) +
+        ylab('')
+    
+    # p = ggplot(
+    #         D %>% filter(cluster %in% c('segment')),
+    #         aes(x = cell, y = seg_label, fill = logBF)
+    #     ) +
+    #     geom_tile() +
+    #     theme_classic() +
+    #     scale_y_discrete(expand = expansion(0)) +
+    #     scale_x_discrete(expand = expansion(0)) +
+    #     theme(
+    #         panel.spacing = unit(0.1, 'mm'),
+    #         panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
+    #         panel.background = element_rect(fill = 'skyblue'),
+    #         strip.background = element_blank(),
+    #         axis.text.x = element_blank(),
+    #         strip.text = element_text(angle = 90, size = 8, vjust = 0.5)
+    #     ) +
+    #     facet_grid(cluster~cell_group, scale = 'free', space = 'free') +
+    #     scale_fill_gradient(low = 'skyblue', high = 'red', limits = c(0, 10), oob = scales::oob_squish) +
+    #     ylab('')
+    
+    p_cnv_tree = tree_cnv %>%
+        ggtree::ggtree(ladderize=F) +
+        scale_x_discrete(expand = expansion(mult = 0)) +
+        theme(plot.margin = margin(0,0,0,0)) 
+    
+    panel_1 = (p_cnv_tree | p) + plot_layout(widths = c(1,20))
+    
+    ## split plot
+    D = joint_post %>%
+        mutate(seg = factor(seg, rev(cnv_order))) %>%
+        arrange(seg) %>%
+        mutate(
+            seg_label = factor(seg_label, unique(seg_label))
+        ) %>%
+        mutate(cell = factor(cell, cell_order$cell)) %>%
+        group_by(cell_group) %>%
+        filter(cell %in% sample(unique(cell), min(200, length(unique(cell))))) %>%
+        ungroup()
+
+    p = D %>% 
+        reshape2::melt(measure.vars = c('p_cnv', 'p_cnv_x', 'p_cnv_y'), value.name = 'p_cnv') %>%
+        mutate(source = c('p_cnv' = 'joint', 'p_cnv_x' = 'expr', 'p_cnv_y' = 'allele')[as.character(variable)]) %>%
+        # filter(!(cnv_state %in% c('bamp') & source %in% c('allele', 'joint'))) %>%
+        # filter(!(cnv_state %in% c('loh') & source %in% c('expr', 'joint'))) %>%
+        filter(source != 'joint') %>%
+        ggplot(
+            aes(x = cell, y = source, fill = p_cnv)
+        ) +
+        geom_tile() +
+        theme_classic() +
+        scale_y_discrete(expand = expansion(0), position = "right") +
+        scale_x_discrete(expand = expansion(0)) +
+        facet_grid(seg_label~cell_group, scale = 'free', space = 'free_x', switch = 'y') +
+        theme(
+            panel.spacing = unit(0.1, 'mm'),
+            panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
+            panel.background = element_rect(fill = 'skyblue'),
+            strip.background = element_blank(),
+            axis.text.x = element_blank(),
+            strip.text.x = element_text(angle = 90, size = 8),
+            strip.text.y.left = element_text(angle = 0, size = 8),
+            plot.margin = margin(0,0,0,0)
+        ) +
+        scale_fill_gradient2(low = 'skyblue', high = 'red', mid = 'skyblue', midpoint = 0.5, limits = c(0,1)) +
+        ylab('')
+    
+    panel_2 = (p_cnv_tree | p) + plot_layout(widths = c(1,20))
+    
+    return(panel_1)
+    
 }

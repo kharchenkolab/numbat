@@ -11,7 +11,12 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
         display('Building expression tree ..')
     }
     
-    tree = calc_cluster_tree(count_mat, cell_annot)
+    dist_mat = calc_cluster_dist(
+        count_mat, 
+        cell_annot %>% filter(group == 'obs')
+    )
+
+    tree = hclust(as.dist(dist_mat), method = "ward.D2")
     
     # internal nodes
     nodes = get_internal_nodes(as.dendrogram(tree), '0', data.frame())
@@ -45,19 +50,18 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     nodes = lapply(names(nodes), function(n) {nodes[[n]] %>% inset('label', n)}) %>% setNames(names(nodes))
     
     nodes = nodes %>% extract(map(., 'size') > 300)
-    
+        
     #### 2. Run pseudobulk HMM ####
     
     if (verbose) {
         display('Running HMMs ..')
     }
-            
+                
     bulk_all = mclapply(
             nodes,
             mc.cores = ncores,
             function(node) {
-
-                bulk = get_bulk(
+                get_bulk(
                     count_mat = count_mat[,node$cells],
                     df = df %>% filter(cell %in% node$cells),
                     lambdas_ref = lambdas_ref,
@@ -65,8 +69,6 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
                 ) %>%
                 mutate(node = node$label) %>%
                 analyze_bulk_gpois(t = t, verbose = TRUE)
-
-                return(bulk)
         }) %>%
         bind_rows() %>%
         arrange(CHROM, POS) %>%
@@ -104,9 +106,9 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     segs_all = bulk_all %>% 
         filter(state != 'neu') %>%
         distinct(node, CHROM, seg, cnv_state, cnv_state_post, seg_start, seg_end,
-                 theta_mle, phi_mle, p_loh, p_del, p_amp, p_bamp, p_bdel, LLR, LLR_ar)
+                 theta_mle, phi_mle, p_loh, p_del, p_amp, p_bamp, p_bdel, LLR, LLR_y)
     
-    segs_filtered = segs_all %>% filter(!(LLR_ar < 10 & cnv_state %in% c('del', 'amp') & (phi_mle > 2 | phi_mle < 0.5)))
+    segs_filtered = segs_all %>% filter(!(LLR_y < 15 & cnv_state %in% c('del', 'amp') & (phi_mle > 2 | phi_mle < 0.5)))
         
     segs_consensus = resolve_cnvs(segs_filtered)
     
@@ -139,7 +141,6 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
         'plot_list' = plot_list,
         'segs_all' = segs_all,
         'segs_filtered' = segs_filtered,
-        'graph' = G,
         'segs_consensus' = segs_consensus,
         'exp_post' = exp_post,
         'allele_post' = allele_post,
@@ -244,6 +245,7 @@ get_exp_post = function(segs_consensus, count_mat, lambdas_ref, ncores = 30) {
     exp_sc = count_mat %>%
         as.data.frame() %>%
         tibble::rownames_to_column('gene') %>% 
+        filter(gene %in% gtf_transcript$gene) %>%
         mutate(lambda_ref = lambdas_ref[gene]) %>%
         filter(lambda_ref > 0) %>%
         left_join(
@@ -443,6 +445,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
             Z_n_x = l11_x + log(1/2),
             Z_n_y = l11_y + log(1/2),
             p_cnv = exp(Z_cnv - Z),
+            p_n = exp(Z_n - Z),
             p_cnv_x = exp(Z_cnv_x - Z_x),
             p_cnv_y = exp(Z_cnv_y - Z_y)
         ) %>%
@@ -454,177 +457,4 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
         mutate(seg_label = factor(seg_label, unique(seg_label)))
     
     return(joint_post)
-}
-
-plot_cnv_cell = function(joint_post, n_sample = 100, rev_cnv = F, rev_cell = F, mut_clust = NULL) {
-    
-    cell_group_order = c('Adrenergic', 'SCP-like', 'Mesenchymal', 'Endothelial', 'Mast', 'Myofibroblasts', 'Immune')
-    
-    joint_post = joint_post %>% 
-        mutate(p_cnv_y = exp(Z_cnv_y - Z_y)) %>%
-        mutate(cell_group = case_when(
-            cell_type %in% c('Th', 'NK', 'Tcyto', 'Monocytes', 'B', 'Treg', 'pDC', 'Plasma', 'mDC', 'Macrophages', 'ILC3') ~ 'Immune',
-            T ~ as.character(cell_type)
-        )) %>%
-        mutate(cell_group = factor(cell_group, cell_group_order))
-    
-    tree_cnv = joint_post %>% 
-        reshape2::dcast(seg ~ cell, value.var = 'p_cnv') %>%
-        tibble::column_to_rownames('seg') %>%
-        dist() %>%
-        hclust
-    
-    if (rev_cnv) {tree_cnv = rev(tree_cnv)}
-    
-    cnv_order = tree_cnv %>% {.$labels[.$order]}
-    
-    cell_order = joint_post %>% 
-            group_by(cell_group) %>%
-            do(
-                reshape2::dcast(., cell ~ seg, value.var = 'p_cnv') %>%
-                tibble::column_to_rownames('cell') %>%
-                dist() %>%
-                hclust %>%
-                {.$labels[.$order]} %>%
-                as.data.frame()
-            ) %>%
-            set_names(c('cell_group', 'cell'))
-    
-    if (rev_cell) {cell_order = cell_order %>% arrange(-row_number())}
-        
-#     if (is.null(mut_clust)) {
-#         mut_clust = joint_post %>% 
-#             pull(seg) %>% unique
-#     }
-    
-    cnv_clusters = dendextend::cutree(tree_cnv, 2) 
-#     cnv_clusters = lapply(unique(cnv_clusters), function(c) {names(cnv_clusters[cnv_clusters == c])})
-    
-#     joint_post_cell = joint_post %>% 
-#         group_by(cell, cell_group) %>%
-#         summarise_at(
-#             vars(contains('Z_')),
-#             sum
-#         ) %>%
-#         mutate(
-#             Z = matrixStats::logSumExp(c(Z_cnv + log(0.5), Z_n + log(0.5))),
-#             Z_x = matrixStats::logSumExp(c(Z_cnv_x + log(0.5), Z_n_x + log(0.5))),
-#             Z_y = matrixStats::logSumExp(c(Z_cnv_y + log(0.5), Z_n_y + log(0.5))),
-#             p_cnv = exp(Z_cnv + log(0.5) - Z),
-#             p_cnv_x = exp(Z_cnv_x + log(0.5) - Z_x),
-#             p_cnv_y = exp(Z_cnv_y + log(0.5) - Z_y)
-#         ) %>%
-#         ungroup() %>%
-#         mutate(panel = 'all')
-        
-    joint_post_cell = joint_post %>% 
-        mutate(cluster = cnv_clusters[seg]) %>%
-        rbind(
-            mutate(., cluster = 'all')
-        ) %>%
-        group_by(cell, cell_group, cluster) %>%
-        summarise_at(
-            vars(contains('Z_')),
-            sum
-        ) %>%
-        rowwise() %>%
-        mutate(
-            Z = matrixStats::logSumExp(c(Z_cnv + log(0.5), Z_n + log(0.5))),
-            Z_x = matrixStats::logSumExp(c(Z_cnv_x + log(0.5), Z_n_x + log(0.5))),
-            Z_y = matrixStats::logSumExp(c(Z_cnv_y + log(0.5), Z_n_y + log(0.5))),
-            p_cnv = exp(Z_cnv + log(0.5) - Z),
-            p_cnv_x = exp(Z_cnv_x + log(0.5) - Z_x),
-            p_cnv_y = exp(Z_cnv_y + log(0.5) - Z_y)
-        ) %>%
-        ungroup()
-    
-    D = joint_post %>% 
-        mutate(cluster = 'segment') %>%
-        bind_rows(
-            joint_post_cell %>% 
-                reshape2::melt(measure.vars = c('p_cnv_x', 'p_cnv_y', 'p_cnv'), value.name = 'p_cnv') %>%
-                mutate(seg_label = c('p_cnv' = 'joint', 'p_cnv_x' = 'expr', 'p_cnv_y' = 'allele')[as.character(variable)]) %>%
-                filter(seg_label == 'joint' | cluster == 'all') %>%
-                select(seg_label, cell, cell_group, p_cnv, cluster) %>%
-                arrange(seg_label)
-        ) %>%
-#         mutate(cluster = factor(cluster, c('all', '1', '2', 'segment'))) %>%
-        mutate(seg = factor(seg, cnv_order)) %>%
-        arrange(seg) %>%
-        mutate(seg_label = factor(seg_label, unique(seg_label))) %>%
-        mutate(cell = factor(cell, cell_order$cell)) %>%
-        group_by(cell_group) %>%
-        filter(cell %in% sample(unique(cell), min(n_sample, length(unique(cell))))) %>%
-        ungroup()
-    
-    p = ggplot(
-            D,
-            aes(x = cell, y = seg_label, fill = p_cnv)
-        ) +
-        geom_tile() +
-        theme_classic() +
-        scale_y_discrete(expand = expansion(0)) +
-        scale_x_discrete(expand = expansion(0)) +
-        theme(
-            panel.spacing = unit(0.1, 'mm'),
-            panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
-            panel.background = element_rect(fill = 'skyblue'),
-            strip.background = element_blank(),
-            axis.text.x = element_blank(),
-            strip.text = element_text(angle = 90, size = 8, vjust = 0.5)
-        ) +
-        facet_grid(cluster~cell_group, scale = 'free', space = 'free') +
-        scale_fill_gradient2(low = 'skyblue', high = 'red', mid = 'skyblue', midpoint = 0.5, limits = c(0,1)) +
-        ylab('')
-    
-    p_cnv_tree = tree_cnv %>%
-        ggtree::ggtree(ladderize=F) +
-        scale_x_discrete(expand = expansion(mult = 0)) +
-        theme(plot.margin = margin(0,0,0,0)) 
-    
-    panel_1 = p
-    
-    ## split plot
-    D = joint_post %>%
-        mutate(seg = factor(seg, rev(cnv_order))) %>%
-        arrange(seg) %>%
-        mutate(
-            seg_label = factor(seg_label, unique(seg_label))
-        ) %>%
-        mutate(cell = factor(cell, cell_order$cell)) %>%
-        group_by(cell_group) %>%
-        filter(cell %in% sample(unique(cell), min(200, length(unique(cell))))) %>%
-        ungroup()
-
-    p = D %>% 
-        reshape2::melt(measure.vars = c('p_cnv', 'p_cnv_x', 'p_cnv_y'), value.name = 'p_cnv') %>%
-        mutate(source = c('p_cnv' = 'joint', 'p_cnv_x' = 'expr', 'p_cnv_y' = 'allele')[as.character(variable)]) %>%
-#         filter(!(cnv_state %in% c('bamp') & source %in% c('allele', 'joint'))) %>%
-#         filter(!(cnv_state %in% c('loh') & source %in% c('expr', 'joint'))) %>%
-        filter(source != 'joint') %>%
-        ggplot(
-            aes(x = cell, y = source, fill = p_cnv)
-        ) +
-        geom_tile() +
-        theme_classic() +
-        scale_y_discrete(expand = expansion(0), position = "right") +
-        scale_x_discrete(expand = expansion(0)) +
-        facet_grid(seg_label~cell_group, scale = 'free', space = 'free_x', switch = 'y') +
-        theme(
-            panel.spacing = unit(0.1, 'mm'),
-            panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
-            panel.background = element_rect(fill = 'skyblue'),
-            strip.background = element_blank(),
-            axis.text.x = element_blank(),
-            strip.text.x = element_text(angle = 90, size = 8),
-            strip.text.y.left = element_text(angle = 0, size = 8),
-            plot.margin = margin(0,0,0,0)
-        ) +
-        scale_fill_gradient2(low = 'skyblue', high = 'red', mid = 'skyblue', midpoint = 0.5, limits = c(0,1)) +
-        ylab('')
-    
-    panel_2 = (p_cnv_tree | p) + plot_layout(widths = c(1,20))
-    
-    return(list(panel_1, panel_2))
-    
 }
