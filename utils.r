@@ -1,27 +1,31 @@
 ########################### Data processing ############################
 
 # take in a reference matrix, decide which one is best 
-choose_ref = function(count_mat_obs, count_mat_ref, gtf_transcript, debug = F) {
+choose_ref = function(count_mat_obs, lambda_mat_ref, gtf_transcript, debug = F) {
+
+    d = sum(count_mat_obs)
     
-    errs = apply(count_mat_ref, 2, function(lambdas_ref) {
-            
+    errs = apply(lambda_mat_ref, 2, function(lambdas_ref) {
+
+            Y_obs = rowSums(count_mat_obs)
+
             genes_common = gtf_transcript$gene %>% 
                 intersect(rownames(count_mat_obs)) %>%
                 intersect(names(lambdas_ref)[lambdas_ref > 0])
 
-            Y_obs = rowSums(count_mat_obs)[genes_common]
+            Y_obs = Y_obs[genes_common]
             lambdas_ref = lambdas_ref[genes_common]
 
             tibble(
-                l_total = sum(dpois(x = Y_obs, lambda = lambdas_ref * sum(Y_obs), log = TRUE)),
-                mse = mean((log2((Y_obs/sum(Y_obs) + 1e-6)/lambdas_ref))^2),
+                l_total = sum(dpois(x = Y_obs, lambda = lambdas_ref * d, log = TRUE)),
+                mse = mean((log2((Y_obs/d + 1e-6)/lambdas_ref))^2),
                 n = length(genes_common)
             ) %>%
             mutate(l_bar = l_total/n)
 
         }) %>% 
         bind_rows() %>%
-        mutate(ref = colnames(count_mat_ref))
+        mutate(ref = colnames(lambda_mat_ref))
     
     if (debug) {
         return(errs)
@@ -36,12 +40,12 @@ process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = 
     genes_annotated = gtf_transcript$gene %>% 
         intersect(rownames(count_mat_obs)) %>%
         intersect(names(lambdas_ref))
+
+    depth_obs = sum(count_mat_obs)
     
-    count_mat_obs = count_mat_obs[genes_annotated,]
+    count_mat_obs = count_mat_obs[genes_annotated,,drop=F]
     lambdas_ref = lambdas_ref[genes_annotated]
 
-    depths = colSums(count_mat_obs)
-    depth_obs = sum(depths)
     lambdas_obs = rowSums(count_mat_obs)/depth_obs
 
     # filter for mutually expressed genes
@@ -50,9 +54,9 @@ process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = 
     mut_expressed = ((lambdas_ref * 1e6 > min_both & lambdas_obs * 1e6 > min_both) |
         (lambdas_ref > mean(lambdas_ref[lambdas_ref != 0])) |
         (lambdas_obs > mean(lambdas_obs[lambdas_obs != 0]))) &
-        (lambdas_ref > 0 & lambdas_obs > 0)
+        (lambdas_ref > 0)
     
-    count_mat_obs = count_mat_obs[mut_expressed,]
+    count_mat_obs = count_mat_obs[mut_expressed,,drop=F]
     lambdas_ref = lambdas_ref[mut_expressed]
 
     if(verbose){display(nrow(count_mat_obs))}
@@ -215,15 +219,30 @@ preprocess_data = function(
 
 get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 2, verbose = FALSE) {
 
-    
+    if (length(dim(lambdas_ref)) > 1) {
+        # ref_star = choose_ref(count_mat, lambdas_ref, gtf_transcript)
+        # lambdas_star = lambdas_ref[,ref_star]
+        # if (verbose) {
+        #     display(glue('Using {ref_star} as reference..'))
+        # }
+        Y_obs = rowSums(count_mat)
+
+        fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs))
+
+        if (verbose) {
+            display('Fitted reference proportions:')
+            display(signif(fit$w, 2))
+        }
+    }
     
     gexp_bulk = process_exp_fc(
         count_mat,
-        lambdas_ref,
+        fit$lambdas_bar,
         gtf_transcript,
         verbose = verbose
     )$bulk %>%
-    filter(logFC < 8 & logFC > -8)
+    filter((logFC < 8 & logFC > -8) | Y_obs == 0)
+    # mutate(ref_star = ref_star)
             
     combine_bulk(
         df = df,
@@ -298,6 +317,28 @@ combine_bulk = function(df, gexp_bulk, min_depth = 2) {
     
     return(Obs)
     
+}
+
+make_psbulk = function(count_mat, cell_annot, verbose = F) {
+    
+    cells = intersect(colnames(count_mat), cell_annot$cell)
+    
+    count_mat = count_mat %>% extract(,cells)
+    cell_annot = cell_annot %>% filter(cell %in% cells)
+    
+    cell_dict = cell_annot %>% {setNames(.$cell_type, .$cell)} %>% droplevels
+
+    cell_dict = cell_dict[cells]
+
+    if (verbose) {
+        display(table(cell_dict))
+    }
+   
+    M = model.matrix(~ 0 + cell_dict) %>% set_colnames(levels(cell_dict))
+    count_mat_clust = count_mat %*% M
+    exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% set_colnames(colnames(count_mat_clust))
+    
+    return(as.matrix(exp_mat_clust))
 }
 
 
@@ -481,16 +522,17 @@ find_diploid = function(bulk, gamma = 20, t = 1e-5, fc_min = 1.25, debug = F, ve
         set_names(c('i', 'j')) %>%
         rowwise() %>%
         mutate(
-            p = ks.test(x = bulk_balanced$FC[bulk_balanced$seg == i],
-                        y = bulk_balanced$FC[bulk_balanced$seg == j])$p.value
+            p = t.test(x = bulk_balanced$lnFC[bulk_balanced$seg == i],
+                        y = bulk_balanced$lnFC[bulk_balanced$seg == j])$p.value
         ) %>%
-        ungroup()
+        ungroup() %>%
+        mutate(p = p.adjust(p))
     options(warn = 0)
     
     # build graph
     V = segs
 
-    E = tests %>% filter(p > 0.01) 
+    E = tests %>% filter(p > 0.05) 
 
     G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
     
@@ -503,7 +545,7 @@ find_diploid = function(bulk, gamma = 20, t = 1e-5, fc_min = 1.25, debug = F, ve
     
     # seperation needs to be clear (2 vs 4 copy)
     if (max(FC)/min(FC) > fc_min) {
-        if (verbose) {display('quadruploid state found!')}
+        if (verbose) {display('quadruploid state enabled')}
         diploid_segs = names(cliques[[which.min(FC)]])
         bamp = TRUE
     } else {
@@ -628,17 +670,55 @@ l_gpois = function(Y_obs, lambda_ref, d, alpha, beta, phi = 1) {
 }
 
 fit_gpois = function(Y_obs, lambda_ref, d) {
+
+    Y_obs = Y_obs[lambda_ref > 0]
+    lambda_ref = lambda_ref[lambda_ref > 0]
     
-    res = stats4::mle(
+    fit = stats4::mle(
         minuslogl = function(alpha, beta) {
             -l_gpois(Y_obs, lambda_ref, d, alpha, beta)
         },
         start = c(1, 1),
         lower = c(0.01, 0.01),
-        upper = c(5, 5)
+        control = list('trace' = FALSE)
     )
     
-    return(res)
+    return(fit)
+}
+
+fit_multi_ref = function(Y_obs, lambdas_ref, d) {
+
+    genes_common = gtf_transcript$gene %>% 
+        intersect(names(Y_obs)) %>%
+        intersect(rownames(lambdas_ref)[rowSums(lambdas_ref == 0) == 0])
+
+    display(length(genes_common))
+
+    Y_obs = Y_obs[genes_common]
+    lambdas_ref = lambdas_ref[genes_common,,drop=F]
+
+    n_ref = ncol(lambdas_ref)
+    
+    fit = optim(
+        fn = function(params) {
+            alpha = params[1]
+            w = params[2:length(params)]
+            -sum(dgpois(Y_obs, shape = alpha, rate = 1/(d * (lambdas_ref %*% w)), log = TRUE))
+        },
+        method = 'L-BFGS-B',
+        par = c(1, rep(1/n_ref, n_ref)),
+        lower = c(0.01, rep(0, n_ref))
+    )
+
+    alpha = fit$par[1]
+    w = fit$par[2:length(fit$par)]
+    beta = 1/sum(w)
+    w = w * beta
+    w = set_names(w, colnames(lambdas_ref))
+
+    lambdas_bar = lambdas_ref %*% w %>% {set_names(as.vector(.), rownames(.))}
+
+    return(list('alpha' = alpha, 'beta' = beta, 'w' = w, 'lambdas_bar' = lambdas_bar))
 }
 
 retest_cnv = function(bulk) {
@@ -735,6 +815,31 @@ approx_lik_exp = function(Y_obs, lambda_ref, d, alpha, beta, lower = 0.2, upper 
     sigma = sqrt(as.numeric(1/(fit$hessian)))
     
     return(tibble('phi_mle' = mu, 'phi_sigma' = sigma))
+}
+
+approx_post_exp = function(Y_obs, lambda_ref, d, alpha, beta, sigma_0, lower = 0.2, upper = 10, start = 1) {
+    
+    if (length(Y_obs) == 0) {
+        return(tibble('phi_map' = 1, 'phi_sigma' = 0))
+    }
+    
+    start = max(min(1, upper), lower)
+    
+    fit = optim(
+        start,
+        function(phi) {
+            - (dlnorm(phi, meanlog = 0, sdlog = sigma_0, log = TRUE) + l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi))
+        },
+        method = 'L-BFGS-B',
+        lower = lower,
+        upper = upper,
+        hessian = TRUE
+    )
+
+    mu = fit$par
+    sigma = sqrt(as.numeric(1/(fit$hessian)))
+    
+    return(tibble('phi_map' = mu, 'phi_sigma' = sigma))
 }
 
 pnorm.range = function(lower, upper, mu, sd) {
@@ -875,18 +980,24 @@ calc_exp_LLR = function(Y_obs, lambda_ref, depth_obs, alpha, beta, phi_mle) {
 }
 
 # multi-state model
-get_exp_likelihoods = function(exp_sc) {
-    
+get_exp_likelihoods = function(exp_sc, alpha = NULL, beta = NULL) {
+
     depth_obs = sum(exp_sc$Y_obs)
+
+    exp_sc = exp_sc %>% filter(lambda_ref > 0)
+
+    if (is.null(alpha) & is.null(beta)) {
+
+        fit = exp_sc %>% filter(cnv_state == 'neu') %>%
+            {fit_gpois(.$Y_obs, .$lambda_ref, depth_obs)}
         
-    fit = exp_sc %>% filter(cnv_state == 'neu') %>%
-        {fit_gpois(.$Y_obs, .$lambda_ref, depth_obs)}
-    
-    alpha = fit@coef[1]
-    beta = fit@coef[2]
+        alpha = fit@coef[1]
+        beta = fit@coef[2]
+        
+    }
         
     res = exp_sc %>% 
-        filter(cnv_state %in% c('del', 'amp', 'bamp', 'bdel')) %>%
+        # filter(cnv_state %in% c('del', 'amp', 'bamp', 'bdel')) %>%
         group_by(seg) %>%
         summarise(
             n = n(),
@@ -898,14 +1009,7 @@ get_exp_likelihoods = function(exp_sc) {
             l21 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 1.5),
             l31 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 2),
             l22 = l31,
-            l00 = l10,
-#             l11 = approx_lik_exp(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 0.75, upper = 1.25),
-#             l20 = l11,
-#             l10 = approx_lik_exp(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 0.1, upper = 0.75),
-#             l21 = approx_lik_exp(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 1.25, upper = 1.75),
-#             l31 = approx_lik_exp(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 1.75, upper = 3.5),
-#             l22 = l31,
-#             l00 = l10
+            l00 = l10
         ) %>%
         mutate(alpha = alpha, beta = beta)
         
@@ -935,7 +1039,7 @@ permute_phi_vec = function(lambda_mat_obs, lambda_ref, n_perm) {
 }
 
 
-########################### Plotting ############################
+########################### Visualization ############################
 
 cnv_colors = scale_color_manual(
     values = c("neu" = "gray", "del_up" = "royalblue", "del_down" = "darkblue", 
@@ -945,8 +1049,13 @@ cnv_colors = scale_color_manual(
               "amp" = "darkred", "loh" = "#34d834", "del" = "darkblue", "neu2" = "gray30")
 )
 
-plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10) {
+plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, fc_correct = FALSE) {
     
+    # correct for baseline bias
+    if (fc_correct) {
+        Obs = Obs %>% mutate(logFC = log2((lambda_obs/lambda_ref) * (beta/alpha)))
+    }
+
     p = ggplot(
         Obs %>% 
             mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
@@ -1024,17 +1133,7 @@ plot_cnv_post = function(segs_consensus) {
 }
 
 
-plot_cnv_cell = function(joint_post, n_sample = 100, rev_cnv = F, rev_cell = F, mut_clust = NULL) {
-    
-    cell_group_order = c('Adrenergic', 'SCP-like', 'Mesenchymal', 'Endothelial', 'Mast', 'Myofibroblasts', 'Immune')
-    
-    joint_post = joint_post %>% 
-        mutate(p_cnv_y = exp(Z_cnv_y - Z_y)) %>%
-        mutate(cell_group = case_when(
-            cell_type %in% c('Th', 'NK', 'Tcyto', 'Monocytes', 'B', 'Treg', 'pDC', 'Plasma', 'mDC', 'Macrophages', 'ILC3') ~ 'Immune',
-            T ~ as.character(cell_type)
-        )) %>%
-        mutate(cell_group = factor(cell_group, cell_group_order))
+plot_cnv_cell = function(joint_post, n_sample = 1e4, rev_cnv = F, rev_cell = F, mut_clust = NULL) {
     
     tree_cnv = joint_post %>% 
         reshape2::dcast(seg ~ cell, value.var = 'p_cnv') %>%
@@ -1108,7 +1207,14 @@ plot_cnv_cell = function(joint_post, n_sample = 100, rev_cnv = F, rev_cell = F, 
         group_by(cell_group) %>%
         filter(cell %in% sample(unique(cell), min(n_sample, length(unique(cell))))) %>%
         ungroup()
+
+    pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
     
+    cell_colors = D %>% 
+        distinct(cell_type, cell) %>%
+        arrange(cell) %>%
+        {setNames(pal[as.integer(factor(.$cell_type))], .$cell)}
+
     p = ggplot(
             D %>% filter(cluster %in% c('segment')),
             aes(x = cell, y = seg_label, fill = p_cnv)
@@ -1123,10 +1229,11 @@ plot_cnv_cell = function(joint_post, n_sample = 100, rev_cnv = F, rev_cell = F, 
             panel.background = element_rect(fill = 'skyblue'),
             strip.background = element_blank(),
             axis.text.x = element_blank(),
-            strip.text = element_text(angle = 90, size = 8, vjust = 0.5)
+            strip.text = element_text(angle = 90, size = 8, vjust = 0.5),
+            axis.ticks.x = element_line(color = cell_colors, size = 0.1)
         ) +
         facet_grid(cluster~cell_group, scale = 'free', space = 'free') +
-        scale_fill_gradient2(low = 'skyblue', high = 'red', mid = 'skyblue', midpoint = 0.5, limits = c(0,1)) +
+        scale_fill_gradient2(low = pal[2], mid = pal[2], high = pal[1], midpoint = 0, limits = c(0,1)) +
         ylab('')
     
     # p = ggplot(
@@ -1199,4 +1306,27 @@ plot_cnv_cell = function(joint_post, n_sample = 100, rev_cnv = F, rev_cell = F, 
     
     return(panel_1)
     
+}
+
+plot_exp_cell = function(exp_post, segs_consensus, cell_annot) {
+    ggplot(
+        exp_post %>% 
+            inner_join(
+                segs_consensus %>% select(seg = seg_cons, CHROM, seg_start, seg_end),
+                by = 'seg'
+            ) %>%
+            left_join(cell_annot, by = 'cell') %>%
+            mutate(phi_mle = ifelse(phi_mle > 0.7 & phi_mle < 1.3, 1, phi_mle)),
+        aes(x = seg_start, xend = seg_end, y = cell, yend = cell, color = phi_mle)
+    ) +
+    theme_classic() +
+    geom_segment(size = 0.05) +
+    theme(
+        panel.spacing = unit(0, 'mm'),
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.background = element_blank(),
+        axis.text.y = element_blank()
+    ) +
+    facet_grid(cell_group~CHROM, space = 'free', scale = 'free') +
+    scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = scales::oob_squish)
 }

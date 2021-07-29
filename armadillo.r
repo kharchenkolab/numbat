@@ -49,7 +49,7 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     
     nodes = lapply(names(nodes), function(n) {nodes[[n]] %>% inset('label', n)}) %>% setNames(names(nodes))
     
-    nodes = nodes %>% extract(map(., 'size') > 300)
+    nodes = nodes %>% extract(purrr::map(., 'size') > 300)
         
     #### 2. Run pseudobulk HMM ####
     
@@ -108,7 +108,7 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
         distinct(node, CHROM, seg, cnv_state, cnv_state_post, seg_start, seg_end,
                  theta_mle, phi_mle, p_loh, p_del, p_amp, p_bamp, p_bdel, LLR, LLR_y)
     
-    segs_filtered = segs_all %>% filter(!(LLR_y < 15 & cnv_state %in% c('del', 'amp') & (phi_mle > 2 | phi_mle < 0.5)))
+    segs_filtered = segs_all %>% filter(!(LLR_y < 20 & cnv_state %in% c('del', 'amp')))
         
     segs_consensus = resolve_cnvs(segs_filtered)
     
@@ -128,7 +128,11 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     
     allele_post = get_allele_post(bulk_all, segs_consensus, df)
     
-    joint_post = get_joint_post(exp_post, allele_post, segs_consensus)
+    joint_post = get_joint_post(
+        exp_post %>% filter(cnv_state %in% c('del', 'amp', 'bamp', 'bdel')),
+        allele_post,
+        segs_consensus
+    )
     
     if (verbose) {
         display('All done!')
@@ -150,7 +154,7 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     return(res)
 }
 
-resolve_cnvs = function(segs_all) {
+resolve_cnvs = function(segs_all, gbuild = 'hg38', debug = FALSE) {
             
     # resolve overlapping calls by graph
     V = segs_all %>% mutate(vertex = 1:n(), .before = 'CHROM')
@@ -171,7 +175,11 @@ resolve_cnvs = function(segs_all) {
 
     segs_consensus = segs_all %>% arrange(CHROM, group, -LLR) %>% distinct(group, `.keep_all` = TRUE) 
     
-    segs_consensus = fill_neu_segs(segs_consensus)
+    segs_consensus = fill_neu_segs(segs_consensus, gbuild)
+
+    if (debug) {
+        return(list('G' = G, 'segs_consensus' = segs_consensus))
+    }
     
     return(segs_consensus)
 }
@@ -179,14 +187,28 @@ resolve_cnvs = function(segs_all) {
 
 
 # retrieve neutral segments
-fill_neu_segs = function(segs_consensus) {
+fill_neu_segs = function(segs_consensus, gbuild = 'hg38') {
     
-    chrom_sizes = fread('~/ref/hg38.chrom.sizes.txt') %>% 
+    chrom_sizes = fread(glue('~/ref/{gbuild}.chrom.sizes.txt')) %>% 
             set_names(c('CHROM', 'LEN')) %>%
             mutate(CHROM = str_remove(CHROM, 'chr')) %>%
             filter(CHROM %in% 1:22) %>%
-            mutate(CHROM = as.integer(CHROM))
-    
+            mutate(CHROM = as.factor(as.integer(CHROM)))
+
+    out_of_bound = segs_consensus %>% left_join(chrom_sizes, by = "CHROM") %>% 
+        filter(seg_end > LEN) %>% pull(seg)
+
+    if (length(out_of_bound) > 0) {
+        warning(glue('Segment end exceeds genome length: {out_of_bound}'))
+        chrom_sizes = chrom_sizes %>%
+            left_join(
+                segs_filtered %>% group_by(CHROM) %>%
+                    summarise(seg_end = max(seg_end)),
+                by = "CHROM"
+            ) %>%
+            mutate(LEN = ifelse(is.na(seg_end), LEN, pmax(LEN, seg_end)))
+    }
+
     segs_consensus = c(
             segs_consensus %>% {GenomicRanges::GRanges(
                 seqnames = .$CHROM,
@@ -215,7 +237,7 @@ fill_neu_segs = function(segs_consensus) {
     return(segs_consensus)
 }
 
-get_exp_post = function(segs_consensus, count_mat, lambdas_ref, ncores = 30) {
+get_exp_post = function(segs_consensus, count_mat, lambdas_ref, alpha = NULL, beta = NULL, ncores = 30) {
 
     gene_seg = GenomicRanges::findOverlaps(
             gtf_transcript %>% {GenomicRanges::GRanges(
@@ -245,13 +267,19 @@ get_exp_post = function(segs_consensus, count_mat, lambdas_ref, ncores = 30) {
     exp_sc = count_mat %>%
         as.data.frame() %>%
         tibble::rownames_to_column('gene') %>% 
-        filter(gene %in% gtf_transcript$gene) %>%
-        mutate(lambda_ref = lambdas_ref[gene]) %>%
-        filter(lambda_ref > 0) %>%
-        left_join(
-            gene_seg %>% select(gene, seg = seg_cons, cnv_state),
+        inner_join(
+            gene_seg %>% select(CHROM, gene, seg = seg_cons, seg_start, seg_end, gene_start, cnv_state),
             by = "gene"
-        )
+        ) %>%
+        arrange(CHROM, gene_start) %>%
+        mutate(gene_index = 1:n()) %>%
+        group_by(seg) %>%
+        mutate(
+            seg_start_index = min(gene_index),
+            seg_end_index = max(gene_index),
+            n_genes = n()
+        ) %>%
+        ungroup()
     
     cells = colnames(count_mat)
     
@@ -259,10 +287,22 @@ get_exp_post = function(segs_consensus, count_mat, lambdas_ref, ncores = 30) {
         cells,
         mc.cores = ncores,
         function(cell) {
-            exp_sc[,c('gene', 'lambda_ref', 'seg', 'cnv_state', cell)] %>%
-            set_names(c('gene', 'lambda_ref', 'seg', 'cnv_state', 'Y_obs')) %>%
-            get_exp_likelihoods() %>%
-            mutate(cell = cell)
+
+            exp_sc = exp_sc[,c('gene', 'seg', 'CHROM', 'cnv_state', 'seg_start',
+                 'seg_end', 'seg_start_index', 'seg_end_index', c)] %>%
+                rename(Y_obs = ncol(.))
+            
+            # ref_star = exp_sc %>% select(gene, Y_obs) %>%
+            #     tibble::column_to_rownames('gene') %>%
+            #     choose_ref(lambdas_ref, gtf_transcript)
+
+            fit = exp_sc %>% {fit_multi_ref(setNames(.$Y_obs, .$gene), lambdas_ref, sum(.$Y_obs))}
+
+            exp_sc %>%
+                # mutate(lambda_ref = lambdas_ref[,ref_star][gene]) %>%
+                
+                get_exp_likelihoods(alpha, beta) %>%
+                mutate(cell = cell, ref_star = ref_star)
         }
     ) %>% 
     bind_rows() %>%
