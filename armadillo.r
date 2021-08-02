@@ -1,6 +1,5 @@
-source('~/Armadillo/hmm.r')
-source('~/Armadillo/utils.r')
-########################### Main ############################
+source('/home/tenggao/Armadillo/hmm.r')
+source('/home/tenggao/Armadillo/utils.r')
 
 #' @param exp_mat scaled expression matrix
 armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, verbose = TRUE) {
@@ -56,7 +55,7 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     if (verbose) {
         display('Running HMMs ..')
     }
-                
+
     bulk_all = mclapply(
             nodes,
             mc.cores = ncores,
@@ -154,9 +153,9 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     return(res)
 }
 
+# resolve overlapping calls by graph reduction
 resolve_cnvs = function(segs_all, gbuild = 'hg38', debug = FALSE) {
             
-    # resolve overlapping calls by graph
     V = segs_all %>% mutate(vertex = 1:n(), .before = 'CHROM')
 
     E = segs_all %>% {GenomicRanges::GRanges(
@@ -168,6 +167,25 @@ resolve_cnvs = function(segs_all, gbuild = 'hg38', debug = FALSE) {
         as.data.frame %>%
         setNames(c('from', 'to')) %>% 
         filter(from != to)
+
+    # cut some edges with weak overlaps
+    E = E %>% 
+        left_join(
+            V %>% select(from = vertex, start_x = seg_start, end_x = seg_end),
+            by = 'from'
+        ) %>%
+        left_join(
+            V %>% select(to = vertex, start_y = seg_start, end_y = seg_end),
+            by = 'to'
+        ) %>%
+        mutate(
+            len_x = end_x - start_x,
+            len_y = end_y - start_y,
+            len_overlap = pmin(end_x, end_y) - pmax(start_x, start_y),
+            frac_overlap_x = len_overlap/len_x,
+            frac_overlap_y = len_overlap/len_y
+        ) %>%
+        filter(!(frac_overlap_x < 0.1 & frac_overlap_y < 0.1))
 
     G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
 
@@ -183,7 +201,6 @@ resolve_cnvs = function(segs_all, gbuild = 'hg38', debug = FALSE) {
     
     return(segs_consensus)
 }
-
 
 
 # retrieve neutral segments
@@ -237,7 +254,7 @@ fill_neu_segs = function(segs_consensus, gbuild = 'hg38') {
     return(segs_consensus)
 }
 
-get_exp_post = function(segs_consensus, count_mat, lambdas_ref, alpha = NULL, beta = NULL, ncores = 30) {
+get_exp_post = function(segs_consensus, count_mat, lambdas_ref = NULL, lambdas_fit = NULL, alpha = NULL, beta = NULL, ncores = 30) {
 
     gene_seg = GenomicRanges::findOverlaps(
             gtf_transcript %>% {GenomicRanges::GRanges(
@@ -289,22 +306,23 @@ get_exp_post = function(segs_consensus, count_mat, lambdas_ref, alpha = NULL, be
         function(cell) {
 
             exp_sc = exp_sc[,c('gene', 'seg', 'CHROM', 'cnv_state', 'seg_start',
-                 'seg_end', 'seg_start_index', 'seg_end_index', c)] %>%
+                 'seg_end', cell)] %>%
                 rename(Y_obs = ncol(.))
             
             # ref_star = exp_sc %>% select(gene, Y_obs) %>%
             #     tibble::column_to_rownames('gene') %>%
             #     choose_ref(lambdas_ref, gtf_transcript)
-
-            fit = exp_sc %>% {fit_multi_ref(setNames(.$Y_obs, .$gene), lambdas_ref, sum(.$Y_obs))}
+            if (is.null(lambdas_fit)) {
+                lambdas_fit = exp_sc %>% {fit_multi_ref(setNames(.$Y_obs, .$gene), lambdas_ref, sum(.$Y_obs), gtf_transcript)}
+            }
 
             exp_sc %>%
                 # mutate(lambda_ref = lambdas_ref[,ref_star][gene]) %>%
-                
+                mutate(lambda_ref = lambdas_fit$lambdas_bar[gene]) %>%
                 get_exp_likelihoods(alpha, beta) %>%
-                mutate(cell = cell, ref_star = ref_star)
+                mutate(cell = cell, w = paste0(signif(lambdas_fit$w, 2), collapse = ','))
         }
-    ) %>% 
+    ) %>%
     bind_rows() %>%
     mutate(seg = factor(seg, gtools::mixedsort(unique(seg))))
     
@@ -325,6 +343,16 @@ get_exp_post = function(segs_consensus, count_mat, lambdas_ref, alpha = NULL, be
                   l22 + log(p_bamp/2),
                   l00 + log(p_bdel/2))
             ),
+            Z_cnv = matrixStats::logSumExp(
+                c(l20 + log(p_loh/2),
+                l10 + log(p_del/2),
+                l21 + log(p_amp/4),
+                l31 + log(p_amp/4),
+                l22 + log(p_bamp/2),
+                l00 + log(p_bdel/2))
+            ),
+            Z_n = l11 + log(1/2),
+            logBF = Z_cnv - Z_n,
             p_amp = exp(matrixStats::logSumExp(c(l21 + log(p_amp/4), l31 + log(p_amp/4))) - Z),
             p_amp_sin = exp(l21 + log(p_amp/4) - Z),
             p_amp_mul = exp(l31 + log(p_amp/4) - Z),
@@ -410,6 +438,16 @@ get_allele_post = function(bulk_all, segs_consensus, df) {
                   l00 + log(p_bdel/2)
                  )
             ),
+            Z_cnv = matrixStats::logSumExp(
+                c(l20 + log(p_loh/2),
+                  l10 + log(p_del/2),
+                  l21 + log(p_amp/4),
+                  l31 + log(p_amp/4),
+                  l22 + log(p_bamp/2),
+                  l00 + log(p_bdel/2)
+                 )
+            ),
+            Z_n = l11 + log(1/2),
             p_amp = exp(matrixStats::logSumExp(c(l21 + log(p_amp/4), l31 + log(p_amp/4))) - Z),
             p_amp_sin = exp(l21 + log(p_amp/4) - Z),
             p_amp_mul = exp(l31 + log(p_amp/4) - Z),
@@ -426,14 +464,15 @@ get_allele_post = function(bulk_all, segs_consensus, df) {
 get_joint_post = function(exp_post, allele_post, segs_consensus) {
     joint_post = exp_post %>%
         select(
-            cell, seg, cnv_state, l11_x = l11, l20_x = l20, l10_x = l10, l21_x = l21, l31_x = l31, l22_x = l22, l00_x = l00,
-            Z_x = Z
+            cell, seg, cnv_state, l11_x = l11, l20_x = l20,
+            l10_x = l10, l21_x = l21, l31_x = l31, l22_x = l22, l00_x = l00,
+            Z_x = Z, Z_cnv_x = Z_cnv, Z_n_x = Z_n
         ) %>%
         full_join(
             allele_post %>% select(
                 cell, seg, l11_y = l11, l20_y = l20, l10_y = l10, l21_y = l21, l31_y = l31, l22_y = l22, l00_y = l00,
                 n_snp = total,
-                Z_y = Z
+                Z_y = Z, Z_cnv_y = Z_cnv, Z_n_y = Z_n
             ),
             c("cell", "seg")
         ) %>%
@@ -457,22 +496,6 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
                   l22_x + l22_y + log(p_bamp/2),
                   l00_x + l00_y + log(p_bdel/2))
             ),
-            Z_cnv_x = matrixStats::logSumExp(
-                c(l20_x + log(p_loh/2),
-                  l10_x + log(p_del/2),
-                  l21_x + log(p_amp/4),
-                  l31_x + log(p_amp/4),
-                  l22_x + log(p_bamp/2),
-                  l00_x + log(p_bdel/2))
-            ),
-            Z_cnv_y = matrixStats::logSumExp(
-                c(l20_y + log(p_loh/2),
-                  l10_y + log(p_del/2),
-                  l21_y + log(p_amp/4),
-                  l31_y + log(p_amp/4),
-                  l22_y + log(p_bamp/2),
-                  l00_y + log(p_bdel/2))
-            ),
             Z_cnv = matrixStats::logSumExp(
                 c(l20_x + l20_y + log(p_loh/2),
                   l10_x + l10_y + log(p_del/2),
@@ -482,8 +505,6 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
                   l00_x + l00_y + log(p_bdel/2))
             ),
             Z_n = l11_x + l11_y + log(1/2),
-            Z_n_x = l11_x + log(1/2),
-            Z_n_y = l11_y + log(1/2),
             p_cnv = exp(Z_cnv - Z),
             p_n = exp(Z_n - Z),
             p_cnv_x = exp(Z_cnv_x - Z_x),

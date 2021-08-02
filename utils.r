@@ -219,6 +219,7 @@ preprocess_data = function(
 
 get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 2, verbose = FALSE) {
 
+    # write this inside the procee_exp_fc function
     if (length(dim(lambdas_ref)) > 1) {
         # ref_star = choose_ref(count_mat, lambdas_ref, gtf_transcript)
         # lambdas_star = lambdas_ref[,ref_star]
@@ -227,7 +228,7 @@ get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 2, v
         # }
         Y_obs = rowSums(count_mat)
 
-        fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs))
+        fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
 
         if (verbose) {
             display('Fitted reference proportions:')
@@ -241,8 +242,8 @@ get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 2, v
         gtf_transcript,
         verbose = verbose
     )$bulk %>%
-    filter((logFC < 8 & logFC > -8) | Y_obs == 0)
-    # mutate(ref_star = ref_star)
+    filter((logFC < 8 & logFC > -8) | Y_obs == 0) %>%
+    mutate(w = paste0(signif(fit$w, 2), collapse = ','))
             
     combine_bulk(
         df = df,
@@ -660,7 +661,7 @@ phi_mle_roll = function(Y_obs, lambda_ref, alpha, beta, d_obs, h) {
         1:n,
         function(c) {
             slice = max(c - h - 1, 1):min(c + h, n)
-            calc_phi_mle(Y_obs[slice], lambda_ref[slice], unique(d_obs), alpha, beta)
+            calc_phi_mle(Y_obs[slice], lambda_ref[slice], unique(d_obs), alpha[slice], beta[slice])
         }
     )
 }
@@ -682,17 +683,80 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
         lower = c(0.01, 0.01),
         control = list('trace' = FALSE)
     )
+
+    alpha = fit@coef[1]
+    beta = fit@coef[2]
     
     return(fit)
 }
 
-fit_multi_ref = function(Y_obs, lambdas_ref, d) {
+l_gpois_glm = function(Y_obs, lambda_ref, d, mu_0, m, v_0, tau,  phi = 1) {
+
+    v = exp(v_0 + tau * log(lambda_ref))
+    mu = exp(mu_0 + m * log(lambda_ref))
+    beta = mu/v
+    alpha = mu * beta
+
+    sum(dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE))
+
+}
+
+fit_gpois_glm = function(Y_obs, lambda_ref, d) {
+
+    Y_obs = Y_obs[lambda_ref > 0]
+    lambda_ref = lambda_ref[lambda_ref > 0]
+    
+    fit = stats4::mle(
+        minuslogl = function(mu_0, m, v_0, tau) {
+            -l_gpois_glm(Y_obs, lambda_ref, d, mu_0, m, v_0, tau)
+        },
+        start = c(1, 0, 1, 0)
+    )
+    
+    return(fit)
+}
+
+l_gpois_glm2 = function(Y_obs, lambda_ref, d, m_0, m_1, m_2, v_0, v_1, v_2, phi = 1) {
+
+    v = exp(v_0 + v_1 * log(lambda_ref) + v_2 * log(lambda_ref)^2)
+    mu = exp(m_0 + m_1 * log(lambda_ref) + m_2 * log(lambda_ref)^2)
+    beta = mu/v
+    alpha = mu * beta
+
+    ls = dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE)
+
+    if (any(is.na(ls))) {
+        display(sum(is.na(ls)))
+        display(c(v[which(is.na(ls))]))
+        display(c(m_0, m_1, m_2, v_0, v_1, v_2))
+    }
+
+    sum(ls)
+
+}
+
+fit_gpois_glm2 = function(Y_obs, lambda_ref, d) {
+
+    Y_obs = Y_obs[lambda_ref > 0]
+    lambda_ref = lambda_ref[lambda_ref > 0]
+    
+    fit = stats4::mle(
+        minuslogl = function(m_0, m_1, m_2, v_0, v_1, v_2) {
+            -l_gpois_glm2(Y_obs, lambda_ref, d, m_0, m_1, m_2, v_0, v_1, v_2)
+        },
+        start = c(1, 0, 0, 10, 2, 0.1),
+        lower = c(rep(-10, 6)),
+        control = c('trace' = TRUE)
+    )
+
+    return(fit)
+}
+
+fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript) {
 
     genes_common = gtf_transcript$gene %>% 
         intersect(names(Y_obs)) %>%
         intersect(rownames(lambdas_ref)[rowSums(lambdas_ref == 0) == 0])
-
-    display(length(genes_common))
 
     Y_obs = Y_obs[genes_common]
     lambdas_ref = lambdas_ref[genes_common,,drop=F]
@@ -707,7 +771,7 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d) {
         },
         method = 'L-BFGS-B',
         par = c(1, rep(1/n_ref, n_ref)),
-        lower = c(0.01, rep(0, n_ref))
+        lower = c(0.01, rep(1e-6, n_ref))
     )
 
     alpha = fit$par[1]
@@ -1134,6 +1198,8 @@ plot_cnv_post = function(segs_consensus) {
 
 
 plot_cnv_cell = function(joint_post, n_sample = 1e4, rev_cnv = F, rev_cell = F, mut_clust = NULL) {
+
+    joint_post = joint_post %>% filter(cnv_state != 'neu')
     
     tree_cnv = joint_post %>% 
         reshape2::dcast(seg ~ cell, value.var = 'p_cnv') %>%
@@ -1200,6 +1266,7 @@ plot_cnv_cell = function(joint_post, n_sample = 1e4, rev_cnv = F, rev_cell = F, 
                 select(seg_label, cell, cell_group, p_cnv, cluster) %>%
                 arrange(seg_label)
         ) %>%
+        mutate(logBF = Z_cnv - Z_n) %>%
         mutate(seg = factor(seg, cnv_order)) %>%
         arrange(seg) %>%
         mutate(seg_label = factor(seg_label, unique(seg_label))) %>%
@@ -1211,34 +1278,14 @@ plot_cnv_cell = function(joint_post, n_sample = 1e4, rev_cnv = F, rev_cell = F, 
     pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
     
     cell_colors = D %>% 
-        distinct(cell_type, cell) %>%
-        arrange(cell) %>%
-        {setNames(pal[as.integer(factor(.$cell_type))], .$cell)}
+        filter(cluster %in% c('segment')) %>%
+        distinct(cell_group, cell) %>%
+        arrange(cell_group, cell) %>%
+        {setNames(pal[as.integer(factor(.$cell_group))], .$cell)}
 
-    p = ggplot(
-            D %>% filter(cluster %in% c('segment')),
-            aes(x = cell, y = seg_label, fill = p_cnv)
-        ) +
-        geom_tile() +
-        theme_classic() +
-        scale_y_discrete(expand = expansion(0)) +
-        scale_x_discrete(expand = expansion(0)) +
-        theme(
-            panel.spacing = unit(0.1, 'mm'),
-            panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
-            panel.background = element_rect(fill = 'skyblue'),
-            strip.background = element_blank(),
-            axis.text.x = element_blank(),
-            strip.text = element_text(angle = 90, size = 8, vjust = 0.5),
-            axis.ticks.x = element_line(color = cell_colors, size = 0.1)
-        ) +
-        facet_grid(cluster~cell_group, scale = 'free', space = 'free') +
-        scale_fill_gradient2(low = pal[2], mid = pal[2], high = pal[1], midpoint = 0, limits = c(0,1)) +
-        ylab('')
-    
     # p = ggplot(
     #         D %>% filter(cluster %in% c('segment')),
-    #         aes(x = cell, y = seg_label, fill = logBF)
+    #         aes(x = cell, y = seg_label, fill = p_cnv)
     #     ) +
     #     geom_tile() +
     #     theme_classic() +
@@ -1246,81 +1293,120 @@ plot_cnv_cell = function(joint_post, n_sample = 1e4, rev_cnv = F, rev_cell = F, 
     #     scale_x_discrete(expand = expansion(0)) +
     #     theme(
     #         panel.spacing = unit(0.1, 'mm'),
+    #         panel.border = element_rect(size = 0.5, color = 'black', fill = NA),
+    #         panel.background = element_rect(fill = 'white'),
+    #         strip.background = element_blank(),
+    #         axis.text.x = element_blank(),
+    #         strip.text = element_text(angle = 90, size = 8, vjust = 0.5),
+    #         axis.ticks.x = element_line(color = cell_colors, size = 0.1)
+    #     ) +
+    #     facet_grid(cluster~cell_group, scale = 'free', space = 'free') +
+    #     scale_fill_gradient(low = 'white', high = 'red', limits = c(0.5,1), oob = scales::oob_squish) +
+    #     ylab('')
+    
+    p = ggplot(
+            D %>% filter(cluster %in% c('segment')),
+            aes(x = cell, y = seg_label, fill = logBF)
+        ) +
+        geom_tile() +
+        theme_classic() +
+        scale_y_discrete(expand = expansion(0)) +
+        scale_x_discrete(expand = expansion(0)) +
+        theme(
+            panel.spacing = unit(0.1, 'mm'),
+            panel.border = element_rect(size = 0.5, color = 'black', fill = NA),
+            panel.background = element_rect(fill = 'white'),
+            strip.background = element_blank(),
+            axis.text.x = element_blank(),
+            strip.text = element_text(angle = 90, size = 8, vjust = 0.5)
+        ) +
+        facet_grid(cluster~cell_group, scale = 'free', space = 'free') +
+        scale_fill_gradient(low = 'white', high = 'red', limits = c(2, 5), oob = scales::oob_squish) +
+        ylab('')
+    
+    # p_cnv_tree = tree_cnv %>%
+    #     ggtree::ggtree(ladderize=F) +
+    #     scale_x_discrete(expand = expansion(mult = 0)) +
+    #     theme(plot.margin = margin(0,0,0,0)) 
+    
+    # panel_1 = (p) + plot_layout(widths = c(1,20))
+    
+    ## split plot
+    # D = joint_post %>%
+    #     mutate(seg = factor(seg, rev(cnv_order))) %>%
+    #     arrange(seg) %>%
+    #     mutate(
+    #         seg_label = factor(seg_label, unique(seg_label))
+    #     ) %>%
+    #     mutate(cell = factor(cell, cell_order$cell)) %>%
+    #     group_by(cell_group) %>%
+    #     filter(cell %in% sample(unique(cell), min(200, length(unique(cell))))) %>%
+    #     ungroup()
+
+    # p = D %>% 
+    #     reshape2::melt(measure.vars = c('p_cnv', 'p_cnv_x', 'p_cnv_y'), value.name = 'p_cnv') %>%
+    #     mutate(source = c('p_cnv' = 'joint', 'p_cnv_x' = 'expr', 'p_cnv_y' = 'allele')[as.character(variable)]) %>%
+    #     # filter(!(cnv_state %in% c('bamp') & source %in% c('allele', 'joint'))) %>%
+    #     # filter(!(cnv_state %in% c('loh') & source %in% c('expr', 'joint'))) %>%
+    #     filter(source != 'joint') %>%
+    #     ggplot(
+    #         aes(x = cell, y = source, fill = p_cnv)
+    #     ) +
+    #     geom_tile() +
+    #     theme_classic() +
+    #     scale_y_discrete(expand = expansion(0), position = "right") +
+    #     scale_x_discrete(expand = expansion(0)) +
+    #     facet_grid(seg_label~cell_group, scale = 'free', space = 'free_x', switch = 'y') +
+    #     theme(
+    #         panel.spacing = unit(0.1, 'mm'),
     #         panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
     #         panel.background = element_rect(fill = 'skyblue'),
     #         strip.background = element_blank(),
     #         axis.text.x = element_blank(),
-    #         strip.text = element_text(angle = 90, size = 8, vjust = 0.5)
+    #         strip.text.x = element_text(angle = 90, size = 8),
+    #         strip.text.y.left = element_text(angle = 0, size = 8),
+    #         plot.margin = margin(0,0,0,0)
     #     ) +
-    #     facet_grid(cluster~cell_group, scale = 'free', space = 'free') +
-    #     scale_fill_gradient(low = 'skyblue', high = 'red', limits = c(0, 10), oob = scales::oob_squish) +
+    #     scale_fill_gradient2(low = 'skyblue', high = 'red', mid = 'skyblue', midpoint = 0.5, limits = c(0,1)) +
     #     ylab('')
     
-    p_cnv_tree = tree_cnv %>%
-        ggtree::ggtree(ladderize=F) +
-        scale_x_discrete(expand = expansion(mult = 0)) +
-        theme(plot.margin = margin(0,0,0,0)) 
+    # panel_2 = (p_cnv_tree | p) + plot_layout(widths = c(1,20))
     
-    panel_1 = (p_cnv_tree | p) + plot_layout(widths = c(1,20))
-    
-    ## split plot
-    D = joint_post %>%
-        mutate(seg = factor(seg, rev(cnv_order))) %>%
-        arrange(seg) %>%
-        mutate(
-            seg_label = factor(seg_label, unique(seg_label))
-        ) %>%
-        mutate(cell = factor(cell, cell_order$cell)) %>%
-        group_by(cell_group) %>%
-        filter(cell %in% sample(unique(cell), min(200, length(unique(cell))))) %>%
-        ungroup()
-
-    p = D %>% 
-        reshape2::melt(measure.vars = c('p_cnv', 'p_cnv_x', 'p_cnv_y'), value.name = 'p_cnv') %>%
-        mutate(source = c('p_cnv' = 'joint', 'p_cnv_x' = 'expr', 'p_cnv_y' = 'allele')[as.character(variable)]) %>%
-        # filter(!(cnv_state %in% c('bamp') & source %in% c('allele', 'joint'))) %>%
-        # filter(!(cnv_state %in% c('loh') & source %in% c('expr', 'joint'))) %>%
-        filter(source != 'joint') %>%
-        ggplot(
-            aes(x = cell, y = source, fill = p_cnv)
-        ) +
-        geom_tile() +
-        theme_classic() +
-        scale_y_discrete(expand = expansion(0), position = "right") +
-        scale_x_discrete(expand = expansion(0)) +
-        facet_grid(seg_label~cell_group, scale = 'free', space = 'free_x', switch = 'y') +
-        theme(
-            panel.spacing = unit(0.1, 'mm'),
-            panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
-            panel.background = element_rect(fill = 'skyblue'),
-            strip.background = element_blank(),
-            axis.text.x = element_blank(),
-            strip.text.x = element_text(angle = 90, size = 8),
-            strip.text.y.left = element_text(angle = 0, size = 8),
-            plot.margin = margin(0,0,0,0)
-        ) +
-        scale_fill_gradient2(low = 'skyblue', high = 'red', mid = 'skyblue', midpoint = 0.5, limits = c(0,1)) +
-        ylab('')
-    
-    panel_2 = (p_cnv_tree | p) + plot_layout(widths = c(1,20))
-    
-    return(panel_1)
+    return(p)
     
 }
 
-plot_exp_cell = function(exp_post, segs_consensus, cell_annot) {
-    ggplot(
-        exp_post %>% 
+plot_exp_cell = function(exp_post, segs_consensus, cell_annot, size = 0.05, censor = 0) {
+    
+    # cell_order = exp_post %>% 
+    #     filter(!cnv_state %in% c('neu', 'loh')) %>%
+    #     left_join(cell_annot, by = 'cell') %>%
+    #     group_by(cell_group) %>%
+    #     do(
+    #         reshape2::dcast(., cell ~ seg, value.var = 'phi_mle') %>%
+    #         tibble::column_to_rownames('cell') %>%
+    #         dist() %>%
+    #         hclust %>%
+    #         {.$labels[.$order]} %>%
+    #         as.data.frame()
+    #     ) %>%
+    #     set_names(c('cell_group', 'cell'))
+
+    exp_post = exp_post %>% 
             inner_join(
                 segs_consensus %>% select(seg = seg_cons, CHROM, seg_start, seg_end),
                 by = 'seg'
             ) %>%
-            left_join(cell_annot, by = 'cell') %>%
-            mutate(phi_mle = ifelse(phi_mle > 0.7 & phi_mle < 1.3, 1, phi_mle)),
+            inner_join(cell_annot, by = 'cell') %>%
+            mutate(phi_mle = ifelse(phi_mle > 1-censor & phi_mle < 1+censor, 1, phi_mle))
+            # mutate(cell = factor(cell, cell_order$cell))
+
+    ggplot(
+        exp_post,
         aes(x = seg_start, xend = seg_end, y = cell, yend = cell, color = phi_mle)
     ) +
     theme_classic() +
-    geom_segment(size = 0.05) +
+    geom_segment(size = size) +
     theme(
         panel.spacing = unit(0, 'mm'),
         panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),

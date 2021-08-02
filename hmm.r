@@ -111,56 +111,70 @@ run_hmm_inhom = function(pAD, DP, p_s, p_0 = 1-1e-5, gamma = 20, prior = NULL) {
 }
 
 
-# forward.inhom = function (obj, ...) {
+forward_back_allele = function (obj, ...) {
     
-#     x <- obj$x
-#     p_x <- HiddenMarkov:::makedensity(obj$distn)
+    x <- obj$x
+    p_x <- HiddenMarkov:::makedensity(obj$distn)
     
-#     m <- nrow(obj$Pi[[1]])
-#     n <- length(x)
+    m <- nrow(obj$Pi[[1]])
+    n <- length(x)
     
-#     logprob = sapply(1:m, function(k) {
+    logprob = sapply(1:m, function(k) {
         
-#         l_x = p_x(x = x,  HiddenMarkov:::getj(obj$pm, k), obj$pn, log = TRUE)
+        l_x = p_x(x = x,  HiddenMarkov:::getj(obj$pm, k), obj$pn, log = TRUE)
         
-#         l_x[is.na(l_x)] = 0
+        l_x[is.na(l_x)] = 0
         
-#         return(l_x)
+        return(l_x)
         
-#     })
+    })
         
-#     logphi <- log(as.double(obj$delta))
+    logphi <- log(as.double(obj$delta))
+    logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
+    lscale <- as.double(0)
+    logPi <- lapply(obj$Pi, log)
+    
+    for (t in 1:n) {
+        
+        if (t > 1) {
+            logphi <- sapply(1:m, function(j) matrixStats::logSumExp(logphi + logPi[[t]][,j]))
+        }
+                          
+        logphi <- logphi + logprob[t,]
+                          
+        logsumphi <- matrixStats::logSumExp(logphi)
+                          
+        logphi <- logphi - logsumphi
+                          
+        lscale <- lscale + logsumphi
+                          
+        logalpha[t,] <- logphi + lscale
+                          
+        LL <- lscale
+    }
 
-#     logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-    
-#     lscale <- as.double(0)
-    
-#     logPi <- lapply(obj$Pi, log)
-    
-#     for (i in 1:n) {
+    logbeta <- matrix(as.double(rep(0, m * n)), nrow = n)
+    logphi <- log(as.double(rep(1/m, m)))
+    lscale <- as.double(log(m))
+
+    for (t in seq(n-1, 1, -1)){
         
-#         if (i > 1) {
-#             logphi <- sapply(1:m, function(j) matrixStats::logSumExp(logphi + logPi[[i]][,j]))
-#         }
-                          
-#         logphi <- logphi + logprob[i,]
-                          
-#         logSumPhi <- matrixStats::logSumExp(logphi)
-                          
-#         logphi <- logphi - logSumPhi
-                          
-#         lscale <- lscale + logSumPhi
-                          
-#         logalpha[i,] <- logphi + lscale
-                          
-#         LL <- lscale
-#     }
+        logphi = sapply(1:m, function(i) matrixStats::logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
+
+        logbeta[t,] <- logphi + lscale
+
+        logsumphi <- matrixStats::logSumExp(logphi)
+
+        logphi <- logphi - logsumphi
+
+        lscale <- lscale + logsumphi
+    }
     
-#     return(LL)
-# }
+    return(list('logalpha' = logalpha, 'logbeta' = logbeta))
+}
 
 # only compute total log likelihood
-forward.inhom = function (obj, ...) {
+likelihood_allele = function (obj, ...) {
         
     x <- obj$x
     p_x <- HiddenMarkov:::makedensity(obj$distn)
@@ -204,8 +218,9 @@ forward.inhom = function (obj, ...) {
     
     return(LL)
 }
-                             
-calc_allele_lik = function (pAD, DP, p_s, theta, gamma = 20) {
+
+get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
+
     states = c("theta_up", "theta_down")
     calc_trans_mat = function(p_s) {
         matrix(c(1 - p_s, p_s, p_s, 1 - p_s), ncol = 2, byrow = TRUE)
@@ -218,12 +233,20 @@ calc_allele_lik = function (pAD, DP, p_s, theta, gamma = 20) {
     beta_up = (0.5 - theta) * gamma
     alpha_down = beta_up
     beta_down = alpha_up
+    
     hmm = HiddenMarkov::dthmm(x = pAD, Pi = As, delta = prior, 
         distn = "bbinom", pm = list(alpha = c(alpha_up, alpha_down), 
             beta = c(beta_up, beta_down)), pn = list(size = DP), 
         discrete = TRUE)
+
     class(hmm) = "dthmm.inhom"
-    LL = forward.inhom(hmm)
+
+    return(hmm)
+}
+                             
+calc_allele_lik = function (pAD, DP, p_s, theta, gamma = 20) {
+    hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma)
+    LL = likelihood_allele(hmm)
     return(LL)
 }
 
@@ -473,7 +496,7 @@ run_hmm_mv_inhom_gpois = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, bal_
                "6" = "amp_up", "7" = "amp_down", "8" = "bamp", "9" = "bdel")
     
     # relative abundance of states
-    w = c('neu' = 1, 'del' = 1, 'loh' = 1, 'amp' = 1, 'bamp' = 1e-5, 'bdel' = 1e-10)
+    w = c('neu' = 1, 'del' = 1, 'loh' = 1, 'amp' = 1, 'bamp' = 1e-4, 'bdel' = 1e-10)
         
     if (!bal_cnv) {
         w[c('bamp', 'bdel')] = 0
