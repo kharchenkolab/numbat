@@ -1,9 +1,12 @@
 source('/home/tenggao/Armadillo/hmm.r')
 source('/home/tenggao/Armadillo/utils.r')
+source('/home/tenggao/Armadillo/graphs.r')
+
 
 #' @param exp_mat scaled expression matrix
 armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, verbose = TRUE) {
     
+    res = list()
     #### 1. Build expression tree ####
     
     if (verbose) {
@@ -49,7 +52,10 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     nodes = lapply(names(nodes), function(n) {nodes[[n]] %>% inset('label', n)}) %>% setNames(names(nodes))
     
     nodes = nodes %>% extract(purrr::map(., 'size') > 300)
-        
+    
+    res[['tree']] = tree
+    res[['nodes']] = nodes
+    
     #### 2. Run pseudobulk HMM ####
     
     if (verbose) {
@@ -95,6 +101,9 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
             }
         )
     options(warn = 0)
+
+    res[['bulk_all']] = bulk_all
+    res[['plot_list']] = plot_list
     
     #### 3. Find consensus CNVs ####
     
@@ -105,25 +114,29 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
     segs_all = bulk_all %>% 
         filter(state != 'neu') %>%
         distinct(node, CHROM, seg, cnv_state, cnv_state_post, seg_start, seg_end,
-                 theta_mle, phi_mle, p_loh, p_del, p_amp, p_bamp, p_bdel, LLR, LLR_y)
+                 theta_mle, theta_sigma, phi_mle, phi_sigma, p_loh, p_del, p_amp, p_bamp, p_bdel, LLR, LLR_y, n_genes, n_snps)
     
     segs_filtered = segs_all %>% filter(!(LLR_y < 20 & cnv_state %in% c('del', 'amp')))
         
     segs_consensus = resolve_cnvs(segs_filtered)
-    
+
+    res[['segs_all']] = segs_all
+    res[['segs_filtered']] = segs_filtered
+    res[['segs_consensus']] = segs_consensus
+
     #### 4. Per-cell CNV evaluations ####
     
     if (verbose) {
         display('Calculating per-cell CNV posteriors ..')
     }
-    
+
     exp_post = get_exp_post(
         segs_consensus %>%
             mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
         count_mat,
         lambdas_ref,
-        ncores = ncores
-    )
+        ncores = ncores)
+    
     
     allele_post = get_allele_post(bulk_all, segs_consensus, df)
     
@@ -132,23 +145,16 @@ armadillo = function(count_mat, lambdas_ref, df, cell_annot, ncores, t = 1e-5, v
         allele_post,
         segs_consensus
     )
+
+    joint_post = joint_post %>% left_join(cell_annot)
     
     if (verbose) {
         display('All done!')
     }
     
-    res = list(
-        'tree' = tree,
-        'nodes' = nodes,
-        'bulk_all' = bulk_all,
-        'plot_list' = plot_list,
-        'segs_all' = segs_all,
-        'segs_filtered' = segs_filtered,
-        'segs_consensus' = segs_consensus,
-        'exp_post' = exp_post,
-        'allele_post' = allele_post,
-        'joint_post' = joint_post
-    )
+    res[['exp_post']] = exp_post
+    res[['allele_post']] = allele_post
+    res[['joint_post']] = joint_post
     
     return(res)
 }
@@ -254,7 +260,7 @@ fill_neu_segs = function(segs_consensus, gbuild = 'hg38') {
     return(segs_consensus)
 }
 
-get_exp_post = function(segs_consensus, count_mat, lambdas_ref = NULL, lambdas_fit = NULL, alpha = NULL, beta = NULL, ncores = 30) {
+get_exp_post = function(segs_consensus, count_mat, lambdas_ref = NULL, lambdas_fit = NULL, alpha = NULL, beta = NULL, ncores = 30, debug = F) {
 
     gene_seg = GenomicRanges::findOverlaps(
             gtf_transcript %>% {GenomicRanges::GRanges(
@@ -300,33 +306,34 @@ get_exp_post = function(segs_consensus, count_mat, lambdas_ref = NULL, lambdas_f
     
     cells = colnames(count_mat)
     
-    exp_post = mclapply(
+    if (debug) {
+        return(exp_sc)
+    }
+
+    # should write a try catch to handle failures in some cells..
+    results = mclapply(
         cells,
         mc.cores = ncores,
         function(cell) {
 
-            exp_sc = exp_sc[,c('gene', 'seg', 'CHROM', 'cnv_state', 'seg_start',
-                 'seg_end', cell)] %>%
+            exp_sc = exp_sc[,c('gene', 'seg', 'CHROM', 'cnv_state', 'seg_start', 'seg_end', cell)] %>%
                 rename(Y_obs = ncol(.))
             
-            # ref_star = exp_sc %>% select(gene, Y_obs) %>%
-            #     tibble::column_to_rownames('gene') %>%
-            #     choose_ref(lambdas_ref, gtf_transcript)
             if (is.null(lambdas_fit)) {
                 lambdas_fit = exp_sc %>% {fit_multi_ref(setNames(.$Y_obs, .$gene), lambdas_ref, sum(.$Y_obs), gtf_transcript)}
             }
 
             exp_sc %>%
-                # mutate(lambda_ref = lambdas_ref[,ref_star][gene]) %>%
                 mutate(lambda_ref = lambdas_fit$lambdas_bar[gene]) %>%
                 get_exp_likelihoods(alpha, beta) %>%
                 mutate(cell = cell, w = paste0(signif(lambdas_fit$w, 2), collapse = ','))
         }
-    ) %>%
-    bind_rows() %>%
-    mutate(seg = factor(seg, gtools::mixedsort(unique(seg))))
+    )
+
+    exp_post = results[map(results, class) != 'try-error'] %>% bind_rows()
     
     exp_post = exp_post %>% 
+        mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) %>%
         rowwise() %>%
         left_join(
             segs_consensus %>% select(seg = seg_cons, p_loh, p_amp, p_del, p_bamp, p_bdel),
@@ -369,6 +376,11 @@ get_exp_post = function(segs_consensus, count_mat, lambdas_ref = NULL, lambdas_f
 }
 
 get_allele_post = function(bulk_all, segs_consensus, df) {
+
+    if (!'node' %in% colnames(bulk_all) & !'node' %in% colnames(segs_consensus)) {
+        bulk_all['node'] = '0'
+        segs_consensus['node'] = '0'
+    }
     
     # alele posteriors
     snp_seg = bulk_all %>%
@@ -462,6 +474,11 @@ get_allele_post = function(bulk_all, segs_consensus, df) {
 }
 
 get_joint_post = function(exp_post, allele_post, segs_consensus) {
+
+    cells_common = intersect(exp_post$cell, allele_post$cell)
+    exp_post = exp_post %>% filter(cell %in% cells_common)
+    allele_post = allele_post %>% filter(cell %in% cells_common)
+
     joint_post = exp_post %>%
         select(
             cell, seg, cnv_state, l11_x = l11, l20_x = l20,

@@ -370,8 +370,8 @@ Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
 
         nu[1, ] = nu[1, ] + dfunc2(
             x = x2[1],
-            list('shape' = object$alpha),
-            list('rate' = object$beta/(object$phi * object$d * object$lambda_star[1])),
+            list('shape' = object$alpha[1]),
+            list('rate' = object$beta[1]/(object$phi * object$d * object$lambda_star[1])),
             log = TRUE
         )
         
@@ -391,8 +391,8 @@ Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
         if (!is.na(x2[i])) {
             nu[i, ] = nu[i, ] + dfunc2(
                 x = x2[i],
-                list('shape' = object$alpha),
-                list('rate' = object$beta/(object$phi * object$d * object$lambda_star[i])),
+                list('shape' = object$alpha[i]),
+                list('rate' = object$beta[i]/(object$phi * object$d * object$lambda_star[i])),
                 log = TRUE
             )
             
@@ -489,7 +489,7 @@ forward.mv.inhom = function (obj, ...) {
     return(LL)
 }
 
-run_hmm_mv_inhom_gpois = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), alpha = 1, beta = 1, t = 1e-5, gamma = 18, prior = NULL, exp_only = FALSE, allele_only = FALSE, debug = FALSE) {
+run_hmm_mv_inhom_gpois = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, theta_min, bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), alpha = 1, beta = 1, t = 1e-5, gamma = 18, prior = NULL, exp_only = FALSE, allele_only = FALSE, debug = FALSE) {
     
     # states
     states = c("1" = "neu", "2" = "del_up", "3" = "del_down", "4" = "loh_up", "5" = "loh_down", 
@@ -549,8 +549,8 @@ run_hmm_mv_inhom_gpois = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, bal_
         function(p_s) {calc_trans_mat(p_s, t, n_states = length(states))}
     )
     
-    theta_u = 0.58
-    theta_d = 0.42
+    theta_u = 0.5 + theta_min
+    theta_d = 0.5 - theta_min
             
     hmm = HiddenMarkov::dthmm(
         x = pAD, 
