@@ -48,37 +48,49 @@ Viterbi.dthmm.inhom <- function (obj, ...){
     m <- nrow(obj$Pi[[1]])
     nu <- matrix(NA, nrow = n, ncol = m)
     y <- rep(NA, n)
-    nu[1, ] <- log(obj$delta) + dfunc(x=x[1], obj$pm,
-                                    HiddenMarkov:::getj(obj$pn, 1), log=TRUE)
-    logPi <- lapply(obj$Pi, log)
-    for (i in 2:n) {
-        matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
-        nu[i, ] <- apply(matrixnu + logPi[[i]], 2, max) +
-            dfunc(x=x[i], obj$pm, HiddenMarkov:::getj(obj$pn, i), log=TRUE)
+
+    nu[1, ] <- log(obj$delta) 
+
+    if (!is.na(x[1])) {
+        nu[1, ] <- nu[1, ] + dfunc(x=x[1], obj$pm, HiddenMarkov:::getj(obj$pn, 1), log=TRUE)
     }
     
+    logPi <- lapply(obj$Pi, log)
+
+    for (i in 2:n) {
+        matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
+        nu[i, ] <- apply(matrixnu + logPi[[i]], 2, max)
+        if (!is.na(x[i])) {
+            nu[i, ] <- nu[i, ] + dfunc(x=x[i], obj$pm, HiddenMarkov:::getj(obj$pn, i), log=TRUE)
+        }
+    }
 #     if (any(nu[n, ] == -Inf)) 
 #         stop("Problems With Underflow")
     y[n] <- which.max(nu[n, ])
     # double check this index of logPi
     for (i in seq(n - 1, 1, -1)) y[i] <- which.max(logPi[[i + 1]][, y[i + 1]] + nu[i, ])
-        
-    max.loglik = max(nu[n, ])
     
-    return(list('y' = y, 'max.loglik' = max.loglik))
+    return(y)
 }
 
-run_hmm_inhom = function(pAD, DP, p_s, p_0 = 1-1e-5, gamma = 20, prior = NULL) {
+# one theta level
+run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
+
+    gamma = unique(gamma)
+
+    if (length(gamma) > 1) {
+        stop('More than one gamma parameter')
+    }
     
     # states
     states = c("theta_up", "neu", "theta_down")
     
     # transition matrices
-    calc_trans_mat = function(p_s, p_0, n_states) {
+    calc_trans_mat = function(p_s, t, n_states) {
         matrix(
-            c(p_0 * (1-p_s), 1 - p_0, p_0 * p_s, 
-             (1-p_0)/2, p_0, (1-p_0)/2,
-             p_0 * p_s, 1-p_0, p_0 * (1 - p_s)),
+            c((1-t) * (1-p_s), t, (1-t) * p_s, 
+             t/2, (1-t), t/2,
+             (1-t) * p_s, t, (1-t) * (1-p_s)),
             ncol = n_states,
             byrow = TRUE
         )
@@ -86,26 +98,91 @@ run_hmm_inhom = function(pAD, DP, p_s, p_0 = 1-1e-5, gamma = 20, prior = NULL) {
     
     As = lapply(
         p_s,
-        function(p_s) {calc_trans_mat(p_s, p_0, n_states = length(states))}
+        function(p_s) {calc_trans_mat(p_s, t, n_states = length(states))}
     )
     
     # intitial probabilities
     if (is.null(prior)) {
         prior = rep(1/length(states), length(states))
     }
+
+    alpha_up = (0.5 + theta_min) * gamma
+    beta_up = (0.5 - theta_min) * gamma
+    alpha_down = beta_up
+    beta_down = alpha_up
+    alpha_neu = gamma/2
+    beta_neu = gamma/2
         
     hmm = HiddenMarkov::dthmm(
         x = pAD, 
         Pi = As, 
         delta = prior, 
         distn = "bbinom",
-        pm = list(alpha=c(10,10,6), beta=c(6,10,10)),
+        pm = list(alpha=c(alpha_up,alpha_neu,alpha_down), beta=c(beta_up,beta_neu,beta_down)),
         pn = list(size = DP),
         discrete = TRUE)
 
     class(hmm) = 'dthmm.inhom'
         
-    solution = states[HiddenMarkov::Viterbi(hmm)$y]
+    solution = states[HiddenMarkov::Viterbi(hmm)]
+    
+    return(solution)
+}
+
+# two theta levels
+run_hmm_inhom2 = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
+
+    gamma = unique(gamma)
+
+    if (length(gamma) > 1) {
+        stop('More than one gamma parameter')
+    }
+    
+    # states
+    states = c("neu", "theta_up_1", "theta_down_1", "theta_up_2", "theta_down_2")
+    
+    # transition matrices
+    calc_trans_mat = function(p_s, t, n_states) {
+        matrix(
+            c(1-t, t/4, t/4, t/4, t/4, 
+             t/4, (1-t)*(1-p_s), (1-t)*p_s, t/4, t/4,
+             t/4, (1-t)*p_s, (1-t)*(1-p_s), t/4, t/4,
+             t/4, t/4, t/4, (1-t)*(1-p_s), (1-t)*p_s,
+             t/4, t/4, t/4, (1-t)*p_s, (1-t)*(1-p_s)),
+            ncol = n_states,
+            byrow = TRUE
+        )
+    }
+    
+    As = lapply(
+        p_s,
+        function(p_s) {calc_trans_mat(p_s, t, n_states = length(states))}
+    )
+    
+    # intitial probabilities
+    if (is.null(prior)) {
+        prior = rep(1/length(states), length(states))
+    }
+
+    theta_1 = theta_min
+    theta_2 = 0.4
+            
+    hmm = HiddenMarkov::dthmm(
+        x = pAD, 
+        Pi = As, 
+        delta = prior, 
+        distn = "bbinom",
+        pm = list(
+            alpha = gamma * c(0.5, 0.5 + theta_1, 0.5 - theta_1, 0.5 + theta_2, 0.5 - theta_2),
+            beta = gamma * c(0.5, 0.5 - theta_1, 0.5 + theta_1, 0.5 - theta_2, 0.5 + theta_2)
+        ),
+        pn = list(size = DP),
+        discrete = TRUE
+    )
+
+    class(hmm) = 'dthmm.inhom'
+        
+    solution = states[HiddenMarkov::Viterbi(hmm)]
     
     return(solution)
 }
@@ -399,34 +476,17 @@ Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
         }
     }
     
-#     if (any(nu[n, ] == -Inf)) {
-#         stop("Problems With Underflow")
-#     }
-#     display(head(mu, 100))
+    # if (any(nu[n, ] == -Inf)) {
+    #     stop("Problems With Underflow")
+    # }
+    # display(tail(nu, 100))
+    # fwrite(nu, '~/debug.txt')
               
     y[n] <- which.max(nu[n, ])
 
     for (i in seq(n - 1, 1, -1)) y[i] <- which.max(logPi[[i+1]][, y[i+1]] + nu[i, ])
         
     return(y)
-}
-
-
-get_trans_probs = function(t, w) {
-    
-    a = list()
-        
-    for (from in names(w)) {
-        for (to in names(w)) {
-            if (from == to) {
-                a[[from]][[to]] = 1-t
-            } else {
-                a[[from]][[to]] = t * w[[to]]/sum(w[names(w)!=from])
-            }
-        }
-    }
-    
-    return(a)
 }
 
 forward.mv.inhom = function (obj, ...) {
@@ -488,6 +548,275 @@ forward.mv.inhom = function (obj, ...) {
     
     return(LL)
 }
+
+get_trans_probs = function(t, w) {
+    
+    a = list()
+        
+    for (from in names(w)) {
+        for (to in names(w)) {
+            if (from == to) {
+                a[[from]][[to]] = 1-t
+            } else {
+                a[[from]][[to]] = t * w[[to]]/sum(w[names(w)!=from])
+            }
+        }
+    }
+    
+    return(a)
+}
+
+run_hmm_mv_inhom_gpois2 = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, theta_min, bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), alpha = 1, beta = 1, t = 1e-5, gamma = 18, prior = NULL, exp_only = FALSE, allele_only = FALSE, debug = FALSE) {
+    
+    # states
+    states = c(
+        "1" = "neu", "2" = "del_up_1", "3" = "del_down_1", "4" = "del_up_2", "5" = "del_down_2",
+        "6" = "loh_up_1", "7" = "loh_down_1", "8" = "loh_up_2", "9" = "loh_down_2", 
+        "10" = "amp_up_1", "11" = "amp_down_1", "12" = "amp_up_2", "13" = "amp_down_2", 
+        "14" = "bamp", "15" = "bdel"
+    )
+
+    # relative abundance of states
+    w = c('neu' = 1, 'del' = 1, 'loh' = 1, 'amp' = 1, 'bamp' = 1e-4, 'bdel' = 1e-10)
+        
+    if (!bal_cnv) {
+        w[c('bamp', 'bdel')] = 0
+    }
+    
+    # intitial probabilities
+    if (is.null(prior)) {
+        # encourage CNV from telomeres
+        a_0 = get_trans_probs(t = t * 100, w)[['neu']]
+        prior = c(a_0[['neu']], 
+            rep(a_0[['del']]/4, 4),
+            rep(a_0[['loh']]/4, 4),
+            rep(a_0[['amp']]/4, 4), 
+            a_0[['bamp']],
+            a_0[['bdel']])
+    }
+        
+    if (exp_only) {
+        pAD = rep(NA, length(pAD))
+        p_s = rep(0, length(p_s))
+    }
+    
+    if (allele_only) {
+        Y_obs = rep(NA, length(Y_obs))
+    }
+    
+    a = get_trans_probs(t, w)
+
+    calc_trans_mat = function(p_s, t, n_states) {
+        matrix(
+            c(
+                1-t, rep(a[['neu']][['del']]/4, 4), rep(a[['neu']][['loh']]/4, 4), rep(a[['neu']][['amp']]/4, 4), a[['neu']][['bamp']], a[['neu']][['bdel']],
+
+                a[['del']][['neu']], (1-t)*(1-p_s), (1-t)*p_s, 0, 0, rep(a[['del']][['loh']]/4, 4), rep(a[['del']][['amp']]/4, 4), a[['del']][['bamp']], a[['del']][['bdel']],
+                a[['del']][['neu']], (1-t)*p_s, (1-t)*(1-p_s), 0, 0, rep(a[['del']][['loh']]/4, 4), rep(a[['del']][['amp']]/4, 4), a[['del']][['bamp']], a[['del']][['bdel']],
+
+                a[['del']][['neu']], 0, 0, (1-t)*(1-p_s), (1-t)*p_s, rep(a[['del']][['loh']]/4, 4), rep(a[['del']][['amp']]/4, 4), a[['del']][['bamp']], a[['del']][['bdel']],
+                a[['del']][['neu']], 0, 0, (1-t)*p_s, (1-t)*(1-p_s), rep(a[['del']][['loh']]/4, 4), rep(a[['del']][['amp']]/4, 4), a[['del']][['bamp']], a[['del']][['bdel']],
+
+                a[['loh']][['neu']], rep(a[['loh']][['del']]/4, 4), (1-t)*(1-p_s), (1-t)*p_s, rep(0, 2), rep(a[['loh']][['amp']]/4, 4), a[['loh']][['bamp']], a[['loh']][['bdel']],
+                a[['loh']][['neu']], rep(a[['loh']][['del']]/4, 4), (1-t)*p_s, (1-t)*(1-p_s), rep(0, 2), rep(a[['loh']][['amp']]/4, 4), a[['loh']][['bamp']], a[['loh']][['bdel']],
+
+                a[['loh']][['neu']], rep(a[['loh']][['del']]/4, 4), rep(0, 2), (1-t)*(1-p_s), (1-t)*p_s, rep(a[['loh']][['amp']]/4, 4), a[['loh']][['bamp']], a[['loh']][['bdel']],
+                a[['loh']][['neu']], rep(a[['loh']][['del']]/4, 4), rep(0, 2), (1-t)*p_s, (1-t)*(1-p_s), rep(a[['loh']][['amp']]/4, 4), a[['loh']][['bamp']], a[['loh']][['bdel']],
+
+                a[['amp']][['neu']], rep(a[['amp']][['del']]/4, 4), rep(a[['amp']][['loh']]/4, 4), (1-t)*(1-p_s), (1-t)*p_s, rep(0, 2), a[['amp']][['bamp']], a[['amp']][['bdel']],
+                a[['amp']][['neu']], rep(a[['amp']][['del']]/4, 4), rep(a[['amp']][['loh']]/4, 4), (1-t)*p_s, (1-t)*(1-p_s), rep(0, 2), a[['amp']][['bamp']], a[['amp']][['bdel']],
+
+                a[['amp']][['neu']], rep(a[['amp']][['del']]/4, 4), rep(a[['amp']][['loh']]/4, 4), rep(0, 2), (1-t)*(1-p_s), (1-t)*p_s, a[['amp']][['bamp']], a[['amp']][['bdel']],
+                a[['amp']][['neu']], rep(a[['amp']][['del']]/4, 4), rep(a[['amp']][['loh']]/4, 4), rep(0, 2), (1-t)*p_s, (1-t)*(1-p_s), a[['amp']][['bamp']], a[['amp']][['bdel']],
+
+                a[['bamp']][['neu']], rep(a[['bamp']][['del']]/4, 4), rep(a[['bamp']][['loh']]/4, 4), rep(a[['bamp']][['amp']]/4, 4), 1-t, a[['bamp']][['bdel']],
+                a[['bdel']][['neu']], rep(a[['bdel']][['del']]/4, 4), rep(a[['bdel']][['loh']]/4, 4), rep(a[['bdel']][['amp']]/4, 4), a[['bdel']][['bamp']], 1-t
+            ),
+            ncol = n_states,
+            byrow = TRUE
+        )
+    }
+    
+    As = lapply(
+        p_s,
+        function(p_s) {calc_trans_mat(p_s, t, n_states = length(states))}
+    )
+    
+    theta_u_1 = 0.5 + theta_min
+    theta_d_1 = 0.5 - theta_min
+
+    theta_u_2 = 0.8
+    theta_d_2 = 0.2
+            
+    hmm = HiddenMarkov::dthmm(
+        x = pAD, 
+        Pi = As, 
+        delta = prior, 
+        distn = "bbinom",
+        pm = list(alpha = gamma * c(0.5, rep(c(theta_u_1, theta_d_1, theta_u_2, theta_d_2), 3), 0.5, 0.5), beta = gamma * c(0.5, rep(c(theta_d_1, theta_u_1, theta_d_2, theta_u_2), 3), 0.5, 0.5)),
+        pn = list(size = DP),
+        discrete = TRUE
+    )
+    
+    hmm$distn2 = 'gpois'
+    hmm$x2 = Y_obs
+    hmm$phi = c(phi_neu, rep(phi_del, 4), rep(phi_neu, 4), rep(phi_amp, 4), phi_bamp, phi_bdel)
+    hmm$alpha = alpha
+    hmm$beta = beta
+    hmm$lambda_star = lambda_ref
+    hmm$d = d_total
+    
+    class(hmm) = 'dthmm.mv.inhom.gpois'
+    
+    if (debug) {
+        return(hmm)
+    }
+    
+    return(states[as.character(HiddenMarkov::Viterbi(hmm))])
+}
+
+
+get_trans_probs3 = function(t, w) {
+    
+    a = list()
+    w1 = w %>% magrittr::inset(c('del_2', 'loh_2', 'amp_2'), 1e-4)
+    w2 = w %>% magrittr::inset(c('del_1', 'loh_1', 'amp_1'), 1e-4)
+        
+    for (from in names(w)) {
+        for (to in names(w)) {
+            if (from == to) {
+                a[[from]][[to]] = 1-t
+            } else {
+                if (str_detect(from, '_1')) {
+                    a[[from]][[to]] = w1 %>% {t * .[[to]]/sum(.[names(.)!=from])}
+                } else if (str_detect(from, '_2')) {
+                    a[[from]][[to]] = w2 %>% {t * .[[to]]/sum(.[names(.)!=from])}
+                } else {
+                    a[[from]][[to]] = w %>% {t * .[[to]]/sum(.[names(.)!=from])}
+                }
+            }
+        }
+    }
+    
+    return(a)
+}
+
+run_hmm_mv_inhom_gpois3 = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, theta_min, bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), alpha = 1, beta = 1, t = 1e-5, gamma = 18, prior = NULL, exp_only = FALSE, allele_only = FALSE, debug = FALSE) {
+    
+    # states
+    states = c(
+        "1" = "neu", "2" = "del_up_1", "3" = "del_down_1", "4" = "del_up_2", "5" = "del_down_2",
+        "6" = "loh_up_1", "7" = "loh_down_1", "8" = "loh_up_2", "9" = "loh_down_2", 
+        "10" = "amp_up_1", "11" = "amp_down_1", "12" = "amp_up_2", "13" = "amp_down_2", 
+        "14" = "bamp", "15" = "bdel"
+    )
+
+    # relative abundance of states
+    w = c('neu' = 1, 'del_1' = 1, 'del_2' = 1e-10, 'loh_1' = 1, 'loh_2' = 1e-10, 'amp_1' = 1, 'amp_2' = 1e-10, 'bamp' = 1e-4, 'bdel' = 1e-10)
+        
+    if (!bal_cnv) {
+        w[c('bamp', 'bdel')] = 0
+    }
+    
+    # intitial probabilities
+    if (is.null(prior)) {
+        # encourage CNV from telomeres
+        a_0 = get_trans_probs(t = t * 100, w)[['neu']]
+        prior = c(a_0[['neu']], 
+            rep(a_0[['del_1']]/2, 2),
+            rep(a_0[['del_2']]/2, 2),
+            rep(a_0[['loh_1']]/2, 2),
+            rep(a_0[['loh_2']]/2, 2),
+            rep(a_0[['amp_1']]/2, 2), 
+            rep(a_0[['amp_2']]/2, 2), 
+            a_0[['bamp']],
+            a_0[['bdel']])
+    }
+        
+    if (exp_only) {
+        pAD = rep(NA, length(pAD))
+        p_s = rep(0, length(p_s))
+    }
+    
+    if (allele_only) {
+        Y_obs = rep(NA, length(Y_obs))
+    }
+    
+    a = get_trans_probs(t, w)
+    
+    # transition matrices
+    calc_trans_mat = function(p_s, t, n_states) {
+        matrix(
+            c(
+                1-t, rep(a[['neu']][['del_1']]/2, 2), rep(a[['neu']][['del_1']]/2, 2), rep(a[['neu']][['loh_1']]/2, 2), rep(a[['neu']][['loh_2']]/2, 2), rep(a[['neu']][['amp_1']]/2, 2), rep(a[['neu']][['amp_2']]/2, 2), a[['neu']][['bamp']], a[['neu']][['bdel']],
+
+                a[['del_1']][['neu']], (1-t)*(1-p_s), (1-t)*p_s, rep(a[['del_1']][['del_2']]/2, 2), rep(a[['del_1']][['loh_1']]/2, 2), rep(a[['del_1']][['loh_2']]/2, 2), rep(a[['del_1']][['amp_1']]/2, 2), rep(a[['del_1']][['amp_2']]/2, 2), a[['del_1']][['bamp']], a[['del_1']][['bdel']],
+                a[['del_1']][['neu']], (1-t)*p_s, (1-t)*(1-p_s), rep(a[['del_1']][['del_2']]/2, 2), rep(a[['del_1']][['loh_1']]/2, 2), rep(a[['del_1']][['loh_2']]/2, 2), rep(a[['del_1']][['amp_1']]/2, 2), rep(a[['del_1']][['amp_2']]/2, 2), a[['del_1']][['bamp']], a[['del_1']][['bdel']],
+
+                a[['del_2']][['neu']], rep(a[['del_2']][['del_1']]/2, 2), (1-t)*(1-p_s), (1-t)*p_s, rep(a[['del_2']][['loh_1']]/2, 2), rep(a[['del_2']][['loh_2']]/2, 2), rep(a[['del_2']][['amp_1']]/2, 2), rep(a[['del_2']][['amp_2']]/2, 2), a[['del_2']][['bamp']], a[['del_2']][['bdel']],
+                a[['del_2']][['neu']], rep(a[['del_2']][['del_1']]/2, 2), (1-t)*p_s, (1-t)*(1-p_s), rep(a[['del_2']][['loh_1']]/2, 2), rep(a[['del_2']][['loh_2']]/2, 2), rep(a[['del_2']][['amp_1']]/2, 2), rep(a[['del_2']][['amp_2']]/2, 2), a[['del_2']][['bamp']], a[['del_2']][['bdel']],
+
+                a[['loh_1']][['neu']], rep(a[['loh_1']][['del_1']]/2, 2), rep(a[['loh_1']][['del_2']]/2, 2), (1-t)*(1-p_s), (1-t)*p_s, rep(a[['loh_1']][['loh_2']]/2, 2), rep(a[['loh_1']][['amp_1']]/2, 2), rep(a[['loh_1']][['amp_2']]/2, 2), a[['loh_1']][['bamp']], a[['loh_1']][['bdel']],
+                a[['loh_1']][['neu']], rep(a[['loh_1']][['del_1']]/2, 2), rep(a[['loh_1']][['del_2']]/2, 2), (1-t)*p_s, (1-t)*(1-p_s), rep(a[['loh_1']][['loh_2']]/2, 2), rep(a[['loh_1']][['amp_1']]/2, 2), rep(a[['loh_1']][['amp_2']]/2, 2), a[['loh_1']][['bamp']], a[['loh_1']][['bdel']],
+
+                a[['loh_2']][['neu']], rep(a[['loh_2']][['del_1']]/2, 2), rep(a[['loh_2']][['del_2']]/2, 2), rep(a[['loh_2']][['loh_1']]/2, 2), (1-t)*(1-p_s), (1-t)*p_s, rep(a[['loh_2']][['amp_1']]/2, 2), rep(a[['loh_2']][['amp_2']]/2, 2), a[['loh_2']][['bamp']], a[['loh_2']][['bdel']],
+                a[['loh_2']][['neu']], rep(a[['loh_2']][['del_1']]/2, 2), rep(a[['loh_2']][['del_2']]/2, 2), rep(a[['loh_2']][['loh_1']]/2, 2), (1-t)*p_s, (1-t)*(1-p_s), rep(a[['loh_2']][['amp_1']]/2, 2), rep(a[['loh_2']][['amp_2']]/2, 2), a[['loh_2']][['bamp']], a[['loh_2']][['bdel']],
+
+                a[['amp_1']][['neu']], rep(a[['amp_1']][['del_1']]/2, 2), rep(a[['amp_1']][['del_2']]/2, 2), rep(a[['amp_1']][['loh_1']]/2, 2), rep(a[['amp_1']][['loh_2']]/2, 2), (1-t)*(1-p_s), (1-t)*p_s, rep(a[['amp_1']][['amp_2']]/2, 2), a[['amp_1']][['bamp']], a[['amp_1']][['bdel']],
+                a[['amp_1']][['neu']], rep(a[['amp_1']][['del_1']]/2, 2), rep(a[['amp_1']][['del_2']]/2, 2), rep(a[['amp_1']][['loh_1']]/2, 2), rep(a[['amp_1']][['loh_2']]/2, 2), (1-t)*p_s, (1-t)*(1-p_s), rep(a[['amp_1']][['amp_2']]/2, 2), a[['amp_1']][['bamp']], a[['amp_1']][['bdel']],
+
+                a[['amp_2']][['neu']], rep(a[['amp_2']][['del_1']]/2, 2), rep(a[['amp_2']][['del_2']]/2, 2), rep(a[['amp_2']][['loh_1']]/2, 2), rep(a[['amp_2']][['loh_2']]/2, 2), rep(a[['amp_2']][['amp_1']]/2, 2), (1-t)*(1-p_s), (1-t)*p_s, a[['amp_2']][['bamp']], a[['amp_2']][['bdel']],
+                a[['amp_2']][['neu']], rep(a[['amp_2']][['del_1']]/2, 2), rep(a[['amp_2']][['del_2']]/2, 2), rep(a[['amp_2']][['loh_1']]/2, 2), rep(a[['amp_2']][['loh_2']]/2, 2), rep(a[['amp_2']][['amp_1']]/2, 2), (1-t)*p_s, (1-t)*(1-p_s), a[['amp_2']][['bamp']], a[['amp_2']][['bdel']],
+
+                a[['bamp']][['neu']], rep(a[['bamp']][['del_1']]/2, 2), rep(a[['bamp']][['del_2']]/2, 2), rep(a[['bamp']][['loh_1']]/2, 2), rep(a[['bamp']][['loh_2']]/2, 2), rep(a[['bamp']][['amp_1']]/2, 2), rep(a[['bamp']][['amp_2']]/2, 2), 1-t, a[['bamp']][['bdel']],
+                a[['bdel']][['neu']], rep(a[['bdel']][['del_1']]/2, 2), rep(a[['bdel']][['del_2']]/2, 2), rep(a[['bdel']][['loh_1']]/2, 2), rep(a[['bdel']][['loh_2']]/2, 2), rep(a[['bdel']][['amp_1']]/2, 2), rep(a[['bdel']][['amp_2']]/2, 2), a[['bdel']][['bamp']], 1-t
+            ),
+            ncol = n_states,
+            byrow = TRUE
+        )
+    }
+
+    
+    As = lapply(
+        p_s,
+        function(p_s) {calc_trans_mat(p_s, t, n_states = length(states))}
+    )
+    
+    theta_u_1 = 0.5 + theta_min
+    theta_d_1 = 0.5 - theta_min
+
+    theta_u_2 = 0.9
+    theta_d_2 = 0.1
+            
+    hmm = HiddenMarkov::dthmm(
+        x = pAD, 
+        Pi = As, 
+        delta = prior, 
+        distn = "bbinom",
+        pm = list(alpha = gamma * c(0.5, rep(c(theta_u_1, theta_d_1, theta_u_2, theta_d_2), 3), 0.5, 0.5), beta = gamma * c(0.5, rep(c(theta_d_1, theta_u_1, theta_d_2, theta_u_2), 3), 0.5, 0.5)),
+        pn = list(size = DP),
+        discrete = TRUE
+    )
+    
+    hmm$distn2 = 'gpois'
+    hmm$x2 = Y_obs
+    hmm$phi = c(phi_neu, rep(phi_del, 2), rep(0.5, 2), rep(phi_neu, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
+    hmm$alpha = alpha
+    hmm$beta = beta
+    hmm$lambda_star = lambda_ref
+    hmm$d = d_total
+    
+    class(hmm) = 'dthmm.mv.inhom.gpois'
+    
+    if (debug) {
+        return(hmm)
+    }
+    
+    return(states[as.character(HiddenMarkov::Viterbi(hmm))])
+}
+
+
+
 
 run_hmm_mv_inhom_gpois = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, theta_min, bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), alpha = 1, beta = 1, t = 1e-5, gamma = 18, prior = NULL, exp_only = FALSE, allele_only = FALSE, debug = FALSE) {
     
@@ -557,7 +886,7 @@ run_hmm_mv_inhom_gpois = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, thet
         Pi = As, 
         delta = prior, 
         distn = "bbinom",
-        pm = list(alpha = c(gamma * 0.5, rep(c(gamma * theta_u, gamma * theta_d), 3), gamma * 0.5), beta = c(gamma * 0.5, rep(c(gamma * theta_d, gamma * theta_u), 3), gamma * 0.5, gamma * 0.5)),
+        pm = list(alpha = gamma * c(0.5, rep(c(theta_u, theta_d), 3), 0.5, 0.5), beta = gamma * c(0.5, rep(c(theta_d, theta_u), 3), 0.5, 0.5)),
         pn = list(size = DP),
         discrete = TRUE
     )
