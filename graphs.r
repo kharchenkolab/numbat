@@ -311,11 +311,18 @@ simplify_history = function(G, l_matrix, max_cost = 100, verbose = T) {
 
         if (move_opt$cost < max_cost) {
 
-            G = G %>% contract_nodes(c(move_opt$from_label, move_opt$to_label), move_opt$from_node) %>% transfer_links()
+            if (move_opt$direction == 'up') {
+                G = G %>% contract_nodes(c(move_opt$from_label, move_opt$to_label), move_opt$from_node) %>% transfer_links()
+                msg = glue('opt_move:{move_opt$to_label}->{move_opt$from_label}, cost={signif(move_opt$cost,3)}')
+            } else {
+                G = G %>% contract_nodes(c(move_opt$from_label, move_opt$to_label), move_opt$to_node) %>% transfer_links()
+                msg = glue('opt_move:{move_opt$from_label}->{move_opt$to_label}, cost={signif(move_opt$cost,3)}')
+            }
+
             moves = moves %>% rbind(move_opt %>% mutate(i = i))
 
             if (verbose) {
-                display(glue('opt_move:{move_opt$to_label}->{move_opt$from_label}, cost={signif(move_opt$cost,3)}'))
+                display(msg)
             }
         } else {
             break()
@@ -326,6 +333,11 @@ simplify_history = function(G, l_matrix, max_cost = 100, verbose = T) {
 }
 
 get_move_cost = function(muts, node_ori, node_tar, l_matrix) {
+
+    if (muts == '') {
+        return(Inf)
+    }
+
     if (str_detect(muts, ',')) {
         muts = unlist(str_split(muts, ','))
     }
@@ -336,32 +348,21 @@ get_move_cost = function(muts, node_ori, node_tar, l_matrix) {
 get_move_opt = function(G, l_matrix) {
     
     move_opt = G %>% as_data_frame('edges') %>%
-        rowwise() %>%
-        filter(from_label != '') %>%
-        mutate(
-            cost = get_move_cost(to_label, to_node, from_node, l_matrix)
-        ) %>%
+        group_by(from) %>%
+        mutate(n_sibling = n()) %>%
         ungroup() %>%
-        arrange(cost) %>%
-        head(1)
-    
-    return(move_opt)
-}
-
-get_move_opt2 = function(G, l_matrix) {
-    
-    move_opt = G %>% as_data_frame('edges') %>%
         rowwise() %>%
-        filter(from_label != '') %>%
         mutate(
             up = get_move_cost(to_label, to_node, from_node, l_matrix),
             down = get_move_cost(from_label, from_node, to_node, l_matrix)
         ) %>%
         ungroup() %>%
+        # prevent a down move if branching. Technically it's fine but graph has to be modified correctly
+        mutate(down = ifelse(n_sibling > 1, Inf, down)) %>%
         reshape2::melt(measure.vars = c('up', 'down'), variable.name = 'direction', value.name = 'cost') %>%
         arrange(cost) %>%
         head(1)
-    
+
     return(move_opt)
 }
 

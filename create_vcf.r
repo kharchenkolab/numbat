@@ -113,13 +113,6 @@ get_snps = function(sample) {
     return(snps)
 }
 
-merge_vcfs = function(samples) {
-
-    
-
-    return(list('vcf' = vcf, 'snps' = snps))
-}
-
 ###### Main ######
 
 vcf_template = read.vcfR('/home/tenggao/bench/reverse_jewish_son_chr1.vcf.gz', verbose = F)
@@ -156,6 +149,8 @@ if (length(samples) == 1) {
         arrange(CHROM, POS) %>%
         mutate(ID = NA, QUAL = NA, FILTER = 'PASS', INFO = paste0('AD=', AD, ';', 'DP=', DP, ';', 'OTH=', OTH)) %>%
         select(CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO) %>%
+        # to prevent as.matrix from adding leading whitespace
+        mutate(POS = as.character(POS)) %>%
         as.matrix
 
     for (chr in 1:22) {

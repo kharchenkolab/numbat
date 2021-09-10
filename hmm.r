@@ -489,6 +489,73 @@ Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
     return(y)
 }
 
+Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
+
+    x <- object$x
+    dfunc <- HiddenMarkov:::makedensity(object$distn)
+    
+    x2 <- object$x2
+    dfunc2 <- HiddenMarkov:::makedensity(object$distn2)
+
+    n <- length(x)
+    m <- nrow(object$Pi[[1]])
+    nu <- matrix(NA, nrow = n, ncol = m)
+    mu <- matrix(NA, nrow = n, ncol = m + 1)
+    y <- rep(NA, n)
+    
+    
+    nu[1, ] = log(object$delta)
+    
+        
+    if (!is.na(x[1])) {
+        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, HiddenMarkov:::getj(object$pn, 1), log = TRUE)
+    }
+    
+    if (!is.na(x2[1])) {
+
+        nu[1, ] = nu[1, ] + dfunc2(
+            x = x2[1],
+            list('sig' = object$sig[1]),
+            list('mu' = object$mu[1] + log(object$phi * object$d * object$lambda_star[1])),
+            log = TRUE
+        )
+        
+    }
+            
+    logPi <- lapply(object$Pi, log)
+
+    for (i in 2:n) {
+        matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
+        
+        nu[i, ] = apply(matrixnu + logPi[[i]], 2, max)
+            
+        if (!is.na(x[i])) {
+            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, HiddenMarkov:::getj(object$pn, i), log = TRUE)
+        }
+        
+        if (!is.na(x2[i])) {
+            nu[i, ] = nu[i, ] + dfunc2(
+                x = x2[i],
+                list('sig' = object$sig[i]),
+                list('mu' = object$mu[i] + log(object$phi * object$d * object$lambda_star[i])),
+                log = TRUE
+            )
+        }
+    }
+    
+    # if (any(nu[n, ] == -Inf)) {
+    #     stop("Problems With Underflow")
+    # }
+    # display(head(nu, 100))
+    # fwrite(nu, '~/debug.txt')
+              
+    y[n] <- which.max(nu[n, ])
+
+    for (i in seq(n - 1, 1, -1)) y[i] <- which.max(logPi[[i+1]][, y[i+1]] + nu[i, ])
+        
+    return(y)
+}
+
 forward.mv.inhom = function (obj, ...) {
     
     x <- obj$x
@@ -701,7 +768,13 @@ get_trans_probs3 = function(t, w) {
     return(a)
 }
 
-run_hmm_mv_inhom_gpois3 = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, theta_min, bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), alpha = 1, beta = 1, t = 1e-5, gamma = 18, prior = NULL, exp_only = FALSE, allele_only = FALSE, debug = FALSE) {
+run_hmm_mv_inhom_gpois3 = function(
+    pAD, DP, p_s, Y_obs, lambda_ref, d_total, theta_min, bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), 
+    alpha = 1, beta = 1, 
+    mu = 0, sig = 1,
+    exp_model = 'gpois',
+    t = 1e-5, gamma = 18, prior = NULL, exp_only = FALSE, allele_only = FALSE, debug = FALSE
+) {
     
     # states
     states = c(
@@ -797,16 +870,42 @@ run_hmm_mv_inhom_gpois3 = function(pAD, DP, p_s, Y_obs, lambda_ref, d_total, the
         pn = list(size = DP),
         discrete = TRUE
     )
+
+    if (exp_model == 'gpois') {
+
+        # print('running gpois model')
+
+        hmm$distn2 = 'gpois'
+        hmm$x2 = Y_obs
+        hmm$phi = c(phi_neu, rep(phi_del, 2), rep(0.5, 2), rep(phi_neu, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
+        hmm$alpha = alpha
+        hmm$beta = beta
+        hmm$lambda_star = lambda_ref
+        hmm$d = d_total
+        
+        class(hmm) = 'dthmm.mv.inhom.gpois'
+
+    } else {
+
+        # print('running lnpois model')
+
+        if (length(mu) == 1 & length(sig) == 1) {
+            mu = rep(mu, length(Y_obs))
+            sig = rep(sig, length(Y_obs))
+        }
+
+        hmm$distn2 = 'poilog_approx'
+        hmm$x2 = Y_obs
+        hmm$phi = c(phi_neu, rep(phi_del, 2), rep(0.5, 2), rep(phi_neu, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
+        hmm$mu = mu
+        hmm$sig = sig
+        hmm$lambda_star = lambda_ref
+        hmm$d = d_total
+        
+        class(hmm) = 'dthmm.mv.inhom.lnpois'
+
+    }
     
-    hmm$distn2 = 'gpois'
-    hmm$x2 = Y_obs
-    hmm$phi = c(phi_neu, rep(phi_del, 2), rep(0.5, 2), rep(phi_neu, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
-    hmm$alpha = alpha
-    hmm$beta = beta
-    hmm$lambda_star = lambda_ref
-    hmm$d = d_total
-    
-    class(hmm) = 'dthmm.mv.inhom.gpois'
     
     if (debug) {
         return(hmm)
