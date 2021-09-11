@@ -503,7 +503,6 @@ Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
     mu <- matrix(NA, nrow = n, ncol = m + 1)
     y <- rep(NA, n)
     
-    
     nu[1, ] = log(object$delta)
     
         
@@ -514,8 +513,8 @@ Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
     if (!is.na(x2[1])) {
 
         nu[1, ] = nu[1, ] + dfunc2(
-            x = x2[1],
-            list('sig' = object$sig[1]),
+            x = rep(x2[1], m),
+            list('sig' = rep(object$sig[1], m)),
             list('mu' = object$mu[1] + log(object$phi * object$d * object$lambda_star[1])),
             log = TRUE
         )
@@ -535,18 +534,24 @@ Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
         
         if (!is.na(x2[i])) {
             nu[i, ] = nu[i, ] + dfunc2(
-                x = x2[i],
-                list('sig' = object$sig[i]),
+                x = rep(x2[i], m),
+                list('sig' = rep(object$sig[i], m)),
                 list('mu' = object$mu[i] + log(object$phi * object$d * object$lambda_star[i])),
                 log = TRUE
             )
         }
     }
+
+    if (any(is.na(nu))) {
+        fwrite(nu, '~/debug.txt')
+        stop("NA values in viterbi")
+    }
     
-    # if (any(nu[n, ] == -Inf)) {
-    #     stop("Problems With Underflow")
-    # }
-    # display(head(nu, 100))
+    if (all(nu[n, ] == -Inf)) {
+        fwrite(nu, '~/debug.txt')
+        stop("Problems With Underflow")
+    }
+    # display(head(tail, 1000))
     # fwrite(nu, '~/debug.txt')
               
     y[n] <- which.max(nu[n, ])
@@ -768,14 +773,14 @@ get_trans_probs3 = function(t, w) {
     return(a)
 }
 
-run_hmm_mv_inhom_gpois3 = function(
+run_hmm_mv_inhom = function(
     pAD, DP, p_s, Y_obs, lambda_ref, d_total, theta_min, bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), 
     alpha = 1, beta = 1, 
     mu = 0, sig = 1,
     exp_model = 'gpois',
     t = 1e-5, gamma = 18, prior = NULL, exp_only = FALSE, allele_only = FALSE, debug = FALSE
 ) {
-    
+
     # states
     states = c(
         "1" = "neu", "2" = "del_up_1", "3" = "del_down_1", "4" = "del_up_2", "5" = "del_down_2",
@@ -787,9 +792,9 @@ run_hmm_mv_inhom_gpois3 = function(
     # relative abundance of states
     w = c('neu' = 1, 'del_1' = 1, 'del_2' = 1e-10, 'loh_1' = 1, 'loh_2' = 1e-10, 'amp_1' = 1, 'amp_2' = 1e-10, 'bamp' = 1e-4, 'bdel' = 1e-10)
         
-    if (!bal_cnv) {
-        w[c('bamp', 'bdel')] = 0
-    }
+    # if (!bal_cnv) {
+    #     w[c('bamp', 'bdel')] = 0
+    # }
     
     # intitial probabilities
     if (is.null(prior)) {
@@ -821,7 +826,7 @@ run_hmm_mv_inhom_gpois3 = function(
     calc_trans_mat = function(p_s, t, n_states) {
         matrix(
             c(
-                1-t, rep(a[['neu']][['del_1']]/2, 2), rep(a[['neu']][['del_1']]/2, 2), rep(a[['neu']][['loh_1']]/2, 2), rep(a[['neu']][['loh_2']]/2, 2), rep(a[['neu']][['amp_1']]/2, 2), rep(a[['neu']][['amp_2']]/2, 2), a[['neu']][['bamp']], a[['neu']][['bdel']],
+                1-t, rep(a[['neu']][['del_1']]/2, 2), rep(a[['neu']][['del_2']]/2, 2), rep(a[['neu']][['loh_1']]/2, 2), rep(a[['neu']][['loh_2']]/2, 2), rep(a[['neu']][['amp_1']]/2, 2), rep(a[['neu']][['amp_2']]/2, 2), a[['neu']][['bamp']], a[['neu']][['bdel']],
 
                 a[['del_1']][['neu']], (1-t)*(1-p_s), (1-t)*p_s, rep(a[['del_1']][['del_2']]/2, 2), rep(a[['del_1']][['loh_1']]/2, 2), rep(a[['del_1']][['loh_2']]/2, 2), rep(a[['del_1']][['amp_1']]/2, 2), rep(a[['del_1']][['amp_2']]/2, 2), a[['del_1']][['bamp']], a[['del_1']][['bdel']],
                 a[['del_1']][['neu']], (1-t)*p_s, (1-t)*(1-p_s), rep(a[['del_1']][['del_2']]/2, 2), rep(a[['del_1']][['loh_1']]/2, 2), rep(a[['del_1']][['loh_2']]/2, 2), rep(a[['del_1']][['amp_1']]/2, 2), rep(a[['del_1']][['amp_2']]/2, 2), a[['del_1']][['bamp']], a[['del_1']][['bdel']],
@@ -860,52 +865,64 @@ run_hmm_mv_inhom_gpois3 = function(
 
     theta_u_2 = 0.9
     theta_d_2 = 0.1
+
+    # parameters for each state
+    alpha_states = gamma * c(0.5, rep(c(theta_u_1, theta_d_1, theta_u_2, theta_d_2), 3), 0.5, 0.5)
+    beta_states = gamma * c(0.5, rep(c(theta_d_1, theta_u_1, theta_d_2, theta_u_2), 3), 0.5, 0.5)
+    phi_states = c(phi_neu, rep(phi_del, 2), rep(0.5, 2), rep(phi_neu, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
+
+    if (!bal_cnv) {
+        # to do: renormalize the probabilities after deleting states
+        states_index = 1:13
+        prior = prior[states_index]
+        As = lapply(As, function(A){A[states_index, states_index]})
+        alpha_states = alpha_states[states_index]
+        beta_states = beta_states[states_index]
+        phi_states = phi_states[states_index]
+    }
             
     hmm = HiddenMarkov::dthmm(
         x = pAD, 
         Pi = As, 
         delta = prior, 
         distn = "bbinom",
-        pm = list(alpha = gamma * c(0.5, rep(c(theta_u_1, theta_d_1, theta_u_2, theta_d_2), 3), 0.5, 0.5), beta = gamma * c(0.5, rep(c(theta_d_1, theta_u_1, theta_d_2, theta_u_2), 3), 0.5, 0.5)),
+        pm = list(
+            alpha = alpha_states,
+            beta = beta_states
+        ),
         pn = list(size = DP),
         discrete = TRUE
     )
+
+    hmm$x2 = Y_obs
+    hmm$phi = phi_states
+    hmm$lambda_star = lambda_ref
+    hmm$d = d_total
 
     if (exp_model == 'gpois') {
 
         # print('running gpois model')
 
         hmm$distn2 = 'gpois'
-        hmm$x2 = Y_obs
-        hmm$phi = c(phi_neu, rep(phi_del, 2), rep(0.5, 2), rep(phi_neu, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
         hmm$alpha = alpha
         hmm$beta = beta
-        hmm$lambda_star = lambda_ref
-        hmm$d = d_total
         
         class(hmm) = 'dthmm.mv.inhom.gpois'
 
     } else {
-
-        # print('running lnpois model')
 
         if (length(mu) == 1 & length(sig) == 1) {
             mu = rep(mu, length(Y_obs))
             sig = rep(sig, length(Y_obs))
         }
 
-        hmm$distn2 = 'poilog_approx'
-        hmm$x2 = Y_obs
-        hmm$phi = c(phi_neu, rep(phi_del, 2), rep(0.5, 2), rep(phi_neu, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
+        hmm$distn2 = 'poilog'
         hmm$mu = mu
         hmm$sig = sig
-        hmm$lambda_star = lambda_ref
-        hmm$d = d_total
         
         class(hmm) = 'dthmm.mv.inhom.lnpois'
 
     }
-    
     
     if (debug) {
         return(hmm)

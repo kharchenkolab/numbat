@@ -683,7 +683,7 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TR
         mutate(gamma = gamma) %>%
         group_by(CHROM) %>%
         mutate(state = 
-            run_hmm_mv_inhom_gpois3(
+            run_hmm_mv_inhom(
                 pAD = pAD,
                 DP = DP, 
                 p_s = p_s,
@@ -721,7 +721,7 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TR
             display('Retesting CNVs..')
         }
 
-        segs_post = retest_cnv(Obs)
+        segs_post = retest_cnv(Obs, exp_model = 'gpois')
         
         Obs = Obs %>% 
             select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM')])) %>%
@@ -753,6 +753,116 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TR
                     mutate(
                         phi_mle_roll = phi_mle_roll(
                             Y_obs, lambda_ref, alpha, beta, d_obs, h = 50)
+                    ) %>%
+                    select(phi_mle_roll, CHROM, gene),
+            by = c('CHROM', 'gene')
+        ) %>%
+        group_by(CHROM) %>%
+        mutate(phi_mle_roll = zoo::na.locf(phi_mle_roll, na.rm=FALSE)) %>%
+        ungroup()
+    }
+    
+    return(Obs)
+}
+
+analyze_bulk_lnpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL, exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE, roll_phi = TRUE, verbose = TRUE, debug = F) {
+    
+    if (!is.numeric(t)) {
+        stop('transition probability is not numeric')
+    } 
+
+    # the density approximation doesn't work with 0 counts
+    # Obs = Obs %>% filter(!(Y_obs == 0 & !is.na(Y_obs)))
+    
+    x = find_diploid(Obs, t = 1e-5, gamma = gamma, verbose = verbose)
+    
+    Obs = x$bulk
+    bal_cnv = x$bamp
+
+    fit = Obs %>%
+        filter(!is.na(Y_obs)) %>%
+        filter(logFC < 8 & logFC > -8) %>%
+        filter(diploid) %>%
+        {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs), approx = F)}
+        
+    Obs = Obs %>% mutate(mu = fit@coef[1], sig = fit@coef[2])
+    
+    Obs = Obs %>% 
+        mutate(gamma = gamma) %>%
+        group_by(CHROM) %>%
+        mutate(state = 
+            run_hmm_mv_inhom(
+                pAD = pAD,
+                DP = DP, 
+                p_s = p_s,
+                Y_obs = Y_obs, 
+                lambda_ref = lambda_ref, 
+                d_total = na.omit(unique(d_obs)),
+                phi_neu = 1,
+                phi_amp = 2^(0.25),
+                phi_del = 2^(-0.25),
+                phi_bamp = 2^(0.25),
+                phi_bdel = 2^(-0.25),
+                mu = mu,
+                sig = sig,
+                t = t,
+                gamma = unique(gamma),
+                theta_min = theta_min,
+                prior = prior,
+                bal_cnv = bal_cnv,
+                exp_only = exp_only,
+                allele_only = allele_only,
+                exp_model = 'lnpois'
+            )
+        ) %>% 
+        mutate(cnv_state = str_remove(state, '_down|_up')) %>%
+        annot_segs %>%
+        smooth_segs %>%
+        annot_segs %>%
+        ungroup()
+    
+    # rolling theta estimates
+    Obs = annot_roll_theta(Obs)
+    
+    if (retest) {
+        
+        if (verbose) {
+            display('Retesting CNVs..')
+        }
+
+        segs_post = retest_cnv(Obs, exp_model = 'lnpois')
+        
+        Obs = Obs %>% 
+            select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM')])) %>%
+            left_join(segs_post, by = c('seg', 'CHROM')) %>%
+            mutate(
+                cnv_state_post = tidyr::replace_na(cnv_state_post, 'neu'),
+                cnv_state = tidyr::replace_na(cnv_state, 'neu')
+            ) %>%
+            mutate(state_post = ifelse(
+                cnv_state_post %in% c('amp', 'del', 'loh') & (!cnv_state %in% c('bamp', 'bdel')),
+                paste0(cnv_state_post, '_', str_extract(state, 'up_1|down_1|up_2|down_2|up|down')),
+                cnv_state_post
+            )) %>%
+            mutate(state_post = str_remove(state_post, '_NA'))
+        
+    }
+    
+    if (verbose) {
+        display('Finishing..')
+    }
+
+    if (roll_phi) {
+        # rolling phi estimates
+        Obs = Obs %>% 
+            select(-any_of('phi_mle_roll')) %>%
+            left_join(
+                Obs %>% 
+                    group_by(CHROM) %>%
+                    filter(!is.na(Y_obs)) %>%
+                    filter(Y_obs > 0) %>%
+                    mutate(
+                        phi_mle_roll = phi_hat_lnpois_roll(Y_obs, lambda_ref, d_obs, mu, sig, h = 50)
                     ) %>%
                     select(phi_mle_roll, CHROM, gene),
             by = c('CHROM', 'gene')
@@ -819,11 +929,12 @@ annot_segs = function(Obs) {
 }
 
 smooth_segs = function(bulk, min_genes = 10) {
-    bulk = bulk %>% group_by(seg) %>%
+    bulk %>% group_by(seg) %>%
         mutate(
-            cnv_state = ifelse(n_genes < min_genes, NA, cnv_state)
+            cnv_state = ifelse(n_genes <= min_genes, NA, cnv_state)
         ) %>%
         ungroup() %>%
+        mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = F, na.rm=FALSE)) %>%
         mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = T, na.rm=FALSE))
 }
 
@@ -1176,23 +1287,60 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
 }
 
 # Poisson LogNormal model
-l_lnpois = function(Y_obs, lambda_ref, d, mu, sigma, phi = 1) {
-    if (sigma <= 0) {stop(glue('negative sigma. value: {sigma}'))}
-    sum(log(poilog::dpoilog(Y_obs, mu + log(phi * d * lambda_ref), rep(sigma, length(Y_obs)))))
+l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
+    if (any(sig <= 0)) {stop(glue('negative sigma. value: {sig}'))}
+    if (length(sig) == 1) {sig = rep(sig, length(Y_obs))}
+    if (any(is.infinite(sig)) | any(is.infinite(mu))) {
+        display(sig[is.infinite(sig)])
+        display(mu[is.infinite(mu)])
+    }
+    sum(log(poilog::dpoilog(Y_obs, mu + log(phi * d * lambda_ref), sig)))
 }
 
 # density function approximation by taylor expansion
+# dpoilog_approx = function(x, mu, sig, log = FALSE) {
+#     p = (2 * pi * sig^2)^(-1/2)/x * exp(-(log(x)-mu)^2/(2*sig^2)) * (1 + (2 * x * sig^2)^(-1) * ((log(x) - mu)^2/sig^2 + log(x) - mu - 1))
+#     if (log) {
+#         return(log(p))
+#     } else {
+#         return(p)
+#     }
+# }
+
 dpoilog_approx = function(x, mu, sig, log = FALSE) {
-    p = (2 * pi * sig^2)^(-1/2)/x * exp(-(log(x)-mu)^2/(2*sig^2)) * (1 + (2 * x * sig^2)^(-1) * ((log(x) - mu)^2/sig^2 + log(x) - mu - 1))
-    if (log) {
-        return(log(p))
-    } else {
-        return(p)
+
+    logp = -(1/2)*log(2 * pi * sig^2) - log(x) - (log(x)-mu)^2/(2*sig^2) + log((1 + (2 * x * sig^2)^(-1) * ((log(x) - mu)^2/sig^2 + log(x) - mu - 1)))
+
+    if (any(is.na(logp))) {
+        display(x[is.na(logp)])
+        display(mu[is.na(logp)])
+        display(sig)
     }
+
+    if (log) {
+        return(logp)
+    } else {
+        return(exp(logp))
+    }
+
 }
 
-l_lnpois_approx = function(Y_obs, lambda_ref, d, mu, sigma, phi = 1) {
-    sum(log(dpoilog_approx(Y_obs, mu + log(phi * d * lambda_ref), sigma)))
+# dpoilog_mix = function(x, mu, sig, log = FALSE) {
+#     low = Y_obs <= 10
+#     l_low = dpoilog_approx(Y_obs[low], lambda_ref[low], d, mu, sig, phi)
+#     l_high = l_lnpois_approx(Y_obs[!low], lambda_ref[!low], d, mu, sig, phi)
+#     return(l_low + l_high)
+# }
+
+l_lnpois_approx = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
+    sum(log(dpoilog_approx(Y_obs, mu + log(phi * d * lambda_ref), sig)))
+}
+
+l_lnpois_mix = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
+    low = Y_obs <= 10
+    l_low = l_lnpois(Y_obs[low], lambda_ref[low], d, mu, sig, phi)
+    l_high = l_lnpois_approx(Y_obs[!low], lambda_ref[!low], d, mu, sig, phi)
+    return(l_low + l_high)
 }
 
 fit_lnpois = function(Y_obs, lambda_ref, d, approx = F) {
@@ -1200,12 +1348,12 @@ fit_lnpois = function(Y_obs, lambda_ref, d, approx = F) {
     Y_obs = Y_obs[lambda_ref > 0]
     lambda_ref = lambda_ref[lambda_ref > 0]
 
-    l_func = ifelse(approx, l_lnpois_approx, l_lnpois)
+    l_func = ifelse(approx, l_lnpois_mix, l_lnpois)
     
     fit = stats4::mle(
-        minuslogl = function(mu, sigma) {
-            # if (sigma < 0) {stop('optim is trying negative sigma')}
-            -l_func(Y_obs, lambda_ref, d, mu, sigma)
+        minuslogl = function(mu, sig) {
+            # if (sig < 0) {stop('optim is trying negative sigma')}
+            -l_func(Y_obs, lambda_ref, d, mu, sig)
         },
         start = c(0, 1),
         lower = c(-Inf, 0.01),
@@ -1215,7 +1363,7 @@ fit_lnpois = function(Y_obs, lambda_ref, d, approx = F) {
     return(fit)
 }
 
-calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sigma, lower = 0.1, upper = 10) {
+calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, upper = 10) {
     
     if (length(Y_obs) == 0) {
         return(1)
@@ -1224,14 +1372,14 @@ calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sigma, lower = 0.1, up
     start = max(min(1, upper), lower)
     
     res = stats4::mle(minuslogl = function(phi) {
-        -l_lnpois(Y_obs, lambda_ref, d, mu, sigma, phi)
+        -l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi)
     }, start = start, lower = lower, upper = upper)
     
     return(res@coef)
     
 }
 
-retest_cnv = function(bulk) {
+retest_cnv = function(bulk, exp_model) {
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     
@@ -1251,7 +1399,14 @@ retest_cnv = function(bulk) {
             L_y_n = pnorm.range(0, theta_min, theta_mle, theta_sigma),
             L_y_d = pnorm.range(theta_min, 0.499, theta_mle, theta_sigma),
             L_y_a = pnorm.range(theta_min, 0.375, theta_mle, theta_sigma),
-            approx_lik_exp(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), alpha[!is.na(Y_obs)], beta[!is.na(Y_obs)]),
+            approx_lik_exp(
+                Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
+                alpha = alpha[!is.na(Y_obs)],
+                beta = beta[!is.na(Y_obs)],
+                mu = mu[!is.na(Y_obs)],
+                sig = sig[!is.na(Y_obs)],
+                model = exp_model
+            ),
             L_x_n = pnorm.range(1 - delta_phi_min, 1 + delta_phi_min, phi_mle, phi_sigma),
             L_x_d = pnorm.range(0.1, 1 - delta_phi_min, phi_mle, phi_sigma),
             L_x_a = pnorm.range(1 + delta_phi_min, 3, phi_mle, phi_sigma),
@@ -1266,7 +1421,17 @@ retest_cnv = function(bulk) {
             p_del = (G['10'] * L_x_d * L_y_d)/Z,
             p_bamp = (G['22'] * L_x_a * L_y_n)/Z,
             p_bdel = (G['00'] * L_x_d * L_y_n)/Z,
-            LLR_x = calc_exp_LLR(Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)), alpha[!is.na(Y_obs)], beta[!is.na(Y_obs)], phi_mle),
+            LLR_x = calc_exp_LLR(
+                Y_obs[!is.na(Y_obs)],
+                lambda_ref[!is.na(Y_obs)], 
+                unique(na.omit(d_obs)),
+                phi_mle,
+                alpha = alpha[!is.na(Y_obs)],
+                beta = beta[!is.na(Y_obs)],
+                mu = mu[!is.na(Y_obs)],
+                sig = sig[!is.na(Y_obs)],
+                model = exp_model
+            ),
             LLR_y = calc_allele_LLR(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta_mle),
             LLR = LLR_x + LLR_y,
             .groups = 'drop'
@@ -1305,18 +1470,24 @@ approx_lik_ar = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 0.2
     return(tibble('theta_mle' = mu, 'theta_sigma' = sigma))
 }
 
-approx_lik_exp = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, lower = 0.2, upper = 10, start = 1) {
+approx_lik_exp = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, model = 'gpois', lower = 0.2, upper = 10, start = 1) {
     
     if (length(Y_obs) == 0) {
         return(tibble('phi_mle' = 1, 'phi_sigma' = 0))
     }
     
     start = max(min(1, upper), lower)
-    
+
+    if (model == 'gpois') {
+        l = function(phi) {l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi)}
+    } else {
+        l = function(phi) {l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = phi)}
+    }
+
     fit = optim(
         start,
         function(phi) {
-            -l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi)
+            -l(phi)
         },
         method = 'L-BFGS-B',
         lower = lower,
@@ -1324,15 +1495,17 @@ approx_lik_exp = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, lower
         hessian = TRUE
     )
 
-    mu = fit$par
-    sigma = sqrt(as.numeric(1/(fit$hessian)))
+    mean = fit$par
+    sd = sqrt(as.numeric(1/(fit$hessian)))
 
-    if (is.na(sigma)) {
-        mu = 1
-        sigma = 0
+    if (is.na(sd)) {
+        mean = 1
+        sd = 0
     }
+
     
-    return(tibble('phi_mle' = mu, 'phi_sigma' = sigma))
+    
+    return(tibble('phi_mle' = mean, 'phi_sigma' = sd))
 }
 
 approx_post_exp = function(Y_obs, lambda_ref, d, alpha, beta, sigma_0, lower = 0.2, upper = 10, start = 1) {
@@ -1365,78 +1538,6 @@ pnorm.range = function(lower, upper, mu, sd) {
         return(1)
     }
     pnorm(upper, mu, sd) - pnorm(lower, mu, sd)
-}
-
-walk_tree = function(den, cut_prefix, cuts, segs_tested, gexp.norm.long, df, p_cutoff = 0.01, min_depth = 10) {
-    
-    # split into two clusters
-    membership = dendextend::cutree(den, k = 2) %>%
-        data.frame() %>%
-        tibble::rownames_to_column('cell') %>%
-        setNames(c('cell', 'cut')) %>%
-        mutate(cut_prefix = cut_prefix)
-        
-    IRdisplay::display(cut_prefix)
-    
-    min_size = membership %>% count(cut) %>% pull(n) %>% min()
-    
-    accept = FALSE
-    
-    if (min_size > 400) {
-        
-        IRdisplay::display('Running HMMs..')
-        Obs_cut = analyze_cut(df, gexp.norm.long, membership, min_depth)
-        
-        IRdisplay::display('Comparing clusters..')
-        seg_diff = compare_cluster(Obs_cut) 
-        
-        if (nrow(seg_diff) > 0) {
-            # accept the split if any significantly different segments
-            accept = any(seg_diff$p_diff <= p_cutoff)
-            
-            segs_tested = rbind(
-                segs_tested, 
-                seg_diff %>% mutate(cut_prefix = cut_prefix))
-        }
-    } 
-    
-    if (!accept) {
-        # this is a fringe node
-        cuts = rbind(cuts, membership)
-        return(list('cuts' = cuts, 'segs_tested' = segs_tested))
-    } else {
-        
-        # keep splitting
-        sub_dens = dendextend::get_subdendrograms(den, k = 2)
-        
-        res_1 = walk_tree(
-            sub_dens[[1]],
-            paste0(cut_prefix, '.', 1),
-            cuts,
-            segs_tested,
-            gexp.norm.long,
-            df,
-            p_cutoff,
-            min_depth
-        )
-        
-        res_2 = walk_tree(
-            sub_dens[[2]],
-            paste0(cut_prefix, '.', 2),
-            cuts,
-            segs_tested, 
-            gexp.norm.long,
-            df,
-            p_cutoff,
-            min_depth
-        )
-        
-        res = list(
-            'cuts' = rbind(res_1$cuts, res_2$cuts), 
-            'segs_tested' = rbind(res_1$segs_tested, res_2$segs_tested))
-        
-        return(res)
-    }
 }
 
 exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F, k = 5, ncores = 10, verbose = T) {
@@ -1597,12 +1698,18 @@ calc_allele_LLR = function(pAD, DP, p_s, theta_mle, gamma = 20) {
     return(l_1 - l_0)
 }
 
-calc_exp_LLR = function(Y_obs, lambda_ref, depth_obs, alpha, beta, phi_mle) {
+calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, model = 'gpois') {
     if (length(Y_obs) == 0) {
         return(0)
     }
-    l_1 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = phi_mle)
-    l_0 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 1)
+    if (model == 'gpois') {
+        l_1 = l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi_mle)
+        l_0 = l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = 1)
+    } else {
+        l_1 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = phi_mle)
+        l_0 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = 1)
+    }
+    
     return(l_1 - l_0)
 }
 

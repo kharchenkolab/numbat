@@ -1,9 +1,9 @@
-source('/home/tenggao/Armadillo/hmm.r')
-source('/home/tenggao/Armadillo/utils.r')
-source('/home/tenggao/Armadillo/graphs.r')
+source('/home/tenggao/Numbat/hmm.r')
+source('/home/tenggao/Numbat/utils.r')
+source('/home/tenggao/Numbat/graphs.r')
 
 
-armadillo_exp = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot, out_dir, bulk_only = FALSE, ncores = 30, min_cells = 200, min_depth = 0, t = 1e-5, gbuild = 'hg38', verbose = TRUE) {
+numbat_exp = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot, out_dir, bulk_only = FALSE, ncores = 30, min_cells = 200, min_depth = 0, t = 1e-5, gbuild = 'hg38', verbose = TRUE) {
     
     res = list()
     dir.create(out_dir, showWarnings = FALSE)
@@ -141,7 +141,7 @@ armadillo_exp = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot,
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df dataframe of allele counts per cell, produced by preprocess_data
 #' @param gtf_transcript gtf dataframe of transcripts 
-armadillo_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 200, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, gbuild = 'hg38', verbose = TRUE) {
+numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 200, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, gbuild = 'hg38', verbose = TRUE) {
     
     dir.create(out_dir, showWarnings = FALSE)
 
@@ -152,7 +152,7 @@ armadillo_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_a
 
         if (verbose) {display('Initializing using raw expression tree ..')}   
 
-        bulk_subtrees = armadillo_exp(
+        bulk_subtrees = numbat_exp(
             count_mat = count_mat,
             lambdas_ref = lambdas_ref,
             df = df,
