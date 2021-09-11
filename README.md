@@ -1,5 +1,4 @@
-# Armadillo
-<img src="armadillo.png" width="500">
+# Numbat
 Haplotype-aware detection of copy number variations in scRNA-Seq
 
 1. SNP pileup
