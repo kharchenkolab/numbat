@@ -17,7 +17,7 @@ cmd = glue(
 
 2. Create VCF
 ```
-Rscript /home/tenggao/Armadillo/create_vcf.r --sample sample1,sample2 --label patient 
+Rscript /home/tenggao/numbat/create_vcf.r --sample sample1,sample2 --label patient 
 ```
 
 3. Phasing
@@ -41,9 +41,9 @@ for (sample in samples) {
 list(cmds) %>% fwrite('~/external/WASHU/run_phasing.sh', sep = '\n')
 ```
 
-4. Run Armadillo
+4. Run Numbat
 ```
-source('~/Armadillo/armadillo.r')
+source('~/Numbat/main.r')
 
 # gtf
 gtf = fread('~/ref/hg38.refGene.gtf')
@@ -96,7 +96,7 @@ df = preprocess_data(
 )$df_obs
 
  # run
- out = armadillo_subclone(
+ out = numbat_subclone(
     count_mat_obs,
     lambdas_ref,
     df,
