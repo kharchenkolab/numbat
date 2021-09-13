@@ -1,6 +1,8 @@
 # Numbat
 Haplotype-aware detection of copy number variations in scRNA-Seq
 
+![alt text](numbat.jpeg)
+
 1. SNP pileup
 ```
 cmd = glue(
