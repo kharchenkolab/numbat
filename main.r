@@ -141,7 +141,7 @@ numbat_exp = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot, ou
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df dataframe of allele counts per cell, produced by preprocess_data
 #' @param gtf_transcript gtf dataframe of transcripts 
-numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 200, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, gbuild = 'hg38', verbose = TRUE) {
+numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 200, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE) {
     
     dir.create(out_dir, showWarnings = FALSE)
 
@@ -173,7 +173,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
                 gtf_transcript = gtf_transcript,
                 min_depth = min_depth
             ) %>%
-            analyze_bulk_gpois(t = t) %>%
+            analyze_bulk_lnpois(t = t) %>%
             mutate(sample = 0)
 
     } else if (init_method == 'smooth') {
@@ -200,6 +200,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
             gtf_transcript = gtf_transcript,
             min_depth = min_depth,
             t = t,
+            exp_model = exp_model,
             verbose = verbose)
 
     } else {
@@ -334,7 +335,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
             filter(!is.na(rank)) %>%
             data.frame() %>%
             inner_join(clone_post, by = c('GT')) %>%
-            {list(label = v, members = unique(.$GT), cells = .$cell, size = length(.$cell))}
+            {list(label = v, members = unique(.$GT), clones = unique(.$clone), cells = .$cell, size = length(.$cell))}
         })
 
         saveRDS(subtrees, glue('{out_dir}/subtrees_{i}.rds'))
@@ -350,6 +351,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
             gtf_transcript = gtf_transcript,
             min_depth = min_depth,
             t = t,
+            exp_model = exp_model,
             verbose = verbose)
 
         fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv'), sep = '\t')
@@ -362,6 +364,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
             gtf_transcript = gtf_transcript,
             min_depth = min_depth,
             t = t,
+            exp_model = exp_model,
             verbose = verbose)
         
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv'), sep = '\t')
@@ -378,7 +381,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
 }
 
 
-run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, t, min_depth = 0, verbose = FALSE) {
+run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, t, gamma = 20, min_depth = 0, ncores = NULL, exp_model = 'lnpois', verbose = FALSE, debug = FALSE) {
 
     if (length(groups) == 0) {
         return(data.frame())
@@ -388,9 +391,13 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, t,
         display(glue('Running HMMs on {length(groups)} cell groups..'))
     }
 
+    analyze_bulk = ifelse(exp_model == 'gpois', analyze_bulk_gpois, analyze_bulk_lnpois)
+
+    ncores = ifelse(is.null(ncores), length(groups), ncores)
+
     results = mclapply(
             groups,
-            mc.cores = length(groups),
+            mc.cores = ncores,
             function(g) {
                 get_bulk(
                     count_mat = count_mat[,g$cells],
@@ -404,7 +411,7 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, t,
                     members = paste0(g$members, collapse = ';'),
                     sample = g$label
                 ) %>%
-                analyze_bulk_gpois(t = t, verbose = verbose)
+                analyze_bulk(t = t, gamma = gamma, verbose = verbose)
         })
 
     bad = sapply(results, inherits, what = "try-error")
@@ -412,6 +419,10 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, t,
     if (any(bad)) {
         if (verbose) {display(glue('{sum(bad)} jobs failed'))}
         print(results[bad])
+    }
+
+    if (debug) {
+        return(results)
     }
     
     bulk_all = results %>% 
@@ -486,10 +497,12 @@ cell_to_clone = function(gtree, exp_post, allele_post, prior = FALSE) {
             Z_clone = log(prior_clone) + l_clone_x + l_clone_y,
             post_clone = exp(Z_clone - matrixStats::logSumExp(Z_clone))
         ) %>%
-        summarise(
-            clone = clone[which.max(post_clone)],
-            GT = GT[which.max(post_clone)]
-        )
+        mutate(
+            clone_opt = clone[which.max(post_clone)],
+            GT_opt = GT[clone_opt]
+        ) %>%
+        mutate(clone = paste0('p', clone)) %>%
+        reshape2::dcast(cell + clone_opt + GT_opt ~ clone, value.var = 'post_clone')
     
     return(clone_post)
     
@@ -984,6 +997,7 @@ get_allele_post = function(bulk_all, segs_consensus, df) {
                  )
             ),
             Z_n = l11 + log(1/2),
+            logBF = Z_cnv - Z_n,
             p_amp = exp(matrixStats::logSumExp(c(l21 + log(p_amp/4), l31 + log(p_amp/4))) - Z),
             p_amp_sin = exp(l21 + log(p_amp/4) - Z),
             p_amp_mul = exp(l31 + log(p_amp/4) - Z),
@@ -1047,6 +1061,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
                   l00_x + l00_y + log(p_bdel/2))
             ),
             Z_n = l11_x + l11_y + log(1/2),
+            logBF = Z_cnv - Z_n,
             p_cnv = exp(Z_cnv - Z),
             p_n = exp(Z_n - Z),
             p_cnv_x = exp(Z_cnv_x - Z_x),

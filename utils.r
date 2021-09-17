@@ -1,6 +1,15 @@
 devtools::load_all('~/poilog', quiet = T)
 ########################### Data processing ############################
 
+genetic_map = fread('~/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz') %>% 
+    setNames(c('CHROM', 'POS', 'rate', 'cM')) %>%
+    group_by(CHROM) %>%
+    mutate(
+        start = POS,
+        end = c(POS[2:length(POS)], POS[length(POS)])
+    ) %>%
+    ungroup()
+
 # take in a reference matrix, decide which one is best 
 choose_ref = function(count_mat_obs, lambda_mat_ref, gtf_transcript, debug = F) {
 
@@ -493,7 +502,7 @@ preprocess_data = function(
     return(list('df_obs' = df_obs, 'df_ref' = df_ref))
 }
 
-get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 2, verbose = FALSE) {
+get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 0, verbose = FALSE) {
 
     if (nrow(df) == 0) {
         stop('empty allele dataframe - check cell names')
@@ -537,6 +546,83 @@ get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 2, v
     bulk = bulk %>% filter(lambda_ref != 0 | is.na(gene))
 }
 
+
+# phase switch probablity as a function of genomic distance
+switch_prob = function(x, pad = 0.01) {
+    1-pmax(pmin(2.8 - 0.38 * log10(x), 1 - pad), 0.5 + pad)
+}
+
+switch_prob_bp = function(x, lambda = 1.0728, min_p = 0) {
+    p = 0.5*(1 - exp(-lambda * x/1e6))
+    pmax(p, min_p)
+}
+
+switch_prob_cm = function(x, lambda = 0.52, min_p = 1e-10) {
+    p = 0.5*(1 - exp(-lambda * x))
+    pmax(p, min_p)
+}
+
+fit_switch_prob = function(y, d) {
+    
+    eta = function(d, lambda, min_p = 1e-10) {
+        p = 0.5*(1 - exp(-lambda * d))
+        pmax(p, min_p)
+    }
+
+    l_lambda = function(y, d, lambda) {
+        sum(log(eta(d[y == 1], lambda))) - lambda * sum(d[y == 0])
+    }
+
+    fit = stats4::mle(
+        minuslogl = function(lambda) {
+            -l_lambda(y, d, lambda)
+
+        },
+        start = c(5),
+        lower = c(1e-7)
+    )
+    
+    return(fit@coef)
+}
+
+annot_cm = function(bulk, genetic_map) {
+
+    bulk = bulk %>% ungroup()
+    
+    marker_map = GenomicRanges::findOverlaps(
+            bulk %>% {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$POS,
+                    end = .$POS)
+            )},
+            genetic_map %>% {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$start,
+                    end = .$end)
+            )}
+        ) %>%
+        as.data.frame() %>%
+        set_names(c('marker_index', 'map_index')) %>%
+        left_join(
+            bulk %>% mutate(marker_index = 1:n()) %>%
+                select(marker_index, snp_id),
+            by = c('marker_index')
+        ) %>%
+        left_join(
+            genetic_map %>% mutate(map_index = 1:n()),
+            by = c('map_index')
+        ) %>%
+        arrange(marker_index, -start) %>%
+        distinct(marker_index, `.keep_all` = T) %>%
+        select(snp_id, cM)
+
+    bulk = bulk %>% left_join(marker_map, by = 'snp_id') %>%
+        filter(!is.na(cM))
+
+    return(bulk)
+    
+}
+
 combine_bulk = function(df, gexp_bulk, min_depth) {
     
     pseudobulk = df %>%
@@ -556,10 +642,17 @@ combine_bulk = function(df, gexp_bulk, min_depth) {
         mutate(pAD = ifelse(GT == '1|0', AD, DP - AD)) %>%
         mutate(CHROM = factor(CHROM, unique(CHROM))) %>%
         arrange(CHROM, POS) %>%
+        annot_cm(genetic_map) %>%
         group_by(CHROM) %>%
         filter(n() > 1) %>%
-        mutate(inter_snp_dist = c(NA, POS[2:length(POS)] - POS[1:(length(POS)-1)])) %>%
-        mutate(p_s = switch_prob(inter_snp_dist)) %>%
+        mutate(
+            inter_snp_cm = c(NA, cM[2:length(cM)] - cM[1:(length(cM)-1)]),
+            p_s = switch_prob_cm(inter_snp_cm)
+        ) %>%
+        # mutate(
+        #     inter_snp_dist = c(NA, POS[2:length(POS)] - POS[1:(length(POS)-1)]),
+        #     p_s = switch_prob_bp(inter_snp_dist)
+        # ) %>%
         ungroup()
 
     Obs = pseudobulk %>% 
@@ -765,7 +858,7 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TR
     return(Obs)
 }
 
-analyze_bulk_lnpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL, exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE, roll_phi = TRUE, verbose = TRUE, debug = F) {
+analyze_bulk_lnpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL, exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE, phase = TRUE, roll_phi = TRUE, verbose = TRUE, debug = F) {
     
     if (!is.numeric(t)) {
         stop('transition probability is not numeric')
@@ -972,32 +1065,36 @@ annot_consensus = function(bulk, segs_consensus, bulk_all) {
         mutate(seg = seg_cons) %>%
         mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) 
 
-    phase_post = bulk_all %>%
-        filter(!is.na(pAD)) %>%
-        mutate(haplo = case_when(
-            str_detect(state, 'up') ~ 'major',
-            str_detect(state, 'down') ~ 'minor',
-            T ~ ifelse(pBAF > 0.5, 'major', 'minor')
-        )) %>%
-        select(snp_id, sample, seg, haplo) %>%
-        inner_join(
-            segs_consensus,
-            by = c('sample', 'seg')
-        ) %>%
-        select(snp_id, haplo)
-
-    bulk = bulk %>% left_join(phase_post, by = 'snp_id') %>%
-        mutate(
-            state = ifelse(
-                is.na(haplo),
-                'neu',
-                paste0(str_remove(cnv_state, '_1|_2'), '_', c('major' = 'up', 'minor' = 'down')[haplo])
-            )
-        ) %>%
-        mutate(state_post = state)
-    
     return(bulk)
 }
+
+
+    # phase_post = bulk_all %>%
+    #     filter(!is.na(pAD)) %>%
+    #     mutate(haplo = case_when(
+    #         str_detect(state, 'up') ~ 'major',
+    #         str_detect(state, 'down') ~ 'minor',
+    #         T ~ ifelse(pBAF > 0.5, 'major', 'minor')
+    #     )) %>%
+    #     select(snp_id, sample, seg, haplo) %>%
+    #     inner_join(
+    #         segs_consensus,
+    #         by = c('sample', 'seg')
+    #     ) %>%
+    #     select(snp_id, haplo)
+
+    # bulk = bulk %>% left_join(phase_post, by = 'snp_id') %>%
+    #     mutate(
+    #         state = ifelse(
+    #             is.na(haplo),
+    #             'neu',
+    #             paste0(str_remove(cnv_state, '_1|_2'), '_', c('major' = 'up', 'minor' = 'down')[haplo])
+    #         )
+    #     ) %>%
+    #     mutate(state_post = state)
+    
+    # return(bulk)
+# }
 
 find_diploid = function(bulk, gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, debug = F, verbose = T) {
     
@@ -1262,6 +1359,26 @@ phi_mle_roll = function(Y_obs, lambda_ref, alpha, beta, d_obs, h) {
     )
 }
 
+l_bbinom = function(AD, DP, alpha, beta) {
+    sum(dbbinom(AD, DP, alpha, beta, log = TRUE))
+}
+
+fit_bbinom = function(AD, DP) {
+
+    fit = stats4::mle(
+        minuslogl = function(alpha, beta) {
+            -l_bbinom(AD, DP, alpha, beta)
+        },
+        start = c(5, 5),
+        lower = c(0, 0)
+    )
+
+    alpha = fit@coef[1]
+    beta = fit@coef[2]
+    
+    return(fit)
+}
+
 l_gpois = function(Y_obs, lambda_ref, d, alpha, beta, phi = 1) {
     sum(dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE))
 }
@@ -1290,10 +1407,6 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
 l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
     if (any(sig <= 0)) {stop(glue('negative sigma. value: {sig}'))}
     if (length(sig) == 1) {sig = rep(sig, length(Y_obs))}
-    if (any(is.infinite(sig)) | any(is.infinite(mu))) {
-        display(sig[is.infinite(sig)])
-        display(mu[is.infinite(mu)])
-    }
     sum(log(poilog::dpoilog(Y_obs, mu + log(phi * d * lambda_ref), sig)))
 }
 
@@ -1352,7 +1465,7 @@ fit_lnpois = function(Y_obs, lambda_ref, d, approx = F) {
     
     fit = stats4::mle(
         minuslogl = function(mu, sig) {
-            # if (sig < 0) {stop('optim is trying negative sigma')}
+            if (sig < 0) {stop('optim is trying negative sigma')}
             -l_func(Y_obs, lambda_ref, d, mu, sig)
         },
         start = c(0, 1),
@@ -2472,6 +2585,7 @@ plot_allele_cell = function(df, bulk_subtrees, clone_post) {
 
 clone_vs_annot = function(clone_post, cell_annot) {
     clone_post %>% 
+    rename(clone = clone_opt) %>%
     filter(!is.na(clone)) %>%
     left_join(cell_annot, by = 'cell') %>%
     count(clone, cell_type) %>%

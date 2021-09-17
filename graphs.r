@@ -305,7 +305,7 @@ simplify_history = function(G, l_matrix, max_cost = 100, verbose = T) {
 
     moves = data.frame()
 
-    for (i in 1:(ecount(G)-1)) {
+    for (i in 1:ecount(G)) {
     
         move_opt = get_move_opt(G, l_matrix)
 

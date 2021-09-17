@@ -35,11 +35,6 @@ run_hmm = function(pAD, DP, p_0 = 1-1e-5, p_s = 0.1) {
 
 ############ time inhomogenous univariate HMM ############
 
-# phase switch probablity as a function of genomic distance
-switch_prob = function(x, pad = 0.01) {
-    1-pmax(pmin(2.8 - 0.38 * log10(x), 1 - pad), 0.5 + pad)
-}
-
 Viterbi.dthmm.inhom <- function (obj, ...){
 #     print('Solving univariate nonhomogenous markov chain')
     x <- obj$x
