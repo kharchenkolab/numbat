@@ -70,6 +70,7 @@ numbat_exp = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot, ou
         df = df, 
         lambdas_ref = lambdas_ref,
         gtf_transcript = gtf_transcript,
+        genetic_map = genetic_map,
         min_depth = min_depth,
         t = t,
         verbose = verbose)
@@ -141,7 +142,7 @@ numbat_exp = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot, ou
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df dataframe of allele counts per cell, produced by preprocess_data
 #' @param gtf_transcript gtf dataframe of transcripts 
-numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 200, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE) {
+numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 200, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE) {
     
     dir.create(out_dir, showWarnings = FALSE)
 
@@ -157,6 +158,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
             lambdas_ref = lambdas_ref,
             df = df,
             gtf_transcript = gtf_transcript,
+            genetic_map = genetic_map,
             cell_annot = cell_annot,
             min_cells = min_cells,
             out_dir = out_dir,
@@ -171,6 +173,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
                 df = df,
                 lambdas_ref = lambdas_ref,
                 gtf_transcript = gtf_transcript,
+                genetic_map = genetic_map,
                 min_depth = min_depth
             ) %>%
             analyze_bulk_lnpois(t = t) %>%
@@ -198,6 +201,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
             df = df, 
             lambdas_ref = lambdas_ref,
             gtf_transcript = gtf_transcript,
+            genetic_map = genetic_map,
             min_depth = min_depth,
             t = t,
             exp_model = exp_model,
@@ -268,11 +272,11 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
         p_min = 1e-10
 
         geno = joint_post %>%
-            filter(cell %in% cell_sample) %>%
             filter(cnv_state != 'neu') %>%
             group_by(seg) %>%
-            filter(mean(p_cnv > 0.95) > 0.05) %>%
+            filter(mean(p_cnv > 0.95) > 0.05 | mean(p_cnv < 0.05) > 0.5) %>%
             ungroup() %>%
+            filter(cell %in% cell_sample) %>%
             mutate(p_n = 1 - p_cnv) %>%
             mutate(p_n = pmax(pmin(p_n, 1-p_min), p_min)) %>%
             reshape2::dcast(seg ~ cell, value.var = 'p_n', fill = 0.5) %>%
@@ -316,14 +320,16 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
         # map cells to the phylogeny
         clone_post = cell_to_clone(gtree, exp_post, allele_post)
 
-        normal_cells = clone_post %>% filter(GT == '') %>% pull(cell)
+        fwrite(clone_post, glue('{out_dir}/clone_post_{i}.tsv'), sep = '\t')
+
+        normal_cells = clone_post %>% filter(GT_opt == '') %>% pull(cell)
 
         if (verbose) {
             display(glue('Found {length(normal_cells)} normal cells..'))
         }
 
-        clones = clone_post %>% split(.$clone) %>%
-            map(function(c){list(label = unique(c$clone), members = unique(c$GT), cells = c$cell, size = length(c$cell))})
+        clones = clone_post %>% split(.$clone_opt) %>%
+            map(function(c){list(label = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
 
         saveRDS(clones, glue('{out_dir}/clones_{i}.rds'))
         clones = keep(clones, function(x) x$size > min_cells)
@@ -334,7 +340,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
             mutate(rank = dfs_rank(root = v)) %>%
             filter(!is.na(rank)) %>%
             data.frame() %>%
-            inner_join(clone_post, by = c('GT')) %>%
+            inner_join(clone_post, by = c('GT' = 'GT_opt')) %>%
             {list(label = v, members = unique(.$GT), clones = unique(.$clone), cells = .$cell, size = length(.$cell))}
         })
 
@@ -349,6 +355,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
             df = df, 
             lambdas_ref = lambdas_ref,
             gtf_transcript = gtf_transcript,
+            genetic_map = genetic_map,
             min_depth = min_depth,
             t = t,
             exp_model = exp_model,
@@ -362,6 +369,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
             df = df,
             lambdas_ref = lambdas_ref,
             gtf_transcript = gtf_transcript,
+            genetic_map = genetic_map,
             min_depth = min_depth,
             t = t,
             exp_model = exp_model,
@@ -381,7 +389,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, cell_anno
 }
 
 
-run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, t, gamma = 20, min_depth = 0, ncores = NULL, exp_model = 'lnpois', verbose = FALSE, debug = FALSE) {
+run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, genetic_map, t, gamma = 20, min_depth = 0, ncores = NULL, exp_model = 'lnpois', verbose = FALSE, debug = FALSE) {
 
     if (length(groups) == 0) {
         return(data.frame())
@@ -404,6 +412,7 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, t,
                     df = df %>% filter(cell %in% g$cells),
                     lambdas_ref = lambdas_ref,
                     gtf_transcript = gtf_transcript,
+                    genetic_map = genetic_map,
                     min_depth = min_depth
                 ) %>%
                 mutate(
@@ -441,16 +450,21 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, t,
     return(bulk_all)
 }
 
-get_segs_consensus = function(bulk_all, gbuild = 'hg38') {
+get_segs_consensus = function(bulk_all, LLR_min = 20, gbuild = 'hg38') {
 
     segs_all = bulk_all %>% 
         filter(state != 'neu') %>%
         distinct(sample, CHROM, seg, cnv_state, cnv_state_post, seg_start, seg_end, seg_start_index, seg_end_index,
                 theta_mle, theta_sigma, phi_mle, phi_sigma, p_loh, p_del, p_amp, p_bamp, p_bdel, LLR, LLR_y, n_genes, n_snps)
     
-    segs_filtered = segs_all %>% filter(!(LLR_y < 20 & cnv_state %in% c('del', 'amp'))) %>% filter(n_genes >= 20)
+    segs_filtered = segs_all %>% filter(LLR_y > LLR_min | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% filter(n_genes >= 20)
+
+    # no valid segments should overlap with these endpoints
+    bounds = bulk_all %>% 
+        group_by(CHROM) %>%
+        summarise(bound_left = min(POS) - 1, bound_right = max(POS) + 1)
     
-    segs_consensus = segs_filtered %>% resolve_cnvs() %>% fill_neu_segs(gbuild = gbuild)
+    segs_consensus = segs_filtered %>% resolve_cnvs() %>% fill_neu_segs(bounds, gbuild = gbuild)
 
     return(segs_consensus)
 
@@ -570,60 +584,8 @@ resolve_cnvs = function(segs_all, debug = FALSE) {
     return(segs_consensus)
 }
 
-
-# # retrieve neutral segments
-# fill_neu_segs = function(segs_consensus, gbuild = 'hg38') {
-    
-#     chrom_sizes = fread(glue('~/ref/{gbuild}.chrom.sizes.txt')) %>% 
-#             set_names(c('CHROM', 'LEN')) %>%
-#             mutate(CHROM = str_remove(CHROM, 'chr')) %>%
-#             filter(CHROM %in% 1:22) %>%
-#             mutate(CHROM = as.factor(as.integer(CHROM)))
-
-#     out_of_bound = segs_consensus %>% left_join(chrom_sizes, by = "CHROM") %>% 
-#         filter(seg_end > LEN) %>% pull(seg)
-
-#     if (length(out_of_bound) > 0) {
-#         warning(glue('Segment end exceeds genome length: {out_of_bound}'))
-#         chrom_sizes = chrom_sizes %>%
-#             left_join(
-#                 segs_filtered %>% group_by(CHROM) %>%
-#                     summarise(seg_end = max(seg_end)),
-#                 by = "CHROM"
-#             ) %>%
-#             mutate(LEN = ifelse(is.na(seg_end), LEN, pmax(LEN, seg_end)))
-#     }
-
-#     segs_consensus = c(
-#             segs_consensus %>% {GenomicRanges::GRanges(
-#                 seqnames = .$CHROM,
-#                 IRanges::IRanges(start = .$seg_start,
-#                        end = .$seg_end)
-#             )},
-#             chrom_sizes %>% {GenomicRanges::GRanges(
-#                 seqnames = .$CHROM,
-#                 IRanges::IRanges(start = 1,
-#                        end = .$LEN)
-#             )}
-#         ) %>%
-#         GenomicRanges::disjoin() %>%
-#         as.data.frame() %>%
-#         select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
-#         left_join(
-#             segs_consensus,
-#             by = c("CHROM", "seg_start", "seg_end")
-#         ) %>%
-#         mutate(cnv_state = tidyr::replace_na(cnv_state, 'neu')) %>%
-#         group_by(CHROM) %>%
-#         mutate(seg_cons = paste0(CHROM, '_', 1:n())) %>%
-#         ungroup() %>%
-#         mutate(CHROM = as.factor(CHROM))
-    
-#     return(segs_consensus)
-# }
-
 # retrieve neutral segments
-fill_neu_segs = function(segs_consensus, gbuild = 'hg38') {
+fill_neu_segs = function(segs_consensus, bounds, gbuild = 'hg38') {
     
     chrom_sizes = fread(glue('~/ref/{gbuild}.chrom.sizes.txt')) %>% 
             set_names(c('CHROM', 'LEN')) %>%
@@ -664,6 +626,10 @@ fill_neu_segs = function(segs_consensus, gbuild = 'hg38') {
         as.data.frame() %>%
         select(CHROM = seqnames, seg_start = start, seg_end = end)
 
+    # trim telomeric gaps
+    # gaps = gaps %>% left_join(bounds, by = 'CHROM') %>% 
+    #     filter(seg_start > bound_left & seg_end < bound_right)
+
     segs_consensus = segs_consensus %>%
         bind_rows(gaps) %>% 
         mutate(cnv_state = tidyr::replace_na(cnv_state, 'neu')) %>%
@@ -678,11 +644,13 @@ fill_neu_segs = function(segs_consensus, gbuild = 'hg38') {
 
 
 # multi-state model
-get_exp_likelihoods = function(exp_sc, alpha = NULL, beta = NULL, hskd = FALSE, depth_obs = NULL) {
+get_exp_likelihoods = function(exp_sc, alpha = NULL, beta = NULL, hskd = FALSE, use_loh = FALSE, depth_obs = NULL) {
     
     if (is.null(depth_obs)){
         depth_obs = sum(exp_sc$Y_obs)
     }
+
+    ref_states = ifelse(use_loh, c('neu', 'loh'), c('neu'))
 
     exp_sc = exp_sc %>% filter(lambda_ref > 0)
     
@@ -693,7 +661,7 @@ get_exp_likelihoods = function(exp_sc, alpha = NULL, beta = NULL, hskd = FALSE, 
             exp_sc = exp_sc %>% mutate(exp_bin = as.factor(ntile(lambda_ref, 2)))
 
             fits = exp_sc %>% 
-                filter(cnv_state %in% c('neu')) %>%
+                filter(cnv_state %in% ref_states) %>%
                 group_by(exp_bin) %>%
                 do({
                     fit = fit_gpois(.$Y_obs, .$lambda_ref, depth_obs)
@@ -735,7 +703,7 @@ get_exp_likelihoods = function(exp_sc, alpha = NULL, beta = NULL, hskd = FALSE, 
     return(res)
 }
 
-get_exp_likelihoods_lnpois = function(exp_sc, depth_obs = NULL) {
+get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL) {
 
     exp_sc = exp_sc %>% filter(lambda_ref > 0)
     
@@ -743,7 +711,9 @@ get_exp_likelihoods_lnpois = function(exp_sc, depth_obs = NULL) {
         depth_obs = sum(exp_sc$Y_obs)
     }
 
-    fit = exp_sc %>% filter(cnv_state %in% c('neu')) %>% {fit_lnpois(.$Y_obs, .$lambda_ref, depth_obs)}
+    ref_states = ifelse(use_loh, c('neu', 'loh'), c('neu'))
+
+    fit = exp_sc %>% filter(cnv_state %in% ref_states) %>% {fit_lnpois(.$Y_obs, .$lambda_ref, depth_obs)}
 
     mu = fit@coef[1]
     sigma = fit@coef[2]
@@ -824,7 +794,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     
     cells = colnames(count_mat)
 
-    if (!is.matrix(lambdas_ref)) {
+    if ((!is.matrix(lambdas_ref))) {
         lambdas_ref = as.matrix(lambdas_ref) %>% set_colnames('ref')
         best_refs = setNames(rep('ref', length(cells)), cells)
     } else {
@@ -906,7 +876,9 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
             p_bdel = exp(l22 + log(prior_bdel/2) - Z),
             p_cnv = p_amp + p_del + p_loh + p_bamp + p_bdel
         ) %>%
-        ungroup()
+        ungroup() %>%
+        mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
+        mutate(seg_label = factor(seg_label, unique(seg_label)))
     
     return(list('exp_post' = exp_post, 'exp_sc' = exp_sc, 'best_refs' = best_refs))
 }
@@ -1008,7 +980,9 @@ get_allele_post = function(bulk_all, segs_consensus, df) {
             p_bdel = exp(l22 + log(p_bdel/2) - Z),
             p_cnv = p_amp + p_del + p_loh + p_bamp + p_bdel
         ) %>%
-        ungroup()
+        ungroup() %>%
+        mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
+        mutate(seg_label = factor(seg_label, unique(seg_label)))
 }
 
 get_joint_post = function(exp_post, allele_post, segs_consensus) {

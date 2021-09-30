@@ -70,15 +70,6 @@ create_vcf = function(chr, snps, vcf_original, vcf_template, sample, chr_prefix 
     
     write.vcf(vcf_chr, file_name)
 
-    vcfR_file_fix <- function(file) {
-
-      out <- R.utils::gunzip(file)
-      out2 <- Rsamtools::bgzip(out, dest=sprintf("%s.gz", sub("\\.gz$", "", out)),
-                     overwrite = TRUE)
-      file.remove(out)
-
-    }
-
     # compress using bgzip
     vcfR_file_fix(file_name)
 
@@ -91,8 +82,16 @@ create_vcf = function(chr, snps, vcf_original, vcf_template, sample, chr_prefix 
     
 }
 
-# read in VCFs
+vcfR_file_fix <- function(file) {
 
+    out <- R.utils::gunzip(file)
+    out2 <- Rsamtools::bgzip(out, dest=sprintf("%s.gz", sub("\\.gz$", "", out)),
+                    overwrite = TRUE)
+    file.remove(out)
+
+}
+
+# read in VCFs
 get_snps = function(sample) {
     
     snps = fread(glue('/home/tenggao/pileup/{sample}/cellSNP.base.vcf')) %>% rename(CHROM = `#CHROM`)

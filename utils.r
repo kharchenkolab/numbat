@@ -1,14 +1,4 @@
-devtools::load_all('~/poilog', quiet = T)
 ########################### Data processing ############################
-
-genetic_map = fread('~/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz') %>% 
-    setNames(c('CHROM', 'POS', 'rate', 'cM')) %>%
-    group_by(CHROM) %>%
-    mutate(
-        start = POS,
-        end = c(POS[2:length(POS)], POS[length(POS)])
-    ) %>%
-    ungroup()
 
 # take in a reference matrix, decide which one is best 
 choose_ref = function(count_mat_obs, lambda_mat_ref, gtf_transcript, debug = F) {
@@ -502,7 +492,7 @@ preprocess_data = function(
     return(list('df_obs' = df_obs, 'df_ref' = df_ref))
 }
 
-get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 0, verbose = FALSE) {
+get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min_depth = 0, verbose = FALSE) {
 
     if (nrow(df) == 0) {
         stop('empty allele dataframe - check cell names')
@@ -535,6 +525,7 @@ get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, min_depth = 0, v
     bulk = combine_bulk(
         df = df,
         gexp_bulk = gexp_bulk,
+        genetic_map = genetic_map,
         min_depth = min_depth
     )
 
@@ -623,7 +614,7 @@ annot_cm = function(bulk, genetic_map) {
     
 }
 
-combine_bulk = function(df, gexp_bulk, min_depth) {
+combine_bulk = function(df, gexp_bulk, genetic_map, min_depth) {
     
     pseudobulk = df %>%
         filter(GT %in% c('1|0', '0|1')) %>%
@@ -701,7 +692,7 @@ combine_bulk = function(df, gexp_bulk, min_depth) {
 make_psbulk = function(count_mat, cell_annot, verbose = F) {
 
     cell_annot = cell_annot %>% mutate(cell_type = factor(cell_type))
-    
+
     cells = intersect(colnames(count_mat), cell_annot$cell)
     
     count_mat = count_mat %>% extract(,cells)
@@ -825,7 +816,7 @@ analyze_bulk_gpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TR
             ) %>%
             mutate(state_post = ifelse(
                 cnv_state_post %in% c('amp', 'del', 'loh') & (!cnv_state %in% c('bamp', 'bdel')),
-                paste0(cnv_state_post, '_', str_extract(state, 'up_1|down_1|up_2|down_2|up|down')),
+                paste0(cnv_state_post, '_', str_extract(state, 'up_1|down_1|up_2|down_2|up|down|1_up|2_up|1_down|2_down')),
                 cnv_state_post
             )) %>%
             mutate(state_post = str_remove(state_post, '_NA'))
@@ -912,12 +903,15 @@ analyze_bulk_lnpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = T
         annot_segs %>%
         smooth_segs %>%
         annot_segs %>%
+        ungroup() %>%
+        group_by(CHROM) %>%
+        mutate(seg_start = min(POS), seg_end = max(POS)) %>%
         ungroup()
     
     # rolling theta estimates
     Obs = annot_roll_theta(Obs)
     
-    if (retest) {
+    if (retest & (!allele_only) & (!exp_only)) {
         
         if (verbose) {
             display('Retesting CNVs..')
@@ -934,11 +928,13 @@ analyze_bulk_lnpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = T
             ) %>%
             mutate(state_post = ifelse(
                 cnv_state_post %in% c('amp', 'del', 'loh') & (!cnv_state %in% c('bamp', 'bdel')),
-                paste0(cnv_state_post, '_', str_extract(state, 'up_1|down_1|up_2|down_2|up|down')),
+                paste0(cnv_state_post, '_', str_extract(state, 'up_1|down_1|up_2|down_2|up|down|1_up|2_up|1_down|2_down')),
                 cnv_state_post
             )) %>%
             mutate(state_post = str_remove(state_post, '_NA'))
         
+    } else {
+        Obs = Obs %>% mutate(state_post = state, cnv_state_post = cnv_state)
     }
     
     if (verbose) {
@@ -1131,9 +1127,9 @@ find_diploid = function(bulk, gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1
         ungroup() %>%
         filter(n_genes > 50 & n_snps > 50 & theta_mle < 0.15)
 
-    if (length(segs) == 0) {
+    if (nrow(segs) == 0) {
         stop('No balanced segments')
-    } else if (length(segs) == 1) {
+    } else if (nrow(segs) == 1) {
         diploid_segs = segs$seg
         bamp = FALSE
     } else {
@@ -1887,26 +1883,86 @@ permute_phi_vec = function(lambda_mat_obs, lambda_ref, n_perm) {
 
 ########################### Visualization ############################
 
-cnv_colors = c("neu" = "gray",
-        "del_up" = "royalblue", "del_down" = "darkblue", 
-        "loh_up" = "darkgreen", "loh_down" = "olivedrab4",
-        "amp_up" = "red", "amp_down" = "tomato3",
-        "del_up_1" = "royalblue", "del_down_1" = "darkblue", 
-        "loh_up_1" = "darkgreen", "loh_down_1" = "olivedrab4",
-        "amp_up_1" = "red", "amp_down_1" = "tomato3",
-        "del_up_2" = "royalblue", "del_down_2" = "darkblue", 
-        "loh_up_2" = "darkgreen", "loh_down_2" = "olivedrab4",
-        "amp_up_2" = "red", "amp_down_2" = "tomato3",
-        "bamp" = "salmon", "bdel" = "skyblue",
-        "amp" = "red", "loh" = "#34d834", "del" = "darkblue", "neu2" = "gray30",
-        "theta_up" = "darkgreen", "theta_down" = "olivedrab4",
-        "theta_up_1" = "darkgreen", "theta_down_1" = "olivedrab4",
-        "theta_up_2" = "darkgreen", "theta_down_2" = "olivedrab4",
-        '0|1' = 'red', '1|0' = 'blue'
-    )
-    
+show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 
-plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = FALSE) {
+    D = bulk %>% 
+        filter(!is.na(pAD)) %>%
+        group_by(CHROM) %>%
+        mutate(pBAF = 1-pBAF, pAD = DP - pAD) %>%
+        mutate(theta_ar_roll = theta_hat_roll(AD, DP-AD, h = h)) %>%
+        mutate(theta_hat_roll = theta_hat_roll(pAD, DP-pAD, h = h)) %>%
+        filter(DP >= min_depth) %>%
+        mutate(snp_index = 1:n()) %>%
+        mutate(dAR = 0.5+abs(AR-0.5)) %>%
+        mutate(dAR_roll = caTools::runmean(abs(AR-0.5), align = 'center', k = 30))
+
+    boundary = D %>% filter(boundary == 1) %>% pull(snp_index)
+    
+    p1 = D %>%
+        mutate(state_post = 'neu') %>%
+        ggplot(
+            aes(x = snp_index, y = AR),
+            na.rm=TRUE
+        ) +
+        geom_hline(yintercept = 0.5, linetype = 'dashed', color = 'gray') +
+        geom_point(
+            aes(color = state_post),
+            size = dot_size,
+        ) +
+        # geom_line(
+        #     aes(x = snp_index, y = 0.5 + dAR_roll), color = 'red'
+        # ) +
+        # geom_line(
+        #     aes(x = snp_index, y = 0.5 - dAR_roll), color = 'red'
+        # ) +
+        # geom_line(
+        #     aes(x = snp_index, y = 0.5 + theta_ar_roll), color = 'red'
+        # ) +
+        theme_classic() +
+        theme(
+            panel.spacing = unit(0, 'mm'),
+            panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+            strip.background = element_blank(),
+            axis.text.x = element_blank(),
+            axis.title.x = element_blank()
+        ) +
+        scale_color_manual(values = cnv_colors) +
+        ylim(0,1) +
+        facet_grid(.~CHROM, space = 'free_x', scale = 'free_x') +
+        geom_vline(xintercept = boundary - 1, color = 'red', size = 0.5, linetype = 'dashed') +
+        guides(color = 'none')
+
+    p2 = D %>%
+        mutate(state_post = 'neu') %>%
+        ggplot(
+            aes(x = snp_index, y = pBAF),
+            na.rm=TRUE
+        ) +
+        geom_hline(yintercept = 0.5, linetype = 'dashed', color = 'gray') +
+        geom_point(
+            aes(color = ifelse(theta_hat_roll > 0, 'loh_1_up', 'loh_1_down')),
+            size = dot_size,
+        ) +
+        geom_line(
+            aes(x = snp_index, y = 0.5 + theta_hat_roll), color = 'red'
+        ) +
+        theme_classic() +
+        theme(
+            panel.spacing = unit(0, 'mm'),
+            panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+            strip.background = element_blank()
+        ) +
+        scale_color_manual(values = cnv_colors) +
+        ylim(0,1) +
+        facet_grid(.~CHROM, space = 'free_x', scale = 'free_x') +
+        geom_vline(xintercept = boundary - 1, color = 'red', size = 0.5, linetype = 'dashed') +
+        guides(color = 'none')
+
+    (p1 / p2) + plot_layout(guides = 'auto')
+}
+
+
+plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = TRUE) {
 
     if (!'state_post' %in% colnames(Obs)) {
         Obs = Obs %>% mutate(state_post = state)
@@ -1914,7 +1970,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
 
     # correct for baseline bias
     if (fc_correct) {
-        Obs = Obs %>% mutate(logFC = log2((lambda_obs/lambda_ref) * (beta/alpha)))
+        Obs = Obs %>% mutate(logFC = logFC - mu)
     }
 
     p = ggplot(
@@ -1972,7 +2028,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
     return(p)
 }
 
-plot_bulks = function(bulk_all, min_depth = 8, ncol = 1) {
+plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, ncol = 1) {
 
     options(warn = -1)
     plot_list = bulk_all %>%
@@ -1983,7 +2039,7 @@ plot_bulks = function(bulk_all, min_depth = 8, ncol = 1) {
                 sample = unique(bulk$sample)
                 n_cells = unique(bulk$n_cells)
 
-                p = plot_psbulk(bulk, min_depth = min_depth) + 
+                p = plot_psbulk(bulk, min_depth = min_depth, fc_correct = fc_correct) + 
                     theme(
                         title = element_text(size = 8),
                         axis.text.x = element_blank(),
@@ -2395,9 +2451,19 @@ tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NU
     return(panel)
 }
 
-cell_heatmap = function(G, cnv_order, cell_order, limit = 5) {
+cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5) {
 
-    G = G %>% 
+    geno = geno %>% mutate(logBF = Z_cnv - Z_n)
+
+    if (is.null(cnv_order)) {
+        cnv_order = unique(geno$seg)
+    }
+
+    if (is.null(cell_order)) {
+        cell_order = unique(geno$cell)
+    }
+
+    geno = geno %>% 
         filter(cell %in% cell_order) %>%
         filter(cnv_state != 'neu') %>%
         mutate(seg = factor(seg, cnv_order)) %>%
@@ -2408,7 +2474,7 @@ cell_heatmap = function(G, cnv_order, cell_order, limit = 5) {
     pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 
     p_map = ggplot(
-            G,
+            geno,
             aes(x = cell, y = seg_label, fill = logBF)
         ) +
         geom_tile(width=0.4, height=0.9) +
@@ -2600,5 +2666,6 @@ clone_vs_annot = function(clone_post, cell_annot) {
     geom_tile() +
     geom_text() +
     theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
-    scale_fill_gradient(low = 'white', high = 'red')
+    scale_fill_gradient(low = 'white', high = 'red') +
+    xlab('')
 }
