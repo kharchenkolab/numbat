@@ -1,142 +1,7 @@
-source('/home/tenggao/Numbat/hmm.r')
-source('/home/tenggao/Numbat/utils.r')
-source('/home/tenggao/Numbat/graphs.r')
-
-
-numbat_exp = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot, out_dir, bulk_only = FALSE, ncores = 30, min_cells = 200, min_depth = 0, t = 1e-5, gbuild = 'hg38', verbose = TRUE) {
-    
-    res = list()
-    dir.create(out_dir, showWarnings = FALSE)
-    cells = colnames(count_mat)
-    #### 1. Build expression tree ####
-
-    cell_annot = cell_annot %>% filter(cell %in% cells) %>% mutate(cluster = factor(cluster))
-    
-    if (verbose) {
-        display('Building expression tree ..')
-    }
-    
-    dist_mat = calc_cluster_dist(
-        count_mat, 
-        cell_annot %>% filter(group == 'obs')
-    )
-
-    tree = hclust(as.dist(dist_mat), method = "ward.D2")
-    
-    # internal nodes
-    nodes = get_internal_nodes(as.dendrogram(tree), '0', data.frame())
-    
-    # add terminal modes
-    nodes = nodes %>% rbind(
-        data.frame(
-            node = cell_annot %>% filter(group != 'ref') %>% pull(cluster) %>% unique
-        ) %>%
-        mutate(cluster = node)
-    )
-    
-    # convert to list
-    nodes = nodes %>%
-        group_by(node) %>%
-        summarise(
-            members = list(cluster)
-        ) %>%
-        {setNames(.$members, .$node)} %>%
-        lapply(function(members) {
-
-            node = list(
-                members = members,
-                cells = cell_annot %>% filter(cluster %in% members) %>% pull(cell)
-            ) %>%
-            magrittr::inset('size', length(.$cells))
-
-            return(node)
-        })
-    
-    nodes = lapply(names(nodes), function(n) {nodes[[n]] %>% magrittr::inset('label', n)}) %>% setNames(names(nodes))
-    
-    nodes = nodes %>% extract(purrr::map(., 'size') > min_cells)
-    
-    res[['tree']] = tree
-    res[['nodes']] = nodes
-
-    saveRDS(tree, glue('{out_dir}/exp_tree.rds'))
-    saveRDS(nodes, glue('{out_dir}/exp_nodes.rds'))
-    
-    #### 2. Run HMMs ####
-
-    bulk_all = run_group_hmms(
-        groups = nodes,
-        count_mat = count_mat,
-        df = df, 
-        lambdas_ref = lambdas_ref,
-        gtf_transcript = gtf_transcript,
-        genetic_map = genetic_map,
-        min_depth = min_depth,
-        t = t,
-        verbose = verbose)
-
-    fwrite(bulk_all, glue('{out_dir}/bulk_all_0.tsv'), sep = '\t')
-
-    res[['bulk_all']] = bulk_all
-
-    if (bulk_only) {
-        return(res)
-    }
-    
-    #### 3. Find consensus CNVs ####
-    
-    if (verbose) {
-        display('Finding consensus CNVs ..')
-    }
-    
-    segs_consensus = get_segs_consensus(bulk_all, gbuild = gbuild)
-
-    res[['segs_consensus']] = segs_consensus
-
-    #### 4. Per-cell CNV evaluations ####
-    
-    if (verbose) {
-        display('Calculating per-cell CNV posteriors ..')
-    }
-
-    exp_post_res = get_exp_post(
-        segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
-        count_mat,
-        lambdas_ref,
-        gtf_transcript = gtf_transcript,
-        ncores = ncores)
-
-    exp_post = exp_post_res$exp_post
-    exp_sc = exp_post_res$exp_sc
-    
-    allele_post = get_allele_post(
-        bulk_all,
-        segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
-        df)
-    
-    joint_post = get_joint_post(
-        exp_post,
-        allele_post,
-        segs_consensus
-    )
-
-    joint_post = joint_post %>% left_join(cell_annot)
-    
-    if (verbose) {
-        display('All done!')
-    }
-
-    fwrite(exp_sc, glue('{out_dir}/exp_sc_0.tsv'), sep = '\t')
-    fwrite(exp_post, glue('{out_dir}/exp_post_0.tsv'), sep = '\t')
-    fwrite(allele_post, glue('{out_dir}/allele_post_0.tsv'), sep = '\t')
-    fwrite(joint_post, glue('{out_dir}/joint_post_0.tsv'), sep = '\t')
-    
-    res[['exp_post']] = exp_post
-    res[['allele_post']] = allele_post
-    res[['joint_post']] = joint_post
-    
-    return(res)
-}
+# source('/home/tenggao/Numbat/hmm.r')
+# source('/home/tenggao/Numbat/utils.r')
+# source('/home/tenggao/Numbat/graphs.r')
+library(logger)
 
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
@@ -145,13 +10,14 @@ numbat_exp = function(count_mat, lambdas_ref, df, gtf_transcript, cell_annot, ou
 numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 200, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE) {
     
     dir.create(out_dir, showWarnings = FALSE)
-
-    res = list()
+    logfile = glue('{out_dir}/log.txt')
+    if (file.exists(logfile)) {file.remove(logfile)}
+    log_appender(appender_file(logfile))
 
     ######## Initialization ########
     if (init_method == 'raw') {
 
-        if (verbose) {display('Initializing using raw expression tree ..')}   
+        if (verbose) {log_info('Initializing using raw expression tree ..')}   
 
         bulk_subtrees = numbat_exp(
             count_mat = count_mat,
@@ -167,7 +33,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
 
     } else if (init_method == 'bulk') {
 
-        if (verbose) {display('Initializing using all-cell bulk ..')}   
+        if (verbose) {log_info('Initializing using all-cell bulk ..')}   
         bulk_subtrees = get_bulk(
                 count_mat = count_mat,
                 df = df,
@@ -181,7 +47,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
 
     } else if (init_method == 'smooth') {
 
-        if (verbose) {display('Approximating initial clusters using smoothed expression ..')}
+        if (verbose) {log_info('Approximating initial clusters using smoothed expression ..')}
 
         clust = exp_hclust(
             count_mat,
@@ -216,21 +82,19 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
     # resolve CNVs
     segs_consensus = get_segs_consensus(bulk_subtrees, gbuild = gbuild)
 
-    res[['0']] = list(bulk_subtrees, segs_consensus)
-
     normal_cells = c()
 
     ######## Begin iterations ########
     for (i in 1:max_iter) {
 
         if (verbose) {
-            display(glue('Iteration {i}'))
+            log_info('Iteration {i}')
         }
 
         ######## Evaluate CNV per cell ########
 
         if (verbose) {
-            display('Evaluating CNV per cell ..')
+            log_info('Evaluating CNV per cell ..')
         }
 
         exp_post_res = get_exp_post(
@@ -262,7 +126,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
         ######## Build phylogeny ########
 
         if (verbose) {
-            display('Building phylogeny ..')
+            log_info('Building phylogeny ..')
         }
 
         cell_sample = colnames(count_mat) %>% 
@@ -325,7 +189,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
         normal_cells = clone_post %>% filter(GT_opt == '') %>% pull(cell)
 
         if (verbose) {
-            display(glue('Found {length(normal_cells)} normal cells..'))
+            log_info('Found {length(normal_cells)} normal cells..')
         }
 
         clones = clone_post %>% split(.$clone_opt) %>%
@@ -381,11 +245,10 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
 
         segs_consensus = get_segs_consensus(bulk_subtrees, gbuild = gbuild)
 
-        res[[as.character(i)]] = list(cell_sample, exp_post, allele_post, joint_post, tree_post, G_m, gtree, subtrees, bulk_subtrees, segs_consensus)
-
+        fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
     }
 
-    return(res)
+    return('Success')
 }
 
 
@@ -396,7 +259,7 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, ge
     }
 
     if (verbose) {
-        display(glue('Running HMMs on {length(groups)} cell groups..'))
+        log_info('Running HMMs on {length(groups)} cell groups..')
     }
 
     analyze_bulk = ifelse(exp_model == 'gpois', analyze_bulk_gpois, analyze_bulk_lnpois)
@@ -426,7 +289,7 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, ge
     bad = sapply(results, inherits, what = "try-error")
 
     if (any(bad)) {
-        if (verbose) {display(glue('{sum(bad)} jobs failed'))}
+        if (verbose) {log_warn(glue('{sum(bad)} jobs failed'))}
         print(results[bad])
     }
 
@@ -459,18 +322,33 @@ get_segs_consensus = function(bulk_all, LLR_min = 20, gbuild = 'hg38') {
     
     segs_filtered = segs_all %>% filter(LLR_y > LLR_min | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% filter(n_genes >= 20)
 
-    # no valid segments should overlap with these endpoints
-    bounds = bulk_all %>% 
-        group_by(CHROM) %>%
-        summarise(bound_left = min(POS) - 1, bound_right = max(POS) + 1)
+    # fetch all neutral segs
+    segs_neu = bulk_all %>% 
+        filter(cnv_state == 'neu') %>%
+        group_by(sample, seg, CHROM) %>%
+        mutate(seg_start = min(POS), seg_end = max(POS)) %>%
+        distinct(sample, CHROM, seg, seg_start, seg_end)
+
+    # reduce to unique intervals
+    segs_neu = segs_neu %>%
+        arrange(CHROM) %>%
+        {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )} %>%
+        GenomicRanges::reduce() %>%
+        as.data.frame() %>%
+        select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
+        mutate(seg_length = seg_end - seg_start)
     
-    segs_consensus = segs_filtered %>% resolve_cnvs() %>% fill_neu_segs(bounds, gbuild = gbuild)
+    segs_consensus = segs_filtered %>% resolve_cnvs() %>% fill_neu_segs(segs_neu)
 
     return(segs_consensus)
 
 }
 
-cell_to_clone = function(gtree, exp_post, allele_post, prior = FALSE) {
+cell_to_clone = function(gtree, exp_post, allele_post) {
 
     # note that if clone size prior is used, and normal cells are tossed out, clone size has to be rescaled
     clones = gtree %>% data.frame() %>% 
@@ -478,7 +356,9 @@ cell_to_clone = function(gtree, exp_post, allele_post, prior = FALSE) {
         summarise(
             clone_size = n()
         ) %>%
-        mutate(prior_clone = ifelse(prior, clone_size/sum(clone_size), 1)) %>%
+        mutate(
+            prior_clone = ifelse(GT == '', 0.5, 0.5/(length(unique(GT))- 1))
+        ) %>%
         mutate(seg = GT) %>%
         tidyr::separate_rows(seg, sep = ',') %>%
         mutate(I = 1) %>%
@@ -509,14 +389,19 @@ cell_to_clone = function(gtree, exp_post, allele_post, prior = FALSE) {
         group_by(cell) %>%
         mutate(
             Z_clone = log(prior_clone) + l_clone_x + l_clone_y,
-            post_clone = exp(Z_clone - matrixStats::logSumExp(Z_clone))
+            Z_clone_x = log(prior_clone) + l_clone_x,
+            Z_clone_y = log(prior_clone) + l_clone_y,
+            p = exp(Z_clone - matrixStats::logSumExp(Z_clone)),
+            p_x = exp(Z_clone_x - matrixStats::logSumExp(Z_clone_x)),
+            p_y = exp(Z_clone_y - matrixStats::logSumExp(Z_clone_y))
         ) %>%
         mutate(
-            clone_opt = clone[which.max(post_clone)],
+            clone_opt = clone[which.max(p)],
             GT_opt = GT[clone_opt]
         ) %>%
-        mutate(clone = paste0('p', clone)) %>%
-        reshape2::dcast(cell + clone_opt + GT_opt ~ clone, value.var = 'post_clone')
+        as.data.table() %>%
+        data.table::dcast(cell + clone_opt + GT_opt ~ clone, value.var = c('p', 'p_x', 'p_y')) %>%
+        as.data.frame()
     
     return(clone_post)
     
@@ -585,33 +470,14 @@ resolve_cnvs = function(segs_all, debug = FALSE) {
 }
 
 # retrieve neutral segments
-fill_neu_segs = function(segs_consensus, bounds, gbuild = 'hg38') {
+fill_neu_segs = function(segs_consensus, segs_neu) {
     
-    chrom_sizes = fread(glue('~/ref/{gbuild}.chrom.sizes.txt')) %>% 
-            set_names(c('CHROM', 'LEN')) %>%
-            mutate(CHROM = str_remove(CHROM, 'chr')) %>%
-            filter(CHROM %in% 1:22) %>%
-            mutate(CHROM = as.factor(as.integer(CHROM)))
-
-    out_of_bound = segs_consensus %>% left_join(chrom_sizes, by = "CHROM") %>% 
-        filter(seg_end > LEN) %>% pull(seg)
-
-    if (length(out_of_bound) > 0) {
-        warning(glue('Segment end exceeds genome length: {out_of_bound}'))
-        chrom_sizes = chrom_sizes %>%
-            left_join(
-                segs_consensus %>% group_by(CHROM) %>%
-                    summarise(seg_end = max(seg_end)),
-                by = "CHROM"
-            ) %>%
-            mutate(LEN = ifelse(is.na(seg_end), LEN, pmax(LEN, seg_end)))
-    }
-
+    # take complement of consensus aberrant segs
     gaps = GenomicRanges::setdiff(
-        chrom_sizes %>% {GenomicRanges::GRanges(
+        segs_neu %>% {GenomicRanges::GRanges(
             seqnames = .$CHROM,
-            IRanges::IRanges(start = 1,
-                   end = .$LEN)
+            IRanges::IRanges(start = .$seg_start,
+                   end = .$seg_end)
         )},
         segs_consensus %>% 
             group_by(CHROM) %>%
@@ -624,11 +490,9 @@ fill_neu_segs = function(segs_consensus, bounds, gbuild = 'hg38') {
             )},
         ) %>%
         as.data.frame() %>%
-        select(CHROM = seqnames, seg_start = start, seg_end = end)
-
-    # trim telomeric gaps
-    # gaps = gaps %>% left_join(bounds, by = 'CHROM') %>% 
-    #     filter(seg_start > bound_left & seg_end < bound_right)
+        select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
+        mutate(seg_length = seg_end - seg_start) %>%
+        filter(seg_length > 0)
 
     segs_consensus = segs_consensus %>%
         bind_rows(gaps) %>% 
@@ -640,67 +504,6 @@ fill_neu_segs = function(segs_consensus, bounds, gbuild = 'hg38') {
         mutate(CHROM = as.factor(CHROM)) 
     
     return(segs_consensus)
-}
-
-
-# multi-state model
-get_exp_likelihoods = function(exp_sc, alpha = NULL, beta = NULL, hskd = FALSE, use_loh = FALSE, depth_obs = NULL) {
-    
-    if (is.null(depth_obs)){
-        depth_obs = sum(exp_sc$Y_obs)
-    }
-
-    ref_states = ifelse(use_loh, c('neu', 'loh'), c('neu'))
-
-    exp_sc = exp_sc %>% filter(lambda_ref > 0)
-    
-    if (is.null(alpha) & is.null(beta)) {
-
-        if (hskd) {
-
-            exp_sc = exp_sc %>% mutate(exp_bin = as.factor(ntile(lambda_ref, 2)))
-
-            fits = exp_sc %>% 
-                filter(cnv_state %in% ref_states) %>%
-                group_by(exp_bin) %>%
-                do({
-                    fit = fit_gpois(.$Y_obs, .$lambda_ref, depth_obs)
-                    data.frame(
-                        alpha = fit@coef[1],
-                        beta = fit@coef[2]
-                    )
-                })
-
-            exp_sc = exp_sc %>%
-                select(-any_of(c('alpha', 'beta'))) %>%
-                left_join(fits, by = 'exp_bin')
-        } else {
-            fit = exp_sc %>% filter(cnv_state %in% c('neu')) %>% {fit_gpois(.$Y_obs, .$lambda_ref, depth_obs)}
-        
-            exp_sc = exp_sc %>% mutate(alpha = fit@coef[1], beta = fit@coef[2])
-
-        }
-    }
-        
-    res = exp_sc %>% 
-        group_by(seg, cnv_state) %>%
-        summarise(
-            n = n(),
-            phi_mle = calc_phi_mle(Y_obs, lambda_ref, depth_obs, alpha, beta, lower = 0.1, upper = 10),
-            l11 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 1),
-            l20 = l11,
-            l10 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 0.5),
-            l21 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 1.5),
-            l31 = l_gpois(Y_obs, lambda_ref, depth_obs, alpha, beta, phi = 2),
-            l22 = l31,
-            l00 = l10,
-            alpha = paste0(unique(signif(alpha,3)), collapse = ','),
-            beta = paste0(unique(signif(beta,3)), collapse = ','),
-            .groups = 'drop'
-        )
-        
-        
-    return(res)
 }
 
 get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL) {
@@ -791,6 +594,13 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, lambdas_fit = NULL, alpha = NULL, beta = NULL, ncores = 30, verbose = T, debug = F) {
 
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf_transcript) 
+
+    if (mean(exp_sc$cnv_state == 'neu') < 0.05) {
+        use_loh = TRUE
+        log_info('less than 5% genes are in neutral region - including LOH in baseline')
+    } else {
+        use_loh = FALSE
+    }
     
     cells = colnames(count_mat)
 
@@ -817,7 +627,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
                     lambda_obs = Y_obs/sum(Y_obs),
                     logFC = log2(lambda_obs/lambda_ref)
                 ) %>%
-                get_exp_likelihoods_lnpois() %>%
+                get_exp_likelihoods_lnpois(use_loh) %>%
                 mutate(cell = cell, ref = ref)
 
         }
@@ -826,9 +636,9 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     bad = sapply(results, inherits, what = "try-error")
 
     if (any(bad)) {
-        if (verbose) {display(glue('{sum(bad)} jobs failed'))}
-        display(results[bad][1])
-        display(cells[bad])
+        if (verbose) {log_warn(glue('{sum(bad)} jobs failed'))}
+        log_warn(results[bad][1])
+        log_warn(cells[bad])
     }
     
     exp_post = results[!bad] %>%

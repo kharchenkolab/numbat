@@ -716,139 +716,6 @@ make_psbulk = function(count_mat, cell_annot, verbose = F) {
 
 ########################### Analysis ############################
 
-analyze_bulk_gpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL, exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE, roll_phi = TRUE, verbose = TRUE, debug = F) {
-    
-    if (!is.numeric(t)) {
-        stop('transition probability is not numeric')
-    } 
-    
-    x = find_diploid(Obs, t = 1e-5, gamma = gamma, verbose = verbose)
-    
-    Obs = x$bulk
-    bal_cnv = x$bamp
-
-    if (hskd) {
-
-        Obs = Obs %>% mutate(exp_bin = as.factor(ntile(lambda_ref, 4)))
-
-        fits = Obs %>% 
-            filter(!is.na(Y_obs)) %>%
-            filter(logFC < 8 & logFC > -8) %>%
-            filter(diploid) %>%
-            group_by(exp_bin) %>%
-            do({
-                coef = fit_gpois(.$Y_obs, .$lambda_ref, .$d_obs)@coef
-                alpha = coef[1]
-                beta = coef[2]
-                data.frame(
-                    alpha = alpha,
-                    beta = beta,
-                    mean = alpha/beta,
-                    var = alpha/beta^2
-                )
-            })
-
-        Obs = Obs %>%
-            select(-any_of(c('alpha', 'beta'))) %>%
-            left_join(fits, by = 'exp_bin')
-
-    } else {
-
-        fit = Obs %>%
-            filter(!is.na(Y_obs)) %>%
-            filter(logFC < 8 & logFC > -8) %>%
-            filter(diploid) %>%
-            {fit_gpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
-            
-        Obs = Obs %>% mutate(alpha = fit@coef[1], beta = fit@coef[2])
-    }
-    
-    Obs = Obs %>% 
-        mutate(gamma = gamma) %>%
-        group_by(CHROM) %>%
-        mutate(state = 
-            run_hmm_mv_inhom(
-                pAD = pAD,
-                DP = DP, 
-                p_s = p_s,
-                Y_obs = Y_obs, 
-                lambda_ref = lambda_ref, 
-                d_total = na.omit(unique(d_obs)),
-                phi_neu = 1,
-                phi_amp = 2^(0.25),
-                phi_del = 2^(-0.25),
-                phi_bamp = 2^(0.25),
-                phi_bdel = 2^(-0.25),
-                alpha = alpha,
-                beta = beta,
-                t = t,
-                gamma = unique(gamma),
-                theta_min = theta_min,
-                prior = prior,
-                bal_cnv = bal_cnv,
-                exp_only = exp_only,
-                allele_only = allele_only
-            )
-        ) %>% 
-        mutate(cnv_state = str_remove(state, '_down|_up')) %>%
-        annot_segs %>%
-        smooth_segs %>%
-        annot_segs %>%
-        ungroup()
-    
-    # rolling theta estimates
-    Obs = annot_roll_theta(Obs)
-    
-    if (retest) {
-        
-        if (verbose) {
-            display('Retesting CNVs..')
-        }
-
-        segs_post = retest_cnv(Obs, exp_model = 'gpois')
-        
-        Obs = Obs %>% 
-            select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM')])) %>%
-            left_join(segs_post, by = c('seg', 'CHROM')) %>%
-            mutate(
-                cnv_state_post = tidyr::replace_na(cnv_state_post, 'neu'),
-                cnv_state = tidyr::replace_na(cnv_state, 'neu')
-            ) %>%
-            mutate(state_post = ifelse(
-                cnv_state_post %in% c('amp', 'del', 'loh') & (!cnv_state %in% c('bamp', 'bdel')),
-                paste0(cnv_state_post, '_', str_extract(state, 'up_1|down_1|up_2|down_2|up|down|1_up|2_up|1_down|2_down')),
-                cnv_state_post
-            )) %>%
-            mutate(state_post = str_remove(state_post, '_NA'))
-        
-    }
-    
-    if (verbose) {
-        display('Finishing..')
-    }
-    if (roll_phi) {
-        # rolling phi estimates
-        Obs = Obs %>% 
-            select(-any_of('phi_mle_roll')) %>%
-            left_join(
-                Obs %>% 
-                    group_by(CHROM) %>%
-                    filter(!is.na(Y_obs)) %>%
-                    mutate(
-                        phi_mle_roll = phi_mle_roll(
-                            Y_obs, lambda_ref, alpha, beta, d_obs, h = 50)
-                    ) %>%
-                    select(phi_mle_roll, CHROM, gene),
-            by = c('CHROM', 'gene')
-        ) %>%
-        group_by(CHROM) %>%
-        mutate(phi_mle_roll = zoo::na.locf(phi_mle_roll, na.rm=FALSE)) %>%
-        ungroup()
-    }
-    
-    return(Obs)
-}
-
 analyze_bulk_lnpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL, exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE, phase = TRUE, roll_phi = TRUE, verbose = TRUE, debug = F) {
     
     if (!is.numeric(t)) {
@@ -1664,8 +1531,7 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F,
         fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
 
         if (verbose) {
-            display('Fitted reference proportions:')
-            display(signif(fit$w, 2))
+            log_info('Fitted reference proportions: {signif(fit$w, 2)}')
         }
 
         gexp = process_exp(

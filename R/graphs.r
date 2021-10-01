@@ -301,7 +301,7 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
     
 }
 
-simplify_history = function(G, l_matrix, max_cost = 100, verbose = T) {
+simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
 
     moves = data.frame()
 
@@ -322,6 +322,7 @@ simplify_history = function(G, l_matrix, max_cost = 100, verbose = T) {
             moves = moves %>% rbind(move_opt %>% mutate(i = i))
 
             if (verbose) {
+                log_info(msg)
                 display(msg)
             }
         } else {
