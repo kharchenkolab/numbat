@@ -40,8 +40,21 @@ parse_scistree = function(out_file, geno, joint_post) {
 read_mut_tree = function(tree_file, mut_assign) {
 
     G = igraph::read_graph(tree_file, format = 'gml')
-    V(G)$id = 1:length(igraph::V(G))
-    V(G)$label[V(G)$label == ' '] = ''
+    # fix the root node
+    if (all(V(G)$label != ' ')) {
+        
+        V(G)$id = V(G)$id + 1
+        
+        G = G %>% add_vertices(1, attr = list('label' = ' ', 'id' = 1)) %>%
+            add_edges(c(length(V(G))+1,1)) 
+    }
+
+    G = G %>% as_tbl_graph() %>% arrange(id != 1) %>%
+        mutate(id = 1:length(V(G))) %>%
+        mutate(label = ifelse(label == ' ', '', label)) 
+
+    # V(G)$id = 1:length(igraph::V(G))
+    # V(G)$label[V(G)$label == ' '] = ''
 
     G = label_edges(G)
 
@@ -147,7 +160,6 @@ get_tree_post = function(MLtree, geno) {
 
     return(list('mut_nodes' = mut_nodes, 'gtree' = gtree, 'nodes' = nodes, 'l_matrix' = l_matrix))
 }
-
 
 
 mut_to_tree = function(gtree, mut_nodes) {

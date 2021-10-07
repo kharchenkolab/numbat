@@ -22,6 +22,8 @@ cnv_colors = c("neu" = "gray",
         "theta_up" = "darkgreen", "theta_down" = "olivedrab4",
         "theta_1_up" = "darkgreen", "theta_1_down" = "olivedrab4",
         "theta_2_up" = "darkgreen", "theta_2_down" = "olivedrab4",
+        "theta_up_1" = "darkgreen", "theta_down_1" = "olivedrab4",
+        "theta_up_2" = "darkgreen", "theta_down_2" = "olivedrab4",
         '0|1' = 'red', '1|0' = 'blue'
     )
     
@@ -563,15 +565,15 @@ Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
     }
 
     if (any(is.na(nu))) {
-        fwrite(nu, '~/debug.txt')
+        # fwrite(nu, '~/debug.txt')
         stop("NA values in viterbi")
     }
     
     if (all(nu[n, ] == -Inf)) {
-        fwrite(nu, '~/debug.txt')
+        # fwrite(nu, '~/debug.txt')
         stop("Problems With Underflow")
     }
-    # display(head(tail, 1000))
+
     # fwrite(nu, '~/debug.txt')
               
     y[n] <- which.max(nu[n, ])
@@ -679,7 +681,7 @@ run_hmm_mv_inhom = function(
     alpha = 1, beta = 1, 
     mu = 0, sig = 1,
     exp_model = 'gpois',
-    t = 1e-5, gamma = 18, prior = NULL, exp_only = FALSE, allele_only = FALSE, debug = FALSE
+    t = 1e-5, gamma = 18, prior = NULL, exp_only = FALSE, allele_only = FALSE, classify_allele = FALSE, phasing = TRUE, debug = FALSE
 ) {
 
     # states
@@ -701,10 +703,17 @@ run_hmm_mv_inhom = function(
         # encourage CNV from telomeres
         prior = sapply(1:length(states), function(to){
                 get_trans_probs(
-                    t = t * 100, p_s = 0, w,
+                    t = min(t * 100, 1), p_s = 0, w,
                     cn_from = 'neu', phase_from = NA,
                     cn_to = states_cn[to], phase_to = states_phase[to])
             })
+    }
+
+    # to do: renormalize the probabilities after deleting states
+    states_index = 1:length(states)
+
+    if (!bal_cnv) {
+        states_index = 1:13
     }
         
     if (exp_only) {
@@ -713,7 +722,22 @@ run_hmm_mv_inhom = function(
     }
     
     if (allele_only) {
+        states_index = c(1, 6:9)
+
         Y_obs = rep(NA, length(Y_obs))
+    }
+
+    if (!phasing) {
+        states_index = c(1, 6)
+        
+        p_s = ifelse(is.na(pAD), p_s, 0)
+        pAD = ifelse(pAD > (DP - pAD), pAD, DP - pAD)
+        theta_neu = 0.1
+        theta_min = 0.45
+    }
+
+    if (classify_allele) {
+        states_index = c(6,7)
     }
     
     # transition matrices
@@ -732,16 +756,6 @@ run_hmm_mv_inhom = function(
     alpha_states = gamma * c(theta_u_neu, rep(c(theta_u_1, theta_d_1, theta_u_2, theta_d_2), 3), theta_u_neu, theta_u_neu)
     beta_states = gamma * c(theta_d_neu, rep(c(theta_d_1, theta_u_1, theta_d_2, theta_u_2), 3), theta_d_neu, theta_d_neu)
     phi_states = c(phi_neu, rep(phi_del, 2), rep(0.5, 2), rep(phi_neu, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
-
-    # to do: renormalize the probabilities after deleting states
-    states_index = 1:length(states)
-    if (!bal_cnv) {
-        states_index = 1:13
-    } 
-    
-    if (allele_only) {
-        states_index = c(1, 6:9)
-    }
 
     prior = prior[states_index]
     As = As[states_index, states_index,]
@@ -792,11 +806,7 @@ run_hmm_mv_inhom = function(
         class(hmm) = 'dthmm.mv.inhom.lnpois'
 
     }
-    
-    if (debug) {
-        return(hmm)
-    }
-    
+        
     return(states[as.character(HiddenMarkov::Viterbi(hmm))])
 }
 

@@ -29,4 +29,5 @@ Imports:
     caTools,
     matrixStats,
     dendextend,
-    ggtree
+    ggtree,
+    ggraph

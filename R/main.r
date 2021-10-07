@@ -2,6 +2,7 @@
 # source('/home/tenggao/Numbat/utils.r')
 # source('/home/tenggao/Numbat/graphs.r')
 library(logger)
+library(ggraph)
 
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
@@ -181,6 +182,9 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
         # update tree
         gtree = mut_to_tree(tree_post$gtree, mut_nodes)
 
+        saveRDS(gtree, glue('{out_dir}/tree_final_{i}.rds'))
+        saveRDS(G_m, glue('{out_dir}/mut_graph_{i}.rds'))
+
         # map cells to the phylogeny
         clone_post = cell_to_clone(gtree, exp_post, allele_post)
 
@@ -252,7 +256,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
 }
 
 
-run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, genetic_map, t, gamma = 20, min_depth = 0, ncores = NULL, exp_model = 'lnpois', verbose = FALSE, debug = FALSE) {
+run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, genetic_map, t, gamma = 20, min_depth = 0, ncores = NULL, exp_model = 'lnpois', allele_only = FALSE, verbose = FALSE, debug = FALSE) {
 
     if (length(groups) == 0) {
         return(data.frame())
@@ -283,7 +287,7 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, ge
                     members = paste0(g$members, collapse = ';'),
                     sample = g$label
                 ) %>%
-                analyze_bulk(t = t, gamma = gamma, verbose = verbose)
+                analyze_bulk(t = t, gamma = gamma, allele_only = allele_only, verbose = verbose)
         })
 
     bad = sapply(results, inherits, what = "try-error")
@@ -314,6 +318,10 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, ge
 }
 
 get_segs_consensus = function(bulk_all, LLR_min = 20, gbuild = 'hg38') {
+
+    if (!'sample' %in% colnames(bulk_all)) {
+        bulk_all$sample = 0
+    }
 
     segs_all = bulk_all %>% 
         filter(state != 'neu') %>%
@@ -350,7 +358,6 @@ get_segs_consensus = function(bulk_all, LLR_min = 20, gbuild = 'hg38') {
 
 cell_to_clone = function(gtree, exp_post, allele_post) {
 
-    # note that if clone size prior is used, and normal cells are tossed out, clone size has to be rescaled
     clones = gtree %>% data.frame() %>% 
         group_by(GT) %>%
         summarise(
@@ -514,7 +521,11 @@ get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL)
         depth_obs = sum(exp_sc$Y_obs)
     }
 
-    ref_states = ifelse(use_loh, c('neu', 'loh'), c('neu'))
+    if (use_loh) {
+        ref_states = c('neu', 'loh')
+    } else {
+        ref_states = c('neu')
+    }
 
     fit = exp_sc %>% filter(cnv_state %in% ref_states) %>% {fit_lnpois(.$Y_obs, .$lambda_ref, depth_obs)}
 
@@ -693,12 +704,16 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     return(list('exp_post' = exp_post, 'exp_sc' = exp_sc, 'best_refs' = best_refs))
 }
 
-get_allele_post = function(bulk_all, segs_consensus, df) {
+get_allele_post = function(bulk_all, segs_consensus, df, naive = FALSE) {
 
     if ((!'sample' %in% colnames(bulk_all)) | (!'sample' %in% colnames(segs_consensus))) {
         bulk_all['sample'] = '0'
         segs_consensus['sample'] = '0'
-        warning('Sample column missing')
+        # warning('Sample column missing')
+    }
+
+    if (naive) {
+        bulk_all = bulk_all %>% mutate(state = 'neu')
     }
     
     # allele posteriors
@@ -793,6 +808,8 @@ get_allele_post = function(bulk_all, segs_consensus, df) {
         ungroup() %>%
         mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
         mutate(seg_label = factor(seg_label, unique(seg_label)))
+
+        return(allele_post)
 }
 
 get_joint_post = function(exp_post, allele_post, segs_consensus) {

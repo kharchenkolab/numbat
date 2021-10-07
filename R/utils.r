@@ -713,22 +713,72 @@ make_psbulk = function(count_mat, cell_annot, verbose = F) {
     return(as.matrix(exp_mat_clust))
 }
 
+fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
+
+    res = list()
+
+    res[['mut_tree_file']] = glue('{out_dir}/mut_tree_{i}.gml')
+    res[['joint_post']] = fread(glue('{out_dir}/joint_post_{i}.tsv'))
+    res[['exp_post']] = fread(glue('{out_dir}/exp_post_{i}.tsv'))
+    res[['allele_post']] = fread(glue('{out_dir}/allele_post_{i}.tsv'))
+    # bulk0 = fread(glue('{out_dir}/bulk_subtrees_0.tsv'))
+    res[['geno']] = fread(glue('{out_dir}/geno_{i}.tsv')) %>% tibble::column_to_rownames('V1')
+    res[['tree_post']] = readRDS(glue('{out_dir}/tree_post_{i}.rds'))
+    res[['scistree_out']] = readRDS(glue('{out_dir}/scistree_out_{i}.rds'))
+    
+    f = glue('{out_dir}/segs_consensus_{i}.tsv')
+    if (file.exists(f)) {
+        res[['segs_consensus']] = fread(f)
+    }
+    res[['bulk_subtrees']] = fread(glue('{out_dir}/bulk_subtrees_{i}.tsv'))
+    res[['bulk_clones']] = fread(glue('{out_dir}/bulk_clones_{i}.tsv'))
+
+    G_m = res$mut_tree_file %>% 
+        read_mut_tree(res$tree_post$mut_nodes) %>%
+        simplify_history(res$tree_post$l_matrix, max_cost = max_cost, verbose = verbose) %>%
+        label_genotype()
+
+    mut_nodes = G_m %>% as_data_frame('vertices') %>% select(name = node, site = label)
+
+    # update tree
+    res$gtree = mut_to_tree(res$tree_post$gtree, mut_nodes)
+    res$G_m = G_m
+
+    f = glue('{out_dir}/clone_post_{i}.rds')
+    if (file.exists(f)) {
+        res[['clone_post']] = readRDS(f)
+    } else {
+        res[['clone_post']] = cell_to_clone(res$gtree, res$exp_post, res$allele_post)
+    }
+
+    return(res)
+
+}
+
 
 ########################### Analysis ############################
 
-analyze_bulk_lnpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL, exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE, phase = TRUE, roll_phi = TRUE, verbose = TRUE, debug = F) {
+analyze_bulk_lnpois = function(
+    Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
+    exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE,
+    phasing = TRUE, roll_phi = TRUE, verbose = TRUE, debug = FALSE, 
+    diploid_chroms = NULL, classify_allele = FALSE
+) {
     
     if (!is.numeric(t)) {
         stop('transition probability is not numeric')
     } 
 
-    # the density approximation doesn't work with 0 counts
-    # Obs = Obs %>% filter(!(Y_obs == 0 & !is.na(Y_obs)))
-    
-    x = find_diploid(Obs, t = 1e-5, gamma = gamma, verbose = verbose)
-    
-    Obs = x$bulk
-    bal_cnv = x$bamp
+    if (is.null(diploid_chroms)) {
+
+        x = find_diploid(Obs, t = 1e-5, gamma = gamma, verbose = verbose)
+        
+        Obs = x$bulk
+        bal_cnv = x$bamp
+
+    } else {
+        Obs = Obs %>% mutate(diploid = CHROM %in% diploid_chroms)
+    }
 
     fit = Obs %>%
         filter(!is.na(Y_obs)) %>%
@@ -763,6 +813,8 @@ analyze_bulk_lnpois = function(Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = T
                 bal_cnv = bal_cnv,
                 exp_only = exp_only,
                 allele_only = allele_only,
+                classify_allele = classify_allele,
+                phasing = phasing,
                 exp_model = 'lnpois'
             )
         ) %>% 
@@ -894,7 +946,7 @@ smooth_segs = function(bulk, min_genes = 10) {
         mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = T, na.rm=FALSE))
 }
 
-annot_consensus = function(bulk, segs_consensus, bulk_all) {
+annot_consensus = function(bulk, segs_consensus) {
     
     marker_seg = GenomicRanges::findOverlaps(
             bulk %>% {GenomicRanges::GRanges(
@@ -1983,260 +2035,138 @@ plot_exp_post = function(exp_post) {
     scale_fill_manual(values = cnv_colors)
 }
 
-
-plot_cnv_cell = function(joint_post, n_sample = 1e4, rev_cnv = F, rev_cell = F, p_adjust = F, prior_adjust = F, mut_clust = NULL) {
+plot_clones = function(joint_post, gtree, n_sample = 1e4, pal_clones = RColorBrewer::brewer.pal(n = 8, 'Set1')) {
 
     joint_post = joint_post %>% 
         mutate(logBF = Z_cnv - Z_n) %>%
-        group_by(cell_group) %>%
+        group_by(group) %>%
         filter(cell %in% sample(unique(cell), min(n_sample, length(unique(cell))))) %>%
         ungroup() %>%
         filter(cnv_state != 'neu')
     
-    tree_cnv = joint_post %>% 
-        reshape2::dcast(seg ~ cell, value.var = 'logBF') %>%
-        tibble::column_to_rownames('seg') %>%
-        dist() %>%
-        hclust
-    
-    if (rev_cnv) {tree_cnv = rev(tree_cnv)}
-    
-    cnv_order = tree_cnv %>% {.$labels[.$order]}
-    
-    cell_order = joint_post %>% 
-            group_by(cell_group) %>%
-            filter(length(unique(cell)) > 1) %>%
-            do(
-                reshape2::dcast(., cell ~ seg, value.var = 'logBF') %>%
-                tibble::column_to_rownames('cell') %>%
-                dist() %>%
-                hclust %>%
-                {.$labels[.$order]} %>%
-                as.data.frame()
-            ) %>%
-            set_names(c('cell_group', 'cell'))
-    
-    if (rev_cell) {cell_order = cell_order %>% arrange(-row_number())}
-    
-    cnv_clusters = dendextend::cutree(tree_cnv, 2) 
-    
-    joint_post_cell = joint_post %>% 
-        mutate(cluster = cnv_clusters[seg]) %>%
-        rbind(
-            mutate(., cluster = 'all')
-        ) %>%
-        group_by(cell, cell_group, cluster) %>%
-        summarise_at(
-            vars(contains('Z_')),
-            sum
-        ) %>%
-        rowwise() %>%
-        mutate(
-            Z = matrixStats::logSumExp(c(Z_cnv, Z_n)),
-            Z_x = matrixStats::logSumExp(c(Z_cnv_x, Z_n_x)),
-            Z_y = matrixStats::logSumExp(c(Z_cnv_y, Z_n_y)),
-            p_cnv = exp(Z_cnv - Z),
-            p_n = exp(Z_n - Z),
-            p_cnv_x = exp(Z_cnv_x - Z_x),
-            p_n_x = exp(Z_n_x - Z_x),
-            p_cnv_y = exp(Z_cnv_y - Z_y),
-            p_n_y = exp(Z_n_y - Z_y),
-        ) %>%
-        ungroup() %>%
-        mutate(
-            p_cnv = 1 - p.adjust(p_n, method = 'BH'),
-            p_cnv_x = 1 - p.adjust(p_n_x, method = 'BH'),
-            p_cnv_y = 1 - p.adjust(p_n_y, method = 'BH')
-        )
-    
+    cnv_order = gtree %>% 
+            activate(nodes) %>%
+            mutate(rank = dfs_rank(root = node_is_root())) %>%
+            data.frame() %>%
+            filter(!is.na(site)) %>%
+            arrange(-rank) %>%
+            pull(site) %>%
+            map(function(x){rev(unlist(str_split(x, ',')))}) %>%
+            unlist
+
+    set.seed(0)
     D = joint_post %>% 
-        mutate(cluster = 'segment') %>%
-        bind_rows(
-            joint_post_cell %>% 
-                reshape2::melt(measure.vars = c('p_cnv_x', 'p_cnv_y', 'p_cnv'), value.name = 'p_cnv') %>%
-                mutate(seg_label = c('p_cnv' = 'joint', 'p_cnv_x' = 'expr', 'p_cnv_y' = 'allele')[as.character(variable)]) %>%
-                filter(seg_label == 'joint' | cluster == 'all') %>%
-                select(seg_label, cell, cell_group, p_cnv, cluster) %>%
-                arrange(seg_label)
-        ) %>%
+        group_by(group) %>%
+        sample_frac(1) %>%
+        ungroup() %>%
+        mutate(cell = factor(cell, unique(cell))) %>%
         mutate(seg = factor(seg, cnv_order)) %>%
         arrange(seg) %>%
-        mutate(seg_label = factor(seg_label, unique(seg_label))) %>%
-        mutate(cell = factor(cell, cell_order$cell)) 
-
-    pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
-    
-    # cell_colors = D %>% 
-    #     filter(cluster %in% c('segment')) %>%
-    #     distinct(cell_group, cell) %>%
-    #     arrange(cell_group, cell) %>%
-    #     {setNames(pal[as.integer(factor(.$cell_group))], .$cell)}
-
-    if (p_adjust) {
-        D = D %>% group_by(cluster) %>%
-            mutate(
-                p_cnv = 1 - p.adjust(p_n, method = 'BH')
-            )
-    }
-
-    if (prior_adjust) {
-        D = D %>% 
-            rowwise() %>%
-            mutate(
-                p_cnv = exp(Z_cnv + log(0.1) - matrixStats::logSumExp(c(Z_cnv + log(0.1), Z_n + log(0.9))))
-            ) %>% 
-            ungroup()
-    }
-
-    # p = ggplot(
-    #         D %>% filter(cluster %in% c('segment')),
-    #         aes(x = cell, y = seg_label, fill = p_cnv)
-    #     ) +
-    #     geom_tile() +
-    #     theme_classic() +
-    #     scale_y_discrete(expand = expansion(0)) +
-    #     scale_x_discrete(expand = expansion(0)) +
-    #     theme(
-    #         panel.spacing = unit(0.1, 'mm'),
-    #         panel.border = element_rect(size = 0.5, color = 'black', fill = NA),
-    #         panel.background = element_rect(fill = 'white'),
-    #         strip.background = element_blank(),
-    #         axis.text.x = element_blank(),
-    #         strip.text = element_text(angle = 90, size = 8, vjust = 0.5)
-    #     ) +
-    #     facet_grid(cluster~cell_group, scale = 'free', space = 'free') +
-    #     scale_fill_gradient(low = 'white', high = 'red', limits = c(0.5,1), oob = scales::oob_squish) +
-    #     ylab('')
+        mutate(seg_label = factor(seg_label, unique(seg_label)))  %>%
+        mutate(group = factor(group))
     
     p = ggplot(
-            D %>% filter(cluster %in% c('segment')),
+            D,
             aes(x = cell, y = seg_label, fill = logBF)
         ) +
-        geom_tile(width=0.4, height=0.9) +
+        geom_tile(width=0.1, height=0.9) +
         theme_classic() +
         scale_y_discrete(expand = expansion(0)) +
         scale_x_discrete(expand = expansion(0)) +
         theme(
             panel.spacing = unit(0.1, 'mm'),
-            panel.border = element_rect(size = 0.5, color = 'black', fill = NA),
+            # panel.border = element_rect(size = 0.5, color = 'black', fill = NA),
+            panel.background = element_rect(fill = 'white'),
+            axis.line.x = element_blank(),
+            axis.line.y = element_blank(),
+            strip.background = element_blank(),
+            strip.text = element_blank(),
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            # strip.text = element_text(angle = 0, size = 8, vjust = 0.5)
+        ) +
+        facet_grid(.~group, scale = 'free', space = 'free') +
+        scale_fill_gradient2(low = pal[2], high = pal[1], midpoint = 0, limits = c(-5, 5), oob = scales::oob_squish) +
+        xlab('') 
+
+    p_bar = ggplot(
+            D %>% distinct(cell, group),
+            aes(x = cell, y = 0, fill = group)
+        ) +
+        geom_tile(width=1, height=0.9) +
+        theme_void() +
+        scale_y_discrete(expand = expansion(0)) +
+        scale_x_discrete(expand = expansion(0)) +
+        theme(
+            panel.spacing = unit(0.1, 'mm'),
+            panel.border = element_rect(size = 0, color = 'black', fill = NA),
             panel.background = element_rect(fill = 'white'),
             strip.background = element_blank(),
             axis.text.x = element_blank(),
-            strip.text = element_text(angle = 90, size = 8, vjust = 0.5)
+            axis.ticks.x = element_blank(),
+            strip.text = element_text(angle = 0, size = 10, vjust = 0.5)
         ) +
-        facet_grid(cluster~cell_group, scale = 'free', space = 'free') +
-        scale_fill_gradient2(low = pal[2], high = pal[1], midpoint = 0, limits = c(-5, 5), oob = scales::oob_squish) +
-        xlab('')
+        facet_grid(.~group, scale = 'free', space = 'free') +
+        xlab('') +
+        ylab('') + 
+        scale_fill_manual(values = c('gray', pal_clones)) +
+        guides(fill = 'none')
     
-    p_cnv_tree = tree_cnv %>%
-        ggtree::ggtree(ladderize=F) +
-        scale_x_discrete(expand = expansion(mult = 0)) +
-        theme(plot.margin = margin(0,0,0,0)) 
-    
-    panel_1 = (p_cnv_tree + p) + plot_layout(widths = c(1,20))
-    
-    ## split plot
-    # D = joint_post %>%
-    #     mutate(seg = factor(seg, rev(cnv_order))) %>%
-    #     arrange(seg) %>%
-    #     mutate(
-    #         seg_label = factor(seg_label, unique(seg_label))
-    #     ) %>%
-    #     mutate(cell = factor(cell, cell_order$cell)) %>%
-    #     group_by(cell_group) %>%
-    #     filter(cell %in% sample(unique(cell), min(200, length(unique(cell))))) %>%
-    #     ungroup()
-
-    # p = D %>% 
-    #     reshape2::melt(measure.vars = c('p_cnv', 'p_cnv_x', 'p_cnv_y'), value.name = 'p_cnv') %>%
-    #     mutate(source = c('p_cnv' = 'joint', 'p_cnv_x' = 'expr', 'p_cnv_y' = 'allele')[as.character(variable)]) %>%
-    #     # filter(!(cnv_state %in% c('bamp') & source %in% c('allele', 'joint'))) %>%
-    #     # filter(!(cnv_state %in% c('loh') & source %in% c('expr', 'joint'))) %>%
-    #     filter(source != 'joint') %>%
-    #     ggplot(
-    #         aes(x = cell, y = source, fill = p_cnv)
-    #     ) +
-    #     geom_tile() +
-    #     theme_classic() +
-    #     scale_y_discrete(expand = expansion(0), position = "right") +
-    #     scale_x_discrete(expand = expansion(0)) +
-    #     facet_grid(seg_label~cell_group, scale = 'free', space = 'free_x', switch = 'y') +
-    #     theme(
-    #         panel.spacing = unit(0.1, 'mm'),
-    #         panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
-    #         panel.background = element_rect(fill = 'skyblue'),
-    #         strip.background = element_blank(),
-    #         axis.text.x = element_blank(),
-    #         strip.text.x = element_text(angle = 90, size = 8),
-    #         strip.text.y.left = element_text(angle = 0, size = 8),
-    #         plot.margin = margin(0,0,0,0)
-    #     ) +
-    #     scale_fill_gradient2(low = 'skyblue', high = 'red', mid = 'skyblue', midpoint = 0.5, limits = c(0,1)) +
-    #     ylab('')
-    
-    # panel_2 = (p_cnv_tree | p) + plot_layout(widths = c(1,20))
-    
-    return(p)
+    return((p_bar / p) + plot_layout(height = c(1,10)))
     
 }
 
-tree_heatmap = function(joint_post, tree_cell, cell_annot, mut_nodes = data.frame(), cnv_order = NULL, cell_order = NULL) {
+plot_mut_history = function(G_m, pal_clones = RColorBrewer::brewer.pal(n = 8, 'Set1')) {
 
-    joint_post = joint_post %>% filter(cnv_state != 'neu')
-
-    if (!'logBF' %in% colnames(joint_post)) {
-        joint_post = joint_post %>% mutate(logBF = Z_cnv - Z_n)
-    }
-
-    cell_dict = setNames(factor(cell_annot$cell_group), cell_annot$cell)
-    OTU_dict = lapply(levels(cell_dict), function(x) names(cell_dict[cell_dict == x])) %>% setNames(levels(cell_dict))
-
-    p_tree = ggtree::groupOTU(
-            tree_cell, 
-            OTU_dict,
-            'clone'
+    p = G_m %>%
+        as_tbl_graph() %>%
+        mutate(
+            clone = ifelse(GT == "", "0", str_trunc(GT, 20, side = 'center')),
+            id = as.factor(as.integer(factor(GT)))
         ) %>%
-        ggtree::ggtree(ladderize = T, size = 0.25) +
-        layout_dendrogram() +
-        geom_tippoint(aes(color = clone), size=0.1) +
-        geom_rootedge(size = 0.25) +
-        theme(
-            plot.margin = margin(0,0,0,0),
-            axis.title.x = element_blank(),
-            axis.ticks.x = element_blank(),
-            axis.text.x = element_blank(),
-            axis.line.y = element_line(size = 0.2),
-            axis.ticks.y = element_line(size = 0.2),
-            axis.text.y = element_text(size = 5)
-        ) +
-        guides(color=FALSE)
+        ggraph(layout = 'tree') + 
+        geom_edge_link(
+            aes(label = str_trunc(to_label, 20, side = 'center')),
+            vjust = -1,
+            arrow = arrow(length = unit(3, "mm")),
+            end_cap = circle(4, 'mm'),
+            start_cap = circle(4, 'mm')
+        ) + 
+        geom_node_point(aes(color = id), size = 10) +
+        geom_node_text(aes(label = id), size = 6) +
+        theme_void() +
+        scale_x_continuous(expand = expansion(0.2)) +
+        scale_y_reverse(expand = expansion(0.2)) +
+        coord_flip() +
+        scale_color_manual(values = c('gray', pal_clones)) +
+        guides(color = 'none')
 
-    if (!nrow(mut_nodes) == 0) {
-        p_tree = p_tree %<+% mut_nodes +
-            geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = 1, fill = 'red') +
-            geom_text2(aes(x = branch, label = site), size = 2, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred')
+    return(p)
+}
+
+plot_clone_panel = function(res, type = 'joint', ratio = 1) {
+
+    n_clones = length(unique(res$clone_post$clone_opt))
+    getPalette = colorRampPalette(pal)
+    pal_clones = getPalette(max(n_clones-1, 8))
+
+    if (type == 'joint') {
+        p_matrix = res$joint_post
+    } else if (type == 'allele') {
+        p_matrix = res$allele_post
+    } else {
+        p_matrix = res$exp_post
     }
 
-    if (is.null(cell_order)) {
-        cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
-    }
+    p_clones = p_matrix %>% 
+        filter(seg %in% rownames(res$geno)) %>%
+        inner_join(res$clone_post, by = 'cell') %>%
+        mutate(group = clone_opt) %>%
+        plot_clones(res$gtree, pal_clones = pal_clones)
 
-    if (is.null(cnv_order)) {
-        tree_cnv = joint_post %>% 
-            reshape2::dcast(seg ~ cell, value.var = 'logBF') %>%
-            tibble::column_to_rownames('seg') %>%
-            dist() %>%
-            hclust
+    p_mut = res$G_m %>% plot_mut_history(pal_clones = pal_clones)
 
-        cnv_order = tree_cnv %>% {.$labels[.$order]}
-    }
-
-    p_map = cell_heatmap(joint_post, cnv_order, cell_order)
-
-    panel = (p_tree / p_map) + plot_layout(heights = c(1,1))
-
-    return(panel)
-
+    (p_mut / p_clones) + plot_layout(heights = c(ratio, 1))
 }
 
 tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NULL, cnv_order = NULL, legend = T) {
@@ -2367,6 +2297,9 @@ cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5) {
     return(p_map)
 }
 
+pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
+
+
 plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50) {
 
     cells = unique(gexp.norm.long$cell)
@@ -2404,7 +2337,21 @@ plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50) {
     
 }
 
-plot_exp_cell = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
+
+robust.system <- function(cmd) {
+  stderrFile = tempfile(pattern="R_robust.system_stderr", fileext=as.character(Sys.getpid()))
+  stdoutFile = tempfile(pattern="R_robust.system_stdout", fileext=as.character(Sys.getpid()))
+
+  retval = list()
+  retval$exitStatus = system(paste0(cmd, " 2> ", shQuote(stderrFile), " > ", shQuote(stdoutFile)))
+  retval$stdout = readLines(stdoutFile)
+  retval$stderr = readLines(stderrFile)
+
+  unlink(c(stdoutFile, stderrFile))
+  return(retval)
+}
+
+plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     
     # cell_order = exp_post %>% 
     #     filter(!cnv_state %in% c('neu', 'loh')) %>%
@@ -2447,20 +2394,7 @@ plot_exp_cell = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = scales::oob_squish)
 }
 
-robust.system <- function(cmd) {
-  stderrFile = tempfile(pattern="R_robust.system_stderr", fileext=as.character(Sys.getpid()))
-  stdoutFile = tempfile(pattern="R_robust.system_stdout", fileext=as.character(Sys.getpid()))
-
-  retval = list()
-  retval$exitStatus = system(paste0(cmd, " 2> ", shQuote(stderrFile), " > ", shQuote(stdoutFile)))
-  retval$stdout = readLines(stdoutFile)
-  retval$stderr = readLines(stderrFile)
-
-  unlink(c(stdoutFile, stderrFile))
-  return(retval)
-}
-
-plot_allele_cell = function(df, bulk_subtrees, clone_post) {
+plot_sc_allele = function(df, bulk_subtrees, clone_post) {
     
     snp_seg = bulk_subtrees %>%
         filter(!is.na(pAD)) %>%
