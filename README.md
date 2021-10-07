@@ -1,7 +1,8 @@
 # Numbat
 Haplotype-aware detection of copy number variations in scRNA-Seq
 
-![alt text](numbat.jpeg)
+![image](https://user-images.githubusercontent.com/13375875/136429050-609ee367-8d5d-4a63-8fa8-a87171aff01c.png)
+
 
 1. SNP pileup
 ```
@@ -114,7 +115,9 @@ df = preprocess_data(
 ```res = fetch_results(out_dir, i = 2)```
 
 2. Evolutionary history and cell-cnv heatmap
-```plot_clone_panel(res[[sample]], ratio = 1)```
+```
+plot_clone_panel(res[[sample]], ratio = 1)
+```
 ![image](https://user-images.githubusercontent.com/13375875/136427928-ed7f67ed-4bd1-4f24-9b9e-f381b5920f54.png)
 
 3. Aggregated clone CNV profile
