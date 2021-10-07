@@ -109,3 +109,26 @@ df = preprocess_data(
 )
 ```
 
+# Visualizations of results
+1. Collect results
+```res = fetch_results(out_dir, i = 2)```
+
+2. Evolutionary history and cell-cnv heatmap
+```plot_clone_panel(res[[sample]], ratio = 1)```
+![image](https://user-images.githubusercontent.com/13375875/136427928-ed7f67ed-4bd1-4f24-9b9e-f381b5920f54.png)
+
+3. Aggregated clone CNV profile
+```
+bulk_clones %>% plot_bulks(ncol = 1)
+```
+![image](https://user-images.githubusercontent.com/13375875/136428374-06100e23-1527-4e35-b945-a1528dae93b3.png)
+
+4. Original single-cell phylogeny from ScisTree
+```
+tree_heatmap2(
+    res$joint_post %>% filter(seg %in% rownames(res$geno)),
+    res$gtree
+)
+```
+![image](https://user-images.githubusercontent.com/13375875/136428423-9f92b303-5577-482d-8214-f4bbe2115b50.png)
+
