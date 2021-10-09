@@ -53,7 +53,7 @@ cellsnp-lite \
 
 2. Create VCF
 ```
-Rscript /home/tenggao/numbat/create_vcf.r --sample sample1,sample2 --label patient 
+Rscript create_vcf.r --sample sample1,sample2 --label patient 
 ```
 
 3. For phasing, there are two options:
