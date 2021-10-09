@@ -3,6 +3,21 @@ Haplotype-aware detection of copy number variations in scRNA-Seq
 
 ![image](https://user-images.githubusercontent.com/13375875/136429050-609ee367-8d5d-4a63-8fa8-a87171aff01c.png)
 
+# Installation
+Prerequisites: 
+1. [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
+2. [ScisTree](https://github.com/kharchenkolab/ScisTree)
+If you are doing phasing locally instead of on the cloud [server](https://imputation.biodatacatalyst.nhlbi.nih.gov), please make sure you also have:
+3. [eagle2](https://alkesgroup.broadinstitute.org/Eagle/)
+```
+wget https://data.broadinstitute.org/alkesgroup/Eagle/downloads/Eagle_v2.4.1.tar.gz
+tar -xvf Eagle_v2.4.1.tar.gz
+```
+4. 1000 Genome Reference Panel
+```
+wget wget -r --no-parent -A "*vcf*" http://hgdownload.soe.ucsc.edu/gbdb/hg38/1000Genomes
+mv hgdownload.soe.ucsc.edu/gbdb/hg38/1000Genomes/* ./
+```
 
 1. SNP pileup
 ```
