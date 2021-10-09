@@ -4,7 +4,11 @@ Haplotype-aware detection of copy number variations in scRNA-Seq
 ![image](https://user-images.githubusercontent.com/13375875/136429050-609ee367-8d5d-4a63-8fa8-a87171aff01c.png)
 
 # Installation
-Prerequisites: 
+Install the Numbat R package via:
+```
+devtools::install_github("kharchenkolab/Numbat")
+```
+## Other prerequisites
 1. [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
 2. [ScisTree](https://github.com/kharchenkolab/ScisTree)
 ```
@@ -27,7 +31,7 @@ wget https://data.broadinstitute.org/alkesgroup/Eagle/downloads/Eagle_v2.4.1.tar
 tar -xvf Eagle_v2.4.1.tar.gz
 ./Eagle_v2.4.1/eagle
 ```
-4. 1000 Genome Reference Panel
+5. 1000 Genome Reference Panel
 ```
 mkdir ref
 wget -r --no-parent -A "*vcf*" http://hgdownload.soe.ucsc.edu/gbdb/hg38/1000Genomes
