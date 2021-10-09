@@ -7,30 +7,44 @@ Haplotype-aware detection of copy number variations in scRNA-Seq
 Prerequisites: 
 1. [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
 2. [ScisTree](https://github.com/kharchenkolab/ScisTree)
+```
+git clone https://github.com/kharchenkolab/ScisTree
+cd ScisTree/ScisTree-ver1.2.0.6-src
+make
+./scistree
+```
+Please make sure this binary executable can be found in $PATH.
+
+3. 1000 Genome SNP reference file 
+```
+wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
+```
 If you are doing phasing locally instead of on the cloud [server](https://imputation.biodatacatalyst.nhlbi.nih.gov), please make sure you also have:
-3. [eagle2](https://alkesgroup.broadinstitute.org/Eagle/)
+
+4. [eagle2](https://alkesgroup.broadinstitute.org/Eagle/)
 ```
 wget https://data.broadinstitute.org/alkesgroup/Eagle/downloads/Eagle_v2.4.1.tar.gz
 tar -xvf Eagle_v2.4.1.tar.gz
+./Eagle_v2.4.1/eagle
 ```
 4. 1000 Genome Reference Panel
 ```
-wget wget -r --no-parent -A "*vcf*" http://hgdownload.soe.ucsc.edu/gbdb/hg38/1000Genomes
-mv hgdownload.soe.ucsc.edu/gbdb/hg38/1000Genomes/* ./
+mkdir ref
+wget -r --no-parent -A "*vcf*" http://hgdownload.soe.ucsc.edu/gbdb/hg38/1000Genomes
+mv hgdownload.soe.ucsc.edu/gbdb/hg38/1000Genomes/* ./ref
 ```
 
-1. SNP pileup
+# Usage
+1. Run SNP pileup
 ```
-cmd = glue(
-      'cellsnp-lite', 
-      '-s {bam}.bam',
-      '-b {barcodes}.tsv.gz',
-      '-O /home/tenggao/pileup/{sample}',
-      '-R /home/tenggao/ref/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf', 
-      '-p 30',
-      '--minMAF 0',
-      '--minCOUNT 2',
-      .sep = ' ')
+cellsnp-lite \
+      -s {bam}.bam
+      -b {barcodes}.tsv.gz \
+      -O {sample} \
+      -R genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf \ 
+      -p {ncores} \
+      --minMAF 0 \
+      --minCOUNT 2 
 ```
 
 2. Create VCF
@@ -38,7 +52,9 @@ cmd = glue(
 Rscript /home/tenggao/numbat/create_vcf.r --sample sample1,sample2 --label patient 
 ```
 
-3. Phasing
+3. For phasing, there are two options:
+      - Using the TOPMED reference panel through the [imputation server](https://imputation.biodatacatalyst.nhlbi.nih.gov/)
+      - Locally the 1000G reference panel
 ```
 eagle_cmd = function(chr, sample) {
     paste('eagle', 
@@ -56,7 +72,7 @@ for (sample in samples) {
     cmds = c(cmds, lapply(1:22, function(chr){eagle_cmd(chr, sample)}))
 }
 
-list(cmds) %>% fwrite('~/external/WASHU/run_phasing.sh', sep = '\n')
+list(cmds) %>% fwrite('./run_phasing.sh', sep = '\n')
 ```
 
 4. Run Numbat
