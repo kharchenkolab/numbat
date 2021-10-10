@@ -535,6 +535,11 @@ get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min
 
     # doesn't work with 0s in the ref
     bulk = bulk %>% filter(lambda_ref != 0 | is.na(gene))
+
+    bulk = bulk %>%
+        mutate(CHROM = as.character(CHROM)) %>%
+        mutate(CHROM = ifelse(CHROM == 'X', 23, CHROM)) %>%
+        mutate(CHROM = factor(as.integer(CHROM)))
 }
 
 
@@ -740,13 +745,19 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
 
     mut_nodes = G_m %>% as_data_frame('vertices') %>% select(name = node, site = label)
 
-    # update tree
-    res$gtree = mut_to_tree(res$tree_post$gtree, mut_nodes)
     res$G_m = G_m
 
-    f = glue('{out_dir}/clone_post_{i}.rds')
+    # update tree
+    f = glue('{out_dir}/tree_final_{i}.rds')
     if (file.exists(f)) {
-        res[['clone_post']] = readRDS(f)
+        res$gtree = readRDS(f)
+    } else {
+        res$gtree = mut_to_tree(res$tree_post$gtree, mut_nodes)
+    }
+
+    f = glue('{out_dir}/clone_post_{i}.tsv')
+    if (file.exists(f)) {
+        res[['clone_post']] = fread(f)
     } else {
         res[['clone_post']] = cell_to_clone(res$gtree, res$exp_post, res$allele_post)
     }
@@ -759,7 +770,7 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
 ########################### Analysis ############################
 
 analyze_bulk_lnpois = function(
-    Obs, t, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
+    Obs, t = 1e-5, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
     exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE,
     phasing = TRUE, roll_phi = TRUE, verbose = TRUE, debug = FALSE, 
     diploid_chroms = NULL, classify_allele = FALSE
@@ -767,7 +778,7 @@ analyze_bulk_lnpois = function(
     
     if (!is.numeric(t)) {
         stop('transition probability is not numeric')
-    } 
+    }
 
     if (is.null(diploid_chroms)) {
 
@@ -830,13 +841,13 @@ analyze_bulk_lnpois = function(
     # rolling theta estimates
     Obs = annot_roll_theta(Obs)
     
-    if (retest & (!allele_only) & (!exp_only)) {
+    if (retest & (!exp_only)) {
         
         if (verbose) {
             display('Retesting CNVs..')
         }
 
-        segs_post = retest_cnv(Obs, exp_model = 'lnpois')
+        segs_post = retest_cnv(Obs, exp_model = 'lnpois', allele_only = allele_only)
         
         Obs = Obs %>% 
             select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM')])) %>%
@@ -1407,68 +1418,92 @@ calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, uppe
     
 }
 
-retest_cnv = function(bulk, exp_model) {
+retest_cnv = function(bulk, exp_model, allele_only = FALSE) {
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     
     theta_min = 0.065
     delta_phi_min = 0.15
-    
-    segs_post = bulk %>% 
-        filter(cnv_state != 'neu') %>%
-        group_by(CHROM, seg, cnv_state) %>%
-        summarise(
-            n_genes = length(na.omit(unique(gene))),
-            n_snps = sum(!is.na(pAD)),
-            seg_start = min(POS),
-            seg_end = max(POS),
-            theta_hat = theta_hat_seg(major_count[!is.na(major_count)], minor_count[!is.na(minor_count)]),
-            approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = theta_hat),
-            L_y_n = pnorm.range(0, theta_min, theta_mle, theta_sigma),
-            L_y_d = pnorm.range(theta_min, 0.499, theta_mle, theta_sigma),
-            L_y_a = pnorm.range(theta_min, 0.375, theta_mle, theta_sigma),
-            approx_lik_exp(
-                Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
-                alpha = alpha[!is.na(Y_obs)],
-                beta = beta[!is.na(Y_obs)],
-                mu = mu[!is.na(Y_obs)],
-                sig = sig[!is.na(Y_obs)],
-                model = exp_model
-            ),
-            L_x_n = pnorm.range(1 - delta_phi_min, 1 + delta_phi_min, phi_mle, phi_sigma),
-            L_x_d = pnorm.range(0.1, 1 - delta_phi_min, phi_mle, phi_sigma),
-            L_x_a = pnorm.range(1 + delta_phi_min, 3, phi_mle, phi_sigma),
-            Z = sum(G['20'] * L_x_n * L_y_d,
-                    G['10'] * L_x_d * L_y_d,
-                    G['21'] * L_x_a * L_y_a,
-                    G['31'] * L_x_a * L_y_a,
-                    G['22'] * L_x_a * L_y_n, 
-                    G['00'] * L_x_d * L_y_n),
-            p_loh = (G['20'] * L_x_n * L_y_d)/Z,
-            p_amp = ((G['31'] + G['21']) * L_x_a * L_y_a)/Z,
-            p_del = (G['10'] * L_x_d * L_y_d)/Z,
-            p_bamp = (G['22'] * L_x_a * L_y_n)/Z,
-            p_bdel = (G['00'] * L_x_d * L_y_n)/Z,
-            LLR_x = calc_exp_LLR(
-                Y_obs[!is.na(Y_obs)],
-                lambda_ref[!is.na(Y_obs)], 
-                unique(na.omit(d_obs)),
-                phi_mle,
-                alpha = alpha[!is.na(Y_obs)],
-                beta = beta[!is.na(Y_obs)],
-                mu = mu[!is.na(Y_obs)],
-                sig = sig[!is.na(Y_obs)],
-                model = exp_model
-            ),
-            LLR_y = calc_allele_LLR(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta_mle),
-            LLR = LLR_x + LLR_y,
-            .groups = 'drop'
-        ) %>%
-        rowwise() %>%
-        mutate(cnv_state_post = c('loh', 'amp', 'del', 'bamp', 'bdel')[
-            which.max(c(p_loh, p_amp, p_del, p_bamp, p_bdel))
-        ]) %>%
-        ungroup()
+
+    if (allele_only) {
+        segs_post = bulk %>% 
+            filter(cnv_state != 'neu') %>%
+            group_by(CHROM, seg, cnv_state) %>%
+            summarise(
+                n_genes = length(na.omit(unique(gene))),
+                n_snps = sum(!is.na(pAD)),
+                seg_start = min(POS),
+                seg_end = max(POS),
+                theta_hat = theta_hat_seg(major_count[!is.na(major_count)], minor_count[!is.na(minor_count)]),
+                approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = theta_hat),
+                p_loh = 1, p_amp = 0, p_del = 0, p_bamp = 0, p_bdel = 0,
+                LLR_x = 0,
+                LLR_y = calc_allele_LLR(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta_mle, gamma = unique(gamma)),
+                LLR = LLR_x + LLR_y,
+                phi_mle = 1,
+                phi_sigma = 0,
+                .groups = 'drop'
+            ) %>%
+            rowwise() %>%
+            mutate(cnv_state_post = 'loh') %>%
+            ungroup()
+    } else {
+        segs_post = bulk %>% 
+            filter(cnv_state != 'neu') %>%
+            group_by(CHROM, seg, cnv_state) %>%
+            summarise(
+                n_genes = length(na.omit(unique(gene))),
+                n_snps = sum(!is.na(pAD)),
+                seg_start = min(POS),
+                seg_end = max(POS),
+                theta_hat = theta_hat_seg(major_count[!is.na(major_count)], minor_count[!is.na(minor_count)]),
+                approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = theta_hat),
+                L_y_n = pnorm.range(0, theta_min, theta_mle, theta_sigma),
+                L_y_d = pnorm.range(theta_min, 0.499, theta_mle, theta_sigma),
+                L_y_a = pnorm.range(theta_min, 0.375, theta_mle, theta_sigma),
+                approx_lik_exp(
+                    Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
+                    alpha = alpha[!is.na(Y_obs)],
+                    beta = beta[!is.na(Y_obs)],
+                    mu = mu[!is.na(Y_obs)],
+                    sig = sig[!is.na(Y_obs)],
+                    model = exp_model
+                ),
+                L_x_n = pnorm.range(1 - delta_phi_min, 1 + delta_phi_min, phi_mle, phi_sigma),
+                L_x_d = pnorm.range(0.1, 1 - delta_phi_min, phi_mle, phi_sigma),
+                L_x_a = pnorm.range(1 + delta_phi_min, 3, phi_mle, phi_sigma),
+                Z = sum(G['20'] * L_x_n * L_y_d,
+                        G['10'] * L_x_d * L_y_d,
+                        G['21'] * L_x_a * L_y_a,
+                        G['31'] * L_x_a * L_y_a,
+                        G['22'] * L_x_a * L_y_n, 
+                        G['00'] * L_x_d * L_y_n),
+                p_loh = (G['20'] * L_x_n * L_y_d)/Z,
+                p_amp = ((G['31'] + G['21']) * L_x_a * L_y_a)/Z,
+                p_del = (G['10'] * L_x_d * L_y_d)/Z,
+                p_bamp = (G['22'] * L_x_a * L_y_n)/Z,
+                p_bdel = (G['00'] * L_x_d * L_y_n)/Z,
+                LLR_x = calc_exp_LLR(
+                    Y_obs[!is.na(Y_obs)],
+                    lambda_ref[!is.na(Y_obs)], 
+                    unique(na.omit(d_obs)),
+                    phi_mle,
+                    alpha = alpha[!is.na(Y_obs)],
+                    beta = beta[!is.na(Y_obs)],
+                    mu = mu[!is.na(Y_obs)],
+                    sig = sig[!is.na(Y_obs)],
+                    model = exp_model
+                ),
+                LLR_y = calc_allele_LLR(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta_mle, gamma = unique(gamma)),
+                LLR = LLR_x + LLR_y,
+                .groups = 'drop'
+            ) %>%
+            rowwise() %>%
+            mutate(cnv_state_post = c('loh', 'amp', 'del', 'bamp', 'bdel')[
+                which.max(c(p_loh, p_amp, p_del, p_bamp, p_bdel))
+            ]) %>%
+            ungroup()
+    }
 
     return(segs_post)
 }
@@ -1716,12 +1751,12 @@ calc_theta_mle = function(pAD, DP, p_s, lower = 0.01, upper = 0.49, start = 0.25
     return(res$par)
 }
 
-calc_allele_LLR = function(pAD, DP, p_s, theta_mle, gamma = 20) {
+calc_allele_LLR = function(pAD, DP, p_s, theta_mle, theta_0 = 0, gamma = 20) {
     if (length(pAD) <= 1) {
         return(0)
     }
     l_1 = calc_allele_lik(pAD, DP, p_s, theta = theta_mle) 
-    l_0 = calc_allele_lik(pAD, DP, p_s, theta = 0)
+    l_0 = calc_allele_lik(pAD, DP, p_s, theta = theta_0)
     return(l_1 - l_0)
 }
 
@@ -1880,7 +1915,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 }
 
 
-plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = TRUE) {
+plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = TRUE, allele_only = FALSE) {
 
     if (!'state_post' %in% colnames(Obs)) {
         Obs = Obs %>% mutate(state_post = state)
@@ -1891,11 +1926,17 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
         Obs = Obs %>% mutate(logFC = logFC - mu)
     }
 
+    D = Obs %>% 
+        mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
+        mutate(pBAF = ifelse(DP >= min_depth, pBAF, NA)) %>%
+        reshape2::melt(measure.vars = c('logFC', 'pBAF'))
+
+    if (allele_only) {
+        D = D %>% filter(variable == 'pBAF')
+    }
+
     p = ggplot(
-        Obs %>% 
-            mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
-            mutate(pBAF = ifelse(DP >= min_depth, pBAF, NA)) %>%
-            reshape2::melt(measure.vars = c('logFC', 'pBAF')),
+        D,
         aes(x = snp_index, y = value, color = state_post),
         na.rm=TRUE
     ) +

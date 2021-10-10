@@ -1,13 +1,13 @@
-# source('/home/tenggao/Numbat/hmm.r')
-# source('/home/tenggao/Numbat/utils.r')
-# source('/home/tenggao/Numbat/graphs.r')
 library(logger)
 library(ggraph)
 
+#' Main function to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df dataframe of allele counts per cell, produced by preprocess_data
 #' @param gtf_transcript gtf dataframe of transcripts 
+#' @return a status code
+#' @export
 numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 200, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE) {
     
     dir.create(out_dir, showWarnings = FALSE)
@@ -255,7 +255,8 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
     return('Success')
 }
 
-
+#' Run mutitple HMMs 
+#' @export
 run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, genetic_map, t, gamma = 20, min_depth = 0, ncores = NULL, exp_model = 'lnpois', allele_only = FALSE, verbose = FALSE, debug = FALSE) {
 
     if (length(groups) == 0) {
@@ -317,6 +318,8 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, ge
     return(bulk_all)
 }
 
+#' Extract consensus CNV segments
+#' @export
 get_segs_consensus = function(bulk_all, LLR_min = 20, gbuild = 'hg38') {
 
     if (!'sample' %in% colnames(bulk_all)) {
@@ -356,6 +359,8 @@ get_segs_consensus = function(bulk_all, LLR_min = 20, gbuild = 'hg38') {
 
 }
 
+#' Map cells to clones
+#' @export
 cell_to_clone = function(gtree, exp_post, allele_post) {
 
     clones = gtree %>% data.frame() %>% 
@@ -414,9 +419,9 @@ cell_to_clone = function(gtree, exp_post, allele_post) {
     
 }
 
-
-
-# resolve overlapping calls by graph reduction
+#' @param segs_all a dataframe containing info of all CNV segments from multiple samples
+#' @return consensus CNV segments
+#' @export
 resolve_cnvs = function(segs_all, debug = FALSE) {
             
     V = segs_all %>% mutate(vertex = 1:n(), .before = 'CHROM')
@@ -476,7 +481,10 @@ resolve_cnvs = function(segs_all, debug = FALSE) {
     return(segs_consensus)
 }
 
-# retrieve neutral segments
+#' @param segs_consensus a dataframe containing info of all CNV segments from multiple samples
+#' @param segs_neu neutral segments
+#' @return collections of neutral and aberrant segments with no gaps
+#' @export
 fill_neu_segs = function(segs_consensus, segs_neu) {
     
     # take complement of consensus aberrant segs
@@ -513,6 +521,9 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
     return(segs_consensus)
 }
 
+#' @param exp_sc Single cell expression data matrix
+#' @return expression likelihoods
+#' @export
 get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL) {
 
     exp_sc = exp_sc %>% filter(lambda_ref > 0)
@@ -553,7 +564,11 @@ get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL)
     return(res)
 }
 
-
+#' @param segs_consensus
+#' @param count_mat
+#' @param gtf_transcript
+#' @return CNV expression posteriors
+#' @export
 get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 
     gene_seg = GenomicRanges::findOverlaps(
@@ -601,7 +616,8 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
     return(exp_sc)
 }
 
-
+#' get CNV expression posteriors
+#' @export
 get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, lambdas_fit = NULL, alpha = NULL, beta = NULL, ncores = 30, verbose = T, debug = F) {
 
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf_transcript) 
@@ -704,6 +720,8 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     return(list('exp_post' = exp_post, 'exp_sc' = exp_sc, 'best_refs' = best_refs))
 }
 
+#' get CNV allele posteriors
+#' @export
 get_allele_post = function(bulk_all, segs_consensus, df, naive = FALSE) {
 
     if ((!'sample' %in% colnames(bulk_all)) | (!'sample' %in% colnames(segs_consensus))) {
@@ -812,6 +830,8 @@ get_allele_post = function(bulk_all, segs_consensus, df, naive = FALSE) {
         return(allele_post)
 }
 
+#' get joint posteriors
+#' @export
 get_joint_post = function(exp_post, allele_post, segs_consensus) {
 
     cells_common = intersect(exp_post$cell, allele_post$cell)

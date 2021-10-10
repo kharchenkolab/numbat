@@ -1,13 +1,14 @@
 Package: numbat
-Type: Package
 Title: Accurate reconstruction of copy number profiles in scRNA data using population haplotype phasing
-Version: 1.0.0
-Author: Teng Gao, Peter Kharchenko
+Version: 0.0.0
+Authors: Teng Gao, Peter Kharchenko
 Maintainer: Teng Gao, tgao@g.harvard.edu
 Description: Numbat is a computational method that infers copy number variations (CNVs) in cancer scRNA-Seq data and reconstructs the tumor phylogeny.
 License: MIT
 Encoding: UTF-8
 LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
 Imports:
     dplyr,
     tidyr,

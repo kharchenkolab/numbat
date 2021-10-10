@@ -53,9 +53,6 @@ read_mut_tree = function(tree_file, mut_assign) {
         mutate(id = 1:length(V(G))) %>%
         mutate(label = ifelse(label == ' ', '', label)) 
 
-    # V(G)$id = 1:length(igraph::V(G))
-    # V(G)$label[V(G)$label == ' '] = ''
-
     G = label_edges(G)
 
     for (i in 1:nrow(mut_assign)) {
@@ -78,6 +75,7 @@ read_mut_tree = function(tree_file, mut_assign) {
 
 # compute site branch likelihood
 l_s_v = function(node, site, gtree, geno) {
+    
     gtree %>%
     activate(nodes) %>%
     mutate(seq = bfs_rank(root = node)) %>%
@@ -135,6 +133,8 @@ get_tree_post = function(MLtree, geno) {
     # mutation assignments
     mut_nodes = nodes %>% 
         filter(mle) %>%
+        # if a cell has probability exactly 0.5, the MLE would not be unique
+        distinct(site, .keep_all = T) %>%
         group_by(name) %>%
         summarise(
             site = paste0(sort(site), collapse = ','),
