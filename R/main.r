@@ -4,7 +4,7 @@ library(ggraph)
 #' Main function to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
-#' @param df dataframe of allele counts per cell, produced by preprocess_data
+#' @param df dataframe of allele counts per cell, produced by preprocess_allele
 #' @param gtf_transcript gtf dataframe of transcripts 
 #' @return a status code
 #' @export
@@ -257,7 +257,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
 
 #' Run mutitple HMMs 
 #' @export
-run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, genetic_map, t, gamma = 20, min_depth = 0, ncores = NULL, exp_model = 'lnpois', allele_only = FALSE, verbose = FALSE, debug = FALSE) {
+run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, genetic_map, t, gamma = 20, min_depth = 0, ncores = NULL, exp_model = 'lnpois', allele_only = FALSE, retest = TRUE, verbose = FALSE, debug = FALSE) {
 
     if (length(groups) == 0) {
         return(data.frame())
@@ -288,7 +288,7 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, ge
                     members = paste0(g$members, collapse = ';'),
                     sample = g$label
                 ) %>%
-                analyze_bulk(t = t, gamma = gamma, allele_only = allele_only, verbose = verbose)
+                analyze_bulk(t = t, gamma = gamma, allele_only = allele_only, retest = retest, verbose = verbose)
         })
 
     bad = sapply(results, inherits, what = "try-error")
@@ -302,6 +302,7 @@ run_group_hmms = function(groups, count_mat, df, lambdas_ref, gtf_transcript, ge
         return(results)
     }
     
+    # unify marker index
     bulk_all = results %>% 
         bind_rows() %>%
         arrange(CHROM, POS) %>%
@@ -737,12 +738,7 @@ get_allele_post = function(bulk_all, segs_consensus, df, naive = FALSE) {
     # allele posteriors
     snp_seg = bulk_all %>%
         filter(!is.na(pAD)) %>%
-        mutate(haplo = case_when(
-            str_detect(state, 'up') ~ 'major',
-            str_detect(state, 'down') ~ 'minor',
-            T ~ ifelse(pBAF > 0.5, 'major', 'minor')
-        )) %>%
-        select(snp_id, snp_index, sample, seg, haplo) %>%
+        select(snp_id, snp_index, sample, seg, haplo_post) %>%
         inner_join(
             segs_consensus,
             by = c('sample', 'seg')
@@ -752,12 +748,12 @@ get_allele_post = function(bulk_all, segs_consensus, df, naive = FALSE) {
         mutate(pAD = ifelse(GT == '1|0', AD, DP - AD)) %>%
         select(-snp_index) %>% 
         inner_join(
-            snp_seg %>% select(snp_id, snp_index, haplo, seg = seg_cons, cnv_state),
+            snp_seg %>% select(snp_id, snp_index, haplo_post, seg = seg_cons, cnv_state),
             by = c('snp_id')
         ) %>%
         filter(!cnv_state %in% c('neu', 'bamp', 'bdel')) %>%
         mutate(
-            major_count = ifelse(haplo == 'major', pAD, DP - pAD),
+            major_count = ifelse(haplo_post == 'major', AD, DP - AD),
             minor_count = DP - major_count,
             MAF = major_count/DP
         ) %>%

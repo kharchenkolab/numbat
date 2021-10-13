@@ -11,17 +11,19 @@ devtools::load_all('~/Numbat')
 parser <- ArgumentParser(description='Create VCF from scRNA dataset for phasing')
 parser$add_argument('--samples', type = "character", help = "sample names")
 parser$add_argument('--label', type = "character", help = "output sample label")
+parser$add_argument('--outdir', type = "character", help = "output directory")
 
 args <- parser$parse_args()
 
 samples = str_split(args$samples, ',')[[1]]
 label = args$label
+outdir = args$outdir
 
 ###### Main ######
 
 vcfs = lapply(samples, function(sample){read.vcfR(glue('/home/tenggao/pileup/{sample}/cellSNP.base.vcf'), verbose = F)})
 
-genotype(label, samples, vcfs)
+genotype(label, samples, vcfs, outdir)
 
   
 

@@ -369,8 +369,7 @@ process_exp = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101,
     return(list('gexp.norm.long' = gexp.norm.long, 'gexp.norm' = gexp.norm, 'exp_mat' = exp_mat))
 }
 
-
-preprocess_data = function(
+preprocess_allele = function(
     sample,
     vcf_pu,
     vcf_phased,
@@ -829,7 +828,7 @@ analyze_bulk_lnpois = function(
         ungroup()
 
     # rolling theta estimates
-    Obs = annot_roll_theta(Obs)
+    Obs = annot_theta_roll(Obs)
     
     # retest CNVs
     if (retest & (!exp_only)) {
@@ -856,7 +855,7 @@ analyze_bulk_lnpois = function(
 
         Obs = Obs %>% classify_alleles()
 
-        Obs = annot_roll_theta(Obs)
+        Obs = annot_theta_roll(Obs)
         
     } else {
         Obs = Obs %>% mutate(state_post = state, cnv_state_post = cnv_state)
@@ -891,8 +890,14 @@ analyze_bulk_lnpois = function(
 
 # classify alleles using viterbi and forward-backward
 classify_alleles = function(Obs) {
+
+    if (all(Obs$cnv_state %in% c('neu', 'bdel', 'bamp'))) {
+        return(Obs)
+    }
     
-    Obs = Obs %>%
+    allele_post = Obs %>%
+        filter(!cnv_state %in% c('neu', 'bdel', 'bamp')) %>%
+        filter(!is.na(AD)) %>%
         group_by(CHROM, seg) %>%
         mutate(
             p_up = forward_back_allele(get_allele_hmm(pAD, DP, p_s, theta = unique(theta_mle), gamma = 20)),
@@ -910,28 +915,37 @@ classify_alleles = function(Obs) {
                 mpc == 2 & GT == '0|1' ~ 'major'
             ),
             haplo_naive = ifelse(AR < 0.5, 'minor', 'major')
+        ) %>%
+        ungroup() %>%
+        select(snp_id, p_up, haplo_post, mpc, haplo_mpc, haplo_naive)
+
+    Obs = Obs %>% 
+            select(-any_of(colnames(allele_post)[!colnames(allele_post) %in% c('snp_id')])) %>%
+            left_join(
+                allele_post,
+            by = c('snp_id')
         )
 
     return(Obs)
 }
 
-annot_roll_theta = function(Obs) {
+annot_theta_roll = function(Obs) {   
 
-    Obs = Obs %>%
-        mutate(haplo_post = case_when(
+    Obs = Obs %>% 
+        mutate(haplo_theta_min = case_when(
             str_detect(state, 'up') ~ 'major',
             str_detect(state, 'down') ~ 'minor',
             T ~ ifelse(pBAF > 0.5, 'major', 'minor')
         )) %>% 
         mutate(
-            major_count = ifelse(haplo_post == 'major', pAD, DP - pAD),
+            major_count = ifelse(haplo_theta_min == 'major', pAD, DP - pAD),
             minor_count = DP - major_count
         )
 
     Obs = Obs %>%
         select(-any_of('theta_hat_roll')) %>%
         left_join(
-            Obs %>% 
+            Obs %>%
                 group_by(CHROM) %>%
                 filter(!is.na(pAD)) %>%
                 mutate(theta_hat_roll = theta_hat_roll(major_count, minor_count, h = 100)) %>%
@@ -1826,7 +1840,6 @@ calc_allele_LLR = function(pAD, DP, p_s, theta_mle, theta_0 = 0, gamma = 20) {
         return(0)
     }
     l_1 = calc_allele_lik(pAD, DP, p_s, theta = theta_mle, gamma = gamma) 
-    # l_0 = calc_allele_lik(pAD, DP, p_s, theta = theta_0)
     l_0 = l_bbinom(pAD, DP, gamma*0.5, gamma*0.5)
     return(l_1 - l_0)
 }

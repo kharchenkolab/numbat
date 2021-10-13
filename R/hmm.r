@@ -27,39 +27,6 @@ cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
         '0|1' = 'red', '1|0' = 'blue'
     )
     
-############ time homogenous univariate HMM ############
-
-run_hmm = function(pAD, DP, p_0 = 1-1e-5, p_s = 0.1) {
-    
-    # states
-    states = c("theta_up", "neu", "theta_down")
-    
-    # transition matrix
-    A <- matrix(
-        c(p_0 * (1-p_s), 1 - p_0, p_0 * p_s, 
-         (1-p_0)/2, p_0, (1-p_0)/2,
-         p_0 * p_s, 1-p_0, p_0 * (1 - p_s)),
-        ncol = length(states),
-        byrow = TRUE
-    )
-
-    # intitial probabilities
-    prior = rep(1/length(states), length(states))
-    
-    hmm = HiddenMarkov::dthmm(
-            x = pAD, 
-            Pi = A, 
-            delta = prior, 
-            distn = "bbinom",
-            pm = list(alpha=c(10,10,6), beta=c(6,10,10)),
-            pn = list(size = DP),
-            discrete=TRUE)
-    
-    solution = states[HiddenMarkov::Viterbi(hmm)]
-    
-    return(solution)
-}
-
 ############ time inhomogenous univariate HMM ############
 
 Viterbi.dthmm.inhom <- function (obj, ...){
