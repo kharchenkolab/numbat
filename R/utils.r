@@ -377,7 +377,6 @@ preprocess_data = function(
     AD,
     DP,
     barcodes,
-    cell_annot,
     gtf_transcript
 ) {
 
@@ -478,18 +477,7 @@ preprocess_data = function(
     df = df %>% left_join(vcf_phased %>% select(snp_id, gene, gene_start, gene_end, GT), by = 'snp_id') 
     df = df %>% mutate(CHROM = factor(CHROM, unique(CHROM)))
     
-    df = df %>% 
-        select(-any_of(c('cell_type', 'group'))) %>%
-        left_join(
-            cell_annot,
-            by = "cell"
-        )
-    
-    df_obs = df %>% filter(group == 'obs')
-    
-    df_ref = df %>% filter(group == 'ref')
-
-    return(list('df_obs' = df_obs, 'df_ref' = df_ref))
+    return(df)
 }
 
 get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min_depth = 0, verbose = FALSE) {
@@ -521,12 +509,12 @@ get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min
     )$bulk %>%
     filter((logFC < 5 & logFC > -5) | Y_obs == 0) %>%
     mutate(w = paste0(signif(fit$w, 2), collapse = ','))
+
+    allele_bulk = get_allele_bulk(df, genetic_map, min_depth)
             
     bulk = combine_bulk(
-        df = df,
-        gexp_bulk = gexp_bulk,
-        genetic_map = genetic_map,
-        min_depth = min_depth
+        allele_bulk = allele_bulk,
+        gexp_bulk = gexp_bulk
     )
 
     if (any(duplicated(bulk$snp_id))) {
@@ -619,8 +607,7 @@ annot_cm = function(bulk, genetic_map) {
     
 }
 
-combine_bulk = function(df, gexp_bulk, genetic_map, min_depth) {
-    
+get_allele_bulk = function(df, genetic_map, min_depth) {
     pseudobulk = df %>%
         filter(GT %in% c('1|0', '0|1')) %>%
         group_by(snp_id, CHROM, POS, REF, ALT, GT, gene) %>%
@@ -650,8 +637,11 @@ combine_bulk = function(df, gexp_bulk, genetic_map, min_depth) {
         #     p_s = switch_prob_bp(inter_snp_dist)
         # ) %>%
         ungroup()
+}
 
-    Obs = pseudobulk %>% 
+combine_bulk = function(allele_bulk, gexp_bulk) {
+    
+    Obs = allele_bulk %>% 
         full_join(
             gexp_bulk,
             by = c("CHROM", "gene")
@@ -837,10 +827,11 @@ analyze_bulk_lnpois = function(
         group_by(CHROM) %>%
         mutate(seg_start = min(POS), seg_end = max(POS)) %>%
         ungroup()
-    
+
     # rolling theta estimates
     Obs = annot_roll_theta(Obs)
     
+    # retest CNVs
     if (retest & (!exp_only)) {
         
         if (verbose) {
@@ -862,6 +853,10 @@ analyze_bulk_lnpois = function(
                 cnv_state_post
             )) %>%
             mutate(state_post = str_remove(state_post, '_NA'))
+
+        Obs = Obs %>% classify_alleles()
+
+        Obs = annot_roll_theta(Obs)
         
     } else {
         Obs = Obs %>% mutate(state_post = state, cnv_state_post = cnv_state)
@@ -891,6 +886,32 @@ analyze_bulk_lnpois = function(
         ungroup()
     }
     
+    return(Obs)
+}
+
+# classify alleles using viterbi and forward-backward
+classify_alleles = function(Obs) {
+    
+    Obs = Obs %>%
+        group_by(CHROM, seg) %>%
+        mutate(
+            p_up = forward_back_allele(get_allele_hmm(pAD, DP, p_s, theta = unique(theta_mle), gamma = 20)),
+            haplo_post = case_when(
+                p_up >= 0.5 & GT == '1|0' ~ 'major',
+                p_up >= 0.5 & GT == '0|1' ~ 'minor',
+                p_up < 0.5 & GT == '1|0' ~ 'minor',
+                p_up < 0.5 & GT == '0|1' ~ 'major'
+            ),
+            mpc = HiddenMarkov::Viterbi(get_allele_hmm(pAD, DP, p_s, theta = unique(theta_mle), gamma = 20))$y,
+            haplo_mpc = case_when(
+                mpc == 1 & GT == '1|0' ~ 'major',
+                mpc == 1 & GT == '0|1' ~ 'minor',
+                mpc == 2 & GT == '1|0' ~ 'minor',
+                mpc == 2 & GT == '0|1' ~ 'major'
+            ),
+            haplo_naive = ifelse(AR < 0.5, 'minor', 'major')
+        )
+
     return(Obs)
 }
 
@@ -930,6 +951,29 @@ annot_segs = function(Obs) {
             group_by(CHROM) %>%
             arrange(CHROM, snp_index) %>%
             mutate(boundary = c(0, cnv_state[2:length(cnv_state)] != cnv_state[1:(length(cnv_state)-1)])) %>%
+            group_by(CHROM) %>%
+            mutate(seg = paste0(CHROM, '_', cumsum(boundary))) %>%
+            arrange(CHROM) %>%
+            mutate(seg = factor(seg, unique(seg))) %>%
+            ungroup() %>%
+            group_by(seg) %>%
+            mutate(
+                seg_start_index = min(snp_index),
+                seg_end_index = max(snp_index),
+                n_genes = length(na.omit(unique(gene))),
+                n_snps = sum(!is.na(pAD))
+            ) %>%
+            ungroup()
+
+    return(Obs)
+}
+
+annot_haplo_segs = function(Obs) {
+
+    Obs = Obs %>% 
+            group_by(CHROM) %>%
+            arrange(CHROM, snp_index) %>%
+            mutate(boundary = c(0, state[2:length(state)] != state[1:(length(state)-1)])) %>%
             group_by(CHROM) %>%
             mutate(seg = paste0(CHROM, '_', cumsum(boundary))) %>%
             arrange(CHROM) %>%
@@ -1533,6 +1577,32 @@ approx_lik_ar = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 0.2
     return(tibble('theta_mle' = mu, 'theta_sigma' = sigma))
 }
 
+
+approx_maxlik_ar = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 0.25, gamma = 20) {
+    
+    if (length(pAD) <= 10) {
+        return(tibble('theta_mle' = 0, 'theta_sigma' = 0))
+    }
+
+    fit = optim(
+        start, 
+        function(theta) {-calc_allele_maxlik(pAD, DP, p_s, theta, gamma)},
+        method = 'L-BFGS-B',
+        lower = lower,
+        upper = upper,
+        hessian = TRUE
+    )
+    
+    mu = fit$par
+    sigma = sqrt(as.numeric(1/(fit$hessian)))
+
+    if (is.na(sigma)) {
+        sigma = 0
+    }
+    
+    return(tibble('theta_mle' = mu, 'theta_sigma' = sigma, 'l_max' = -fit$value))
+}
+
 approx_lik_exp = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, model = 'gpois', lower = 0.2, upper = 10, start = 1) {
     
     if (length(Y_obs) == 0) {
@@ -1755,8 +1825,9 @@ calc_allele_LLR = function(pAD, DP, p_s, theta_mle, theta_0 = 0, gamma = 20) {
     if (length(pAD) <= 1) {
         return(0)
     }
-    l_1 = calc_allele_lik(pAD, DP, p_s, theta = theta_mle) 
-    l_0 = calc_allele_lik(pAD, DP, p_s, theta = theta_0)
+    l_1 = calc_allele_lik(pAD, DP, p_s, theta = theta_mle, gamma = gamma) 
+    # l_0 = calc_allele_lik(pAD, DP, p_s, theta = theta_0)
+    l_0 = l_bbinom(pAD, DP, gamma*0.5, gamma*0.5)
     return(l_1 - l_0)
 }
 
@@ -1948,14 +2019,6 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
     ) +
     scale_alpha_discrete(range = c(0.5, 1)) +
     scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 15)) +
-    geom_hline(data = data.frame(variable = 'logFC'), aes(yintercept = 0), color = 'gray30', linetype = 'dashed') +
-    geom_line(
-        inherit.aes = FALSE,
-        data = Obs %>% mutate(variable = 'logFC') %>% filter(log2(phi_mle_roll) < exp_limit),
-        aes(x = snp_index, y = log2(phi_mle_roll), group = '1'),
-        color = 'darkred',
-        size = 0.35
-    ) +
     theme_classic() +
     theme(
         panel.spacing = unit(0, 'mm'),
@@ -1965,6 +2028,17 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
     facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
     scale_color_manual(values = cnv_colors) +
     guides(color = guide_legend(""), fill = FALSE, alpha = FALSE, shape = FALSE)
+
+    if (!allele_only) {
+        p = p + geom_line(
+            inherit.aes = FALSE,
+            data = Obs %>% mutate(variable = 'logFC') %>% filter(log2(phi_mle_roll) < exp_limit),
+            aes(x = snp_index, y = log2(phi_mle_roll), group = '1'),
+            color = 'darkred',
+            size = 0.35
+        ) +
+        geom_hline(data = data.frame(variable = 'logFC'), aes(yintercept = 0), color = 'gray30', linetype = 'dashed')
+    }
 
     if (theta_roll) {
         p = p + geom_line(

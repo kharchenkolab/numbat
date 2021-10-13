@@ -1,5 +1,64 @@
+#' Main function
+#' @param label character string 
+#' @param samples list of strings
+#' @param vcfs vcfR objects
+#' @return a status code
+#' @export
+genotype = function(label, samples, vcfs, outdir) {
+
+    snps = lapply(
+            vcfs, function(vcf){get_snps(vcf)}
+        ) %>%
+        bind_rows() %>%
+        group_by(CHROM, POS, REF, ALT, snp_id) %>% 
+        summarise(
+            AD = sum(AD),
+            DP = sum(DP),
+            OTH = sum(OTH),
+            .groups = 'drop'
+        ) %>%
+        mutate(AR = AD/DP) %>%
+        arrange(CHROM, POS)
+
+    vcf_original = vcfs[[1]]
+
+    vcf_original@fix = snps %>% 
+        arrange(CHROM, POS) %>%
+        mutate(ID = NA, QUAL = NA, FILTER = 'PASS', INFO = paste0('AD=', AD, ';', 'DP=', DP, ';', 'OTH=', OTH)) %>%
+        select(CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO) %>%
+        # to prevent as.matrix from adding leading whitespace
+        mutate(POS = as.character(POS)) %>%
+        as.matrix
+
+    for (chr in 1:22) {
+        make_vcf_chr(chr, snps, vcf_original, label, outdir, het_only = FALSE)
+    }
+
+    return(0)
+}
+
+#' process VCFs into SNP dataframe
+#' @param vcf vcfR object
+get_snps = function(vcf) {
+
+    snps = as.data.frame(vcf@fix) %>%
+        mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
+        tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
+        mutate_at(c('AD', 'DP', 'OTH'), as.integer)
+
+    snps = snps %>% mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_'))
+
+    snps = snps %>% arrange(CHROM, POS) %>%
+        mutate(CHROM = factor(CHROM, unique(CHROM))) %>%
+        mutate(snp_index = 1:n()) %>%
+        mutate(AR = AD/DP) %>%
+        filter(!is.na(AR))
+    
+    return(snps)
+}
+
 ## per chrom function
-create_vcf = function(chr, snps, vcf_original, vcf_template, sample, het_only = TRUE, chr_prefix = TRUE) {
+make_vcf_chr = function(chr, snps, vcf_original, vcf_template, label, outdir = '~/phasing', het_only = TRUE, chr_prefix = TRUE) {
     
     chr_snps = snps %>%
         filter(CHROM == chr) %>%
@@ -45,14 +104,14 @@ create_vcf = function(chr, snps, vcf_original, vcf_template, sample, het_only = 
         FORMAT = rep('GT', nrow(vcf_chr)),
         GT = chr_snps$GT
     ) %>% 
-    setNames(c('FORMAT', sample)) %>% 
+    setNames(c('FORMAT', label)) %>% 
     as.matrix
     
     if (chr_prefix) {
         vcf_chr@fix[,1] = paste0('chr', vcf_chr@fix[,1])
     }
 
-    file_name = glue('~/phasing/{sample}_chr{chr}.vcf.gz')
+    file_name = glue('{outdir}/{label}_chr{chr}.vcf.gz')
     
     write.vcf(vcf_chr, file_name)
 
@@ -75,25 +134,4 @@ vcfR_file_fix <- function(file) {
                     overwrite = TRUE)
     file.remove(out)
 
-}
-
-# read in VCFs
-get_snps = function(sample) {
-    
-    snps = fread(glue('/home/tenggao/pileup/{sample}/cellSNP.base.vcf')) %>% rename(CHROM = `#CHROM`)
-
-    snps = snps %>%
-        mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
-        tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
-        mutate_at(c('AD', 'DP', 'OTH'), as.integer)
-
-    snps = snps %>% mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_'))
-
-    snps = snps %>% arrange(CHROM, POS) %>%
-        mutate(CHROM = factor(CHROM, unique(CHROM))) %>%
-        mutate(snp_index = 1:n()) %>%
-        mutate(AR = AD/DP) %>%
-        filter(!is.na(AR))
-    
-    return(snps)
 }
