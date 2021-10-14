@@ -1,6 +1,11 @@
 library(logger)
 library(glue)
+library(stringr)
 library(argparse)
+library(data.table)
+library(dplyr)
+library(vcfR)
+library(Matrix)
 devtools::load_all('~/Numbat')
 
 parser <- ArgumentParser(description='Run SNP pileup and phasing with 1000G')
@@ -18,6 +23,7 @@ args <- parser$parse_args()
 
 label = args$label
 samples = str_split(args$samples, ',')[[1]]
+outdir = args$outdir
 bams = str_split(args$bams, ',')[[1]]
 barcodes = str_split(args$barcodes, ',')[[1]]
 n_samples = length(samples)
@@ -30,11 +36,14 @@ paneldir = args$paneldir
 dir.create(outdir, showWarnings = FALSE)
 
 for (sample in samples) {
-    dir.create(glue('{outdir}/{sample}'), showWarnings = FALSE)
-    dir.create(glue('{outdir}/{sample}/pileup'), showWarnings = FALSE)
+    dir.create(glue('{outdir}/pileup'), showWarnings = FALSE)
+    dir.create(glue('{outdir}/phasing'), showWarnings = FALSE)
+    dir.create(glue('{outdir}/pileup/{sample}'), showWarnings = FALSE)
 }
 
 ## pileup
+
+cmds = c()
 
 for (i in n_samples) {
     
@@ -42,7 +51,7 @@ for (i in n_samples) {
         'cellsnp-lite', 
         '-s {bams[i]}',
         '-b {barcodes[i]}',
-        '-O {outdir}/{sample[i]}/pileup',
+        '-O {outdir}/pileup/{sample[i]}',
         '-R {snpvcf}', 
         '-p {ncores}',
         '--minMAF 0',
@@ -59,22 +68,23 @@ script = glue('{outdir}/run_pileup.sh')
 
 list(cmds) %>% fwrite(script, sep = '\n')
 
-system(glue('sh {script} &> {outdir}/pileup.log'), wait = T)
+system(glue('chmod +x {script}'))
+system2(script, stdout = glue("{outdir}/pileup.log"))
 
 ## VCF creation
 cat('Creating VCFs')
-vcfs = lapply(samples, function(sample){read.vcfR(glue('{outdir}/{sample}/pileup/cellSNP.base.vcf'), verbose = F)})
+vcfs = lapply(samples, function(sample){read.vcfR(glue('{outdir}/pileup/{sample}/cellSNP.base.vcf'), verbose = F)})
 
-genotype(label, samples, vcfs, outdir)
+genotype(label, samples, vcfs, glue('{outdir}/phasing'))
 
 ## phasing
 eagle_cmd = function(chr, sample) {
     paste('eagle', 
-        '--numThreads {ncores}', 
-        glue('--vcfTarget {outdir}/{label}_chr{chr}.vcf.gz'), 
+        glue('--numThreads {ncores}'), 
+        glue('--vcfTarget {outdir}/phasing/{label}_chr{chr}.vcf.gz'), 
         glue('--vcfRef {paneldir}/ALL.chr{chr}.shapeit2_integrated_v1a.GRCh38.20181129.phased.bcf'), 
         glue('--geneticMapFile={gmap}'), 
-        glue('--outPrefix {outdir}/{label}_chr{chr}.phased'),
+        glue('--outPrefix {outdir}/phasing/{label}_chr{chr}.phased'),
     sep = ' ')
 }
 
@@ -88,7 +98,8 @@ script = glue('{outdir}/run_phasing.sh')
 
 list(cmds) %>% fwrite(script, sep = '\n')
 
-system(glue('sh {script} &> {outdir}/phasing.log'), wait = T)
+system(glue('chmod +x {script}'))
+system2(script, stdout = glue("{outdir}/phasing.log"))
 
 ## Generate allele count dataframe
 cat('Generating allele count dataframes')
@@ -97,21 +108,22 @@ for (sample in samples) {
     
     # read in phased VCF
     vcf_phased = lapply(1:22, function(chr) {
-        fread(glue('{outdir}/{label}_chr{chr}.phased.vcf.gz')) %>%
+        fread(glue('{outdir}/phasing/{label}_chr{chr}.phased.vcf.gz')) %>%
             rename(CHROM = `#CHROM`) %>%
             mutate(CHROM = str_remove(CHROM, 'chr'))   
         }) %>% Reduce(rbind, .) %>%
         mutate(CHROM = factor(CHROM, unique(CHROM)))
 
+    pu_dir = glue('{outdir}/pileup/{sample}')
+
     # pileup VCF
-    vcf_pu = fread(glue('{outdir}/{sample}/pileup/cellSNP.base.vcf')) %>% rename(CHROM = `#CHROM`)
+    vcf_pu = fread(glue('{pu_dir}/cellSNP.base.vcf')) %>% rename(CHROM = `#CHROM`)
 
     # count matrices
-    AD = readMM(glue('{outdir}/{sample}/pileup/cellSNP.tag.AD.mtx'))
-    DP = readMM(glue('{outdir}/{sample}/pileup/cellSNP.tag.DP.mtx'))
+    AD = readMM(glue('{pu_dir}/cellSNP.tag.AD.mtx'))
+    DP = readMM(glue('{pu_dir}/cellSNP.tag.DP.mtx'))
 
-    # cell annotations
-    cell_barcodes = fread(glue('/{outdir}/{sample}/pileup/cellSNP.samples.tsv'), header = F) %>% pull(V1)
+    cell_barcodes = fread(glue('{pu_dir}/cellSNP.samples.tsv'), header = F) %>% pull(V1)
     cell_barcodes = paste0(sample, '_', cell_barcodes)
 
     df = preprocess_allele(
@@ -124,6 +136,6 @@ for (sample in samples) {
         gtf_transcript = gtf_transcript
     )
     
-    fwrite(df, glue('{outdir}/{sample}/allele_counts.tsv'), sep = '\t')
+    fwrite(df, glue('{outdir}/{sample}_allele_counts.tsv'), sep = '\t')
     
 }

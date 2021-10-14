@@ -392,18 +392,18 @@ preprocess_allele = function(
         mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_'))
 
     # pileup count matrices
-    DP = as.data.frame(summary(DP)) %>%
+    DP = as.data.frame(Matrix::summary(DP)) %>%
         mutate(
-            cell = cell_barcodes[j],
+            cell = barcodes[j],
             snp_id = vcf_pu$snp_id[i]
         ) %>%
         select(-i, -j) %>%
         rename(DP = x) %>%
         select(cell, snp_id, DP)
 
-    AD = as.data.frame(summary(AD)) %>%
+    AD = as.data.frame(Matrix::summary(AD)) %>%
         mutate(
-            cell = cell_barcodes[j],
+            cell = barcodes[j],
             snp_id = vcf_pu$snp_id[i]
         ) %>%
         select(-i, -j) %>%

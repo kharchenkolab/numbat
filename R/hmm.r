@@ -1,5 +1,4 @@
 require(extraDistr)
-require(poilog)
 
 cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
         "del_up" = "royalblue", "del_down" = "darkblue", 

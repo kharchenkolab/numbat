@@ -58,7 +58,7 @@ get_snps = function(vcf) {
 }
 
 ## per chrom function
-make_vcf_chr = function(chr, snps, vcf_original, vcf_template, label, outdir = '~/phasing', het_only = TRUE, chr_prefix = TRUE) {
+make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE, chr_prefix = TRUE) {
     
     chr_snps = snps %>%
         filter(CHROM == chr) %>%
@@ -90,11 +90,11 @@ make_vcf_chr = function(chr, snps, vcf_original, vcf_template, label, outdir = '
     # sometimes the vcf from cell-snp-lite has duplicated records
     vcf_chr = vcf_chr[vcf_chr_fix$snp_id %in% chr_snps$snp_id & (!duplicated(vcf_chr_fix$snp_id)), ]
 
-    vcf_chr@meta = vcf_template@meta
+    vcf_chr@meta = vcf_meta
 
     # make sure they are sorted the same way
     vcf_chr = vcf_chr[order(as.integer(vcf_chr@fix[,2])),]
-    chr_snps = chr_snps %>% arrange(POS)
+    chr_snps = chr_snps %>% arrange(as.integer(POS))
 
     if (any(chr_snps$POS != as.integer(vcf_chr@fix[,2]))) {
         stop('Not sorted')
