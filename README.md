@@ -79,29 +79,13 @@ for (sample in samples) {
 list(cmds) %>% fwrite('./run_phasing.sh', sep = '\n')
 ```
 
-4. Run Numbat
+## Running Numbat
+1. Generate reference expression profile(s) using a known reference dataset:
 ```
-source('~/Numbat/main.r')
+lambdas_ref = make_psbulk(count_mat, cell_annot)
+```
 
-# gtf
-gtf = fread('~/ref/hg38.refGene.gtf')
-cols = c('CHROM', 'source', 'biotype', 'start', 'end', 'a', 'strand', 'b', 'info')
-colnames(gtf) = cols
-
-gtf = gtf %>% filter(CHROM %in% paste0('chr', 1:22))
-
-# transcript GTF
-gtf_transcript = gtf %>% filter(biotype == 'transcript') %>% distinct(start, end, `.keep_all` = TRUE) %>%
-    mutate(gene = str_extract(info, '(?<=gene_name \\").*(?=\\";)')) %>%
-    mutate(CHROM = as.integer(str_remove(CHROM, 'chr'))) %>%
-    select(gene, start, end, CHROM) %>%
-    mutate(region = paste0('chr', CHROM, ':', start, '-', end)) %>%
-    mutate(gene_length = end-start) %>%
-    arrange(CHROM, gene, -gene_length) %>%
-    distinct(gene, .keep_all = TRUE) %>%
-    rename(gene_start = start, gene_end = end) %>%
-    arrange(CHROM, gene_start)
- 
+```
 # read in phased VCF
 vcf_phased = lapply(1:22, function(chr) {
  fread(glue('/home/tenggao/phasing/{sample}_chr{chr}_phased.vcf.gz')) %>%
