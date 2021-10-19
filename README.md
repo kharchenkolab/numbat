@@ -39,93 +39,35 @@ mv hgdownload.soe.ucsc.edu/gbdb/hg38/1000Genomes/* ./ref
 ```
 
 # Usage
-1. Run SNP pileup
+1. Run the preprocessing script: collect allele data and phase SNPs
 ```
-cellsnp-lite \
-      -s {bam}.bam
-      -b {barcodes}.tsv.gz \
-      -O {sample} \
-      -R genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf \ 
-      -p {ncores} \
-      --minMAF 0 \
-      --minCOUNT 2 
-```
-
-2. Create VCF
-```
-Rscript create_vcf.r --sample sample1,sample2 --label patient 
-```
-
-3. For phasing, there are two options:
-      - Using the TOPMED reference panel through the [imputation server](https://imputation.biodatacatalyst.nhlbi.nih.gov/)
-      - Locally the 1000G reference panel
-```
-eagle_cmd = function(chr, sample) {
-    paste('eagle', 
-        '--numThreads 20', 
-        glue('--vcfTarget /home/tenggao/phasing/{sample}_chr{chr}.vcf.gz'), 
-        glue('--vcfRef /home/tenggao/ref/ALL.chr{chr}.shapeit2_integrated_v1a.GRCh38.20181129.phased.bcf'), 
-        '--geneticMapFile=/home/tenggao/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz', 
-        glue('--outPrefix /home/tenggao/phasing/{sample}_chr{chr}_phased'),
-    sep = ' ')
-}
-
-cmds = c()
-
-for (sample in samples) {
-    cmds = c(cmds, lapply(1:22, function(chr){eagle_cmd(chr, sample)}))
-}
-
-list(cmds) %>% fwrite('./run_phasing.sh', sep = '\n')
+Rscript pileup_and_phase.r \
+      --label T200 \
+      --sample T200 \
+      --bams /home/tenggao/external/NB_Dong/SRR12148217/SRR12148217_transcriptome/outs/possorted_genome_bam.bam \
+      --barcodes /home/tenggao/external/NB_Dong/SRR12148217/SRR12148217_transcriptome/outs/filtered_feature_bc_matrix/barcodes.tsv.gz \
+      --gmap /home/tenggao/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz \
+      --snpvcf /home/tenggao/ref/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf \
+      --paneldir /home/tenggao/ref/1000G \
+      --outdir /home/tenggao/external/NB_Dong/processed/T200 \
+      --ncores 25
 ```
 
 ## Running Numbat
-1. Generate reference expression profile(s) using a known reference dataset:
 ```
-lambdas_ref = make_psbulk(count_mat, cell_annot)
-```
+library(numbat)
 
-```
-# read in phased VCF
-vcf_phased = lapply(1:22, function(chr) {
- fread(glue('/home/tenggao/phasing/{sample}_chr{chr}_phased.vcf.gz')) %>%
-    rename(CHROM = `#CHROM`) %>%
-    mutate(CHROM = str_remove(CHROM, 'chr'))   
-}) %>% Reduce(rbind, .) %>%
-mutate(CHROM = factor(CHROM, unique(CHROM)))
+# Generate reference expression profile(s) using a known reference dataset
+lambdas_ref = make_psbulk(count_mat_ref, cell_annot)
 
-# pileup VCF
-vcf_pu = fread(glue('/home/tenggao/pileup/{sample}/cellSNP.base.vcf')) %>% rename(CHROM = `#CHROM`)
-
-# count matrices
-AD = readMM(glue('/home/tenggao/pileup/{sample}/cellSNP.tag.AD.mtx'))
-DP = readMM(glue('/home/tenggao/pileup/{sample}/cellSNP.tag.DP.mtx'))
-
-count_mat = as.matrix(t(con$samples[[sample]]$misc$rawCounts))
-
-# cell annotations
-cell_barcodes = fread(glue('/home/tenggao/pileup/{sample}/cellSNP.samples.tsv'), header = F) %>% pull(V1)
-
-# prepare allele count dataframe
-df = preprocess_data(
-    sample = sample,
-    vcf_pu = vcf_pu,
-    vcf_phased = vcf_phased,
-    AD = AD,
-    DP = DP,
-    barcodes = cell_barcodes,
-    gtf_transcript = gtf_transcript
-)$df_obs
-
- # run
- out = numbat_subclone(
-    count_mat_obs,
-    lambdas_ref,
-    df,
-    gtf_transcript,
-    t = 1e-8,
-    sample_size = 500,
-    out_dir = glue('~/results/{sample}')
+# run
+out = numbat_subclone(
+      count_mat_obs,
+      lambdas_ref,
+      df,
+      gtf_transcript,
+      t = 1e-5,
+      out_dir = glue('~/results/{sample}')
 )
 ```
 
