@@ -9,6 +9,7 @@ Install the Numbat R package via:
 devtools::install_github("kharchenkolab/Numbat")
 ```
 ## Other prerequisites
+Please make sure these binary executables can be found in $PATH.
 1. [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
 2. [ScisTree](https://github.com/kharchenkolab/ScisTree)
 ```
@@ -17,8 +18,6 @@ cd ScisTree/ScisTree-ver1.2.0.6-src
 make
 ./scistree
 ```
-Please make sure this binary executable can be found in $PATH.
-
 3. 1000 Genome SNP reference file 
 ```
 wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
