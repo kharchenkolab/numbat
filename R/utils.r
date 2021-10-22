@@ -103,17 +103,20 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
     return(best_refs)
 }
 
-
-
-fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript) {
+fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-6, verbose = FALSE) {
 
     if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
         return(list('w' = 1, 'lambdas_bar' = lambdas_ref))
     }
 
+    # take the union of expressed genes across cell type
     genes_common = gtf_transcript$gene %>% 
         intersect(names(Y_obs)) %>%
-        intersect(rownames(lambdas_ref)[rowSums(lambdas_ref == 0) == 0])
+        intersect(rownames(lambdas_ref)[rowMeans(lambdas_ref) > min_lambda])
+
+    if (verbose) {
+        display(length(genes_common))
+    }
 
     Y_obs = Y_obs[genes_common]
     lambdas_ref = lambdas_ref[genes_common,,drop=F]
@@ -140,46 +143,6 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript) {
     lambdas_bar = lambdas_ref %*% w %>% {set_names(as.vector(.), rownames(.))}
 
     return(list('alpha' = alpha, 'beta' = beta, 'w' = w, 'lambdas_bar' = lambdas_bar))
-}
-
-fit_multi_ref_chrom = function(Y_obs, lambda_mat_ref, d, gtf_transcript) {
-
-    genes_common = gtf_transcript$gene %>% 
-        intersect(names(Y_obs)) %>%
-        intersect(rownames(lambda_mat_ref)[rowSums(lambda_mat_ref == 0) == 0])
-
-    Y_obs = Y_obs[genes_common]
-    lambda_mat_ref = lambda_mat_ref[genes_common,,drop=F]
-
-    D = data.frame(gene = genes_common, Y_obs, check.names = F) %>%
-                left_join(gtf_transcript, by = 'gene')
-
-    n_ref = ncol(lambda_mat_ref)
-
-    res = D %>% 
-        group_by(CHROM) %>%
-        do({
-            fit = optim(
-            fn = function(params) {
-                alpha = params[1]
-                w = params[2:length(params)]
-                -sum(dgpois(Y_obs[.$gene], shape = alpha, rate = 1/(d * (lambda_mat_ref[.$gene,] %*% w)), log = TRUE))
-            },
-            method = 'L-BFGS-B',
-            par = c(1, rep(1/n_ref, n_ref)),
-            lower = c(0.01, rep(1e-6, n_ref))
-            )
-
-            alpha = fit$par[1]
-            w = fit$par[2:length(fit$par)]
-            beta = 1/sum(w)
-            w = w * beta
-            w = set_names(w, colnames(lambda_mat_ref))
-
-            tibble(alpha = alpha, beta = beta, ref = names(w), w)
-        })
-
-    return(res)
 }
 
 # for gamma poisson model
@@ -479,18 +442,12 @@ preprocess_allele = function(
     return(df)
 }
 
-get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min_depth = 0, verbose = FALSE) {
+get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min_depth = 0, lambda = 0.52, verbose = FALSE) {
 
     if (nrow(df) == 0) {
         stop('empty allele dataframe - check cell names')
     }
 
-    # write this inside the procee_exp_fc function
-    # ref_star = choose_ref(count_mat, lambdas_ref, gtf_transcript)
-    # lambdas_star = lambdas_ref[,ref_star]
-    # if (verbose) {
-    #     display(glue('Using {ref_star} as reference..'))
-    # }
     Y_obs = rowSums(count_mat)
 
     fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
@@ -509,7 +466,7 @@ get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min
     filter((logFC < 5 & logFC > -5) | Y_obs == 0) %>%
     mutate(w = paste0(signif(fit$w, 2), collapse = ','))
 
-    allele_bulk = get_allele_bulk(df, genetic_map, min_depth)
+    allele_bulk = get_allele_bulk(df, genetic_map, lambda = lambda, min_depth = min_depth)
             
     bulk = combine_bulk(
         allele_bulk = allele_bulk,
@@ -540,7 +497,7 @@ switch_prob_bp = function(x, lambda = 1.0728, min_p = 0) {
     pmax(p, min_p)
 }
 
-switch_prob_cm = function(x, lambda = 0.52, min_p = 1e-10) {
+switch_prob_cm = function(x, lambda = 2, min_p = 1e-10) {
     p = 0.5*(1 - exp(-lambda * x))
     pmax(p, min_p)
 }
@@ -606,7 +563,7 @@ annot_cm = function(bulk, genetic_map) {
     
 }
 
-get_allele_bulk = function(df, genetic_map, min_depth) {
+get_allele_bulk = function(df, genetic_map, lambda = 0.52, min_depth) {
     pseudobulk = df %>%
         filter(GT %in% c('1|0', '0|1')) %>%
         group_by(snp_id, CHROM, POS, REF, ALT, GT, gene) %>%
@@ -629,7 +586,7 @@ get_allele_bulk = function(df, genetic_map, min_depth) {
         filter(n() > 1) %>%
         mutate(
             inter_snp_cm = c(NA, cM[2:length(cM)] - cM[1:(length(cM)-1)]),
-            p_s = switch_prob_cm(inter_snp_cm)
+            p_s = switch_prob_cm(inter_snp_cm, lambda)
         ) %>%
         # mutate(
         #     inter_snp_dist = c(NA, POS[2:length(POS)] - POS[1:(length(POS)-1)]),
@@ -683,7 +640,13 @@ combine_bulk = function(allele_bulk, gexp_bulk) {
     
 }
 
-make_psbulk = function(count_mat, cell_annot, verbose = F) {
+
+#' Utility function to make reference gene expression profiles
+#' @param count_mat raw count matrices where rownames are genes and column names are cells
+#' @param cell_annot dataframe with columns "cell" and "cell_type"
+#' @return a matrix of reference gene expression profiles
+#' @export
+make_psbulk = function(count_mat, cell_annot, verbose = T) {
 
     cell_annot = cell_annot %>% mutate(cell_type = factor(cell_type))
 
@@ -727,22 +690,28 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
     res[['bulk_subtrees']] = fread(glue('{out_dir}/bulk_subtrees_{i}.tsv'))
     res[['bulk_clones']] = fread(glue('{out_dir}/bulk_clones_{i}.tsv'))
 
-    G_m = res$mut_tree_file %>% 
-        read_mut_tree(res$tree_post$mut_nodes) %>%
-        simplify_history(res$tree_post$l_matrix, max_cost = max_cost, verbose = verbose) %>%
-        label_genotype()
+    # G_m = res$mut_tree_file %>% 
+    #     read_mut_tree(res$tree_post$mut_nodes) %>%
+    #     simplify_history(res$tree_post$l_matrix, max_cost = max_cost, verbose = verbose) %>%
+    #     label_genotype()
 
-    mut_nodes = G_m %>% as_data_frame('vertices') %>% select(name = node, site = label)
+    # mut_nodes = G_m %>% as_data_frame('nodes') %>% select(name = node, site = label)
 
-    res$G_m = G_m
+    # res$G_m = G_m
 
-    # update tree
+    f = glue('{out_dir}/mut_graph_{i}.rds')
+    if (file.exists(f)) {
+        res$G_m = readRDS(f)
+    }
+
+    # # update tree
     f = glue('{out_dir}/tree_final_{i}.rds')
     if (file.exists(f)) {
         res$gtree = readRDS(f)
-    } else {
-        res$gtree = mut_to_tree(res$tree_post$gtree, mut_nodes)
     }
+    # } else {
+        # res$gtree = mut_to_tree(res$tree_post$gtree, mut_nodes)
+    # }
 
     f = glue('{out_dir}/clone_post_{i}.tsv')
     if (file.exists(f)) {
@@ -762,22 +731,22 @@ analyze_bulk_lnpois = function(
     Obs, t = 1e-5, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
     exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE,
     phasing = TRUE, roll_phi = TRUE, verbose = TRUE, debug = FALSE, 
-    diploid_chroms = NULL, classify_allele = FALSE
+    find_diploid = TRUE, classify_allele = FALSE
 ) {
     
     if (!is.numeric(t)) {
         stop('transition probability is not numeric')
     }
 
-    if (is.null(diploid_chroms)) {
+    if (find_diploid) {
 
-        x = find_diploid(Obs, t = 1e-5, gamma = gamma, verbose = verbose)
+        out = find_common_diploid(Obs)
         
-        Obs = x$bulk
-        bal_cnv = x$bamp
+        Obs = out$bulks
+        bal_cnv = out$bamp
 
-    } else {
-        Obs = Obs %>% mutate(diploid = CHROM %in% diploid_chroms)
+    } else if (!'diploid' %in% colnames(Obs)) {
+        stop('Must define diploid region if not given')
     }
 
     fit = Obs %>%
@@ -972,6 +941,8 @@ annot_segs = function(Obs) {
             ungroup() %>%
             group_by(seg) %>%
             mutate(
+                seg_start = min(POS),
+                seg_end = max(POS),
                 seg_start_index = min(snp_index),
                 seg_end_index = max(snp_index),
                 n_genes = length(na.omit(unique(gene))),
@@ -1016,6 +987,8 @@ smooth_segs = function(bulk, min_genes = 10) {
 }
 
 annot_consensus = function(bulk, segs_consensus) {
+
+    bulk = bulk %>% ungroup()
     
     marker_seg = GenomicRanges::findOverlaps(
             bulk %>% {GenomicRanges::GRanges(
@@ -1052,78 +1025,51 @@ annot_consensus = function(bulk, segs_consensus) {
     return(bulk)
 }
 
+find_diploid = function(bulk, gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, bal_consensus = NULL, debug = F, verbose = T) {
 
-    # phase_post = bulk_all %>%
-    #     filter(!is.na(pAD)) %>%
-    #     mutate(haplo = case_when(
-    #         str_detect(state, 'up') ~ 'major',
-    #         str_detect(state, 'down') ~ 'minor',
-    #         T ~ ifelse(pBAF > 0.5, 'major', 'minor')
-    #     )) %>%
-    #     select(snp_id, sample, seg, haplo) %>%
-    #     inner_join(
-    #         segs_consensus,
-    #         by = c('sample', 'seg')
-    #     ) %>%
-    #     select(snp_id, haplo)
-
-    # bulk = bulk %>% left_join(phase_post, by = 'snp_id') %>%
-    #     mutate(
-    #         state = ifelse(
-    #             is.na(haplo),
-    #             'neu',
-    #             paste0(str_remove(cnv_state, '_1|_2'), '_', c('major' = 'up', 'minor' = 'down')[haplo])
-    #         )
-    #     ) %>%
-    #     mutate(state_post = state)
+    if (is.null(bal_consensus)) {
+        # define balanced regions
+        bulk = bulk %>% group_by(CHROM) %>%
+            mutate(state = 
+                run_hmm_inhom2(
+                    pAD = pAD,
+                    DP = DP, 
+                    p_s = p_s,
+                    t = t,
+                    theta_min = theta_min,
+                    gamma = unique(gamma))
+            ) %>% ungroup() %>%
+            mutate(cnv_state = str_remove(state, '_down|_up')) %>%
+            annot_segs()
+    } else {
+        # use the consensus balanced regions
+        bulk = bulk %>% annot_consensus(bal_consensus)
+    }
     
-    # return(bulk)
-# }
-
-find_diploid = function(bulk, gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, debug = F, verbose = T) {
-    
-    # if (verbose) {
-    #     display(glue('t={t}, gamma={gamma}, theta_min={theta_min}'))
-    # }
-
-    # define diploid regions
-    bulk = bulk %>% group_by(CHROM) %>%
-        mutate(state = 
-            run_hmm_inhom2(
-                pAD = pAD,
-                DP = DP, 
-                p_s = p_s,
-                t = t,
-                theta_min = theta_min,
-                gamma = unique(gamma))
-        ) %>% ungroup() %>%
-        mutate(cnv_state = str_remove(state, '_down|_up')) %>%
-        annot_segs()
-    
-    bulk_balanced = bulk %>% 
-        filter(state == 'neu') %>% 
-        filter(!is.na(lnFC)) %>%
-        mutate(FC = exp(lnFC)) 
-
-    segs = bulk_balanced %>% 
+    segs = bulk %>% 
+        filter(cnv_state == 'neu') %>% 
         group_by(seg) %>%
         summarise(
             n_genes = sum(!is.na(Y_obs)),
             n_snps = sum(!is.na(pAD)),
-            approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = 0.1)
+            DP_total = sum(DP, na.rm = TRUE),
+            # approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = 0.1)
         ) %>%
         ungroup() %>%
-        filter(n_genes > 50 & n_snps > 50 & theta_mle < 0.15)
+        filter(n_genes > 50 & n_snps > 50)
+
+    bulk_balanced = bulk %>% 
+        filter(!is.na(lnFC)) %>%
+        mutate(FC = exp(lnFC)) 
 
     if (nrow(segs) == 0) {
         stop('No balanced segments')
     } else if (nrow(segs) == 1) {
         diploid_segs = segs$seg
         bamp = FALSE
-    } else {
-        # pairwise K-S test
         tests = data.frame()
-        
+    } else {
+    
         options(warn = -1)
         tests = t(combn(as.character(segs$seg), 2)) %>% 
             as.data.frame() %>%
@@ -1175,6 +1121,139 @@ find_diploid = function(bulk, gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1
     
     return(list('bulk' = bulk, 'bamp' = bamp))
     
+}
+
+# multi-sample generalization
+find_common_diploid = function(bulks, gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, bal_consensus = NULL, ncores = 5, debug = F, verbose = T) {
+
+    if (!'sample' %in% colnames(bulks)) {
+        bulks$sample = 1
+    }
+    
+    # define balanced regions in each sample
+    bulks = mclapply(
+        bulks %>% split(.$sample),
+        mc.cores = ncores,
+        function(bulk) {
+            
+            bulk %>% 
+                group_by(CHROM) %>%
+                mutate(state = 
+                    run_hmm_inhom2(
+                        pAD = pAD,
+                        DP = DP, 
+                        p_s = p_s,
+                        t = t,
+                        theta_min = theta_min,
+                        gamma = unique(gamma))
+                ) %>% ungroup() %>%
+                mutate(cnv_state = str_remove(state, '_down|_up')) %>%
+                annot_segs()
+
+        }) %>%
+        bind_rows()
+
+    # unionize imbalanced segs
+    segs_imbal = bulks %>% 
+        filter(cnv_state != 'neu') %>%
+        distinct(sample, CHROM, seg, seg_start, seg_end) %>%
+        {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )} %>%
+        GenomicRanges::reduce() %>%
+        as.data.frame() %>%
+        select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
+        mutate(seg_length = seg_end - seg_start) %>%
+        group_by(CHROM) %>%
+        mutate(
+            seg = paste0(CHROM, '_', 1:max(n(),1)),
+            cnv_state = 'theta_1'
+        ) %>%
+        ungroup()
+
+    segs_consensus = fill_neu_segs(segs_imbal, get_segs_neu(bulks)) %>% mutate(seg = seg_cons)
+    bulks = bulks %>% annot_consensus(segs_consensus)
+
+    bulks_bal = bulks %>% filter(cnv_state == 'neu') %>% filter(!is.na(lnFC))
+    segs_bal = bulks_bal %>% count(seg) %>% filter(n > 50) %>% pull(seg) %>% as.character
+
+    test_dat = bulks_bal %>%
+        select(gene, seg, lnFC, sample) %>%
+        reshape2::dcast(seg+gene ~ sample, value.var = 'lnFC') %>%
+        na.omit() %>%
+        mutate(seg = as.character(seg)) %>%
+        select(-gene)
+
+    if (length(segs_bal) == 0) {
+        msg = 'No balanced segments'
+        log_error(msg)
+        stop(msg)
+    } else if (length(segs_bal) == 1) {
+        diploid_segs = segs_bal
+        bamp = FALSE
+        tests = data.frame()
+        FC = data.frame()
+        G = NULL
+    } else {
+        
+        options(warn = -1)
+        tests = t(combn(segs_bal, 2)) %>% 
+            as.data.frame() %>%
+            set_names(c('i', 'j')) %>%
+            rowwise() %>%
+            mutate(
+                p = Hotelling::hotelling.test(
+                    .~seg,
+                    data = test_dat,
+                    pair = c(i, j)
+                )$pval
+            ) %>%
+            ungroup() %>%
+            mutate(p = p.adjust(p))
+        options(warn = 0)
+
+        # build graph
+        V = segs_bal
+
+        E = tests %>% filter(p > 0.05) 
+
+        G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
+        
+        components = igraph::components(G)
+
+        FC = bulks_bal %>%
+            mutate(component = components$membership[as.character(seg)]) %>%
+            filter(!is.na(component)) %>%
+            group_by(component, sample) %>%
+            summarise(
+                lnFC = mean(lnFC, na.rm = T),
+                .groups = 'drop'
+            ) %>%
+            reshape2::dcast(sample ~ component, value.var = 'lnFC') %>%
+            tibble::column_to_rownames('sample')
+
+        diploid_component = names(which.min(colMeans(FC)))
+
+        fc_max = sapply(colnames(FC), function(c) {FC[,c] - FC[,diploid_component]}) %>% max %>% exp
+        
+        # seperation needs to be clear (2 vs 4 copy)
+        if (fc_max > fc_min) {
+            log_info('quadruploid state enabled')
+            diploid_segs = components$membership %>% keep(function(x){x == diploid_component}) %>% names
+            bamp = TRUE
+        } else {
+            diploid_segs = segs_bal
+            bamp = FALSE
+        }
+    }
+
+    log_info(glue('diploid regions: {paste0(gtools::mixedsort(diploid_segs), collapse = ",")}'))
+    
+    bulks = bulks %>% mutate(diploid = seg %in% diploid_segs)
+    
+    return(list('bamp' = bamp, 'bulks' = bulks, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'FC' = FC))
 }
 
 # get all internal nodes, for cluster tree
@@ -1687,53 +1766,6 @@ pnorm.range = function(lower, upper, mu, sd) {
     pnorm(upper, mu, sd) - pnorm(lower, mu, sd)
 }
 
-exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F, k = 5, ncores = 10, verbose = T) {
-
-    if (multi_ref) {
-        gexp = process_exp2(
-            count_mat_obs,
-            lambdas_ref,
-            gtf_transcript,
-            verbose = verbose
-        )
-    } else {
-        Y_obs = rowSums(count_mat_obs)
-
-        fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
-
-        if (verbose) {
-            log_info('Fitted reference proportions: {signif(fit$w, 2)}')
-        }
-
-        gexp = process_exp(
-            count_mat_obs,
-            fit$lambdas_bar,
-            gtf_transcript,
-            verbose = verbose
-        )
-    }
-    
-    gexp.roll.wide = gexp$gexp.norm.long %>%
-        reshape2::dcast(cell ~ gene, value.var = 'exp_rollmean') %>%
-        tibble::column_to_rownames('cell') %>%
-        as.matrix
-
-    dist_mat = parallelDist::parDist(gexp.roll.wide, threads = ncores)
-    # dist_mat = 1-cor(t(gexp.roll.wide))
-
-    hc = hclust(dist_mat, method = "ward.D2")
-
-    cell_annot = data.frame(
-        cell = colnames(count_mat_obs)
-        ) %>%
-        mutate(cluster = cutree(hc, k = k)[cell]) %>%
-        mutate(group = 'obs')
-
-    nodes = get_nodes_celltree(hc, cutree(hc, k = k))
-
-    return(list('cell_annot' = cell_annot, 'nodes' = nodes, 'gexp' = gexp, 'hc' = hc, 'fit' = fit))
-}
-
 # for a cell tree
 get_internal_nodes_sc = function(den, node, labels) {
 
@@ -2056,14 +2088,14 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
     if (theta_roll) {
         p = p + geom_line(
             inherit.aes = FALSE,
-            data = Obs %>% filter(cnv_state_post != 'neu') %>% mutate(variable = 'pBAF'),
+            data = D %>% mutate(variable = 'pBAF'),
             aes(x = snp_index, y = 0.5 - theta_hat_roll, color = paste0(cnv_state_post, '_down')),
             # color = 'black',
             size = 0.35
         ) +
         geom_line(
             inherit.aes = FALSE,
-            data = Obs %>% filter(cnv_state_post != 'neu') %>% mutate(variable = 'pBAF'),
+            data = D %>% mutate(variable = 'pBAF'),
             aes(x = snp_index, y = 0.5 + theta_hat_roll, color = paste0(cnv_state_post, '_up')),
             # color = 'gray',
             size = 0.35
@@ -2126,7 +2158,7 @@ plot_exp = function(gexp_bulk, exp_limit = 3) {
     ylim(-exp_limit, exp_limit)
 }
 
-plot_cnv_post = function(segs_consensus) {
+plot_segs_post = function(segs_consensus) {
     segs_consensus %>% 
         filter(cnv_state != 'neu') %>%
         mutate(seg_label = paste0(seg_cons, '_', cnv_state_post)) %>%
@@ -2163,15 +2195,29 @@ plot_exp_post = function(exp_post) {
     scale_fill_manual(values = cnv_colors)
 }
 
-plot_clones = function(joint_post, gtree, n_sample = 1e4, pal_clones = RColorBrewer::brewer.pal(n = 8, 'Set1')) {
+plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, pal_clones = RColorBrewer::brewer.pal(n = 8, 'Set1')) {
 
-    joint_post = joint_post %>% 
-        mutate(logBF = Z_cnv - Z_n) %>%
+    p_matrix = p_matrix %>% 
         group_by(group) %>%
         filter(cell %in% sample(unique(cell), min(n_sample, length(unique(cell))))) %>%
         ungroup() %>%
         filter(cnv_state != 'neu')
+
+    # ordering cells
+    if (annot) {
+        p_matrix = p_matrix %>% 
+            arrange(group, annot) %>%
+            mutate(cell = factor(cell, unique(cell)))
+    } else {
+        set.seed(0)
+        p_matrix = p_matrix %>% 
+            group_by(group) %>%
+            sample_frac(1) %>%
+            ungroup() %>%
+            mutate(cell = factor(cell, unique(cell)))
+    }
     
+    # ordering cnvs
     cnv_order = gtree %>% 
             activate(nodes) %>%
             mutate(rank = dfs_rank(root = node_is_root())) %>%
@@ -2182,19 +2228,14 @@ plot_clones = function(joint_post, gtree, n_sample = 1e4, pal_clones = RColorBre
             map(function(x){rev(unlist(str_split(x, ',')))}) %>%
             unlist
 
-    set.seed(0)
-    D = joint_post %>% 
-        group_by(group) %>%
-        sample_frac(1) %>%
-        ungroup() %>%
-        mutate(cell = factor(cell, unique(cell))) %>%
+    p_matrix = p_matrix %>%
         mutate(seg = factor(seg, cnv_order)) %>%
         arrange(seg) %>%
         mutate(seg_label = factor(seg_label, unique(seg_label)))  %>%
         mutate(group = factor(group))
     
     p = ggplot(
-            D,
+            p_matrix,
             aes(x = cell, y = seg_label, fill = logBF)
         ) +
         geom_tile(width=0.1, height=0.9) +
@@ -2211,15 +2252,18 @@ plot_clones = function(joint_post, gtree, n_sample = 1e4, pal_clones = RColorBre
             strip.text = element_blank(),
             axis.text.x = element_blank(),
             axis.ticks.x = element_blank(),
+            axis.title.x = element_blank(),
+            plot.margin = margin(3,0,0,0, unit = 'pt')
             # strip.text = element_text(angle = 0, size = 8, vjust = 0.5)
         ) +
         facet_grid(.~group, scale = 'free', space = 'free') +
         scale_fill_gradient2(low = pal[2], high = pal[1], midpoint = 0, limits = c(-5, 5), oob = scales::oob_squish) +
-        xlab('') 
+        xlab('') +
+        guides(fill = guide_colorbar(barwidth = unit(2, 'mm'), barheight = unit(10, 'mm')))
 
-    p_bar = ggplot(
-            D %>% distinct(cell, group),
-            aes(x = cell, y = 0, fill = group)
+    p_clones = ggplot(
+            p_matrix %>% distinct(cell, group),
+            aes(x = cell, y = 'clone', fill = group)
         ) +
         geom_tile(width=1, height=0.9) +
         theme_void() +
@@ -2230,17 +2274,44 @@ plot_clones = function(joint_post, gtree, n_sample = 1e4, pal_clones = RColorBre
             panel.border = element_rect(size = 0, color = 'black', fill = NA),
             panel.background = element_rect(fill = 'white'),
             strip.background = element_blank(),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank(),
-            strip.text = element_text(angle = 0, size = 10, vjust = 0.5)
+            strip.text = element_text(angle = 0, size = 10, vjust = 0.5),
+            axis.text.y = element_text(size = 8)
         ) +
         facet_grid(.~group, scale = 'free', space = 'free') +
         xlab('') +
         ylab('') + 
         scale_fill_manual(values = c('gray', pal_clones)) +
         guides(fill = 'none')
-    
-    return((p_bar / p) + plot_layout(height = c(1,10)))
+
+    if (annot) {
+
+        p_annot = ggplot(
+                p_matrix %>% distinct(cell, group, annot),
+                aes(x = cell, y = 'annot', fill = annot)
+            ) +
+            geom_tile(width=1, height=0.9) +
+            theme_void() +
+            scale_y_discrete(expand = expansion(0)) +
+            scale_x_discrete(expand = expansion(0)) +
+            theme(
+                panel.spacing = unit(0.1, 'mm'),
+                panel.border = element_rect(size = 0, color = 'black', fill = NA),
+                panel.background = element_rect(fill = 'white'),
+                strip.background = element_blank(),
+                strip.text = element_blank(),
+                axis.text.y = element_text(size = 8),
+                plot.margin = margin(3,0,0,0, unit = 'pt')
+            ) +
+            facet_grid(.~group, scale = 'free', space = 'free') +
+            xlab('') +
+            ylab('') +
+            guides(fill = guide_legend(keywidth = unit(2, 'mm'), keyheight = unit(2, 'mm')))
+
+        return((p_clones / p_annot / p) + plot_layout(height = c(1,1,15), guides = 'collect'))
+        
+    } else {
+        return((p_clones / p) + plot_layout(height = c(1,10)))
+    }
     
 }
 
@@ -2272,7 +2343,7 @@ plot_mut_history = function(G_m, pal_clones = RColorBrewer::brewer.pal(n = 8, 'S
     return(p)
 }
 
-plot_clone_panel = function(res, type = 'joint', ratio = 1) {
+plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1) {
 
     n_clones = length(unique(res$clone_post$clone_opt))
     getPalette = colorRampPalette(pal)
@@ -2286,13 +2357,21 @@ plot_clone_panel = function(res, type = 'joint', ratio = 1) {
         p_matrix = res$exp_post
     }
 
+    if (!is.null(cell_annot)) {
+        p_matrix = p_matrix %>% left_join(cell_annot, by = 'cell')
+        annot = TRUE
+    } else {
+        annot = FALSE
+    }
+
     p_clones = p_matrix %>% 
         filter(seg %in% rownames(res$geno)) %>%
         inner_join(res$clone_post, by = 'cell') %>%
         mutate(group = clone_opt) %>%
-        plot_clones(res$gtree, pal_clones = pal_clones)
+        plot_clones(res$gtree, pal_clones = pal_clones, annot = annot)
 
-    p_mut = res$G_m %>% plot_mut_history(pal_clones = pal_clones)
+    p_mut = res$G_m %>% plot_mut_history(pal_clones = pal_clones) + 
+        ggtitle(label)
 
     (p_mut / p_clones) + plot_layout(heights = c(ratio, 1))
 }

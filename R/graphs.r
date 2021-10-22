@@ -333,10 +333,8 @@ simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
 
             moves = moves %>% rbind(move_opt %>% mutate(i = i))
 
-            if (verbose) {
-                log_info(msg)
-                display(msg)
-            }
+            log_info(msg)
+            if (verbose) {display(msg)}
         } else {
             break()
         }

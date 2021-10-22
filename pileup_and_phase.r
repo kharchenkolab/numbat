@@ -1,11 +1,11 @@
-library(logger)
-library(glue)
-library(stringr)
-library(argparse)
-library(data.table)
-library(dplyr)
-library(vcfR)
-library(Matrix)
+library(logger, quietly = T)
+library(glue, quietly = T)
+library(stringr, quietly = T)
+library(argparse, quietly = T)
+library(data.table, quietly = T)
+library(dplyr, quietly = T)
+library(vcfR, quietly = T)
+library(Matrix, quietly = T)
 devtools::load_all('~/Numbat')
 
 parser <- ArgumentParser(description='Run SNP pileup and phasing with 1000G')
@@ -33,7 +33,7 @@ gmap = args$gmap
 snpvcf = args$snpvcf
 paneldir = args$paneldir
 
-dir.create(outdir, showWarnings = FALSE)
+dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
 for (sample in samples) {
     dir.create(glue('{outdir}/pileup'), showWarnings = FALSE)

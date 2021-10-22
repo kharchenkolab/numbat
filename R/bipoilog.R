@@ -110,7 +110,8 @@
         mu=as.double(mu),
         sig2=as.double(sig^2),
         nrN=as.integer(length(x)),
-        val=double(length(x))
+        val=double(length(x)),
+        PACKAGE = "poilog"
      )$val
 
      p[p == 0] = 1e-15
