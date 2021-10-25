@@ -30,9 +30,7 @@ wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_
 ```
 5. 1000 Genome Reference Panel
 ```
-mkdir ref
-wget -r --no-parent -A "*vcf*" http://hgdownload.soe.ucsc.edu/gbdb/hg38/1000Genomes
-mv hgdownload.soe.ucsc.edu/gbdb/hg38/1000Genomes/* ./ref
+wget http://pklab.med.harvard.edu/teng/data/1000G.zip
 ```
 
 # Usage
