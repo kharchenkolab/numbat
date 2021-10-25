@@ -179,6 +179,11 @@ run_hmm_inhom2 = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, 
 
 
 forward_back_allele = function (obj, ...) {
+
+    # case of one-data point
+    if (length(obj$x) == 1) {
+        return(NA)
+    }
     
     x <- obj$x
     p_x <- HiddenMarkov:::makedensity(obj$distn)

@@ -42,7 +42,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
             ncores = ncores
         )
 
-        fwrite(clust$gexp$gexp.norm.long, glue('{out_dir}/gexp.norm.long.tsv'), sep = '\t')
+        fwrite(clust$gexp$gexp.norm.long, glue('{out_dir}/gexp.norm.long.tsv.gz'), sep = '\t')
         saveRDS(clust$hc, glue('{out_dir}/hc.rds'))
         saveRDS(clust$nodes, glue('{out_dir}/hc_nodes.rds'))
 
@@ -62,6 +62,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
             run_group_hmms(
                 t = t,
                 exp_model = exp_model,
+                ncores = ncores,
                 verbose = verbose
             )
 
@@ -69,7 +70,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
         stop('init_method can be raw, bulk, or smooth')
     }
 
-    fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv'), sep = '\t')
+    fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
 
     # resolve CNVs
     segs_consensus = get_segs_consensus(bulk_subtrees, gbuild = gbuild)
@@ -110,7 +111,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
             allele_post,
             segs_consensus)
         
-        fwrite(exp_sc, glue('{out_dir}/exp_sc_{i}.tsv'), sep = '\t')
+        fwrite(exp_sc, glue('{out_dir}/exp_sc_{i}.tsv.gz'), sep = '\t')
         fwrite(exp_post, glue('{out_dir}/exp_post_{i}.tsv'), sep = '\t')
         fwrite(allele_post, glue('{out_dir}/allele_post_{i}.tsv'), sep = '\t')
         fwrite(joint_post, glue('{out_dir}/joint_post_{i}.tsv'), sep = '\t')
@@ -225,7 +226,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
                 verbose = verbose
             )
 
-        fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv'), sep = '\t')
+        fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
         bulk_subtrees = make_group_bulks(
                 groups = subtrees,
@@ -244,7 +245,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
                 verbose = verbose
             )
         
-        fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv'), sep = '\t')
+        fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
 
         ######## Find consensus CNVs ########
 
@@ -379,7 +380,6 @@ run_group_hmms = function(bulks, t = 1e-4, gamma = 20, theta_min = 0.08, exp_mod
 
     if (any(bad)) {
         if (verbose) {log_warn(glue('{sum(bad)} jobs failed'))}
-        print(results[bad])
     }
 
     bulks = results %>% bind_rows() %>%
@@ -757,7 +757,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     if (any(bad)) {
         if (verbose) {log_warn(glue('{sum(bad)} jobs failed'))}
         log_warn(results[bad][1])
-        log_warn(cells[bad])
+        log_warn(cells[bad][1])
     }
     
     exp_post = results[!bad] %>%

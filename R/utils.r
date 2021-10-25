@@ -115,7 +115,7 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
         intersect(rownames(lambdas_ref)[rowMeans(lambdas_ref) > min_lambda])
 
     if (verbose) {
-        display(length(genes_common))
+        log_info(glue('{length(genes_common)} genes common in reference and observation'))
     }
 
     Y_obs = Y_obs[genes_common]
@@ -496,7 +496,7 @@ switch_prob_bp = function(x, lambda = 1.0728, min_p = 0) {
     p = 0.5*(1 - exp(-lambda * x/1e6))
     pmax(p, min_p)
 }
-
+# phase switch probablity as a function of genetic distance
 switch_prob_cm = function(x, lambda = 2, min_p = 1e-10) {
     p = 0.5*(1 - exp(-lambda * x))
     pmax(p, min_p)
@@ -687,8 +687,8 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
     if (file.exists(f)) {
         res[['segs_consensus']] = fread(f)
     }
-    res[['bulk_subtrees']] = fread(glue('{out_dir}/bulk_subtrees_{i}.tsv'))
-    res[['bulk_clones']] = fread(glue('{out_dir}/bulk_clones_{i}.tsv'))
+    res[['bulk_subtrees']] = fread(glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'))
+    res[['bulk_clones']] = fread(glue('{out_dir}/bulk_clones_{i}.tsv.gz'))
 
     # G_m = res$mut_tree_file %>% 
     #     read_mut_tree(res$tree_post$mut_nodes) %>%
@@ -868,6 +868,7 @@ classify_alleles = function(Obs) {
         filter(!cnv_state %in% c('neu', 'bdel', 'bamp')) %>%
         filter(!is.na(AD)) %>%
         group_by(CHROM, seg) %>%
+        filter(n() > 1) %>%
         mutate(
             p_up = forward_back_allele(get_allele_hmm(pAD, DP, p_s, theta = unique(theta_mle), gamma = 20)),
             haplo_post = case_when(
@@ -935,7 +936,7 @@ annot_segs = function(Obs) {
             arrange(CHROM, snp_index) %>%
             mutate(boundary = c(0, cnv_state[2:length(cnv_state)] != cnv_state[1:(length(cnv_state)-1)])) %>%
             group_by(CHROM) %>%
-            mutate(seg = paste0(CHROM, '_', cumsum(boundary))) %>%
+            mutate(seg = paste0(CHROM, '_', (cumsum(boundary)+1))) %>%
             arrange(CHROM) %>%
             mutate(seg = factor(seg, unique(seg))) %>%
             ungroup() %>%
@@ -982,8 +983,10 @@ smooth_segs = function(bulk, min_genes = 10) {
             cnv_state = ifelse(n_genes <= min_genes, NA, cnv_state)
         ) %>%
         ungroup() %>%
+        group_by(CHROM) %>%
         mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = F, na.rm=FALSE)) %>%
-        mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = T, na.rm=FALSE))
+        mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = T, na.rm=FALSE)) %>%
+        ungroup()
 }
 
 annot_consensus = function(bulk, segs_consensus) {
@@ -1124,7 +1127,7 @@ find_diploid = function(bulk, gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1
 }
 
 # multi-sample generalization
-find_common_diploid = function(bulks, gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, bal_consensus = NULL, ncores = 5, debug = F, verbose = T) {
+find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, bal_consensus = NULL, ncores = 5, debug = F, verbose = T) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -1220,28 +1223,57 @@ find_common_diploid = function(bulks, gamma = 20, theta_min = 0.08, t = 1e-5, fc
         E = tests %>% filter(p > 0.05) 
 
         G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
-        
-        components = igraph::components(G)
 
-        FC = bulks_bal %>%
-            mutate(component = components$membership[as.character(seg)]) %>%
-            filter(!is.na(component)) %>%
-            group_by(component, sample) %>%
-            summarise(
-                lnFC = mean(lnFC, na.rm = T),
-                .groups = 'drop'
-            ) %>%
-            reshape2::dcast(sample ~ component, value.var = 'lnFC') %>%
+        if (grouping == 'component') {
+
+            components = igraph::components(G)
+
+            FC = bulks_bal %>%
+                mutate(component = components$membership[as.character(seg)]) %>%
+                filter(!is.na(component)) %>%
+                group_by(component, sample) %>%
+                summarise(
+                    lnFC = mean(lnFC, na.rm = T),
+                    .groups = 'drop'
+                ) %>%
+                reshape2::dcast(sample ~ component, value.var = 'lnFC') %>%
+                tibble::column_to_rownames('sample')
+
+        } else {
+
+            cliques = igraph::maximal.cliques(G)
+
+            FC = lapply(
+                1:length(cliques),
+                function(i) {
+                    bulks_bal %>% 
+                    filter(seg %in% names(cliques[[i]])) %>%
+                    group_by(sample) %>%
+                    summarise(
+                        lnFC = mean(lnFC, na.rm = T),
+                        .groups = 'drop'
+                    ) %>%
+                    setNames(c('sample', i))
+            }) %>%
+            Reduce(x = ., f = function(x,y){full_join(x, y, by = 'sample')}) %>%
             tibble::column_to_rownames('sample')
 
-        diploid_component = names(which.min(colMeans(FC)))
+        }
+        
+        diploid_cluster = as.integer(names(which.min(colMeans(FC))))
 
-        fc_max = sapply(colnames(FC), function(c) {FC[,c] - FC[,diploid_component]}) %>% max %>% exp
+        fc_max = sapply(colnames(FC), function(c) {FC[,c] - FC[,diploid_cluster]}) %>% max %>% exp
         
         # seperation needs to be clear (2 vs 4 copy)
         if (fc_max > fc_min) {
             log_info('quadruploid state enabled')
-            diploid_segs = components$membership %>% keep(function(x){x == diploid_component}) %>% names
+
+            if (grouping == 'component') {
+                diploid_segs = components$membership %>% keep(function(x){x == diploid_component}) %>% names
+            } else {
+                diploid_segs = names(cliques[[diploid_cluster]])
+            }
+            
             bamp = TRUE
         } else {
             diploid_segs = segs_bal
@@ -1253,7 +1285,7 @@ find_common_diploid = function(bulks, gamma = 20, theta_min = 0.08, t = 1e-5, fc
     
     bulks = bulks %>% mutate(diploid = seg %in% diploid_segs)
     
-    return(list('bamp' = bamp, 'bulks' = bulks, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'FC' = FC))
+    return(list('bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'FC' = FC))
 }
 
 # get all internal nodes, for cluster tree
@@ -1555,7 +1587,7 @@ calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, uppe
     
 }
 
-retest_cnv = function(bulk, exp_model, allele_only = FALSE) {
+retest_cnv = function(bulk, exp_model = 'lnpois', allele_only = FALSE) {
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     

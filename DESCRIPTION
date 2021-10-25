@@ -26,6 +26,7 @@ Imports:
     zoo,
     GenomicRanges,
     HiddenMarkov,
+    Hotelling,
     ggplot2,
     caTools,
     matrixStats,
