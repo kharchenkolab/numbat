@@ -18,17 +18,15 @@ cd ScisTree/ScisTree-ver1.2.0.6-src
 make
 ./scistree
 ```
-3. 1000 Genome SNP reference file 
-```
-wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
-```
-If you are doing phasing locally instead of on the cloud [server](https://imputation.biodatacatalyst.nhlbi.nih.gov), please make sure you also have:
-
-4. [eagle2](https://alkesgroup.broadinstitute.org/Eagle/)
+3. [eagle2](https://alkesgroup.broadinstitute.org/Eagle/)
 ```
 wget https://data.broadinstitute.org/alkesgroup/Eagle/downloads/Eagle_v2.4.1.tar.gz
 tar -xvf Eagle_v2.4.1.tar.gz
 ./Eagle_v2.4.1/eagle
+```
+4. 1000 Genome SNP reference file 
+```
+wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
 ```
 5. 1000 Genome Reference Panel
 ```
