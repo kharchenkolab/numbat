@@ -145,6 +145,11 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
     return(list('alpha' = alpha, 'beta' = beta, 'w' = w, 'lambdas_bar' = lambdas_bar))
 }
 
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
 # for gamma poisson model
 process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = TRUE) {
     
@@ -442,7 +447,7 @@ preprocess_allele = function(
     return(df)
 }
 
-get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min_depth = 0, lambda = 0.52, verbose = FALSE) {
+get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min_depth = 0, lambda = 0.52, verbose = TRUE) {
 
     if (nrow(df) == 0) {
         stop('empty allele dataframe - check cell names')
@@ -464,7 +469,7 @@ get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min
         verbose = verbose
     )$bulk %>%
     filter((logFC < 5 & logFC > -5) | Y_obs == 0) %>%
-    mutate(w = paste0(signif(fit$w, 2), collapse = ','))
+    mutate(w = paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
 
     allele_bulk = get_allele_bulk(df, genetic_map, lambda = lambda, min_depth = min_depth)
             
@@ -865,7 +870,7 @@ classify_alleles = function(Obs) {
     }
     
     allele_post = Obs %>%
-        filter(!cnv_state %in% c('neu', 'bdel', 'bamp')) %>%
+        filter(!cnv_state_post %in% c('neu', 'bdel', 'bamp')) %>%
         filter(!is.na(AD)) %>%
         group_by(CHROM, seg) %>%
         filter(n() > 1) %>%
@@ -1260,7 +1265,8 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
 
         }
         
-        diploid_cluster = as.integer(names(which.min(colMeans(FC))))
+        # diploid_cluster = as.integer(names(which.min(colMeans(FC))))
+        diploid_cluster = Mode(apply(FC, 1, which.min))
 
         fc_max = sapply(colnames(FC), function(c) {FC[,c] - FC[,diploid_cluster]}) %>% max %>% exp
         
@@ -1285,7 +1291,7 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
     
     bulks = bulks %>% mutate(diploid = seg %in% diploid_segs)
     
-    return(list('bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'FC' = FC))
+    return(list('bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'FC' = FC, 'cliques' = cliques))
 }
 
 # get all internal nodes, for cluster tree
@@ -2221,7 +2227,7 @@ plot_exp_post = function(exp_post) {
     geom_hline(yintercept = 0, color = 'green', linetype = 'dashed') +
     geom_hline(yintercept = log2(1.5), color = 'red', linetype = 'dashed') +
     geom_hline(yintercept = -1, color = 'blue', linetype = 'dashed') +
-    facet_grid(group~cnv_state, scale = 'free_x', space = 'free_x') +
+    facet_grid(group~cnv_state, scale = 'free', space = 'free') +
     theme_classic() +
     theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
     scale_fill_manual(values = cnv_colors)

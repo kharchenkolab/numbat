@@ -405,16 +405,33 @@ get_segs_consensus = function(bulks, LLR_min = 20, gbuild = 'hg38') {
             'seg_start', 'seg_end', 'seg_start_index', 'seg_end_index',
             'theta_mle', 'theta_sigma', 'phi_mle', 'phi_sigma', 
             'p_loh', 'p_del', 'p_amp', 'p_bamp', 'p_bdel',
-            'LLR', 'LLR_y', 'n_genes', 'n_snps')
+            'LLR', 'LLR_y', 'LLR_x', 'n_genes', 'n_snps')
 
     segs_all = bulks %>% 
-        filter(state != 'neu') %>%
+        group_by(sample, seg, CHROM) %>%
+        mutate(seg_start = min(POS), seg_end = max(POS)) %>%
+        ungroup() %>%
         select(any_of(info_cols)) %>%
         distinct()
 
-    segs_filtered = segs_all %>% filter(LLR_y > LLR_min | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% filter(n_genes >= 20)
+    segs_filtered = segs_all %>% 
+        filter(cnv_state != 'neu') %>%
+        filter(LLR_y > LLR_min | LLR_x > 100 | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% 
+        filter(n_genes >= 20)
 
-    segs_neu = get_segs_neu(bulks)
+    # reduce to unique intervals
+    segs_neu = segs_all %>%
+        filter(cnv_state == 'neu') %>%
+        arrange(CHROM) %>%
+        {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )} %>%
+        GenomicRanges::reduce() %>%
+        as.data.frame() %>%
+        select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
+        mutate(seg_length = seg_end - seg_start)
     
     segs_consensus = segs_filtered %>% resolve_cnvs() %>% fill_neu_segs(segs_neu)
 
@@ -422,9 +439,9 @@ get_segs_consensus = function(bulks, LLR_min = 20, gbuild = 'hg38') {
 
 }
 
-get_segs_neu = function(bulks) {
+get_segs_neu = function(bulks_all) {
     # fetch all neutral segs
-    segs_neu = bulks %>% 
+    segs_neu = bulks_all %>% 
         filter(cnv_state == 'neu') %>%
         group_by(sample, seg, CHROM) %>%
         mutate(seg_start = min(POS), seg_end = max(POS)) %>%
@@ -647,7 +664,7 @@ get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL)
             l21 = l_lnpois(Y_obs, lambda_ref, depth_obs, mu, sigma, phi = 1.5),
             l31 = l_lnpois(Y_obs, lambda_ref, depth_obs, mu, sigma, phi = 2),
             l22 = l31,
-            l00 = l10,
+            l00 = l_lnpois(Y_obs, lambda_ref, depth_obs, mu, sigma, phi = 0.25),
             mu = mu,
             sigma = sigma,
             .groups = 'drop'
@@ -802,7 +819,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
             p_del = exp(l10 + log(prior_del/2) - Z),
             p_loh = exp(l20 + log(prior_loh/2) - Z),
             p_bamp = exp(l22 + log(prior_bamp/2) - Z),
-            p_bdel = exp(l22 + log(prior_bdel/2) - Z),
+            p_bdel = exp(l00 + log(prior_bdel/2) - Z),
             p_cnv = p_amp + p_del + p_loh + p_bamp + p_bdel
         ) %>%
         ungroup() %>%
@@ -946,7 +963,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
                 function(x) tidyr::replace_na(x, 0)
             ) %>%
         left_join(
-            segs_consensus %>% select(seg = seg_cons, p_loh, p_amp, p_del, p_bamp, p_bdel),
+            segs_consensus %>% select(seg = seg_cons, n_genes, n_snps, p_loh, p_amp, p_del, p_bamp, p_bdel),
             by = 'seg'
         ) %>%
         rowwise() %>%
