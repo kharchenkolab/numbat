@@ -672,7 +672,7 @@ make_psbulk = function(count_mat, cell_annot, verbose = T) {
     count_mat_clust = count_mat %*% M
     exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% set_colnames(colnames(count_mat_clust))
     
-    return(as.matrix(exp_mat_clust))
+    return(list('exp_mat' = as.matrix(exp_mat_clust), 'count_mat' = as.matrix(count_mat_clust)))
 }
 
 fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
@@ -1990,6 +1990,8 @@ permute_phi_vec = function(lambda_mat_obs, lambda_ref, n_perm) {
 
 ########################### Visualization ############################
 
+pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
+
 show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 
     D = bulk %>% 
@@ -2542,9 +2544,6 @@ cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5) {
     return(p_map)
 }
 
-pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
-
-
 plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50) {
 
     cells = unique(gexp.norm.long$cell)
@@ -2713,4 +2712,66 @@ clone_vs_annot = function(clone_post, cell_annot) {
     theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
     scale_fill_gradient(low = 'white', high = 'red') +
     xlab('')
+}
+
+plot_markers = function(sample, count_mat, markers, clone_post) {
+    
+    D = as.matrix(count_mat[,markers$gene]) %>%
+        scale %>%
+        reshape2::melt() %>%
+        set_colnames(c('cell', 'gene', 'exp')) %>%
+        left_join(
+            cell_annot[[sample]], by = 'cell'
+        ) %>%
+        mutate(exp = ifelse(is.na(exp), 0, exp)) %>%
+        inner_join(
+            clone_post, by = 'cell'
+        ) %>%
+        left_join(markers, by = 'gene') %>%
+        arrange(p_1) %>%
+        mutate(cell = factor(cell, unique(cell)))
+
+    p_markers = ggplot(
+            D,
+            aes(x = cell, y = gene, fill = exp)
+        ) +
+        geom_tile() +
+        theme_classic() +
+        theme(
+            axis.text.x = element_blank(),
+            axis.text.y = element_text(size = 7),
+            panel.spacing = unit(0, 'mm'),
+            panel.border = element_rect(size = 0.2, fill = NA),
+            strip.background.x = element_blank(),
+            strip.text.x = element_blank(),
+            strip.background.y = element_rect(size = 0, fill = NA),
+            strip.text.y.left = element_text(size = 6, angle = 0),
+        ) +
+        ylab('marker') +
+        facet_grid(marker_type ~ cell_group, space = 'free_y', scale = 'free', switch="y") +
+        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', limits = c(-1.5,1.5), oob = scales::oob_squish)
+
+    p_cnv = ggplot(
+            D,
+            aes(x = cell, y = 'cnv', fill = 1-p_1)
+        ) +
+        geom_tile() +
+        theme_classic() +
+        theme(
+            axis.text.x = element_blank(),
+            axis.text.y = element_text(size = 7),
+            axis.ticks.x = element_blank(),
+            panel.spacing = unit(0, 'mm'),
+            panel.border = element_rect(size = 0.2, fill = NA),
+            strip.background = element_rect(size = 0, fill = NA),
+            strip.text = element_text(size = 6),
+            axis.title.x = element_blank()
+        ) +
+        ylab('CNV') +
+        facet_grid(~cell_group, space = 'free_y', scale = 'free', switch="y") +
+        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 0.5, limits = c(0,1), oob = scales::oob_squish) + 
+        ggtitle(sample)
+
+    p_cnv/p_markers + plot_layout(heights = c(0.5,10))
+    
 }
