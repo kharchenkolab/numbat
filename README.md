@@ -7,6 +7,9 @@ Haplotype-aware detection of copy number variations in scRNA-Seq
 Install the Numbat R package via:
 ```
 git clone https://github.com/kharchenkolab/Numbat.git
+```
+Within R,
+```
 devtools::install_local("./Numbat")
 ```
 
