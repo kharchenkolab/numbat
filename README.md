@@ -6,8 +6,10 @@ Haplotype-aware detection of copy number variations in scRNA-Seq
 # Installation
 Install the Numbat R package via:
 ```
-devtools::install_github("kharchenkolab/Numbat")
+git clone https://github.com/kharchenkolab/Numbat.git
+devtools::install_local("./Numbat")
 ```
+
 ## Other prerequisites
 Please make sure these binary executables can be found in $PATH.
 1. [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
