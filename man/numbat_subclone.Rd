@@ -31,7 +31,7 @@ numbat_subclone(
 
 \item{lambdas_ref}{either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names}
 
-\item{df}{dataframe of allele counts per cell, produced by preprocess_data}
+\item{df}{dataframe of allele counts per cell, produced by preprocess_allele}
 
 \item{gtf_transcript}{gtf dataframe of transcripts}
 }

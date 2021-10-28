@@ -2,25 +2,21 @@
 % Please edit documentation in R/main.r
 \name{run_group_hmms}
 \alias{run_group_hmms}
-\title{Run mutitple HMM}
+\title{Run mutitple HMMs}
 \usage{
 run_group_hmms(
-  groups,
-  count_mat,
-  df,
-  lambdas_ref,
-  gtf_transcript,
-  genetic_map,
-  t,
+  bulks,
+  t = 1e-04,
   gamma = 20,
-  min_depth = 0,
-  ncores = NULL,
+  theta_min = 0.08,
   exp_model = "lnpois",
   allele_only = FALSE,
+  retest = TRUE,
+  ncores = NULL,
   verbose = FALSE,
   debug = FALSE
 )
 }
 \description{
-Run mutitple HMM
+Run mutitple HMMs
 }

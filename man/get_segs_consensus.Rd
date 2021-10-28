@@ -4,7 +4,7 @@
 \alias{get_segs_consensus}
 \title{Extract consensus CNV segments}
 \usage{
-get_segs_consensus(bulk_all, LLR_min = 20, gbuild = "hg38")
+get_segs_consensus(bulks, LLR_min = 20, gbuild = "hg38")
 }
 \description{
 Extract consensus CNV segments
