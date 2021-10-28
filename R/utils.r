@@ -1310,6 +1310,22 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
     return(list('bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'FC' = FC, 'cliques' = cliques))
 }
 
+get_segs_neu = function(bulks_all) {
+    segs_neu = bulks_all %>% filter(cnv_state == "neu") %>%
+        group_by(sample, seg, CHROM) %>% 
+        mutate(seg_start = min(POS), seg_end = max(POS)) %>% 
+        distinct(sample, CHROM, seg, seg_start, seg_end)
+
+    segs_neu = segs_neu %>% arrange(CHROM) %>% {
+            GenomicRanges::GRanges(seqnames = .$CHROM, IRanges::IRanges(start = .$seg_start, end = .$seg_end))
+        } %>% 
+        GenomicRanges::reduce() %>% 
+        as.data.frame() %>% 
+        select(CHROM = seqnames, seg_start = start, seg_end = end) %>% 
+        mutate(seg_length = seg_end - seg_start)
+    return(segs_neu)
+}
+
 # get all internal nodes, for cluster tree
 get_internal_nodes = function(den, node) {
 
