@@ -305,6 +305,7 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F,
     return(list('cell_annot' = cell_annot, 'nodes' = nodes, 'gexp' = gexp, 'hc' = hc, 'fit' = fit))
 }
 
+#' @export
 make_group_bulks = function(groups, count_mat, df, lambdas_ref, gtf_transcript, genetic_map, min_depth = 0, ncores = NULL) {
     
     if (length(groups) == 0) {
@@ -437,30 +438,6 @@ get_segs_consensus = function(bulks, LLR_min = 20, gbuild = 'hg38') {
 
     return(segs_consensus)
 
-}
-
-get_segs_neu = function(bulks_all) {
-    # fetch all neutral segs
-    segs_neu = bulks_all %>% 
-        filter(cnv_state == 'neu') %>%
-        group_by(sample, seg, CHROM) %>%
-        mutate(seg_start = min(POS), seg_end = max(POS)) %>%
-        distinct(sample, CHROM, seg, seg_start, seg_end)
-
-    # reduce to unique intervals
-    segs_neu = segs_neu %>%
-        arrange(CHROM) %>%
-        {GenomicRanges::GRanges(
-            seqnames = .$CHROM,
-            IRanges::IRanges(start = .$seg_start,
-                end = .$seg_end)
-        )} %>%
-        GenomicRanges::reduce() %>%
-        as.data.frame() %>%
-        select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
-        mutate(seg_length = seg_end - seg_start)
-
-    return(segs_neu)
 }
 
 #' @param segs_consensus a dataframe containing info of all CNV segments from multiple samples

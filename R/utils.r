@@ -1,6 +1,7 @@
 ########################### Data processing ############################
 
 # take in a reference matrix, decide which one is best 
+#' @export
 choose_ref = function(count_mat_obs, lambda_mat_ref, gtf_transcript, debug = F) {
 
     d = sum(count_mat_obs)
@@ -44,6 +45,7 @@ choose_ref = function(count_mat_obs, lambda_mat_ref, gtf_transcript, debug = F) 
 }
 
 # choose ref based on likelihood
+#' @export
 choose_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, debug = F) {
 
     genes_common = gtf_transcript$gene %>% 
@@ -82,6 +84,7 @@ choose_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, debug = F) {
 }
 
 # choose ref based on correlation
+#' @export
 choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
     
     genes_annotated = gtf_transcript %>% 
@@ -103,6 +106,7 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
     return(best_refs)
 }
 
+#' @export
 fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-6, verbose = FALSE) {
 
     if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
@@ -151,6 +155,7 @@ Mode <- function(x) {
 }
 
 # for gamma poisson model
+#' @export
 process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = TRUE) {
     
     genes_annotated = gtf_transcript$gene %>% 
@@ -211,6 +216,7 @@ process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = 
 }
 
 # match cells with best reference
+#' @export
 process_exp2 = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
 
     count_mat_obs = as.matrix(count_mat_obs)
@@ -273,6 +279,7 @@ process_exp2 = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101
 }
 
 # compare bulk vs single cells
+#' @export
 process_exp = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
 
     count_mat_obs = as.matrix(count_mat_obs)
@@ -337,6 +344,7 @@ process_exp = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101,
     return(list('gexp.norm.long' = gexp.norm.long, 'gexp.norm' = gexp.norm, 'exp_mat' = exp_mat))
 }
 
+#' @export
 preprocess_allele = function(
     sample,
     vcf_pu,
@@ -447,6 +455,7 @@ preprocess_allele = function(
     return(df)
 }
 
+#' @export
 get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min_depth = 0, lambda = 0.52, verbose = TRUE) {
 
     if (nrow(df) == 0) {
@@ -568,6 +577,7 @@ annot_cm = function(bulk, genetic_map) {
     
 }
 
+#' @export
 get_allele_bulk = function(df, genetic_map, lambda = 0.52, min_depth) {
     pseudobulk = df %>%
         filter(GT %in% c('1|0', '0|1')) %>%
@@ -600,6 +610,7 @@ get_allele_bulk = function(df, genetic_map, lambda = 0.52, min_depth) {
         ungroup()
 }
 
+#' @export
 combine_bulk = function(allele_bulk, gexp_bulk) {
     
     Obs = allele_bulk %>% 
@@ -675,6 +686,7 @@ make_psbulk = function(count_mat, cell_annot, verbose = T) {
     return(list('exp_mat' = as.matrix(exp_mat_clust), 'count_mat' = as.matrix(count_mat_clust)))
 }
 
+#' @export
 fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
 
     res = list()
@@ -732,6 +744,7 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
 
 ########################### Analysis ############################
 
+#' @export
 analyze_bulk_lnpois = function(
     Obs, t = 1e-5, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
     exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE,
@@ -863,6 +876,7 @@ analyze_bulk_lnpois = function(
 }
 
 # classify alleles using viterbi and forward-backward
+#' @export
 classify_alleles = function(Obs) {
 
     if (all(Obs$cnv_state %in% c('neu', 'bdel', 'bamp'))) {
@@ -994,6 +1008,7 @@ smooth_segs = function(bulk, min_genes = 10) {
         ungroup()
 }
 
+#' @export
 annot_consensus = function(bulk, segs_consensus) {
 
     bulk = bulk %>% ungroup()
@@ -1132,6 +1147,7 @@ find_diploid = function(bulk, gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1
 }
 
 # multi-sample generalization
+#' @export
 find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, bal_consensus = NULL, ncores = 5, debug = F, verbose = T) {
 
     if (!'sample' %in% colnames(bulks)) {
@@ -1409,7 +1425,7 @@ phi_hat_roll_sc = function(y_mat, lambda_vec, d_vec, h) {
     )
 }
 
-
+#' @export
 calc_phi_mle = function(Y_obs, lambda_ref, d, alpha, beta, lower = 0.2, upper = 10) {
     
     if (length(Y_obs) == 0) {
@@ -1464,6 +1480,7 @@ l_bbinom = function(AD, DP, alpha, beta) {
     sum(dbbinom(AD, DP, alpha, beta, log = TRUE))
 }
 
+#' @export
 fit_bbinom = function(AD, DP) {
 
     fit = stats4::mle(
@@ -1484,6 +1501,7 @@ l_gpois = function(Y_obs, lambda_ref, d, alpha, beta, phi = 1) {
     sum(dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE))
 }
 
+#' @export
 fit_gpois = function(Y_obs, lambda_ref, d) {
 
     Y_obs = Y_obs[lambda_ref > 0]
@@ -1511,52 +1529,7 @@ l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
     sum(log(poilog::dpoilog(Y_obs, mu + log(phi * d * lambda_ref), sig)))
 }
 
-# density function approximation by taylor expansion
-# dpoilog_approx = function(x, mu, sig, log = FALSE) {
-#     p = (2 * pi * sig^2)^(-1/2)/x * exp(-(log(x)-mu)^2/(2*sig^2)) * (1 + (2 * x * sig^2)^(-1) * ((log(x) - mu)^2/sig^2 + log(x) - mu - 1))
-#     if (log) {
-#         return(log(p))
-#     } else {
-#         return(p)
-#     }
-# }
-
-dpoilog_approx = function(x, mu, sig, log = FALSE) {
-
-    logp = -(1/2)*log(2 * pi * sig^2) - log(x) - (log(x)-mu)^2/(2*sig^2) + log((1 + (2 * x * sig^2)^(-1) * ((log(x) - mu)^2/sig^2 + log(x) - mu - 1)))
-
-    if (any(is.na(logp))) {
-        display(x[is.na(logp)])
-        display(mu[is.na(logp)])
-        display(sig)
-    }
-
-    if (log) {
-        return(logp)
-    } else {
-        return(exp(logp))
-    }
-
-}
-
-# dpoilog_mix = function(x, mu, sig, log = FALSE) {
-#     low = Y_obs <= 10
-#     l_low = dpoilog_approx(Y_obs[low], lambda_ref[low], d, mu, sig, phi)
-#     l_high = l_lnpois_approx(Y_obs[!low], lambda_ref[!low], d, mu, sig, phi)
-#     return(l_low + l_high)
-# }
-
-l_lnpois_approx = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
-    sum(log(dpoilog_approx(Y_obs, mu + log(phi * d * lambda_ref), sig)))
-}
-
-l_lnpois_mix = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
-    low = Y_obs <= 10
-    l_low = l_lnpois(Y_obs[low], lambda_ref[low], d, mu, sig, phi)
-    l_high = l_lnpois_approx(Y_obs[!low], lambda_ref[!low], d, mu, sig, phi)
-    return(l_low + l_high)
-}
-
+#' @export
 fit_lnpois = function(Y_obs, lambda_ref, d, approx = F) {
 
     Y_obs = Y_obs[lambda_ref > 0]
@@ -1593,6 +1566,7 @@ calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, uppe
     
 }
 
+#' @export
 retest_cnv = function(bulk, exp_model = 'lnpois', allele_only = FALSE) {
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
@@ -1929,7 +1903,6 @@ calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, alpha = NULL, beta = NULL
     return(l_1 - l_0)
 }
 
-
 sc_exp_post = function(exp_sc) {
 
     eps = 0.15
@@ -1966,32 +1939,11 @@ sc_exp_post = function(exp_sc) {
     return(res)
 }
 
-permute_phi_vec = function(lambda_mat_obs, lambda_ref, n_perm) {
-    perm_sample = replicate(
-        n = n_perm, {
-            
-            n_cells = ncol(lambda_mat_obs)
-            n_genes = nrow(lambda_mat_obs)
-            
-            swap_index = sample(1:n_genes, size = n_genes/2, replace = FALSE)
-
-            lambda_mat_ref = matrix(lambda_ref, ncol = n_cells, nrow = n_genes)
-            
-            lambda_mat_obs_perm = lambda_mat_obs
-            lambda_mat_ref_perm = lambda_mat_ref
-            lambda_mat_obs_perm[swap_index,] = lambda_mat_ref[swap_index,]
-            lambda_mat_ref_perm[swap_index,] = lambda_mat_obs[swap_index,]
-            
-            phi_perm = colSums(lambda_mat_obs_perm)/colSums(lambda_mat_ref_perm)
-    })
-        
-    return(perm_sample)
-}
-
 ########################### Visualization ############################
 
 pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 
+#' @export
 show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 
     D = bulk %>% 
@@ -2070,7 +2022,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
     (p1 / p2) + plot_layout(guides = 'auto')
 }
 
-
+#' @export
 plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = TRUE, allele_only = FALSE) {
 
     if (!'state_post' %in% colnames(Obs)) {
@@ -2146,6 +2098,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
     return(p)
 }
 
+#' @export
 plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, ncol = 1) {
 
     options(warn = -1)
@@ -2175,6 +2128,7 @@ plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, ncol = 1) {
     return(panel)
 }
 
+#' @export
 plot_exp = function(gexp_bulk, exp_limit = 3) {
     ggplot(
         gexp_bulk,
@@ -2198,6 +2152,7 @@ plot_exp = function(gexp_bulk, exp_limit = 3) {
     ylim(-exp_limit, exp_limit)
 }
 
+#' @export
 plot_segs_post = function(segs_consensus) {
     segs_consensus %>% 
         filter(cnv_state != 'neu') %>%
@@ -2213,6 +2168,7 @@ plot_segs_post = function(segs_consensus) {
 }
 
 # model diagnostics
+#' @export
 plot_exp_post = function(exp_post) {
     if (!'group' %in% colnames(exp_post)) {
         exp_post$group = '0'
@@ -2235,6 +2191,7 @@ plot_exp_post = function(exp_post) {
     scale_fill_manual(values = cnv_colors)
 }
 
+#' @export
 plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, pal_clones = RColorBrewer::brewer.pal(n = 8, 'Set1')) {
 
     p_matrix = p_matrix %>% 
@@ -2355,6 +2312,7 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, pal_clones
     
 }
 
+#' @export
 plot_mut_history = function(G_m, pal_clones = RColorBrewer::brewer.pal(n = 8, 'Set1')) {
 
     p = G_m %>%
@@ -2383,6 +2341,7 @@ plot_mut_history = function(G_m, pal_clones = RColorBrewer::brewer.pal(n = 8, 'S
     return(p)
 }
 
+#' @export
 plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1) {
 
     n_clones = length(unique(res$clone_post$clone_opt))
@@ -2416,6 +2375,7 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
     (p_mut / p_clones) + plot_layout(heights = c(ratio, 1))
 }
 
+#' @export
 tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NULL, cnv_order = NULL, legend = T) {
 
     joint_post = joint_post %>% filter(cnv_state != 'neu')
@@ -2494,6 +2454,7 @@ tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NU
     return(panel)
 }
 
+#' @export
 cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5) {
 
     geno = geno %>% mutate(logBF = Z_cnv - Z_n)
@@ -2544,6 +2505,7 @@ cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5) {
     return(p_map)
 }
 
+#' @export
 plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50) {
 
     cells = unique(gexp.norm.long$cell)
@@ -2581,7 +2543,7 @@ plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50) {
     
 }
 
-
+#' @export
 robust.system <- function(cmd) {
   stderrFile = tempfile(pattern="R_robust.system_stderr", fileext=as.character(Sys.getpid()))
   stdoutFile = tempfile(pattern="R_robust.system_stdout", fileext=as.character(Sys.getpid()))
@@ -2595,6 +2557,7 @@ robust.system <- function(cmd) {
   return(retval)
 }
 
+#' @export
 plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     
     # cell_order = exp_post %>% 
@@ -2638,6 +2601,7 @@ plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = scales::oob_squish)
 }
 
+#' @export
 plot_sc_allele = function(df, bulk_subtrees, clone_post) {
     
     snp_seg = bulk_subtrees %>%
@@ -2693,6 +2657,7 @@ plot_sc_allele = function(df, bulk_subtrees, clone_post) {
     return(p)
 }
 
+#' @export
 clone_vs_annot = function(clone_post, cell_annot) {
     clone_post %>% 
     rename(clone = clone_opt) %>%
@@ -2714,6 +2679,7 @@ clone_vs_annot = function(clone_post, cell_annot) {
     xlab('')
 }
 
+#' @export
 plot_markers = function(sample, count_mat, markers, clone_post) {
     
     D = as.matrix(count_mat[,markers$gene]) %>%
