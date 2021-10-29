@@ -57,15 +57,13 @@ Rscript pileup_and_phase.r \
 ```
 library(numbat)
 
-# Generate reference expression profile(s) using a known reference dataset
-lambdas_ref = make_psbulk(count_mat_ref, cell_annot)
-
 # run
 out = numbat_subclone(
-      count_mat_obs,
-      lambdas_ref,
-      df,
+      count_mat,
+      ref_hca,
+      allele_df,
       gtf_transcript,
+      genetic_map_hg38,
       t = 1e-5,
       out_dir = glue('~/results/{sample}')
 )
