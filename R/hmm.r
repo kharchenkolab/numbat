@@ -1,30 +1,5 @@
 require(extraDistr)
 
-cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
-        "del_up" = "royalblue", "del_down" = "darkblue", 
-        "loh_up" = "darkgreen", "loh_down" = "olivedrab4",
-        "amp_up" = "red", "amp_down" = "tomato3",
-        "del_1_up" = "royalblue", "del_1_down" = "darkblue", 
-        "loh_1_up" = "darkgreen", "loh_1_down" = "olivedrab4",
-        "amp_1_up" = "red", "amp_1_down" = "tomato3",
-        "del_2_up" = "royalblue", "del_2_down" = "darkblue", 
-        "loh_2_up" = "darkgreen", "loh_2_down" = "olivedrab4",
-        "amp_2_up" = "red", "amp_2_down" = "tomato3",
-        "del_up_1" = "royalblue", "del_down_1" = "darkblue", 
-        "loh_up_1" = "darkgreen", "loh_down_1" = "olivedrab4",
-        "amp_up_1" = "red", "amp_down_1" = "tomato3",
-        "del_up_2" = "royalblue", "del_down_2" = "darkblue", 
-        "loh_up_2" = "darkgreen", "loh_down_2" = "olivedrab4",
-        "amp_up_2" = "red", "amp_down_2" = "tomato3",
-        "bamp" = "salmon", "bdel" = "skyblue",
-        "amp" = "red", "loh" = "green", "del" = "darkblue", "neu2" = "gray30",
-        "theta_up" = "darkgreen", "theta_down" = "olivedrab4",
-        "theta_1_up" = "darkgreen", "theta_1_down" = "olivedrab4",
-        "theta_2_up" = "darkgreen", "theta_2_down" = "olivedrab4",
-        "theta_up_1" = "darkgreen", "theta_down_1" = "olivedrab4",
-        "theta_up_2" = "darkgreen", "theta_down_2" = "olivedrab4",
-        '0|1' = 'red', '1|0' = 'blue'
-    )
     
 ############ time inhomogenous univariate HMM ############
 

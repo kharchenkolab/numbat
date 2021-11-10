@@ -6,14 +6,27 @@ library(ggraph)
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df dataframe of allele counts per cell, produced by preprocess_allele
 #' @param gtf_transcript gtf dataframe of transcripts 
+#' @param genetic_map genetic map
 #' @return a status code
 #' @export
-numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 200, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE) {
+numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 10, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE) {
     
-    dir.create(out_dir, showWarnings = FALSE)
+    dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
     if (file.exists(logfile)) {file.remove(logfile)}
     log_appender(appender_file(logfile))
+
+    log_info(paste(
+        'Running under parameters:',
+        glue('t = {t}'), 
+        glue('min_cells = {min_cells}'), 
+        glue('init_k = {init_k}'),
+        glue('sample_size = {sample_size}'),
+        glue('max_cost = {max_cost}'),
+        glue('max_iter = {max_iter}'),
+        glue('min_depth = {min_depth}'),
+        sep = "\n"
+    ))
 
     ######## Initialization ########
     if (init_method == 'bulk') {
@@ -169,7 +182,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
             simplify_history(tree_post$l_matrix, max_cost = max_cost) %>%
             label_genotype()
 
-        mut_nodes = G_m %>% as_data_frame('vertices') %>% select(name = node, site = label)
+        mut_nodes = G_m %>% igraph::as_data_frame('vertices') %>% select(name = node, site = label)
 
         # update tree
         gtree = mut_to_tree(tree_post$gtree, mut_nodes)
@@ -474,6 +487,7 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
         filter(seg_length > 0)
 
     segs_consensus = segs_consensus %>%
+        mutate(seg_length = seg_end - seg_start) %>%
         bind_rows(gaps) %>% 
         mutate(cnv_state = tidyr::replace_na(cnv_state, 'neu')) %>%
         arrange(CHROM, seg_start) %>%
@@ -537,10 +551,11 @@ cell_to_clone = function(gtree, exp_post, allele_post) {
         ) %>%
         mutate(
             clone_opt = clone[which.max(p)],
-            GT_opt = GT[clone_opt]
+            GT_opt = GT[clone_opt],
+            p_opt = p[which.max(p)]
         ) %>%
         as.data.table() %>%
-        data.table::dcast(cell + clone_opt + GT_opt ~ clone, value.var = c('p', 'p_x', 'p_y')) %>%
+        data.table::dcast(cell + clone_opt + GT_opt + p_opt ~ clone, value.var = c('p', 'p_x', 'p_y')) %>%
         as.data.frame()
     
     return(clone_post)
@@ -610,7 +625,7 @@ resolve_cnvs = function(segs_all, debug = FALSE) {
 #' @param exp_sc Single cell expression data matrix
 #' @return expression likelihoods
 #' @export
-get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL) {
+get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL, mu = NULL, sigma = NULL) {
 
     exp_sc = exp_sc %>% filter(lambda_ref > 0)
     
@@ -624,10 +639,12 @@ get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL)
         ref_states = c('neu')
     }
 
-    fit = exp_sc %>% filter(cnv_state %in% ref_states) %>% {fit_lnpois(.$Y_obs, .$lambda_ref, depth_obs)}
+    if (is.null(mu) | is.null(sigma)) {
+        fit = exp_sc %>% filter(cnv_state %in% ref_states) %>% {fit_lnpois(.$Y_obs, .$lambda_ref, depth_obs)}
 
-    mu = fit@coef[1]
-    sigma = fit@coef[2]
+        mu = fit@coef[1]
+        sigma = fit@coef[2]
+    }
 
     res = exp_sc %>% 
         filter(cnv_state != 'neu') %>%
@@ -704,7 +721,7 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 
 #' get CNV expression posteriors
 #' @export
-get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, lambdas_fit = NULL, alpha = NULL, beta = NULL, ncores = 30, verbose = T, debug = F) {
+get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, alpha = NULL, beta = NULL, ncores = 30, verbose = T, debug = F) {
 
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf_transcript) 
 
@@ -940,7 +957,10 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
                 function(x) tidyr::replace_na(x, 0)
             ) %>%
         left_join(
-            segs_consensus %>% select(seg = seg_cons, n_genes, n_snps, p_loh, p_amp, p_del, p_bamp, p_bdel),
+            segs_consensus %>% select(
+                seg = seg_cons,
+                any_of(c('n_genes', 'n_snps', 'p_loh', 'p_amp', 'p_del', 'p_bamp', 'p_bdel'))
+            ),
             by = 'seg'
         ) %>%
         rowwise() %>%
@@ -964,10 +984,12 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
             ),
             Z_n = l11_x + l11_y + log(1/2),
             logBF = Z_cnv - Z_n,
+            logBF_x = Z_cnv_x - Z_n_x,
+            logBF_y = Z_cnv_y - Z_n_y,
             p_cnv = exp(Z_cnv - Z),
             p_n = exp(Z_n - Z),
-            p_cnv_x = exp(Z_cnv_x - Z_x),
-            p_cnv_y = exp(Z_cnv_y - Z_y)
+            p_cnv_x = 1/(1+exp(-logBF_x)),
+            p_cnv_y = 1/(1+exp(-logBF_y))
         ) %>%
         ungroup()
 

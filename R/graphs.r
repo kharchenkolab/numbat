@@ -61,7 +61,7 @@ read_mut_tree = function(tree_file, mut_assign) {
     }
 
     V(G)$node = G %>%
-        as_data_frame('vertices') %>%
+        igraph::as_data_frame('vertices') %>%
         left_join(
             mut_assign %>% rename(node = name),
             by = c('label' = 'site')
@@ -212,13 +212,13 @@ to_phylo = function(gtree) {
 
 label_edges = function(G) {
     
-    edge_df = G %>% as_data_frame('edges') %>%
+    edge_df = G %>% igraph::as_data_frame('edges') %>%
         left_join(
-            G %>% as_data_frame('vertices') %>% select(from_label = label, id),
+            G %>% igraph::as_data_frame('vertices') %>% select(from_label = label, id),
             by = c('from' = 'id')
         ) %>%
         left_join(
-            G %>% as_data_frame('vertices') %>% select(to_label = label, id),
+            G %>% igraph::as_data_frame('vertices') %>% select(to_label = label, id),
             by = c('to' = 'id')
         ) %>%
         mutate(label = paste0(from_label, '->', to_label))
@@ -232,13 +232,13 @@ label_edges = function(G) {
 
 transfer_links = function(G) {
     
-    edge_df = G %>% as_data_frame('edges') %>%
+    edge_df = G %>% igraph::as_data_frame('edges') %>%
             left_join(
-                G %>% as_data_frame('vertices') %>% select(from_node = node, id),
+                G %>% igraph::as_data_frame('vertices') %>% select(from_node = node, id),
                 by = c('from' = 'id')
             ) %>%
             left_join(
-                G %>% as_data_frame('vertices') %>% select(to_node = node, id),
+                G %>% igraph::as_data_frame('vertices') %>% select(to_node = node, id),
                 by = c('to' = 'id')
             )
 
@@ -287,12 +287,6 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
     if (max(vset_ids) != vcount(G)) {
         ids_new[(max(vset_ids)+1):length(ids_new)] = ids_new[(max(vset_ids)+1):length(ids_new)] - length(vset_ids) + 1
     }
-    
-    if (debug) {
-        print(vset)
-        print(vset_ids)
-        print(ids_new)
-    }
 
     G = G %>% contract(
         ids_new,
@@ -305,7 +299,11 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
 
     V(G)$id = 1:vcount(G)
 
-    G = simplify(G)
+    G = igraph::simplify(G)
+
+    if (debug) {
+        return(G)
+    }
     
     G = label_edges(G)
     
@@ -358,7 +356,7 @@ get_move_cost = function(muts, node_ori, node_tar, l_matrix) {
 
 get_move_opt = function(G, l_matrix) {
     
-    move_opt = G %>% as_data_frame('edges') %>%
+    move_opt = G %>% igraph::as_data_frame('edges') %>%
         group_by(from) %>%
         mutate(n_sibling = n()) %>%
         ungroup() %>%

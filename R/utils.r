@@ -149,9 +149,10 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
     return(list('alpha' = alpha, 'beta' = beta, 'w' = w, 'lambdas_bar' = lambdas_bar))
 }
 
-Mode <- function(x) {
+Modes <- function(x) {
   ux <- unique(x)
-  ux[which.max(tabulate(match(x, ux)))]
+  tab <- tabulate(match(x, ux))
+  ux[tab == max(tab)]
 }
 
 # for gamma poisson model
@@ -896,17 +897,17 @@ classify_alleles = function(Obs) {
                 p_up < 0.5 & GT == '1|0' ~ 'minor',
                 p_up < 0.5 & GT == '0|1' ~ 'major'
             ),
-            mpc = HiddenMarkov::Viterbi(get_allele_hmm(pAD, DP, p_s, theta = unique(theta_mle), gamma = 20))$y,
-            haplo_mpc = case_when(
-                mpc == 1 & GT == '1|0' ~ 'major',
-                mpc == 1 & GT == '0|1' ~ 'minor',
-                mpc == 2 & GT == '1|0' ~ 'minor',
-                mpc == 2 & GT == '0|1' ~ 'major'
-            ),
+            # mpc = HiddenMarkov::Viterbi(get_allele_hmm(pAD, DP, p_s, theta = unique(theta_mle), gamma = 20))$y,
+            # haplo_mpc = case_when(
+            #     mpc == 1 & GT == '1|0' ~ 'major',
+            #     mpc == 1 & GT == '0|1' ~ 'minor',
+            #     mpc == 2 & GT == '1|0' ~ 'minor',
+            #     mpc == 2 & GT == '0|1' ~ 'major'
+            # ),
             haplo_naive = ifelse(AR < 0.5, 'minor', 'major')
         ) %>%
         ungroup() %>%
-        select(snp_id, p_up, haplo_post, mpc, haplo_mpc, haplo_naive)
+        select(snp_id, p_up, haplo_post, haplo_naive)
 
     Obs = Obs %>% 
             select(-any_of(colnames(allele_post)[!colnames(allele_post) %in% c('snp_id')])) %>%
@@ -1048,104 +1049,6 @@ annot_consensus = function(bulk, segs_consensus) {
     return(bulk)
 }
 
-find_diploid = function(bulk, gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, bal_consensus = NULL, debug = F, verbose = T) {
-
-    if (is.null(bal_consensus)) {
-        # define balanced regions
-        bulk = bulk %>% group_by(CHROM) %>%
-            mutate(state = 
-                run_hmm_inhom2(
-                    pAD = pAD,
-                    DP = DP, 
-                    p_s = p_s,
-                    t = t,
-                    theta_min = theta_min,
-                    gamma = unique(gamma))
-            ) %>% ungroup() %>%
-            mutate(cnv_state = str_remove(state, '_down|_up')) %>%
-            annot_segs()
-    } else {
-        # use the consensus balanced regions
-        bulk = bulk %>% annot_consensus(bal_consensus)
-    }
-    
-    segs = bulk %>% 
-        filter(cnv_state == 'neu') %>% 
-        group_by(seg) %>%
-        summarise(
-            n_genes = sum(!is.na(Y_obs)),
-            n_snps = sum(!is.na(pAD)),
-            DP_total = sum(DP, na.rm = TRUE),
-            # approx_lik_ar(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = 0.1)
-        ) %>%
-        ungroup() %>%
-        filter(n_genes > 50 & n_snps > 50)
-
-    bulk_balanced = bulk %>% 
-        filter(!is.na(lnFC)) %>%
-        mutate(FC = exp(lnFC)) 
-
-    if (nrow(segs) == 0) {
-        stop('No balanced segments')
-    } else if (nrow(segs) == 1) {
-        diploid_segs = segs$seg
-        bamp = FALSE
-        tests = data.frame()
-    } else {
-    
-        options(warn = -1)
-        tests = t(combn(as.character(segs$seg), 2)) %>% 
-            as.data.frame() %>%
-            set_names(c('i', 'j')) %>%
-            rowwise() %>%
-            mutate(
-                p = t.test(x = bulk_balanced$lnFC[bulk_balanced$seg == i],
-                            y = bulk_balanced$lnFC[bulk_balanced$seg == j])$p.value
-            ) %>%
-            ungroup() %>%
-            mutate(p = p.adjust(p))
-        options(warn = 0)
-        
-        # build graph
-        V = segs
-
-        E = tests %>% filter(p > 0.05) 
-
-        G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
-        
-        # find confident diploid clique
-        cliques = igraph::maximal.cliques(G)
-
-        FC = sapply(cliques, function(c) {
-            bulk_balanced %>% filter(seg %in% names(c)) %>% {phi_hat_seg(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
-        })
-        
-        # seperation needs to be clear (2 vs 4 copy)
-        if (max(FC)/min(FC) > fc_min) {
-            if (verbose) {display('quadruploid state enabled')}
-            diploid_segs = names(cliques[[which.min(FC)]])
-            bamp = TRUE
-        } else {
-            diploid_segs = segs$seg
-            bamp = FALSE
-        }
-    }
-    
-    if (verbose) {
-        display(glue('diploid regions: {paste0(gtools::mixedsort(diploid_segs), collapse = ",")}'))
-    }
-    
-    bulk = bulk %>% mutate(diploid = seg %in% diploid_segs)
-    
-    if (debug) {
-        return(list('G' = G, 'tests' = tests, 'segs' = segs, 'FC' = FC,
-                    'bulk_balanced' = bulk_balanced, 'bulk' = bulk))
-    }
-    
-    return(list('bulk' = bulk, 'bamp' = bamp))
-    
-}
-
 # multi-sample generalization
 #' @export
 find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, bal_consensus = NULL, ncores = 5, debug = F, verbose = T) {
@@ -1280,9 +1183,9 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
             tibble::column_to_rownames('sample')
 
         }
-        
-        # diploid_cluster = as.integer(names(which.min(colMeans(FC))))
-        diploid_cluster = Mode(apply(FC, 1, which.min))
+
+        # choose diploid clique based on min FC in case there's a tie
+        diploid_cluster = as.integer(names(sort(apply(FC[,Modes(apply(FC, 1, which.min)),drop=F], 2, min))))[1]
 
         fc_max = sapply(colnames(FC), function(c) {FC[,c] - FC[,diploid_cluster]}) %>% max %>% exp
         
@@ -1724,7 +1627,7 @@ approx_maxlik_ar = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 
     return(tibble('theta_mle' = mu, 'theta_sigma' = sigma, 'l_max' = -fit$value))
 }
 
-approx_lik_exp = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, model = 'gpois', lower = 0.2, upper = 10, start = 1) {
+approx_lik_exp = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, model = 'lnpois', lower = 0.2, upper = 10, start = 1) {
     
     if (length(Y_obs) == 0) {
         return(tibble('phi_mle' = 1, 'phi_sigma' = 0))
@@ -1959,6 +1862,33 @@ sc_exp_post = function(exp_sc) {
 
 pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 
+
+cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
+        "del_up" = "royalblue", "del_down" = "darkblue", 
+        "loh_up" = "darkgreen", "loh_down" = "olivedrab4",
+        "amp_up" = "red", "amp_down" = "tomato3",
+        "del_1_up" = "royalblue", "del_1_down" = "darkblue", 
+        "loh_1_up" = "darkgreen", "loh_1_down" = "olivedrab4",
+        "amp_1_up" = "red", "amp_1_down" = "tomato3",
+        "del_2_up" = "royalblue", "del_2_down" = "darkblue", 
+        "loh_2_up" = "darkgreen", "loh_2_down" = "olivedrab4",
+        "amp_2_up" = "red", "amp_2_down" = "tomato3",
+        "del_up_1" = "royalblue", "del_down_1" = "darkblue", 
+        "loh_up_1" = "darkgreen", "loh_down_1" = "olivedrab4",
+        "amp_up_1" = "red", "amp_down_1" = "tomato3",
+        "del_up_2" = "royalblue", "del_down_2" = "darkblue", 
+        "loh_up_2" = "darkgreen", "loh_down_2" = "olivedrab4",
+        "amp_up_2" = "red", "amp_down_2" = "tomato3",
+        "bamp" = "salmon", "bdel" = "skyblue",
+        "amp" = "tomato3", "loh" = "olivedrab4", "del" = "royalblue", "neu2" = "gray30",
+        "theta_up" = "darkgreen", "theta_down" = "olivedrab4",
+        "theta_1_up" = "darkgreen", "theta_1_down" = "olivedrab4",
+        "theta_2_up" = "darkgreen", "theta_2_down" = "olivedrab4",
+        "theta_up_1" = "darkgreen", "theta_down_1" = "olivedrab4",
+        "theta_up_2" = "darkgreen", "theta_down_2" = "olivedrab4",
+        '0|1' = 'red', '1|0' = 'blue'
+    )
+
 #' @export
 show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 
@@ -2039,10 +1969,16 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 }
 
 #' @export
-plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = TRUE, allele_only = FALSE) {
+plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = TRUE, allele_only = FALSE, phi_mle = FALSE, use_pos = FALSE, legend = TRUE) {
 
     if (!'state_post' %in% colnames(Obs)) {
         Obs = Obs %>% mutate(state_post = state)
+    }
+
+    if (use_pos) {
+        marker = 'POS'
+    } else {
+        marker = 'snp_index'
     }
 
     # correct for baseline bias
@@ -2061,7 +1997,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
 
     p = ggplot(
         D,
-        aes(x = snp_index, y = value, color = state_post),
+        aes(x = get(marker), y = value, color = state_post),
         na.rm=TRUE
     ) +
     geom_point(
@@ -2076,17 +2012,46 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
     theme(
         panel.spacing = unit(0, 'mm'),
         panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.background = element_blank()
+        strip.background = element_blank(),
+        axis.text.x = element_blank()
     ) +
     facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
     scale_color_manual(values = cnv_colors) +
-    guides(color = guide_legend(""), fill = FALSE, alpha = FALSE, shape = FALSE)
+    guides(color = guide_legend(""), fill = FALSE, alpha = FALSE, shape = FALSE) +
+    xlab(marker) +
+    ylab('')
 
-    if (!allele_only) {
+    if (!legend) {
+        p = p + guides(color = FALSE, fill = FALSE, alpha = FALSE, shape = FALSE)
+    }
+
+    if (phi_mle) {
+        segs = Obs %>% 
+            distinct(CHROM, seg, seg_start, seg_start_index, seg_end, seg_end_index, phi_mle) %>%
+            mutate(variable = 'logFC') %>%
+            filter(log2(phi_mle) < exp_limit)
+
+        if (use_pos) {
+            start = 'seg_start'
+            end = 'seg_end'
+        } else {
+            start = 'seg_start_index'
+            end = 'seg_end_index'
+        }
+
+        p = p + geom_segment(
+            inherit.aes = FALSE,
+            data = segs,
+            aes(x = get(start), xend = get(end), y = log2(phi_mle), yend = log2(phi_mle)),
+            color = 'darkred',
+            size = 0.5
+        ) +
+        geom_hline(data = data.frame(variable = 'logFC'), aes(yintercept = 0), color = 'gray30', linetype = 'dashed')
+    } else {
         p = p + geom_line(
             inherit.aes = FALSE,
             data = Obs %>% mutate(variable = 'logFC') %>% filter(log2(phi_mle_roll) < exp_limit),
-            aes(x = snp_index, y = log2(phi_mle_roll), group = '1'),
+            aes(x = get(marker), y = log2(phi_mle_roll), group = '1'),
             color = 'darkred',
             size = 0.35
         ) +
@@ -2108,14 +2073,13 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
             # color = 'gray',
             size = 0.35
         )
-
-    }
+    } 
     
     return(p)
 }
 
 #' @export
-plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, ncol = 1) {
+plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, phi_mle = FALSE, use_pos = FALSE, ncol = 1, legend = TRUE) {
 
     options(warn = -1)
     plot_list = bulk_all %>%
@@ -2126,7 +2090,11 @@ plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, ncol = 1) {
                 sample = unique(bulk$sample)
                 n_cells = unique(bulk$n_cells)
 
-                p = plot_psbulk(bulk, min_depth = min_depth, fc_correct = fc_correct) + 
+                p = plot_psbulk(
+                        bulk, 
+                        min_depth = min_depth, fc_correct = fc_correct,
+                        phi_mle = phi_mle, use_pos = use_pos, legend = legend
+                    ) + 
                     theme(
                         title = element_text(size = 8),
                         axis.text.x = element_blank(),
@@ -2185,30 +2153,39 @@ plot_segs_post = function(segs_consensus) {
 
 # model diagnostics
 #' @export
-plot_exp_post = function(exp_post) {
-    if (!'group' %in% colnames(exp_post)) {
-        exp_post$group = '0'
+plot_exp_post = function(exp_post, jitter = TRUE) {
+    if (!'annot' %in% colnames(exp_post)) {
+        exp_post$annot = '0'
     }
-    exp_post %>%
-    filter(n > 20) %>%
-    mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
-    mutate(seg_label = factor(seg_label, gtools::mixedsort(unique(seg_label)))) %>%
-    ggplot(
-        aes(x = seg_label, y = log2(phi_mle), fill = cnv_state, color = p_cnv)
-    ) +
-    geom_violin(size = 0) +
-    geom_jitter(size = 0.1) +
-    geom_hline(yintercept = 0, color = 'green', linetype = 'dashed') +
-    geom_hline(yintercept = log2(1.5), color = 'red', linetype = 'dashed') +
-    geom_hline(yintercept = -1, color = 'blue', linetype = 'dashed') +
-    facet_grid(group~cnv_state, scale = 'free', space = 'free') +
-    theme_classic() +
-    theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
-    scale_fill_manual(values = cnv_colors)
+    p = exp_post %>%
+        filter(n > 20) %>%
+        mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
+        mutate(seg_label = factor(seg_label, gtools::mixedsort(unique(seg_label)))) %>%
+        ggplot(
+            aes(x = seg_label, y = log2(phi_mle), fill = cnv_state, color = p_cnv)
+        ) +
+        geom_violin(size = 0) +
+        geom_hline(yintercept = 0, color = 'green', linetype = 'dashed') +
+        geom_hline(yintercept = log2(1.5), color = 'red', linetype = 'dashed') +
+        geom_hline(yintercept = -1, color = 'blue', linetype = 'dashed') +
+        facet_grid(annot~cnv_state, scale = 'free', space = 'free') +
+        theme_classic() +
+        theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+        scale_fill_manual(values = cnv_colors)
+
+    if (jitter) {
+        p = p + geom_jitter(size = 0.1)
+    }
+
+    return(p)
 }
 
 #' @export
-plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, pal_clones = RColorBrewer::brewer.pal(n = 8, 'Set1')) {
+plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio = 0.1, pal_clones = NULL) {
+
+    if (is.null(pal_clones)) {
+        pal_clones = c('gray', RColorBrewer::brewer.pal(n = 8, 'Set1'))
+    }
 
     p_matrix = p_matrix %>% 
         group_by(group) %>%
@@ -2257,7 +2234,7 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, pal_clones
         scale_x_discrete(expand = expansion(0)) +
         theme(
             panel.spacing = unit(0.1, 'mm'),
-            # panel.border = element_rect(size = 0.5, color = 'black', fill = NA),
+            panel.border = element_rect(size = 0.2, color = 'black', fill = NA),
             panel.background = element_rect(fill = 'white'),
             axis.line.x = element_blank(),
             axis.line.y = element_blank(),
@@ -2272,7 +2249,8 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, pal_clones
         facet_grid(.~group, scale = 'free', space = 'free') +
         scale_fill_gradient2(low = pal[2], high = pal[1], midpoint = 0, limits = c(-5, 5), oob = scales::oob_squish) +
         xlab('') +
-        guides(fill = guide_colorbar(barwidth = unit(2, 'mm'), barheight = unit(10, 'mm')))
+        ylab('') +
+        guides(fill = guide_colorbar(barwidth = unit(3, 'mm'), barheight = unit(15, 'mm')))
 
     p_clones = ggplot(
             p_matrix %>% distinct(cell, group),
@@ -2293,14 +2271,14 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, pal_clones
         facet_grid(.~group, scale = 'free', space = 'free') +
         xlab('') +
         ylab('') + 
-        scale_fill_manual(values = c('gray', pal_clones)) +
+        scale_fill_manual(values = pal_clones) +
         guides(fill = 'none')
 
     if (annot) {
 
         p_annot = ggplot(
                 p_matrix %>% distinct(cell, group, annot),
-                aes(x = cell, y = 'annot', fill = annot)
+                aes(x = cell, y = '', fill = annot)
             ) +
             geom_tile(width=1, height=0.9) +
             theme_void() +
@@ -2318,9 +2296,9 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, pal_clones
             facet_grid(.~group, scale = 'free', space = 'free') +
             xlab('') +
             ylab('') +
-            guides(fill = guide_legend(keywidth = unit(2, 'mm'), keyheight = unit(2, 'mm')))
+            guides(fill = guide_legend(keywidth = unit(2, 'mm'), keyheight = unit(2, 'mm'), title = ''))
 
-        return((p_clones / p_annot / p) + plot_layout(height = c(1,1,15), guides = 'collect'))
+        return((p_clones / p_annot / p) + plot_layout(height = c(bar_ratio, bar_ratio, 1), guides = 'collect'))
         
     } else {
         return((p_clones / p) + plot_layout(height = c(1,10)))
@@ -2329,14 +2307,24 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, pal_clones
 }
 
 #' @export
-plot_mut_history = function(G_m, pal_clones = RColorBrewer::brewer.pal(n = 8, 'Set1')) {
+plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clones = NULL) {
 
-    p = G_m %>%
+    if (is.null(pal_clones)) {
+        pal_clones = c('gray', RColorBrewer::brewer.pal(n = 8, 'Set1'))
+    }
+
+    G_df = G_m %>%
         as_tbl_graph() %>%
         mutate(
             clone = ifelse(GT == "", "0", str_trunc(GT, 20, side = 'center')),
             id = as.factor(as.integer(factor(GT)))
-        ) %>%
+        )
+
+    if (!label) {
+        G_df = G_df %>% activate(edges) %>% mutate(to_label = '')
+    }
+
+    p = G_df %>% 
         ggraph(layout = 'tree') + 
         geom_edge_link(
             aes(label = str_trunc(to_label, 20, side = 'center')),
@@ -2349,20 +2337,23 @@ plot_mut_history = function(G_m, pal_clones = RColorBrewer::brewer.pal(n = 8, 'S
         geom_node_text(aes(label = id), size = 6) +
         theme_void() +
         scale_x_continuous(expand = expansion(0.2)) +
-        scale_y_reverse(expand = expansion(0.2)) +
-        coord_flip() +
-        scale_color_manual(values = c('gray', pal_clones)) +
+        scale_y_continuous(expand = expansion(0.2)) + 
+        scale_color_manual(values = pal_clones) +
         guides(color = 'none')
+
+    if (horizontal) {
+        p = p + coord_flip() + scale_y_reverse(expand = expansion(0.2))
+    }
 
     return(p)
 }
 
 #' @export
-plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1) {
+plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1, tvn = FALSE, tree = TRUE, p_min = 0.5, bar_ratio = 0.1) {
 
     n_clones = length(unique(res$clone_post$clone_opt))
     getPalette = colorRampPalette(pal)
-    pal_clones = getPalette(max(n_clones-1, 8))
+    pal_clones = getPalette(max(V(res$G_m)-1, 8)) %>% c('gray', .) %>% setNames(1:n_clones)
 
     if (type == 'joint') {
         p_matrix = res$joint_post
@@ -2379,16 +2370,39 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
         annot = FALSE
     }
 
+    if (!'p_opt' %in% colnames(res$clone_post)) {
+        res$clone_post = res$clone_post %>% 
+            rowwise() %>%
+            mutate(p_opt = get(paste0('p_', clone_opt))) %>%
+            ungroup()
+    }
+
+    if (tvn) {
+        res$clone_post = res$clone_post %>%
+            mutate(
+                clone_opt = ifelse(clone_opt == 1, 'normal', 'tumor'),
+                p_opt = ifelse(clone_opt == 'normal', p_1, 1-p_1)
+            )
+    }
+
     p_clones = p_matrix %>% 
         filter(seg %in% rownames(res$geno)) %>%
-        inner_join(res$clone_post, by = 'cell') %>%
+        inner_join(
+            res$clone_post %>% filter(p_opt > p_min),
+            by = 'cell'
+        ) %>%
         mutate(group = clone_opt) %>%
-        plot_clones(res$gtree, pal_clones = pal_clones, annot = annot)
+        plot_clones(res$gtree, pal_clones = pal_clones, annot = annot, bar_ratio = bar_ratio)
 
-    p_mut = res$G_m %>% plot_mut_history(pal_clones = pal_clones) + 
-        ggtitle(label)
+    plot_title = plot_annotation(title = label, theme = theme(plot.title = element_text(hjust = 0.1)))
 
-    (p_mut / p_clones) + plot_layout(heights = c(ratio, 1))
+    if (tvn | (!tree)) {
+        return(p_clones + plot_title)
+    }
+
+    p_mut = res$G_m %>% plot_mut_history(pal_clones = pal_clones) 
+
+    (p_mut / p_clones) + plot_layout(heights = c(ratio, 1)) + plot_title
 }
 
 #' @export
@@ -2733,6 +2747,27 @@ plot_markers = function(sample, count_mat, markers, clone_post) {
         facet_grid(marker_type ~ cell_group, space = 'free_y', scale = 'free', switch="y") +
         scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', limits = c(-1.5,1.5), oob = scales::oob_squish)
 
+    p_annot = ggplot(
+            D,
+            aes(x = cell, y = 'annot', fill = annot)
+        ) +
+        geom_tile() +
+        theme_classic() +
+        theme(
+            axis.text.x = element_blank(),
+            axis.text.y = element_text(size = 7),
+            axis.ticks.x = element_blank(),
+            panel.spacing = unit(0, 'mm'),
+            panel.border = element_rect(size = 0.2, fill = NA),
+            strip.background = element_rect(size = 0, fill = NA),
+            strip.text = element_text(size = 6),
+            axis.title.x = element_blank(),
+            strip.text.x = element_blank()
+        ) +
+        ylab('annot') +
+        facet_grid(~ cell_group, space = 'free_y', scale = 'free', switch="y") +
+        scale_fill_manual(values = getPalette(13))
+
     p_cnv = ggplot(
             D,
             aes(x = cell, y = 'cnv', fill = 1-p_1)
@@ -2754,6 +2789,6 @@ plot_markers = function(sample, count_mat, markers, clone_post) {
         scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 0.5, limits = c(0,1), oob = scales::oob_squish) + 
         ggtitle(sample)
 
-    p_cnv/p_markers + plot_layout(heights = c(0.5,10))
+    p_cnv/p_annot/p_markers + plot_layout(heights = c(0.5,0.5,10))
     
 }

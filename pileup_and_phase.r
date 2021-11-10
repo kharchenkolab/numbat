@@ -45,13 +45,13 @@ for (sample in samples) {
 
 cmds = c()
 
-for (i in n_samples) {
+for (i in 1:n_samples) {
     
     cmd = glue(
         'cellsnp-lite', 
         '-s {bams[i]}',
         '-b {barcodes[i]}',
-        '-O {outdir}/pileup/{sample[i]}',
+        '-O {outdir}/pileup/{samples[i]}',
         '-R {snpvcf}', 
         '-p {ncores}',
         '--minMAF 0',
@@ -136,6 +136,6 @@ for (sample in samples) {
         gtf_transcript = gtf_transcript
     )
     
-    fwrite(df, glue('{outdir}/{sample}_allele_counts.tsv'), sep = '\t')
+    fwrite(df, glue('{outdir}/{sample}_allele_counts.tsv.gz'), sep = '\t')
     
 }
