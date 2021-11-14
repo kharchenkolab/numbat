@@ -9,7 +9,12 @@ library(ggraph)
 #' @param genetic_map genetic map
 #' @return a status code
 #' @export
-numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, cell_annot = NULL, out_dir = './', t = 1e-5, init_method = 'smooth', init_k = 3, sample_size = 450, min_cells = 10, max_cost = 150, max_iter = 2, min_depth = 0, ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE) {
+numbat_subclone = function(
+        count_mat, lambdas_ref, df, gtf_transcript, genetic_map, cell_annot = NULL, 
+        out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 450, 
+        min_cells = 10, max_cost = 150, max_iter = 2, min_depth = 0, common_diploid = TRUE,
+        ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE
+    ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
@@ -40,7 +45,7 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
                 genetic_map = genetic_map,
                 min_depth = min_depth
             ) %>%
-            analyze_bulk_lnpois(t = t) %>%
+            analyze_bulk_lnpois(t = t, gamma = gamma) %>%
             mutate(sample = 0)
 
     } else if (init_method == 'smooth') {
@@ -74,6 +79,8 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
         bulk_subtrees = bulk_subtrees %>% 
             run_group_hmms(
                 t = t,
+                gamma = gamma,
+                common_diploid = common_diploid,
                 exp_model = exp_model,
                 ncores = ncores,
                 verbose = verbose
@@ -235,8 +242,11 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
         bulk_clones = bulk_clones %>% 
             run_group_hmms(
                 t = t,
+                gamma = gamma,
                 exp_model = exp_model,
-                verbose = verbose
+                common_diploid = common_diploid,
+                verbose = verbose,
+                ncores = ncores
             )
 
         fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
@@ -254,7 +264,9 @@ numbat_subclone = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_m
         bulk_subtrees = bulk_subtrees %>%
             run_group_hmms(
                 t = t,
+                gamma = gamma,
                 exp_model = exp_model,
+                common_diploid = common_diploid,
                 verbose = verbose
             )
         
@@ -359,7 +371,11 @@ make_group_bulks = function(groups, count_mat, df, lambdas_ref, gtf_transcript, 
 
 #' Run mutitple HMMs 
 #' @export
-run_group_hmms = function(bulks, t = 1e-4, gamma = 20, theta_min = 0.08, exp_model = 'lnpois', allele_only = FALSE, retest = TRUE, ncores = NULL, verbose = FALSE, debug = FALSE) {
+run_group_hmms = function(
+    bulks, t = 1e-4, gamma = 20, theta_min = 0.08, exp_model = 'lnpois',
+    common_diploid = TRUE, allele_only = FALSE, retest = TRUE, 
+    ncores = NULL, verbose = FALSE, debug = FALSE
+) {
 
     if (nrow(bulks) == 0) {
         return(data.frame())
@@ -374,9 +390,14 @@ run_group_hmms = function(bulks, t = 1e-4, gamma = 20, theta_min = 0.08, exp_mod
     ncores = ifelse(is.null(ncores), n_groups, ncores)
 
     # find common diploid region
-    diploid_out = find_common_diploid(bulks, ncores = ncores)
-    bulks = diploid_out$bulks
-
+    if (common_diploid) {
+        diploid_out = find_common_diploid(bulks, ncores = ncores)
+        bulks = diploid_out$bulks
+        find_diploid = FALSE
+    } else {
+        find_diploid = TRUE
+    }
+    
     results = mclapply(
         bulks %>% split(.$sample),
         mc.cores = ncores,
@@ -384,7 +405,7 @@ run_group_hmms = function(bulks, t = 1e-4, gamma = 20, theta_min = 0.08, exp_mod
             bulk %>% analyze_bulk_lnpois(
                 t = t,
                 gamma = gamma, 
-                find_diploid = FALSE, 
+                find_diploid = find_diploid, 
                 allele_only = allele_only, 
                 retest = retest, 
                 verbose = verbose)

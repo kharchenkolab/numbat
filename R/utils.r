@@ -705,8 +705,16 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
     if (file.exists(f)) {
         res[['segs_consensus']] = fread(f)
     }
-    res[['bulk_subtrees']] = fread(glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'))
-    res[['bulk_clones']] = fread(glue('{out_dir}/bulk_clones_{i}.tsv.gz'))
+
+    f = glue('{out_dir}/bulk_subtrees_{i}.tsv.gz')
+    if (file.exists(f)) {
+        res[['bulk_subtrees']] = fread(f)
+    }
+
+    f = glue('{out_dir}/bulk_clones_{i}.tsv.gz')
+    if (file.exists(f)) {
+        res[['bulk_clones']] = fread(f)
+    }
 
     # G_m = res$mut_tree_file %>% 
     #     read_mut_tree(res$tree_post$mut_nodes) %>%
@@ -759,7 +767,7 @@ analyze_bulk_lnpois = function(
 
     if (find_diploid) {
 
-        out = find_common_diploid(Obs)
+        out = find_common_diploid(Obs, gamma = gamma, t = t)
         
         Obs = out$bulks
         bal_cnv = out$bamp
@@ -1106,17 +1114,14 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
     bulks_bal = bulks %>% filter(cnv_state == 'neu') %>% filter(!is.na(lnFC))
     segs_bal = bulks_bal %>% count(seg) %>% filter(n > 50) %>% pull(seg) %>% as.character
 
-    test_dat = bulks_bal %>%
-        select(gene, seg, lnFC, sample) %>%
-        reshape2::dcast(seg+gene ~ sample, value.var = 'lnFC') %>%
-        na.omit() %>%
-        mutate(seg = as.character(seg)) %>%
-        select(-gene)
-
     if (length(segs_bal) == 0) {
-        msg = 'No balanced segments'
-        log_error(msg)
-        stop(msg)
+        msg = 'No balanced segments, using all segments as baseline'
+        log_warn(msg)
+        diploid_segs = bulks %>% pull(seg) %>% unique
+        bamp = TRUE
+        tests = data.frame()
+        FC = data.frame()
+        G = NULL
     } else if (length(segs_bal) == 1) {
         diploid_segs = segs_bal
         bamp = FALSE
@@ -1124,6 +1129,12 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
         FC = data.frame()
         G = NULL
     } else {
+        test_dat = bulks_bal %>%
+            select(gene, seg, lnFC, sample) %>%
+            reshape2::dcast(seg+gene ~ sample, value.var = 'lnFC') %>%
+            na.omit() %>%
+            mutate(seg = as.character(seg)) %>%
+            select(-gene)
         
         options(warn = -1)
         tests = t(combn(segs_bal, 2)) %>% 
@@ -2017,7 +2028,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
     ) +
     facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
     scale_color_manual(values = cnv_colors) +
-    guides(color = guide_legend(""), fill = FALSE, alpha = FALSE, shape = FALSE) +
+    guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = FALSE, alpha = FALSE, shape = FALSE) +
     xlab(marker) +
     ylab('')
 
@@ -2047,7 +2058,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
             size = 0.5
         ) +
         geom_hline(data = data.frame(variable = 'logFC'), aes(yintercept = 0), color = 'gray30', linetype = 'dashed')
-    } else {
+    } else if (!allele_only) {
         p = p + geom_line(
             inherit.aes = FALSE,
             data = Obs %>% mutate(variable = 'logFC') %>% filter(log2(phi_mle_roll) < exp_limit),
@@ -2079,7 +2090,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
 }
 
 #' @export
-plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, phi_mle = FALSE, use_pos = FALSE, ncol = 1, legend = TRUE) {
+plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, phi_mle = FALSE, allele_only = FALSE, use_pos = FALSE, ncol = 1, legend = TRUE, title = TRUE) {
 
     options(warn = -1)
     plot_list = bulk_all %>%
@@ -2093,14 +2104,19 @@ plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, phi_mle = FALS
                 p = plot_psbulk(
                         bulk, 
                         min_depth = min_depth, fc_correct = fc_correct,
-                        phi_mle = phi_mle, use_pos = use_pos, legend = legend
+                        phi_mle = phi_mle, use_pos = use_pos, legend = legend,
+                        allele_only = allele_only
                     ) + 
                     theme(
                         title = element_text(size = 8),
                         axis.text.x = element_blank(),
                         axis.title = element_blank()
-                    ) +
-                    ggtitle(glue('{sample} (n={n_cells})'))
+                    )
+
+                if (title) {
+                    p = p + ggtitle(glue('{sample} (n={n_cells})'))
+                }
+                    
 
                 return(p)
             }
@@ -2181,10 +2197,14 @@ plot_exp_post = function(exp_post, jitter = TRUE) {
 }
 
 #' @export
-plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio = 0.1, pal_clones = NULL) {
+plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio = 0.1, pal_clones = NULL, pal_annot = NULL) {
 
     if (is.null(pal_clones)) {
         pal_clones = c('gray', RColorBrewer::brewer.pal(n = 8, 'Set1'))
+    }
+
+    if (is.null(pal_annot)) {
+        pal_annot = c('gray', RColorBrewer::brewer.pal(n = 8, 'Set1'))
     }
 
     p_matrix = p_matrix %>% 
@@ -2296,6 +2316,7 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio 
             facet_grid(.~group, scale = 'free', space = 'free') +
             xlab('') +
             ylab('') +
+            scale_fill_manual(values = pal_annot) +
             guides(fill = guide_legend(keywidth = unit(2, 'mm'), keyheight = unit(2, 'mm'), title = ''))
 
         return((p_clones / p_annot / p) + plot_layout(height = c(bar_ratio, bar_ratio, 1), guides = 'collect'))
@@ -2349,11 +2370,19 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clones = N
 }
 
 #' @export
-plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1, tvn = FALSE, tree = TRUE, p_min = 0.5, bar_ratio = 0.1) {
+plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1, tvn = FALSE, tree = TRUE, p_min = 0.5, bar_ratio = 0.1, pal_clones = NULL, pal_annot = NULL) {
 
-    n_clones = length(unique(res$clone_post$clone_opt))
     getPalette = colorRampPalette(pal)
-    pal_clones = getPalette(max(V(res$G_m)-1, 8)) %>% c('gray', .) %>% setNames(1:n_clones)
+
+    if (is.null(pal_clones)) {
+        n_clones = length(unique(res$clone_post$clone_opt))
+        pal_clones = getPalette(max(V(res$G_m)-1, 8)) %>% c('gray', .) %>% setNames(1:n_clones)
+    } 
+    
+    if (is.null(pal_annot) & !is.null(cell_annot)) {
+        pal_annot = getPalette(length(unique(cell_annot$annot)))
+    }
+    
 
     if (type == 'joint') {
         p_matrix = res$joint_post
@@ -2392,7 +2421,7 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
             by = 'cell'
         ) %>%
         mutate(group = clone_opt) %>%
-        plot_clones(res$gtree, pal_clones = pal_clones, annot = annot, bar_ratio = bar_ratio)
+        plot_clones(res$gtree, pal_clones = pal_clones, pal_annot = pal_annot, annot = annot, bar_ratio = bar_ratio)
 
     plot_title = plot_annotation(title = label, theme = theme(plot.title = element_text(hjust = 0.1)))
 
@@ -2710,14 +2739,18 @@ clone_vs_annot = function(clone_post, cell_annot) {
 }
 
 #' @export
-plot_markers = function(sample, count_mat, markers, clone_post) {
+plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_annot = NULL) {
+
+    if (is.null(pal_annot)) {
+        pal_annot = getPalette(length(unique(cell_annot$annot)))
+    }
     
     D = as.matrix(count_mat[,markers$gene]) %>%
         scale %>%
         reshape2::melt() %>%
         set_colnames(c('cell', 'gene', 'exp')) %>%
-        left_join(
-            cell_annot[[sample]], by = 'cell'
+        inner_join(
+            cell_annot, by = 'cell'
         ) %>%
         mutate(exp = ifelse(is.na(exp), 0, exp)) %>%
         inner_join(
@@ -2764,13 +2797,14 @@ plot_markers = function(sample, count_mat, markers, clone_post) {
             axis.title.x = element_blank(),
             strip.text.x = element_blank()
         ) +
-        ylab('annot') +
+        ylab('') +
         facet_grid(~ cell_group, space = 'free_y', scale = 'free', switch="y") +
-        scale_fill_manual(values = getPalette(13))
+        scale_fill_manual(values = pal_annot) +
+        guides(fill = guide_legend())
 
     p_cnv = ggplot(
-            D,
-            aes(x = cell, y = 'cnv', fill = 1-p_1)
+            D %>% mutate(p_cnv = 1-p_1),
+            aes(x = cell, y = 'cnv', fill = p_cnv)
         ) +
         geom_tile() +
         theme_classic() +
@@ -2784,11 +2818,12 @@ plot_markers = function(sample, count_mat, markers, clone_post) {
             strip.text = element_text(size = 6),
             axis.title.x = element_blank()
         ) +
-        ylab('CNV') +
+        ylab('') +
         facet_grid(~cell_group, space = 'free_y', scale = 'free', switch="y") +
         scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 0.5, limits = c(0,1), oob = scales::oob_squish) + 
-        ggtitle(sample)
+        ggtitle(sample) +
+        guides(fill = 'none')
 
-    p_cnv/p_annot/p_markers + plot_layout(heights = c(0.5,0.5,10))
+    p_cnv/p_annot/p_markers + plot_layout(heights = c(0.5,0.5,10), guides = 'collect')
     
 }
