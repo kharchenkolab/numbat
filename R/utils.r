@@ -1456,7 +1456,7 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
 l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
     if (any(sig <= 0)) {stop(glue('negative sigma. value: {sig}'))}
     if (length(sig) == 1) {sig = rep(sig, length(Y_obs))}
-    sum(log(poilog::dpoilog(Y_obs, mu + log(phi * d * lambda_ref), sig)))
+    sum(log(dpoilog(Y_obs, mu + log(phi * d * lambda_ref), sig)))
 }
 
 #' @export
