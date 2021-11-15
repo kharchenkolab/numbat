@@ -9,7 +9,6 @@ get_exp_post(
   count_mat,
   gtf_transcript,
   lambdas_ref = NULL,
-  lambdas_fit = NULL,
   alpha = NULL,
   beta = NULL,
   ncores = 30,

@@ -1,7 +1,18 @@
-library(logger)
-library(ggraph)
+#' @import logger data.table
+#' @import stringr
+#' @import glue
+#' @import vcfR
+#' @import purrr
+#' @import magrittr
+#' @import parallel
+#' @import igraph
+#' @import tidygraph
+#' @import extraDistr
+#' @import ggplot2
+#' @import ggtree
+#' @import ggraph
 
-#' Main function to decompose tumor subclones
+#' @description Main function to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df dataframe of allele counts per cell, produced by preprocess_allele

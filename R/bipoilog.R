@@ -94,7 +94,8 @@
         sig1=as.double(sig1^2),sig2=as.double(sig2^2),rho=as.double(rho),nrN=as.integer(length(n1)),
         val=double(length(n1)))$val
     }
-   
+
+   #' @export
    dpoilog <- function(x,mu,sig, log = F){
     if (!(length(x) == length(mu) & length(x) == length(sig))) stop('All parameters must be same length') 
      if (any((x[x!=0]/trunc(x[x!=0]))!=1)) stop('all x must be integers')
@@ -111,7 +112,7 @@
         sig2=as.double(sig^2),
         nrN=as.integer(length(x)),
         val=double(length(x)),
-        PACKAGE = "poilog"
+        PACKAGE = "numbat"
      )$val
 
      p[p == 0] = 1e-15

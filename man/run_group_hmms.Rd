@@ -10,6 +10,7 @@ run_group_hmms(
   gamma = 20,
   theta_min = 0.08,
   exp_model = "lnpois",
+  common_diploid = TRUE,
   allele_only = FALSE,
   retest = TRUE,
   ncores = NULL,
