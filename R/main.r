@@ -1,4 +1,5 @@
-#' @import logger data.table
+#' @import logger
+#' @import data.table
 #' @import stringr
 #' @import glue
 #' @import vcfR
@@ -11,6 +12,7 @@
 #' @import ggplot2
 #' @import ggtree
 #' @import ggraph
+#' @useDynLib numbat
 
 #' @description Main function to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
@@ -22,9 +24,10 @@
 #' @export
 numbat_subclone = function(
         count_mat, lambdas_ref, df, gtf_transcript, genetic_map, cell_annot = NULL, 
-        out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 450, 
-        min_cells = 10, max_cost = 150, max_iter = 2, min_depth = 0, common_diploid = TRUE,
-        ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE
+        out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 10000, 
+        min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
+        ncores = 30, exp_model = 'lnpois', verbose = TRUE,
+        exclude_normal = TRUE, max_entropy = 0.6
     ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
@@ -41,6 +44,9 @@ numbat_subclone = function(
         glue('max_cost = {max_cost}'),
         glue('max_iter = {max_iter}'),
         glue('min_depth = {min_depth}'),
+        glue('exclude_normal = {exclude_normal}'),
+        'Input metrics:',
+        glue('{ncol(count_mat)} cells'),
         sep = "\n"
     ))
 
@@ -104,7 +110,7 @@ numbat_subclone = function(
     fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
 
     # resolve CNVs
-    segs_consensus = get_segs_consensus(bulk_subtrees, gbuild = gbuild)
+    segs_consensus = get_segs_consensus(bulk_subtrees)
 
     normal_cells = c()
 
@@ -153,51 +159,48 @@ numbat_subclone = function(
             log_info('Building phylogeny ..')
         }
 
-        cell_sample = colnames(count_mat) %>% 
-            extract(!(. %in% normal_cells)) %>%
-            sample(min(sample_size, length(.)))
+        cell_sample = colnames(count_mat) %>% sample(min(sample_size, length(.)), replace = FALSE)
+        
+        if (exclude_normal) {
+            cell_sample = cell_sample[!cell_sample %in% normal_cells]
+        }
 
+        # cosntruct genotype probability matrix
         p_min = 1e-10
 
-        geno = joint_post %>%
+        P = joint_post %>%
             filter(cnv_state != 'neu') %>%
-            group_by(seg) %>%
-            filter(mean(p_cnv > 0.95) > 0.05 | mean(p_cnv < 0.05) > 0.5) %>%
-            ungroup() %>%
             filter(cell %in% cell_sample) %>%
+            group_by(seg) %>%
+            mutate(
+                avg_entropy = mean(binary_entropy(p_cnv), na.rm = TRUE)
+            ) %>%
+            filter(avg_entropy < max_entropy) %>%
             mutate(p_n = 1 - p_cnv) %>%
             mutate(p_n = pmax(pmin(p_n, 1-p_min), p_min)) %>%
-            reshape2::dcast(seg ~ cell, value.var = 'p_n', fill = 0.5) %>%
-            tibble::column_to_rownames('seg')
+            reshape2::dcast(cell ~ seg, value.var = 'p_n', fill = 0.5) %>%
+            tibble::column_to_rownames('cell') %>%
+            as.matrix
 
-        fwrite(geno, glue('{out_dir}/geno_{i}.tsv'), row.names = T, sep = '\t')
+        fwrite(as.data.frame(P), glue('{out_dir}/geno_{i}.tsv'), row.names = T, sep = '\t')
 
-        n_cnvs = geno %>% nrow
-        n_cells = ncol(geno)
-        in_file = glue('{out_dir}/geno_{i}.txt')
+        # contruct initial NJ tree
+        treeNJ = NJ(dist(rbind(P, 'outgroup' = 1)))
+        treeNJ = root(treeNJ, outgroup = 'outgroup') %>% drop.tip('outgroup')
+        treeNJ = reorder(treeNJ, order = 'postorder')
 
-        fwrite(geno, in_file, row.names = T, sep = ' ', quote = F)
+        saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
 
-        cmd = glue('sed -i "1s;^;HAPLOID {n_cnvs} {n_cells};" {in_file}')
-        system(cmd)
+        # maximum likelihood tree search with NNI
+        tree_list = perform_nni(treeNJ, P, ncores = ncores)
+        saveRDS(tree_list, glue('{out_dir}/tree_list_{i}.rds'))
 
-        # run 
-        out_file = glue('{out_dir}/out_{i}.txt')
-        mut_tree_file = glue('{out_dir}/mut_tree_{i}.gml')
-        cmd = glue('scistree -k 10 -v -e -t 0.9 -o {mut_tree_file} {in_file} > {out_file}')
-        system(cmd, wait = T)
-
-        # read output
-        scistree_out = parse_scistree(out_file, geno, joint_post)
-        tree_post = get_tree_post(scistree_out$MLtree, geno)
-
-        saveRDS(scistree_out, glue('{out_dir}/scistree_out_{i}.rds'))
+        tree_post = get_tree_post(tree_list[[length(tree_list)]], P)
         saveRDS(tree_post, glue('{out_dir}/tree_post_{i}.rds'))
 
         # simplify mutational history
-        G_m = mut_tree_file %>% 
-            read_mut_tree(tree_post$mut_nodes) %>%
-            simplify_history(tree_post$l_matrix, max_cost = max_cost) %>%
+        G_m = get_mut_tree(tree_post$gtree, tree_post$mut_nodes)  %>% 
+            simplify_history(tree_post$l_matrix, max_cost = max_cost) %>% 
             label_genotype()
 
         mut_nodes = G_m %>% igraph::as_data_frame('vertices') %>% select(name = node, site = label)
@@ -285,7 +288,7 @@ numbat_subclone = function(
 
         ######## Find consensus CNVs ########
 
-        segs_consensus = get_segs_consensus(bulk_subtrees, gbuild = gbuild)
+        segs_consensus = get_segs_consensus(bulk_subtrees)
 
         fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
     }
@@ -307,10 +310,6 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F,
         Y_obs = rowSums(count_mat_obs)
 
         fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
-
-        if (verbose) {
-            log_info('Fitted reference proportions: {signif(fit$w, 2)}')
-        }
 
         gexp = process_exp(
             count_mat_obs,
@@ -425,7 +424,8 @@ run_group_hmms = function(
     bad = sapply(results, inherits, what = "try-error")
 
     if (any(bad)) {
-        if (verbose) {log_warn(glue('{sum(bad)} jobs failed'))}
+        log_error(glue('job {paste(which(bad), collapse = ",")} failed'))
+        log_error(results[bad][[1]])
     }
 
     bulks = results %>% bind_rows() %>%
@@ -441,7 +441,7 @@ run_group_hmms = function(
 
 #' Extract consensus CNV segments
 #' @export
-get_segs_consensus = function(bulks, LLR_min = 20, gbuild = 'hg38') {
+get_segs_consensus = function(bulks, LLR_min = 20) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1

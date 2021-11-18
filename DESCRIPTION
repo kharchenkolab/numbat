@@ -23,6 +23,8 @@ Imports:
     tidygraph,
     extraDistr,
     igraph,
+    phangorn,
+    ape,
     zoo,
     GenomicRanges,
     HiddenMarkov,

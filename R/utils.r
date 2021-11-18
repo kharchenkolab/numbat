@@ -698,8 +698,15 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
     res[['allele_post']] = fread(glue('{out_dir}/allele_post_{i}.tsv'))
     # bulk0 = fread(glue('{out_dir}/bulk_subtrees_0.tsv'))
     res[['geno']] = fread(glue('{out_dir}/geno_{i}.tsv')) %>% tibble::column_to_rownames('V1')
+
+
     res[['tree_post']] = readRDS(glue('{out_dir}/tree_post_{i}.rds'))
-    res[['scistree_out']] = readRDS(glue('{out_dir}/scistree_out_{i}.rds'))
+
+    f = glue('{out_dir}/scistree_out_{i}.rds')
+
+    if (file.exists(f)) {
+        res[['scistree_out']] = readRDS(f)
+    }
     
     f = glue('{out_dir}/segs_consensus_{i}.tsv')
     if (file.exists(f)) {
@@ -730,7 +737,7 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
         res$G_m = readRDS(f)
     }
 
-    # # update tree
+    # update tree
     f = glue('{out_dir}/tree_final_{i}.rds')
     if (file.exists(f)) {
         res$gtree = readRDS(f)
@@ -1494,6 +1501,12 @@ calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, uppe
     
     return(res@coef)
     
+}
+
+binary_entropy = function(p) {
+    H = -p*log2(p)-(1-p)*log2(1-p)
+    H[is.na(H)] = 0
+    return(H)
 }
 
 #' @export
@@ -2415,7 +2428,7 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
     }
 
     p_clones = p_matrix %>% 
-        filter(seg %in% rownames(res$geno)) %>%
+        filter(seg %in% colnames(res$geno)) %>%
         inner_join(
             res$clone_post %>% filter(p_opt > p_min),
             by = 'cell'
@@ -2435,8 +2448,8 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
 }
 
 #' @export
-tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NULL, cnv_order = NULL, legend = T) {
-
+tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NULL, cnv_order = NULL, branch_width = 0.2, tip = T, tip_length = 0.5, pal_annot = NULL, layout = 'rect', legend = T) {
+           
     joint_post = joint_post %>% filter(cnv_state != 'neu')
 
     if (!'seg_label' %in% colnames(joint_post)) {
@@ -2460,9 +2473,16 @@ tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NU
         cell_dict = as.factor(cell_dict)
     }
 
+    if (is.null(pal_annot)) {
+        getPalette = colorRampPalette(pal)
+        pal_annot = getPalette(length(unique(cell_dict)))
+    }
+
     OTU_dict = lapply(levels(cell_dict), function(x) names(cell_dict[cell_dict == x])) %>% setNames(levels(cell_dict))
 
-    mut_nodes = gtree %>% filter(!is.na(site)) %>% data.frame() %>% select(name, site)
+    mut_nodes = gtree %>% activate(nodes) %>% filter(!is.na(site)) %>% data.frame() %>% select(name, site)
+
+    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
     
     p_tree = gtree %>% 
         to_phylo() %>%
@@ -2470,10 +2490,9 @@ tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NU
             OTU_dict,
             'clone'
         ) %>%
-        ggtree(ladderize = T, size = 0.25) %<+%
+        ggtree(ladderize = T, size = branch_width, layout = layout) %<+%
         mut_nodes +
         layout_dendrogram() +
-        geom_tippoint(aes(color = clone), size=0.1) +
         geom_rootedge(size = 0.25) +
         geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = 1, fill = 'red') +
         geom_text2(aes(x = branch, label = str_trunc(site, 20, side = 'center')), size = 2, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred') +
@@ -2484,9 +2503,14 @@ tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NU
             axis.text.x = element_blank(),
             axis.line.y = element_line(size = 0.2),
             axis.ticks.y = element_line(size = 0.2),
-            axis.text.y = element_text(size = 5)
+            # axis.text.y = element_text(size = 5)
+            axis.text.y = element_blank()
         ) +
         guides(color = F)
+
+    if (tip) {
+        p_tree = p_tree + geom_tippoint(aes(color = clone), size=0, stroke = 0.2)
+    }
     
     if (legend) {
         p_tree = p_tree + guides(colour = guide_legend(override.aes = list(size = 2)))
@@ -2508,7 +2532,31 @@ tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NU
 
     p_map = cell_heatmap(joint_post, cnv_order, cell_order, limit)
 
-    panel = (p_tree / p_map) + plot_layout(heights = c(ratio,1))
+    p_annot = data.frame(
+            cell = names(cell_dict),
+            annot = unname(cell_dict)
+        ) %>%
+        mutate(cell = factor(cell, cell_order)) %>%
+        ggplot(
+            aes(x = cell, y = '', fill = annot)
+        ) +
+        geom_tile(width=1, height=0.9) +
+        theme_void() +
+        scale_y_discrete(expand = expansion(0)) +
+        scale_x_discrete(expand = expansion(0)) +
+        theme(
+            panel.spacing = unit(0.1, 'mm'),
+            panel.border = element_rect(size = 0, color = 'black', fill = NA),
+            panel.background = element_rect(fill = 'white'),
+            strip.background = element_blank(),
+            strip.text = element_blank(),
+            axis.text.y = element_text(size = 8),
+            plot.margin = margin(3,0,0,0, unit = 'pt')
+        ) +
+        guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = NULL)) +
+        scale_fill_manual(values = pal_annot)
+
+    panel = (p_tree / p_annot / p_map) + plot_layout(heights = c(ratio,0.1,1), guides = 'collect')
 
     return(panel)
 }
@@ -2554,12 +2602,14 @@ cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5) {
             panel.background = element_rect(fill = 'white'),
             strip.background = element_blank(),
             axis.text.x = element_blank(),
-            strip.text = element_text(angle = 90, size = 8, vjust = 0.5)
+            strip.text = element_text(angle = 90, size = 8, vjust = 0.5),
+            plot.margin = margin(0.5,0,0,0, unit = 'mm')
         ) +
         scale_fill_gradient2(low = pal[2], high = pal[1], midpoint = 0, limits = c(-limit, limit), oob = scales::oob_squish) +
         # xlab('') +
-        theme(plot.title = element_text(size = 8)) +
-        ylab('')
+        theme(plot.title = element_blank()) +
+        ylab('') +
+        guides(fill = guide_colorbar(barwidth = unit(3, 'mm'), barheight = unit(15, 'mm')))
 
     return(p_map)
 }
