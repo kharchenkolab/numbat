@@ -1,7 +1,9 @@
 #' @import logger
+#' @import dplyr
 #' @import data.table
 #' @import stringr
 #' @import glue
+#' @import phangorn
 #' @import vcfR
 #' @import purrr
 #' @import magrittr
@@ -27,7 +29,7 @@ numbat_subclone = function(
         out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 10000, 
         min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
         ncores = 30, exp_model = 'lnpois', verbose = TRUE,
-        exclude_normal = TRUE, max_entropy = 0.6
+        exclude_normal = FALSE, max_entropy = 0.4, eps = 0.01
     ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
@@ -77,7 +79,7 @@ numbat_subclone = function(
             ncores = ncores
         )
 
-        fwrite(clust$gexp$gexp.norm.long, glue('{out_dir}/gexp.norm.long.tsv.gz'), sep = '\t')
+        fwrite(clust$gexp$gexp.norm.long, glue('{out_dir}/gexp.norm.long.tsv.gz'), sep = '\t', nThread = min(10, ncores))
         saveRDS(clust$hc, glue('{out_dir}/hc.rds'))
         saveRDS(clust$nodes, glue('{out_dir}/hc_nodes.rds'))
 
@@ -185,14 +187,14 @@ numbat_subclone = function(
         fwrite(as.data.frame(P), glue('{out_dir}/geno_{i}.tsv'), row.names = T, sep = '\t')
 
         # contruct initial NJ tree
-        treeNJ = NJ(dist(rbind(P, 'outgroup' = 1)))
-        treeNJ = root(treeNJ, outgroup = 'outgroup') %>% drop.tip('outgroup')
+        treeNJ = phangorn::NJ(dist(rbind(P, 'outgroup' = 1)))
+        treeNJ = ape::root(treeNJ, outgroup = 'outgroup') %>% ape::drop.tip('outgroup')
         treeNJ = reorder(treeNJ, order = 'postorder')
 
         saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
 
         # maximum likelihood tree search with NNI
-        tree_list = perform_nni(treeNJ, P, ncores = ncores)
+        tree_list = perform_nni(treeNJ, P, ncores = ncores, eps = eps)
         saveRDS(tree_list, glue('{out_dir}/tree_list_{i}.rds'))
 
         tree_post = get_tree_post(tree_list[[length(tree_list)]], P)
@@ -207,6 +209,7 @@ numbat_subclone = function(
 
         # update tree
         gtree = mut_to_tree(tree_post$gtree, mut_nodes)
+        gtree = mark_tumor_lineage(gtree)
 
         saveRDS(gtree, glue('{out_dir}/tree_final_{i}.rds'))
         saveRDS(G_m, glue('{out_dir}/mut_graph_{i}.rds'))
@@ -349,7 +352,7 @@ make_group_bulks = function(groups, count_mat, df, lambdas_ref, gtf_transcript, 
 
     ncores = ifelse(is.null(ncores), length(groups), ncores)
 
-    bulks = mclapply(
+    results = mclapply(
             groups,
             mc.cores = ncores,
             function(g) {
@@ -368,8 +371,15 @@ make_group_bulks = function(groups, count_mat, df, lambdas_ref, gtf_transcript, 
                 )
         })
 
+    bad = sapply(results, inherits, what = "try-error")
+
+    if (any(bad)) {
+        log_error(glue('job {paste(which(bad), collapse = ",")} failed'))
+        log_error(results[bad][[1]])
+    }
+
     # unify marker index
-    bulks = bulks %>% 
+    bulks = results %>% 
         bind_rows() %>%
         arrange(CHROM, POS) %>%
         mutate(snp_id = factor(snp_id, unique(snp_id))) %>%
@@ -537,24 +547,32 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
 #' @export
 cell_to_clone = function(gtree, exp_post, allele_post) {
 
-    clones = gtree %>% data.frame() %>% 
-        group_by(GT) %>%
+    # gtree = mark_tumor_lineage(gtree)
+
+    clones = gtree %>%
+        activate(nodes) %>%
+        data.frame() %>% 
+        # mutate(GT = ifelse(compartment == 'normal', '', GT)) %>%
+        group_by(GT, compartment) %>%
         summarise(
-            clone_size = n()
+            clone_size = n(),
+            .groups = 'drop'
         ) %>%
+        mutate(clone = as.integer(factor(GT))) 
+
+    clone_segs = clones %>%
         mutate(
-            prior_clone = ifelse(GT == '', 0.5, 0.5/(length(unique(GT))- 1))
+            prior_clone = ifelse(GT == '', 0.5, 0.5/(length(unique(GT)) - 1))
         ) %>%
         mutate(seg = GT) %>%
         tidyr::separate_rows(seg, sep = ',') %>%
         mutate(I = 1) %>%
-        tidyr::complete(seg, tidyr::nesting(GT, prior_clone, clone_size), fill = list('I' = 0)) %>%
-        mutate(clone = as.integer(factor(GT))) 
+        tidyr::complete(seg, tidyr::nesting(GT, clone, compartment, prior_clone, clone_size), fill = list('I' = 0))
 
     clone_post = inner_join(
             exp_post %>%
                 filter(cnv_state != 'neu') %>%
-                inner_join(clones, by = c('seg' = 'seg')) %>%
+                inner_join(clone_segs, by = c('seg' = 'seg')) %>%
                 mutate(l_clone = ifelse(I == 1, Z_cnv, Z_n)) %>%
                 group_by(cell, clone, GT, prior_clone) %>%
                 summarise(
@@ -563,7 +581,7 @@ cell_to_clone = function(gtree, exp_post, allele_post) {
                 ),
             allele_post %>%
                 filter(cnv_state != 'neu') %>%
-                inner_join(clones, by = c('seg' = 'seg')) %>%
+                inner_join(clone_segs, by = c('seg' = 'seg')) %>%
                 mutate(l_clone = ifelse(I == 1, Z_cnv, Z_n)) %>%
                 group_by(cell, clone, GT, prior_clone) %>%
                 summarise(
@@ -589,6 +607,14 @@ cell_to_clone = function(gtree, exp_post, allele_post) {
         as.data.table() %>%
         data.table::dcast(cell + clone_opt + GT_opt + p_opt ~ clone, value.var = c('p', 'p_x', 'p_y')) %>%
         as.data.frame()
+
+    tumor_clones = clones %>% 
+        filter(compartment == 'tumor') %>%
+        pull(clone)
+
+    clone_post['p_cnv'] = clone_post[paste0('p_', tumor_clones)] %>% rowSums
+    clone_post['p_cnv_x'] = clone_post[paste0('p_x_', tumor_clones)] %>% rowSums
+    clone_post['p_cnv_y'] = clone_post[paste0('p_y_', tumor_clones)] %>% rowSums
     
     return(clone_post)
     
