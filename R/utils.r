@@ -708,8 +708,11 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
         res[['scistree_out']] = readRDS(f)
     }
     
-    f = glue('{out_dir}/segs_consensus_{i}.tsv')
+    f = glue('{out_dir}/segs_consensus_{i-1}.tsv')
     if (file.exists(f)) {
+        res[['segs_consensus']] = fread(f)
+    } else {
+        f = glue('{out_dir}/segs_consensus_{i}.tsv')
         res[['segs_consensus']] = fread(f)
     }
 
@@ -717,6 +720,9 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
     if (file.exists(f)) {
         res[['bulk_subtrees']] = fread(f)
     }
+
+    res[['bulk_initial']] = fread(glue('{out_dir}/bulk_subtrees_0.tsv.gz'))
+        # mutate(CHROM = factor(CHROM, unique(CHROM)))
 
     f = glue('{out_dir}/bulk_clones_{i}.tsv.gz')
     if (file.exists(f)) {
@@ -1071,7 +1077,7 @@ simes_p = function(p.vals, n_dim) {
 # multi-sample generalization
 #' @export
 find_common_diploid = function(
-    bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, alpha = 0.01,
+    bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, alpha = 1e-4,
     bal_consensus = NULL, ncores = 5, debug = F, verbose = T) {
 
     if (!'sample' %in% colnames(bulks)) {
@@ -1093,7 +1099,8 @@ find_common_diploid = function(
                         p_s = p_s,
                         t = t,
                         theta_min = theta_min,
-                        gamma = unique(gamma))
+                        gamma = gamma
+                    )
                 ) %>% ungroup() %>%
                 mutate(cnv_state = str_remove(state, '_down|_up')) %>%
                 annot_segs()
@@ -1201,7 +1208,8 @@ find_common_diploid = function(
         # build graph
         V = segs_bal
 
-        E = tests %>% filter(q > alpha | delta_max < log(fc_min))
+        # E = tests %>% filter(q > alpha | delta_max < log(fc_min))
+        E = tests %>% filter(q > alpha)
 
         G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
 
@@ -1251,7 +1259,7 @@ find_common_diploid = function(
             log_info('quadruploid state enabled')
 
             if (grouping == 'component') {
-                diploid_segs = components$membership %>% keep(function(x){x == diploid_component}) %>% names
+                diploid_segs = components$membership %>% keep(function(x){x == diploid_cluster}) %>% names
             } else {
                 diploid_segs = names(cliques[[diploid_cluster]])
             }
@@ -2421,10 +2429,10 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clones = N
     return(p)
 }
 
+getPalette = colorRampPalette(pal)
+
 #' @export
 plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1, tvn = FALSE, tree = TRUE, p_min = 0.5, bar_ratio = 0.1, pal_clones = NULL, pal_annot = NULL) {
-
-    getPalette = colorRampPalette(pal)
 
     if (is.null(pal_clones)) {
         n_clones = length(unique(res$clone_post$clone_opt))
@@ -2556,7 +2564,7 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
             # axis.text.y = element_text(size = 5)
             axis.text.y = element_blank()
         ) +
-        guides(color = F)
+        guides(color = F) 
 
     if (tip) {
         p_tree = p_tree + geom_tippoint(aes(color = clone), size=0, stroke = 0.2) +
@@ -2597,7 +2605,7 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
             annot = unname(clone_dict)
         ) %>%
         mutate(cell = factor(cell, cell_order)) %>%
-        annot_bar() +
+        annot_bar(transpose = F) +
         scale_fill_manual(values = c('gray', pal_clone))
 
     if (!is.null(cell_dict)) {
@@ -2606,7 +2614,7 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
                 annot = unname(cell_dict)
             ) %>%
             mutate(cell = factor(cell, cell_order)) %>%
-            annot_bar()
+            annot_bar(transpose = F)
             # scale_fill_manual(values = pal_annot)
 
         panel = (p_tree / p_clones / p_annot / p_map) + plot_layout(heights = c(ratio,0.06,0.06,1), guides = 'collect')
@@ -2617,8 +2625,134 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
     return(panel)
 }
 
-annot_bar = function(D) {
-    ggplot(
+plot_sc_joint = function(
+        gtree, joint_post, segs_consensus, 
+        cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, logBF_max = 5, clone_bar = FALSE, pal_clone = NULL
+    ) {
+          
+    gtree = mark_tumor_lineage(gtree)
+
+    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
+
+    # tree visualization
+    p_tree = gtree %>% 
+            to_phylo() %>%
+            ggtree(ladderize = T, size = branch_width) +
+            geom_rootedge(size = branch_width) +
+            theme(
+                plot.margin = margin(0,1,0,0, unit = 'mm'),
+                axis.title.x = element_blank(),
+                axis.ticks.x = element_blank(),
+                axis.text.x = element_blank(),
+                axis.line.y = element_blank(),
+                axis.ticks.y = element_blank(),
+                # axis.text.y = element_text(size = 5)
+                axis.text.y = element_blank()
+            ) +
+            guides(color = F)
+
+    cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
+
+    # cell heatmap
+    D = joint_post %>% 
+            inner_join(
+                segs_consensus %>% select(seg = seg_cons, CHROM, seg_start, seg_end),
+                by = c('seg', 'CHROM')
+            ) %>%
+            mutate(cell = factor(cell, cell_order)) %>%
+            mutate(cell_index = as.integer(droplevels(cell))) 
+
+    tumor_cells = gtree %>% 
+        activate(nodes) %>% filter(leaf) %>%
+        as.data.frame() %>% 
+        filter(compartment == 'tumor') %>%
+        pull(name)
+
+    first_tumor_index = which(cell_order %in% tumor_cells)[1]
+
+    p_segs = ggplot(
+            D %>% mutate(logBF = pmax(pmin(logBF, logBF_max), logBF_min))
+        ) +
+        theme_classic() +
+        geom_segment(
+            aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state, alpha = logBF),
+            size = size
+        ) +
+        geom_segment(
+            inherit.aes = F,
+            aes(x = seg_start, xend = seg_end, y = 1, yend = 1),
+            data = segs_consensus, size = 0, color = 'white', alpha = 0
+        ) +
+        geom_hline(yintercept = first_tumor_index, color = 'royalblue', size = 0.5, linetype = 'dashed') +
+        theme(
+            panel.spacing = unit(0, 'mm'),
+            panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+            strip.background = element_blank(),
+            axis.text = element_blank(),
+            axis.title = element_blank(),
+            axis.ticks = element_blank(),
+            plot.margin = margin(0,0,5,0, unit = 'mm'),
+            axis.line = element_blank()
+        ) +
+        scale_x_continuous(expand = expansion(0)) +
+        scale_y_continuous(expand = expansion(0)) +
+        facet_grid(.~CHROM, space = 'free', scale = 'free') +
+        scale_alpha_continuous(range = c(0,1)) +
+        guides(
+            alpha = 'none',
+            color = guide_legend(override.aes = c('size' = 1))
+        ) +
+        scale_color_manual(
+            values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = 'red', 'loh' = 'darkgreen')
+        )
+
+    # clone annotation
+    clone_dict = gtree %>%
+        activate(nodes) %>%
+        data.frame %>%
+        mutate(
+            GT = ifelse(compartment == 'normal', '', GT),
+            GT = factor(GT),
+            clone = as.factor(as.integer(GT))
+        ) %>%
+        {setNames(.$clone, .$name)}
+
+    if (is.null(pal_clone)) {
+        pal_clone = c('gray', getPalette(length(unique(clone_dict))))
+    }
+
+    p_clone = data.frame(
+            cell = names(clone_dict),
+            annot = unname(clone_dict)
+        ) %>%
+        mutate(cell = factor(cell, cell_order)) %>%
+        annot_bar(transpose = T) +
+        scale_fill_manual(values =pal_clone)
+
+    # external annotation
+    if (!is.null(cell_dict)) {
+
+        p_annot = data.frame(
+                cell = names(cell_dict),
+                annot = unname(cell_dict)
+            ) %>%
+            mutate(cell = factor(cell, cell_order)) %>%
+            annot_bar(transpose = T)
+
+        if (clone_bar) {
+            (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(1, 0.25, 0.25, 15), guides = 'collect')
+        } else {
+            (p_tree | p_annot | p_segs) + plot_layout(widths = c(1, 0.25, 15), guides = 'collect')
+        }
+    } else if (clone_bar) {
+        (p_tree | p_clone | p_segs) + plot_layout(widths = c(1, 0.25, 15), guides = 'collect')
+    } else {
+        (p_tree | p_segs) + plot_layout(widths = c(1, 15), guides = 'collect')
+    }
+}
+
+annot_bar = function(D, transpose = FALSE) {
+    p = ggplot(
         D,
         aes(x = cell, y = '', fill = annot)
     ) +
@@ -2632,10 +2766,18 @@ annot_bar = function(D) {
         panel.background = element_rect(fill = 'white'),
         strip.background = element_blank(),
         strip.text = element_blank(),
-        axis.text.y = element_text(size = 8),
-        plot.margin = margin(0,0,1,0, unit = 'mm')
+        # axis.text = element_text(size = 8),
+        axis.text = element_blank(),
+        plot.margin = margin(0.5,0,0.5,0, unit = 'mm')
     ) +
     guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = NULL))
+
+    if (transpose) {
+        p = p + coord_flip() +
+            theme(plot.margin = margin(0,0.5,0,0.5, unit = 'mm'))
+    }
+
+    return(p)
 }
 
 #' @export

@@ -109,10 +109,11 @@ numbat_subclone = function(
         stop('init_method can be raw, bulk, or smooth')
     }
 
-    fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
-
     # resolve CNVs
     segs_consensus = get_segs_consensus(bulk_subtrees)
+
+    fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
+    fwrite(segs_consensus, glue('{out_dir}/segs_consensus_0.tsv'), sep = '\t')
 
     normal_cells = c()
 
@@ -167,7 +168,7 @@ numbat_subclone = function(
             cell_sample = cell_sample[!cell_sample %in% normal_cells]
         }
 
-        # cosntruct genotype probability matrix
+        # construct genotype probability matrix
         p_min = 1e-10
 
         P = joint_post %>%
@@ -186,15 +187,36 @@ numbat_subclone = function(
 
         fwrite(as.data.frame(P), glue('{out_dir}/geno_{i}.tsv'), row.names = T, sep = '\t')
 
-        # contruct initial NJ tree
-        treeNJ = phangorn::NJ(dist(rbind(P, 'outgroup' = 1)))
-        treeNJ = ape::root(treeNJ, outgroup = 'outgroup') %>% ape::drop.tip('outgroup')
-        treeNJ = reorder(treeNJ, order = 'postorder')
+        # contruct initial tree
+        dist_mat = dist(rbind(P, 'outgroup' = 1))
 
+        treeUPGMA = phangorn::upgma(dist_mat) %>%
+            ape::root(outgroup = 'outgroup') %>%
+            ape::drop.tip('outgroup') %>%
+            reorder(order = 'postorder')
+
+        # note that dist_mat gets modified
+        treeNJ = phangorn::NJ(dist_mat) %>%
+            ape::root(outgroup = 'outgroup') %>%
+            ape::drop.tip('outgroup') %>%
+            reorder(order = 'postorder')
+
+        NJ_score = score_tree(treeNJ, as.matrix(P))$l_tree
+        UPGMA_score = score_tree(treeUPGMA, as.matrix(P))$l_tree
+
+        if (UPGMA_score > NJ_score) {
+            tree_init = treeUPGMA
+            log_info('Using UPGMA tree as seed..')
+        } else {
+            tree_init = treeNJ
+            log_info('Using NJ tree as seed..')
+        }
+    
         saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
+        saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
 
         # maximum likelihood tree search with NNI
-        tree_list = perform_nni(treeNJ, P, ncores = ncores, eps = eps)
+        tree_list = perform_nni(tree_init, P, ncores = ncores, eps = eps)
         saveRDS(tree_list, glue('{out_dir}/tree_list_{i}.rds'))
 
         tree_post = get_tree_post(tree_list[[length(tree_list)]], P)
@@ -392,7 +414,8 @@ make_group_bulks = function(groups, count_mat, df, lambdas_ref, gtf_transcript, 
 #' Run mutitple HMMs 
 #' @export
 run_group_hmms = function(
-    bulks, t = 1e-4, gamma = 20, theta_min = 0.08, exp_model = 'lnpois',
+    bulks, t = 1e-4, gamma = 20, theta_min = 0.08,
+    exp_model = 'lnpois', alpha = 1e-4,
     common_diploid = TRUE, allele_only = FALSE, retest = TRUE, 
     ncores = NULL, verbose = FALSE, debug = FALSE
 ) {
@@ -411,7 +434,7 @@ run_group_hmms = function(
 
     # find common diploid region
     if (common_diploid) {
-        diploid_out = find_common_diploid(bulks, ncores = ncores)
+        diploid_out = find_common_diploid(bulks, gamma = gamma, alpha = alpha, ncores = ncores)
         bulks = diploid_out$bulks
         find_diploid = FALSE
     } else {
