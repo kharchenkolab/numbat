@@ -86,9 +86,11 @@ out = numbat_subclone(
 3. visualize results
 
 Numbat generates a number of files in the output folder. The main results can be loaded by this function:
-```res = fetch_results(out_dir, i = 2)```
+```
+res = fetch_results(out_dir, i = 2)
+```
 
-Now we can visualize the single-cell CNV and lineage relationships:
+Now we can visualize the single-cell CNV profiles and lineage relationships:
 ```
 plot_sc_joint(
     res$gtree,
