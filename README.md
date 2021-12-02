@@ -83,7 +83,7 @@ out = numbat_subclone(
     out_dir = glue('~/results/test')
 )
 ```
-3. visualize results
+3. Visualize results
 
 Numbat generates a number of files in the output folder. The main results can be loaded by this function:
 ```
