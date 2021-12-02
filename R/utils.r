@@ -729,15 +729,6 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
         res[['bulk_clones']] = fread(f)
     }
 
-    # G_m = res$mut_tree_file %>% 
-    #     read_mut_tree(res$tree_post$mut_nodes) %>%
-    #     simplify_history(res$tree_post$l_matrix, max_cost = max_cost, verbose = verbose) %>%
-    #     label_genotype()
-
-    # mut_nodes = G_m %>% as_data_frame('nodes') %>% select(name = node, site = label)
-
-    # res$G_m = G_m
-
     f = glue('{out_dir}/mut_graph_{i}.rds')
     if (file.exists(f)) {
         res$G_m = readRDS(f)
@@ -770,7 +761,7 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
 analyze_bulk_lnpois = function(
     Obs, t = 1e-5, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
     exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE,
-    phasing = TRUE, roll_phi = TRUE, verbose = TRUE, debug = FALSE, 
+    phasing = TRUE, roll_phi = TRUE, verbose = TRUE, debug = FALSE, diploid_chroms = NULL,
     find_diploid = TRUE, classify_allele = FALSE
 ) {
     
@@ -778,13 +769,13 @@ analyze_bulk_lnpois = function(
         stop('transition probability is not numeric')
     }
 
-    if (find_diploid) {
-
+    if (!is.null(diploid_chroms)) {
+        log_info(glue('Using diploid chromosomes given: {paste0(diploid_chroms, collapse = ",")}'))
+        Obs = Obs %>% mutate(diploid = CHROM %in% diploid_chroms)
+    } else if (find_diploid) {
         out = find_common_diploid(Obs, gamma = gamma, t = t)
-        
         Obs = out$bulks
         bal_cnv = out$bamp
-
     } else if (!'diploid' %in% colnames(Obs)) {
         stop('Must define diploid region if not given')
     }
@@ -2627,7 +2618,7 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
 
 plot_sc_joint = function(
         gtree, joint_post, segs_consensus, 
-        cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, logBF_max = 5, clone_bar = FALSE, pal_clone = NULL
+        cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, pal_clone = NULL
     ) {
           
     gtree = mark_tumor_lineage(gtree)
@@ -2703,7 +2694,7 @@ plot_sc_joint = function(
             color = guide_legend(override.aes = c('size' = 1))
         ) +
         scale_color_manual(
-            values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = 'red', 'loh' = 'darkgreen')
+            values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = 'red', 'mamp' = 'red', 'loh' = 'darkgreen', 'bdel' = 'blue', 'neu' = 'white')
         )
 
     # clone annotation
@@ -2726,7 +2717,7 @@ plot_sc_joint = function(
             annot = unname(clone_dict)
         ) %>%
         mutate(cell = factor(cell, cell_order)) %>%
-        annot_bar(transpose = T) +
+        annot_bar(transpose = T, legend = clone_legend) +
         scale_fill_manual(values =pal_clone)
 
     # external annotation
@@ -2751,7 +2742,7 @@ plot_sc_joint = function(
     }
 }
 
-annot_bar = function(D, transpose = FALSE) {
+annot_bar = function(D, transpose = FALSE, legend = TRUE) {
     p = ggplot(
         D,
         aes(x = cell, y = '', fill = annot)
@@ -2769,12 +2760,17 @@ annot_bar = function(D, transpose = FALSE) {
         # axis.text = element_text(size = 8),
         axis.text = element_blank(),
         plot.margin = margin(0.5,0,0.5,0, unit = 'mm')
-    ) +
-    guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = NULL))
+    ) 
 
     if (transpose) {
         p = p + coord_flip() +
             theme(plot.margin = margin(0,0.5,0,0.5, unit = 'mm'))
+    }
+
+    if (legend) {
+        p = p + guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = NULL))
+    } else {
+        p = p + guides(fill = 'none')
     }
 
     return(p)
@@ -2783,7 +2779,7 @@ annot_bar = function(D, transpose = FALSE) {
 #' @export
 cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5, cnv_type = TRUE) {
 
-    geno = geno %>% mutate(logBF = Z_cnv - Z_n)
+    # geno = geno %>% mutate(logBF = Z_cnv - Z_n)
 
     if (is.null(cnv_order)) {
         cnv_order = unique(geno$seg)
