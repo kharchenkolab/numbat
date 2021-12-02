@@ -1,7 +1,3 @@
-library(igraph)
-library(tidygraph)
-library(ggtree)
-
 ##### R implementation of ScisTree perfect phylogeny #####
 
 #' @description score a tree based on maximum likelihood
