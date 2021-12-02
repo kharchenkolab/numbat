@@ -63,6 +63,7 @@ optional arguments:
 ```
 
 2. Run Numbat
+
 In this example (ATC2 from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2)), the gene expression count matrix and allele dataframe are already prepared for you.
 ```
 library(numbat)
@@ -83,6 +84,7 @@ out = numbat_subclone(
 )
 ```
 3. visualize results
+
 Numbat generates a number of files in the output folder. The main results can be loaded by this function:
 ```res = fetch_results(out_dir, i = 2)```
 
