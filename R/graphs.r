@@ -2,6 +2,146 @@ library(igraph)
 library(tidygraph)
 library(ggtree)
 
+##### R implementation of ScisTree perfect phylogeny #####
+
+#' @description score a tree based on maximum likelihood
+#' @param tree phylo object
+#' @param P genotype probability matrix
+#' @export
+score_tree = function(tree, P) {
+    
+    tree = reorder(tree, order = 'postorder')
+        
+    n = nrow(P)
+    m = ncol(P)
+
+    logQ = matrix(nrow = tree$Nnode * 2 + 1, ncol = m)
+
+    logP_0 = log(P)
+    logP_1 = log(1-P)
+    
+    node_order = c(tree$edge[,2], n+1)
+    node_order = node_order[node_order > n]
+    
+    logQ[1:n,] = logP_1 - logP_0
+
+    for (i in node_order) {
+        children = Children(tree, i)
+        logQ[i,] = logQ[children[1],] + logQ[children[2],]
+    }
+    
+    l_matrix = sweep(logQ, 2, colSums(logP_0), FUN = '+')
+    
+    l_tree = sum(apply(l_matrix, 2, max))
+    
+    return(list('l_tree' = l_tree, 'logQ' = logQ, 'l_matrix' = l_matrix))
+    
+}
+
+#' @description maximum likelihood tree search via NNI
+#' @param tree_init iintial tree as phylo object
+#' @param P genotype probability matrix
+#' @export
+perform_nni = function(tree_init, P, max_iter = 100, ncores = 20, eps = 0.01, verbose = TRUE) {
+
+    P = as.matrix(P)
+    
+    converge = FALSE
+
+    i = 1
+    max_current = score_tree(tree_init, P)$l_tree
+    tree_current = tree_init
+    tree_list = list()
+    tree_list[[1]] = tree_current
+
+    while (!converge & i <= max_iter) {
+        
+        i = i + 1
+        
+        ptm = proc.time()
+
+        neighbours = nni(tree_current)
+
+        scores = mclapply(
+                mc.cores = ncores,
+                neighbours,
+                function(tree) {
+                    score_tree(tree, P)$l_tree
+                }
+            ) %>%
+            unlist()
+
+        if (max(scores) > max_current + eps) {
+            tree_list[[i]] = tree_current = neighbours[[which.max(scores)]]
+            tree_list[[i]]$likelihood = max_current = max(scores)
+            converge = FALSE
+        } else {
+            converge = TRUE
+        }
+        
+        runtime = proc.time() - ptm
+        
+        if (verbose) {
+            msg = glue('Iter {i} {max_current} {signif(unname(runtime[3]),2)}')
+            message(msg)
+            log_info(msg)
+        }
+    }
+
+    class(tree_list) = 'multiPhylo'
+
+    return(tree_list)
+}
+
+#' @export
+mark_tumor_lineage = function(gtree) {
+    
+    mut_nodes = gtree %>%
+        activate(nodes) %>%
+        filter(!is.na(site)) %>%
+        as.data.frame() %>%
+        pull(id)
+
+    mut_burdens = lapply(
+        mut_nodes,
+        function(node) {
+            gtree %>%
+            activate(nodes) %>%
+            mutate(
+                mut_burden = ifelse(GT == '', 0, str_count(GT, ',') + 1)
+            ) %>%
+            ungroup() %>%
+            mutate(seq = bfs_rank(root = node)) %>%
+            data.frame %>%
+            filter(leaf & !is.na(seq)) %>%
+            pull(mut_burden) %>%
+            sum
+        }
+    )
+
+    tumor_root = mut_nodes[which.max(mut_burdens)]
+    
+    gtree = gtree %>%
+        activate(nodes) %>%
+        mutate(
+            seq = bfs_rank(root = tumor_root),
+            compartment = ifelse(is.na(seq), 'normal', 'tumor'),
+            is_tumor_root = tumor_root == id
+        )
+
+    compartment_dict = gtree %>%
+        activate(nodes) %>%
+        as.data.frame() %>%
+        {setNames(.$compartment, .$id)} 
+
+    gtree = gtree %>%
+        activate(edges) %>%
+        mutate(compartment = compartment_dict[to]) 
+    
+    return(gtree)
+    
+}
+
 parse_scistree = function(out_file, geno, joint_post) {
     
     MLtree = fread(out_file, skip = 'Constructed single cell phylogeny', fill=TRUE, sep = ':', nrow = 1) %>%
@@ -23,7 +163,7 @@ parse_scistree = function(out_file, geno, joint_post) {
     
     Gopt = fread(out_file, skip = 'Imputed genotypes', header = F, sep = ' ', nrows = nrow(geno)) %>%
         select(-V1) %>%
-        mutate(V2 = as.integer(map(str_split(V2, '\t'),2))) %>%
+        mutate(V2 = as.integer(purrr::map(str_split(V2, '\t'),2))) %>%
         set_colnames(colnames(geno)) %>%
         mutate(seg = rownames(geno)) %>% 
         reshape2::melt(id.var = 'seg', variable.name = 'cell', value.name = 'p_cnv') %>%
@@ -37,9 +177,8 @@ parse_scistree = function(out_file, geno, joint_post) {
     return(list('MLtree' = MLtree, 'cnv_order' = cnv_order, 'G' = Gopt, 'NJtree' = NJtree))
 }
 
-read_mut_tree = function(tree_file, mut_assign) {
+label_mut_tree = function(G, mut_assign) {
 
-    G = igraph::read_graph(tree_file, format = 'gml')
     # fix the root node
     if (all(V(G)$label != ' ')) {
         
@@ -73,6 +212,31 @@ read_mut_tree = function(tree_file, mut_assign) {
     return(G)
 }
 
+get_mut_tree = function(gtree, mut_assign) {
+
+    G = gtree %>%
+        activate(nodes) %>%
+        arrange(last_mut) %>%
+        convert(to_contracted, last_mut) %>%
+        mutate(label = last_mut, id = 1:n()) %>%
+        as.igraph
+
+    G = label_edges(G)
+
+    V(G)$node = G %>%
+        igraph::as_data_frame('vertices') %>%
+        left_join(
+            mut_assign %>% rename(node = name),
+            by = c('label' = 'site')
+        ) %>%
+        pull(node)
+
+    G = G %>% transfer_links()
+
+    return(G)
+
+}
+
 # compute site branch likelihood
 l_s_v = function(node, site, gtree, geno) {
     
@@ -91,9 +255,34 @@ l_s_v = function(node, site, gtree, geno) {
     sum
 }
 
-get_tree_post = function(MLtree, geno) {
+get_tree_post = function(tree, P) {
     
-    gtree = MLtree %>%
+    sites = colnames(P)
+    n = nrow(P)
+    tree_stats = score_tree(tree, P)
+
+    l_matrix = as.data.frame(tree_stats$l_matrix)
+
+    colnames(l_matrix) = sites
+    rownames(l_matrix) = c(tree$tip.label, paste0('Node', 1:tree$Nnode))
+
+    mut_nodes = data.frame(
+            site = sites,
+            node_phylo = apply(l_matrix, 2, which.max),
+            l = apply(l_matrix, 2, max)
+        ) %>%
+        mutate(
+            name = ifelse(node_phylo <= n, tree$tip.label[node_phylo], paste0('Node', node_phylo - n))
+        ) %>%
+        group_by(name) %>%
+        summarise(
+            site = paste0(sort(site), collapse = ','),
+            n_mut = n(),
+            l = sum(l),
+            .groups = 'drop'
+        )
+
+    gtree = tree %>%
         ape::ladderize() %>%
         as_tbl_graph() %>%
         mutate(
@@ -101,46 +290,6 @@ get_tree_post = function(MLtree, geno) {
             root = node_is_root(),
             depth = bfs_dist(root = 1),
             id = row_number()
-        )
-
-    sites = rownames(geno)
-
-    nodes = mclapply(
-            mc.cores = length(sites),
-            sites,
-            function(site) {
-                gtree %>%
-                data.frame() %>%
-                rowwise() %>%
-                mutate(l = l_s_v(id, site, gtree, geno)) %>%
-                ungroup() %>%
-                mutate(site = site)
-            }
-        ) %>%
-        bind_rows()
-    
-    nodes = nodes %>% group_by(site) %>%
-        mutate(
-            p = exp(l - matrixStats::logSumExp(l)),
-            mle = p == max(p)
-        ) %>%
-        ungroup()
-
-    l_matrix = nodes %>% 
-        reshape2::dcast(name ~ site, value.var = 'l') %>%
-        tibble::column_to_rownames('name')
-
-    # mutation assignments
-    mut_nodes = nodes %>% 
-        filter(mle) %>%
-        # if a cell has probability exactly 0.5, the MLE would not be unique
-        distinct(site, .keep_all = T) %>%
-        group_by(name) %>%
-        summarise(
-            site = paste0(sort(site), collapse = ','),
-            n_mut = n(),
-            l = sum(l),
-            .groups = 'drop'
         )
 
     # leaf annotation for edges
@@ -155,11 +304,13 @@ get_tree_post = function(MLtree, geno) {
             by = c('to' = 'id')
         )
 
-    # annotate the tree with mutation assignment
+    # annotate the tree
     gtree = mut_to_tree(gtree, mut_nodes)
+    gtree = mark_tumor_lineage(gtree)
 
-    return(list('mut_nodes' = mut_nodes, 'gtree' = gtree, 'nodes' = nodes, 'l_matrix' = l_matrix))
+    return(list('mut_nodes' = mut_nodes, 'gtree' = gtree, 'l_matrix' = l_matrix))
 }
+
 
 
 mut_to_tree = function(gtree, mut_nodes) {
@@ -169,7 +320,7 @@ mut_to_tree = function(gtree, mut_nodes) {
         select(-any_of(c('n_mut', 'l', 'site'))) %>%
         left_join(
             mut_nodes %>%
-                mutate(n_mut = unlist(map(str_split(site, ','), length))) %>%
+                mutate(n_mut = unlist(purrr::map(str_split(site, ','), length))) %>%
                 select(name, n_mut, site),
             by = 'name'
         ) %>%
@@ -194,7 +345,20 @@ mut_to_tree = function(gtree, mut_nodes) {
         mutate(GT = unlist(
             map_bfs(node_is_root(),
             .f = function(path, ...) { paste0(na.omit(node_to_mut[path$node]), collapse = ',') })
-        ))
+            ),
+            last_mut = unlist(
+                map_bfs(node_is_root(),
+                .f = function(path, ...) { 
+                    past_muts = na.omit(node_to_mut[path$node])
+                    if (length(past_muts) > 0) {
+                        return(past_muts[length(past_muts)])
+                    } else {
+                        return('')
+                    }
+                })
+            )
+        ) %>%
+        mutate(GT = ifelse(GT == '' & !is.na(site), site, GT))
     
     return(gtree)
 }
@@ -252,8 +416,8 @@ label_genotype = function(G) {
     id_to_label = igraph::as_data_frame(G, 'vertices') %>% {setNames(.$label, .$id)}
 
     V(G)$GT = igraph::all_simple_paths(G, from = 1) %>% 
-        map(as.character) %>%
-        map(function(x) {
+        purrr::map(as.character) %>%
+        purrr::map(function(x) {
             muts = id_to_label[x]
             muts = muts[muts != '']
             paste0(muts, collapse = ',')
@@ -313,7 +477,7 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
 
 simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
 
-    moves = data.frame()
+    # moves = data.frame()
 
     for (i in 1:ecount(G)) {
     
@@ -329,10 +493,10 @@ simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
                 msg = glue('opt_move:{move_opt$from_label}->{move_opt$to_label}, cost={signif(move_opt$cost,3)}')
             }
 
-            moves = moves %>% rbind(move_opt %>% mutate(i = i))
+            # moves = moves %>% rbind(move_opt %>% mutate(i = i))
 
             log_info(msg)
-            if (verbose) {display(msg)}
+            # if (verbose) {display(msg)}
         } else {
             break()
         }
@@ -392,3 +556,4 @@ plot_mut_tree = function(G) {
          asp = 0.25
     )
 }
+

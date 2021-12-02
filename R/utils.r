@@ -181,7 +181,7 @@ process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = 
     count_mat_obs = count_mat_obs[mut_expressed,,drop=F]
     lambdas_ref = lambdas_ref[mut_expressed]
 
-    if(verbose){display(nrow(count_mat_obs))}
+    if(verbose){message(nrow(count_mat_obs))}
 
     bulk_obs = count_mat_obs %>%
         rowSums() %>%
@@ -244,11 +244,11 @@ process_exp2 = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101
     count_mat_obs = count_mat_obs[mut_expressed,,drop=F]
     lambdas_ref = lambdas_ref[mut_expressed,]
     
-    if(verbose){display(nrow(count_mat_obs))}
+    if(verbose){message(nrow(count_mat_obs))}
 
     exp_mat = scale(count_mat_obs, center=FALSE, scale=colSums(count_mat_obs))
 
-    if (verbose) {display('choosing best references by correlation')}
+    if (verbose) {message('choosing best references by correlation')}
     cors = cor(log2(exp_mat * 1e6 + 1), log2(lambdas_ref * 1e6 + 1)[rownames(exp_mat),])
     best_refs = apply(cors, 1, function(x) {colnames(cors)[which.max(x)]})
     exp_mat_ref = lambdas_ref[,best_refs] %>% set_colnames(names(best_refs))
@@ -307,7 +307,7 @@ process_exp = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101,
     count_mat_obs = count_mat_obs[mut_expressed,,drop=F]
     lambdas_ref = lambdas_ref[mut_expressed]
     
-    if(verbose){display(nrow(count_mat_obs))}
+    if(verbose){message(nrow(count_mat_obs))}
     
     exp_mat = scale(count_mat_obs, center=FALSE, scale=colSums(count_mat_obs))
 
@@ -467,10 +467,10 @@ get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min
 
     fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
 
-    if (verbose) {
-        display('Fitted reference proportions:')
-        display(signif(fit$w, 2))
-    }
+    # if (verbose) {
+        # message('Fitted reference proportions:')
+        # message(paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
+    # }
     
     gexp_bulk = process_exp_fc(
         count_mat,
@@ -677,7 +677,7 @@ make_psbulk = function(count_mat, cell_annot, verbose = T) {
     cell_dict = cell_dict[cells]
 
     if (verbose) {
-        display(table(cell_dict))
+        message(table(cell_dict))
     }
    
     M = model.matrix(~ 0 + cell_dict) %>% set_colnames(levels(cell_dict))
@@ -698,11 +698,21 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
     res[['allele_post']] = fread(glue('{out_dir}/allele_post_{i}.tsv'))
     # bulk0 = fread(glue('{out_dir}/bulk_subtrees_0.tsv'))
     res[['geno']] = fread(glue('{out_dir}/geno_{i}.tsv')) %>% tibble::column_to_rownames('V1')
+
+
     res[['tree_post']] = readRDS(glue('{out_dir}/tree_post_{i}.rds'))
-    res[['scistree_out']] = readRDS(glue('{out_dir}/scistree_out_{i}.rds'))
-    
-    f = glue('{out_dir}/segs_consensus_{i}.tsv')
+
+    f = glue('{out_dir}/scistree_out_{i}.rds')
+
     if (file.exists(f)) {
+        res[['scistree_out']] = readRDS(f)
+    }
+    
+    f = glue('{out_dir}/segs_consensus_{i-1}.tsv')
+    if (file.exists(f)) {
+        res[['segs_consensus']] = fread(f)
+    } else {
+        f = glue('{out_dir}/segs_consensus_{i}.tsv')
         res[['segs_consensus']] = fread(f)
     }
 
@@ -711,26 +721,20 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
         res[['bulk_subtrees']] = fread(f)
     }
 
+    res[['bulk_initial']] = fread(glue('{out_dir}/bulk_subtrees_0.tsv.gz'))
+        # mutate(CHROM = factor(CHROM, unique(CHROM)))
+
     f = glue('{out_dir}/bulk_clones_{i}.tsv.gz')
     if (file.exists(f)) {
         res[['bulk_clones']] = fread(f)
     }
-
-    # G_m = res$mut_tree_file %>% 
-    #     read_mut_tree(res$tree_post$mut_nodes) %>%
-    #     simplify_history(res$tree_post$l_matrix, max_cost = max_cost, verbose = verbose) %>%
-    #     label_genotype()
-
-    # mut_nodes = G_m %>% as_data_frame('nodes') %>% select(name = node, site = label)
-
-    # res$G_m = G_m
 
     f = glue('{out_dir}/mut_graph_{i}.rds')
     if (file.exists(f)) {
         res$G_m = readRDS(f)
     }
 
-    # # update tree
+    # update tree
     f = glue('{out_dir}/tree_final_{i}.rds')
     if (file.exists(f)) {
         res$gtree = readRDS(f)
@@ -757,7 +761,7 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
 analyze_bulk_lnpois = function(
     Obs, t = 1e-5, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
     exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE,
-    phasing = TRUE, roll_phi = TRUE, verbose = TRUE, debug = FALSE, 
+    phasing = TRUE, roll_phi = TRUE, verbose = TRUE, debug = FALSE, diploid_chroms = NULL,
     find_diploid = TRUE, classify_allele = FALSE
 ) {
     
@@ -765,13 +769,13 @@ analyze_bulk_lnpois = function(
         stop('transition probability is not numeric')
     }
 
-    if (find_diploid) {
-
+    if (!is.null(diploid_chroms)) {
+        log_info(glue('Using diploid chromosomes given: {paste0(diploid_chroms, collapse = ",")}'))
+        Obs = Obs %>% mutate(diploid = CHROM %in% diploid_chroms)
+    } else if (find_diploid) {
         out = find_common_diploid(Obs, gamma = gamma, t = t)
-        
         Obs = out$bulks
         bal_cnv = out$bamp
-
     } else if (!'diploid' %in% colnames(Obs)) {
         stop('Must define diploid region if not given')
     }
@@ -830,7 +834,7 @@ analyze_bulk_lnpois = function(
     if (retest & (!exp_only)) {
         
         if (verbose) {
-            display('Retesting CNVs..')
+            message('Retesting CNVs..')
         }
 
         segs_post = retest_cnv(Obs, exp_model = 'lnpois', allele_only = allele_only)
@@ -858,7 +862,7 @@ analyze_bulk_lnpois = function(
     }
     
     if (verbose) {
-        display('Finishing..')
+        message('Finishing..')
     }
 
     if (roll_phi) {
@@ -888,7 +892,7 @@ analyze_bulk_lnpois = function(
 #' @export
 classify_alleles = function(Obs) {
 
-    if (all(Obs$cnv_state %in% c('neu', 'bdel', 'bamp'))) {
+    if (all(Obs$cnv_state_post %in% c('neu', 'bdel', 'bamp'))) {
         return(Obs)
     }
     
@@ -1057,9 +1061,15 @@ annot_consensus = function(bulk, segs_consensus) {
     return(bulk)
 }
 
+simes_p = function(p.vals, n_dim) {
+    n_dim * min(sort(p.vals)/seq_along(p.vals))
+}
+
 # multi-sample generalization
 #' @export
-find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, bal_consensus = NULL, ncores = 5, debug = F, verbose = T) {
+find_common_diploid = function(
+    bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, alpha = 1e-4,
+    bal_consensus = NULL, ncores = 5, debug = F, verbose = T) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -1080,7 +1090,8 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
                         p_s = p_s,
                         t = t,
                         theta_min = theta_min,
-                        gamma = unique(gamma))
+                        gamma = gamma
+                    )
                 ) %>% ungroup() %>%
                 mutate(cnv_state = str_remove(state, '_down|_up')) %>%
                 annot_segs()
@@ -1122,12 +1133,14 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
         tests = data.frame()
         FC = data.frame()
         G = NULL
+        test_dat = data.frame()
     } else if (length(segs_bal) == 1) {
         diploid_segs = segs_bal
         bamp = FALSE
         tests = data.frame()
         FC = data.frame()
         G = NULL
+        test_dat = data.frame()
     } else {
         test_dat = bulks_bal %>%
             select(gene, seg, lnFC, sample) %>%
@@ -1136,26 +1149,58 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
             mutate(seg = as.character(seg)) %>%
             select(-gene)
         
-        options(warn = -1)
-        tests = t(combn(segs_bal, 2)) %>% 
-            as.data.frame() %>%
-            set_names(c('i', 'j')) %>%
+        # tests = t(combn(segs_bal, 2)) %>% 
+        #     as.data.frame() %>%
+        #     set_names(c('i', 'j')) %>%
+        #     rowwise() %>%
+        #     mutate(
+        #         p = Hotelling::hotelling.test(
+        #             .~seg,
+        #             data = test_dat,
+        #             pair = c(i, j)
+        #         )$pval
+        #     ) %>%
+        #     ungroup() %>%
+        #     mutate(p = p.adjust(p))
+
+        # sime's p
+        samples = unique(bulks_bal$sample)
+
+        tests = lapply(
+                samples,
+                function(sample) {
+                    t(combn(segs_bal, 2)) %>% 
+                        as.data.frame() %>%
+                        set_names(c('i', 'j')) %>%
+                        mutate(s = sample)
+                }
+            ) %>% 
+            bind_rows() %>%
             rowwise() %>%
             mutate(
-                p = Hotelling::hotelling.test(
-                    .~seg,
-                    data = test_dat,
-                    pair = c(i, j)
-                )$pval
+                p = t.test(
+                    x = bulks_bal$lnFC[bulks_bal$seg == i & bulks_bal$sample == s],
+                    y = bulks_bal$lnFC[bulks_bal$seg == j & bulks_bal$sample == s]
+                )$p.value,
+                lnFC_i = mean(bulks_bal$lnFC[bulks_bal$seg == i & bulks_bal$sample == s]),
+                lnFC_j = mean(bulks_bal$lnFC[bulks_bal$seg == j & bulks_bal$sample == s])
+            ) %>%
+            group_by(i,j) %>%
+            summarise(
+                p = simes_p(p, length(samples)),
+                lnFC_max_i = max(lnFC_i),
+                lnFC_max_j = max(lnFC_j),
+                delta_max = abs(lnFC_max_i - lnFC_max_j),
+                .groups = 'drop'
             ) %>%
             ungroup() %>%
-            mutate(p = p.adjust(p))
-        options(warn = 0)
+            mutate(q = p.adjust(p))
 
         # build graph
         V = segs_bal
 
-        E = tests %>% filter(p > 0.05) 
+        # E = tests %>% filter(q > alpha | delta_max < log(fc_min))
+        E = tests %>% filter(q > alpha)
 
         G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
 
@@ -1205,7 +1250,7 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
             log_info('quadruploid state enabled')
 
             if (grouping == 'component') {
-                diploid_segs = components$membership %>% keep(function(x){x == diploid_component}) %>% names
+                diploid_segs = components$membership %>% keep(function(x){x == diploid_cluster}) %>% names
             } else {
                 diploid_segs = names(cliques[[diploid_cluster]])
             }
@@ -1221,7 +1266,7 @@ find_common_diploid = function(bulks, grouping = 'clique', gamma = 20, theta_min
     
     bulks = bulks %>% mutate(diploid = seg %in% diploid_segs)
     
-    return(list('bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'FC' = FC, 'cliques' = cliques))
+    return(list('bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'test_dat' = test_dat, 'FC' = FC, 'cliques' = cliques))
 }
 
 get_segs_neu = function(bulks_all) {
@@ -1494,6 +1539,12 @@ calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, uppe
     
     return(res@coef)
     
+}
+
+binary_entropy = function(p) {
+    H = -p*log2(p)-(1-p)*log2(1-p)
+    H[is.na(H)] = 0
+    return(H)
 }
 
 #' @export
@@ -1993,7 +2044,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
     }
 
     # correct for baseline bias
-    if (fc_correct) {
+    if (fc_correct & !allele_only) {
         Obs = Obs %>% mutate(logFC = logFC - mu)
     }
 
@@ -2369,10 +2420,10 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clones = N
     return(p)
 }
 
+getPalette = colorRampPalette(pal)
+
 #' @export
 plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1, tvn = FALSE, tree = TRUE, p_min = 0.5, bar_ratio = 0.1, pal_clones = NULL, pal_annot = NULL) {
-
-    getPalette = colorRampPalette(pal)
 
     if (is.null(pal_clones)) {
         n_clones = length(unique(res$clone_post$clone_opt))
@@ -2415,7 +2466,7 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
     }
 
     p_clones = p_matrix %>% 
-        filter(seg %in% rownames(res$geno)) %>%
+        filter(seg %in% colnames(res$geno)) %>%
         inner_join(
             res$clone_post %>% filter(p_opt > p_min),
             by = 'cell'
@@ -2435,7 +2486,9 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
 }
 
 #' @export
-tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NULL, cnv_order = NULL, legend = T) {
+tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NULL, cnv_order = NULL, label_mut = TRUE, cnv_type = TRUE, branch_width = 0.2, tip = T, tip_length = 0.5, pal_annot = NULL, pal_clone = NULL, layout = 'rect', tvn = FALSE, legend = T) {
+           
+    gtree = mark_tumor_lineage(gtree)
 
     joint_post = joint_post %>% filter(cnv_state != 'neu')
 
@@ -2448,35 +2501,50 @@ tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NU
         joint_post = joint_post %>% mutate(logBF = Z_cnv - Z_n)
     }
 
-    if (is.null(cell_dict)) {
-        cell_dict = gtree %>%
+    if (tvn) {
+        clone_dict = gtree %>%
             activate(nodes) %>%
             data.frame %>%
-            mutate(GT = factor(GT)) %>%
-            mutate(clone = as.factor(as.integer(GT))) %>%
-            select(name, clone) %>%
-            {setNames(.$clone, .$name)}
+            mutate(compartment = factor(compartment)) %>%
+            {setNames(.$compartment, .$name)}
     } else {
-        cell_dict = as.factor(cell_dict)
+        clone_dict = gtree %>%
+            activate(nodes) %>%
+            data.frame %>%
+            mutate(
+                GT = ifelse(compartment == 'normal', '', GT),
+                GT = factor(GT),
+                clone = as.factor(as.integer(GT))
+            ) %>%
+            {setNames(.$clone, .$name)}
     }
 
-    OTU_dict = lapply(levels(cell_dict), function(x) names(cell_dict[cell_dict == x])) %>% setNames(levels(cell_dict))
+    getPalette = colorRampPalette(pal)
 
-    mut_nodes = gtree %>% filter(!is.na(site)) %>% data.frame() %>% select(name, site)
+    if (is.null(pal_annot)) {
+        pal_annot = getPalette(length(unique(cell_dict)))
+    }
+
+    if (is.null(pal_clone)) {
+        pal_clone = getPalette(length(unique(clone_dict)))
+    }
+
+    OTU_dict = lapply(levels(clone_dict), function(x) names(clone_dict[clone_dict == x])) %>% setNames(levels(clone_dict))
+
+    mut_nodes = gtree %>% activate(nodes) %>% filter(!is.na(site)) %>% data.frame() %>% select(name, site)
+
+    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
     
     p_tree = gtree %>% 
         to_phylo() %>%
-        groupOTU( 
+        groupOTU(
             OTU_dict,
             'clone'
         ) %>%
-        ggtree(ladderize = T, size = 0.25) %<+%
+        ggtree(ladderize = T, size = branch_width, layout = layout) %<+%
         mut_nodes +
         layout_dendrogram() +
-        geom_tippoint(aes(color = clone), size=0.1) +
-        geom_rootedge(size = 0.25) +
-        geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = 1, fill = 'red') +
-        geom_text2(aes(x = branch, label = str_trunc(site, 20, side = 'center')), size = 2, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred') +
+        geom_rootedge(size = branch_width) +
         theme(
             plot.margin = margin(0,0,0,0),
             axis.title.x = element_blank(),
@@ -2484,12 +2552,27 @@ tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NU
             axis.text.x = element_blank(),
             axis.line.y = element_line(size = 0.2),
             axis.ticks.y = element_line(size = 0.2),
-            axis.text.y = element_text(size = 5)
+            # axis.text.y = element_text(size = 5)
+            axis.text.y = element_blank()
         ) +
-        guides(color = F)
+        guides(color = F) 
+
+    if (tip) {
+        p_tree = p_tree + geom_tippoint(aes(color = clone), size=0, stroke = 0.2) +
+            scale_color_manual(values = c('gray', pal_clone))
+    }
+
+    if (label_mut) {
+        p_tree = p_tree + geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = 1, fill = 'red') +
+            geom_text2(
+                aes(x = branch, label = str_trunc(site, 20, side = 'center')),
+                size = 2, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
+            )
+    }
     
     if (legend) {
-        p_tree = p_tree + guides(colour = guide_legend(override.aes = list(size = 2)))
+        p_tree = p_tree + 
+            guides(color = guide_legend(keywidth = unit(3, 'mm'), override.aes = list(size = 2), keyheight = unit(1, 'mm'), title = NULL))
     }
 
     cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
@@ -2506,17 +2589,197 @@ tree_heatmap2 = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NU
             unlist
     }
 
-    p_map = cell_heatmap(joint_post, cnv_order, cell_order, limit)
+    p_map = cell_heatmap(joint_post, cnv_order, cell_order, limit, cnv_type = cnv_type)
 
-    panel = (p_tree / p_map) + plot_layout(heights = c(ratio,1))
+    p_clones = data.frame(
+            cell = names(clone_dict),
+            annot = unname(clone_dict)
+        ) %>%
+        mutate(cell = factor(cell, cell_order)) %>%
+        annot_bar(transpose = F) +
+        scale_fill_manual(values = c('gray', pal_clone))
+
+    if (!is.null(cell_dict)) {
+        p_annot = data.frame(
+                cell = names(cell_dict),
+                annot = unname(cell_dict)
+            ) %>%
+            mutate(cell = factor(cell, cell_order)) %>%
+            annot_bar(transpose = F)
+            # scale_fill_manual(values = pal_annot)
+
+        panel = (p_tree / p_clones / p_annot / p_map) + plot_layout(heights = c(ratio,0.06,0.06,1), guides = 'collect')
+    } else {
+        panel = (p_tree / p_clones / p_map) + plot_layout(heights = c(ratio,0.1,1), guides = 'collect')
+    }
 
     return(panel)
 }
 
-#' @export
-cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5) {
+plot_sc_joint = function(
+        gtree, joint_post, segs_consensus, 
+        cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, pal_clone = NULL
+    ) {
+          
+    gtree = mark_tumor_lineage(gtree)
 
-    geno = geno %>% mutate(logBF = Z_cnv - Z_n)
+    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
+
+    # tree visualization
+    p_tree = gtree %>% 
+            to_phylo() %>%
+            ggtree(ladderize = T, size = branch_width) +
+            geom_rootedge(size = branch_width) +
+            theme(
+                plot.margin = margin(0,1,0,0, unit = 'mm'),
+                axis.title.x = element_blank(),
+                axis.ticks.x = element_blank(),
+                axis.text.x = element_blank(),
+                axis.line.y = element_blank(),
+                axis.ticks.y = element_blank(),
+                # axis.text.y = element_text(size = 5)
+                axis.text.y = element_blank()
+            ) +
+            guides(color = F)
+
+    cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
+
+    # cell heatmap
+    D = joint_post %>% 
+            inner_join(
+                segs_consensus %>% select(seg = seg_cons, CHROM, seg_start, seg_end),
+                by = c('seg', 'CHROM')
+            ) %>%
+            mutate(cell = factor(cell, cell_order)) %>%
+            mutate(cell_index = as.integer(droplevels(cell))) 
+
+    tumor_cells = gtree %>% 
+        activate(nodes) %>% filter(leaf) %>%
+        as.data.frame() %>% 
+        filter(compartment == 'tumor') %>%
+        pull(name)
+
+    first_tumor_index = which(cell_order %in% tumor_cells)[1]
+
+    p_segs = ggplot(
+            D %>% mutate(logBF = pmax(pmin(logBF, logBF_max), logBF_min))
+        ) +
+        theme_classic() +
+        geom_segment(
+            aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state, alpha = logBF),
+            size = size
+        ) +
+        geom_segment(
+            inherit.aes = F,
+            aes(x = seg_start, xend = seg_end, y = 1, yend = 1),
+            data = segs_consensus, size = 0, color = 'white', alpha = 0
+        ) +
+        geom_hline(yintercept = first_tumor_index, color = 'royalblue', size = 0.5, linetype = 'dashed') +
+        theme(
+            panel.spacing = unit(0, 'mm'),
+            panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+            strip.background = element_blank(),
+            axis.text = element_blank(),
+            axis.title = element_blank(),
+            axis.ticks = element_blank(),
+            plot.margin = margin(0,0,5,0, unit = 'mm'),
+            axis.line = element_blank()
+        ) +
+        scale_x_continuous(expand = expansion(0)) +
+        scale_y_continuous(expand = expansion(0)) +
+        facet_grid(.~CHROM, space = 'free', scale = 'free') +
+        scale_alpha_continuous(range = c(0,1)) +
+        guides(
+            alpha = 'none',
+            color = guide_legend(override.aes = c('size' = 1))
+        ) +
+        scale_color_manual(
+            values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = 'red', 'mamp' = 'red', 'loh' = 'darkgreen', 'bdel' = 'blue', 'neu' = 'white')
+        )
+
+    # clone annotation
+    clone_dict = gtree %>%
+        activate(nodes) %>%
+        data.frame %>%
+        mutate(
+            GT = ifelse(compartment == 'normal', '', GT),
+            GT = factor(GT),
+            clone = as.factor(as.integer(GT))
+        ) %>%
+        {setNames(.$clone, .$name)}
+
+    if (is.null(pal_clone)) {
+        pal_clone = c('gray', getPalette(length(unique(clone_dict))))
+    }
+
+    p_clone = data.frame(
+            cell = names(clone_dict),
+            annot = unname(clone_dict)
+        ) %>%
+        mutate(cell = factor(cell, cell_order)) %>%
+        annot_bar(transpose = T, legend = clone_legend) +
+        scale_fill_manual(values =pal_clone)
+
+    # external annotation
+    if (!is.null(cell_dict)) {
+
+        p_annot = data.frame(
+                cell = names(cell_dict),
+                annot = unname(cell_dict)
+            ) %>%
+            mutate(cell = factor(cell, cell_order)) %>%
+            annot_bar(transpose = T)
+
+        if (clone_bar) {
+            (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(1, 0.25, 0.25, 15), guides = 'collect')
+        } else {
+            (p_tree | p_annot | p_segs) + plot_layout(widths = c(1, 0.25, 15), guides = 'collect')
+        }
+    } else if (clone_bar) {
+        (p_tree | p_clone | p_segs) + plot_layout(widths = c(1, 0.25, 15), guides = 'collect')
+    } else {
+        (p_tree | p_segs) + plot_layout(widths = c(1, 15), guides = 'collect')
+    }
+}
+
+annot_bar = function(D, transpose = FALSE, legend = TRUE) {
+    p = ggplot(
+        D,
+        aes(x = cell, y = '', fill = annot)
+    ) +
+    geom_tile(width=1, height=0.9) +
+    theme_void() +
+    scale_y_discrete(expand = expansion(0)) +
+    scale_x_discrete(expand = expansion(0)) +
+    theme(
+        panel.spacing = unit(0.1, 'mm'),
+        panel.border = element_rect(size = 0, color = 'black', fill = NA),
+        panel.background = element_rect(fill = 'white'),
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        # axis.text = element_text(size = 8),
+        axis.text = element_blank(),
+        plot.margin = margin(0.5,0,0.5,0, unit = 'mm')
+    ) 
+
+    if (transpose) {
+        p = p + coord_flip() +
+            theme(plot.margin = margin(0,0.5,0,0.5, unit = 'mm'))
+    }
+
+    if (legend) {
+        p = p + guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = NULL))
+    } else {
+        p = p + guides(fill = 'none')
+    }
+
+    return(p)
+}
+
+#' @export
+cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5, cnv_type = TRUE) {
+
+    # geno = geno %>% mutate(logBF = Z_cnv - Z_n)
 
     if (is.null(cnv_order)) {
         cnv_order = unique(geno$seg)
@@ -2536,6 +2799,10 @@ cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5) {
 
     pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 
+    if (!cnv_type) {
+        geno = geno %>% mutate(seg_label = seg)
+    }
+
     p_map = ggplot(
             geno,
             aes(x = cell, y = seg_label, fill = logBF)
@@ -2554,12 +2821,14 @@ cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5) {
             panel.background = element_rect(fill = 'white'),
             strip.background = element_blank(),
             axis.text.x = element_blank(),
-            strip.text = element_text(angle = 90, size = 8, vjust = 0.5)
+            strip.text = element_text(angle = 90, size = 8, vjust = 0.5),
+            plot.margin = margin(0,0,0,0, unit = 'mm')
         ) +
         scale_fill_gradient2(low = pal[2], high = pal[1], midpoint = 0, limits = c(-limit, limit), oob = scales::oob_squish) +
         # xlab('') +
-        theme(plot.title = element_text(size = 8)) +
-        ylab('')
+        theme(plot.title = element_blank()) +
+        ylab('') +
+        guides(fill = guide_colorbar(barwidth = unit(3, 'mm'), barheight = unit(15, 'mm')))
 
     return(p_map)
 }

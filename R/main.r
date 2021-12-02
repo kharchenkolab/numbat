@@ -1,6 +1,9 @@
-#' @import logger data.table
+#' @import logger
+#' @import dplyr
+#' @import data.table
 #' @import stringr
 #' @import glue
+#' @import phangorn
 #' @import vcfR
 #' @import purrr
 #' @import magrittr
@@ -11,6 +14,7 @@
 #' @import ggplot2
 #' @import ggtree
 #' @import ggraph
+#' @useDynLib numbat
 
 #' @description Main function to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
@@ -22,9 +26,10 @@
 #' @export
 numbat_subclone = function(
         count_mat, lambdas_ref, df, gtf_transcript, genetic_map, cell_annot = NULL, 
-        out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 450, 
-        min_cells = 10, max_cost = 150, max_iter = 2, min_depth = 0, common_diploid = TRUE,
-        ncores = 30, exp_model = 'lnpois', gbuild = 'hg38', verbose = TRUE
+        out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 10000, 
+        min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
+        ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
+        exclude_normal = FALSE, max_entropy = 0.4, eps = 0.01, min_LLR = 100
     ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
@@ -41,6 +46,13 @@ numbat_subclone = function(
         glue('max_cost = {max_cost}'),
         glue('max_iter = {max_iter}'),
         glue('min_depth = {min_depth}'),
+        glue('use_loh = {use_loh}'),
+        glue('min_LLR = {min_LLR}'),
+        glue('max_entropy = {max_entropy}'),
+        glue('exclude_normal = {exclude_normal}'),
+        glue('diploid_chroms = {paste0(diploid_chroms, collapse = ",")}'),
+        'Input metrics:',
+        glue('{ncol(count_mat)} cells'),
         sep = "\n"
     ))
 
@@ -71,7 +83,7 @@ numbat_subclone = function(
             ncores = ncores
         )
 
-        fwrite(clust$gexp$gexp.norm.long, glue('{out_dir}/gexp.norm.long.tsv.gz'), sep = '\t')
+        fwrite(clust$gexp$gexp.norm.long, glue('{out_dir}/gexp.norm.long.tsv.gz'), sep = '\t', nThread = min(10, ncores))
         saveRDS(clust$hc, glue('{out_dir}/hc.rds'))
         saveRDS(clust$nodes, glue('{out_dir}/hc_nodes.rds'))
 
@@ -85,13 +97,15 @@ numbat_subclone = function(
                 gtf_transcript = gtf_transcript,
                 genetic_map = genetic_map,
                 min_depth = min_depth,
-                ncores = ncores)
+                ncores = ncores
+            )
 
         bulk_subtrees = bulk_subtrees %>% 
             run_group_hmms(
                 t = t,
                 gamma = gamma,
                 common_diploid = common_diploid,
+                diploid_chroms = diploid_chroms,
                 exp_model = exp_model,
                 ncores = ncores,
                 verbose = verbose
@@ -101,10 +115,11 @@ numbat_subclone = function(
         stop('init_method can be raw, bulk, or smooth')
     }
 
-    fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
-
     # resolve CNVs
-    segs_consensus = get_segs_consensus(bulk_subtrees, gbuild = gbuild)
+    segs_consensus = get_segs_consensus(bulk_subtrees)
+
+    fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
+    fwrite(segs_consensus, glue('{out_dir}/segs_consensus_0.tsv'), sep = '\t')
 
     normal_cells = c()
 
@@ -125,6 +140,7 @@ numbat_subclone = function(
             segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
             count_mat,
             lambdas_ref,
+            use_loh = use_loh,
             gtf_transcript = gtf_transcript,
             ncores = ncores)
 
@@ -153,63 +169,93 @@ numbat_subclone = function(
             log_info('Building phylogeny ..')
         }
 
-        cell_sample = colnames(count_mat) %>% 
-            extract(!(. %in% normal_cells)) %>%
-            sample(min(sample_size, length(.)))
+        cell_sample = colnames(count_mat) %>% sample(min(sample_size, length(.)), replace = FALSE)
+        
+        if (exclude_normal) {
+            cell_sample = cell_sample[!cell_sample %in% normal_cells]
+        }
 
+        # construct genotype probability matrix
         p_min = 1e-10
 
-        geno = joint_post %>%
+        P = joint_post %>%
             filter(cnv_state != 'neu') %>%
-            group_by(seg) %>%
-            filter(mean(p_cnv > 0.95) > 0.05 | mean(p_cnv < 0.05) > 0.5) %>%
-            ungroup() %>%
             filter(cell %in% cell_sample) %>%
+            group_by(seg) %>%
+            mutate(
+                avg_entropy = mean(binary_entropy(p_cnv), na.rm = TRUE)
+            ) %>%
+            filter(avg_entropy < max_entropy & LLR > min_LLR) %>%
             mutate(p_n = 1 - p_cnv) %>%
             mutate(p_n = pmax(pmin(p_n, 1-p_min), p_min)) %>%
-            reshape2::dcast(seg ~ cell, value.var = 'p_n', fill = 0.5) %>%
-            tibble::column_to_rownames('seg')
+            reshape2::dcast(cell ~ seg, value.var = 'p_n', fill = 0.5) %>%
+            tibble::column_to_rownames('cell') %>%
+            as.matrix
 
-        fwrite(geno, glue('{out_dir}/geno_{i}.tsv'), row.names = T, sep = '\t')
+        fwrite(as.data.frame(P), glue('{out_dir}/geno_{i}.tsv'), row.names = T, sep = '\t')
 
-        n_cnvs = geno %>% nrow
-        n_cells = ncol(geno)
-        in_file = glue('{out_dir}/geno_{i}.txt')
+        # contruct initial tree
+        dist_mat = dist(rbind(P, 'outgroup' = 1))
 
-        fwrite(geno, in_file, row.names = T, sep = ' ', quote = F)
+        treeUPGMA = phangorn::upgma(dist_mat) %>%
+            ape::root(outgroup = 'outgroup') %>%
+            ape::drop.tip('outgroup') %>%
+            reorder(order = 'postorder')
 
-        cmd = glue('sed -i "1s;^;HAPLOID {n_cnvs} {n_cells};" {in_file}')
-        system(cmd)
+        # note that dist_mat gets modified
+        treeNJ = phangorn::NJ(dist_mat) %>%
+            ape::root(outgroup = 'outgroup') %>%
+            ape::drop.tip('outgroup') %>%
+            reorder(order = 'postorder')
 
-        # run 
-        out_file = glue('{out_dir}/out_{i}.txt')
-        mut_tree_file = glue('{out_dir}/mut_tree_{i}.gml')
-        cmd = glue('scistree -k 10 -v -e -t 0.9 -o {mut_tree_file} {in_file} > {out_file}')
-        system(cmd, wait = T)
+        NJ_score = score_tree(treeNJ, as.matrix(P))$l_tree
+        UPGMA_score = score_tree(treeUPGMA, as.matrix(P))$l_tree
 
-        # read output
-        scistree_out = parse_scistree(out_file, geno, joint_post)
-        tree_post = get_tree_post(scistree_out$MLtree, geno)
+        if (UPGMA_score > NJ_score) {
+            tree_init = treeUPGMA
+            log_info('Using UPGMA tree as seed..')
+        } else {
+            tree_init = treeNJ
+            log_info('Using NJ tree as seed..')
+        }
+    
+        saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
+        saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
 
-        saveRDS(scistree_out, glue('{out_dir}/scistree_out_{i}.rds'))
+        # maximum likelihood tree search with NNI
+        tree_list = perform_nni(tree_init, P, ncores = ncores, eps = eps)
+        saveRDS(tree_list, glue('{out_dir}/tree_list_{i}.rds'))
+
+        tree_post = get_tree_post(tree_list[[length(tree_list)]], P)
         saveRDS(tree_post, glue('{out_dir}/tree_post_{i}.rds'))
 
         # simplify mutational history
-        G_m = mut_tree_file %>% 
-            read_mut_tree(tree_post$mut_nodes) %>%
-            simplify_history(tree_post$l_matrix, max_cost = max_cost) %>%
+        G_m = get_mut_tree(tree_post$gtree, tree_post$mut_nodes)  %>% 
+            simplify_history(tree_post$l_matrix, max_cost = max_cost) %>% 
             label_genotype()
 
         mut_nodes = G_m %>% igraph::as_data_frame('vertices') %>% select(name = node, site = label)
 
         # update tree
         gtree = mut_to_tree(tree_post$gtree, mut_nodes)
+        gtree = mark_tumor_lineage(gtree)
 
         saveRDS(gtree, glue('{out_dir}/tree_final_{i}.rds'))
         saveRDS(G_m, glue('{out_dir}/mut_graph_{i}.rds'))
 
         # map cells to the phylogeny
-        clone_post = cell_to_clone(gtree, exp_post, allele_post)
+        clones = gtree %>%
+            activate(nodes) %>%
+            data.frame() %>% 
+            # mutate(GT = ifelse(compartment == 'normal', '', GT)) %>%
+            group_by(GT, compartment) %>%
+            summarise(
+                clone_size = n(),
+                .groups = 'drop'
+            ) %>%
+            mutate(clone = as.integer(factor(GT))) 
+
+        clone_post = cell_to_clone(clones, exp_post, allele_post)
 
         fwrite(clone_post, glue('{out_dir}/clone_post_{i}.tsv'), sep = '\t')
 
@@ -256,6 +302,7 @@ numbat_subclone = function(
                 gamma = gamma,
                 exp_model = exp_model,
                 common_diploid = common_diploid,
+                diploid_chroms = diploid_chroms,
                 verbose = verbose,
                 ncores = ncores
             )
@@ -278,6 +325,7 @@ numbat_subclone = function(
                 gamma = gamma,
                 exp_model = exp_model,
                 common_diploid = common_diploid,
+                diploid_chroms = diploid_chroms,
                 verbose = verbose
             )
         
@@ -285,7 +333,7 @@ numbat_subclone = function(
 
         ######## Find consensus CNVs ########
 
-        segs_consensus = get_segs_consensus(bulk_subtrees, gbuild = gbuild)
+        segs_consensus = get_segs_consensus(bulk_subtrees)
 
         fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
     }
@@ -307,10 +355,6 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F,
         Y_obs = rowSums(count_mat_obs)
 
         fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
-
-        if (verbose) {
-            log_info('Fitted reference proportions: {signif(fit$w, 2)}')
-        }
 
         gexp = process_exp(
             count_mat_obs,
@@ -350,7 +394,7 @@ make_group_bulks = function(groups, count_mat, df, lambdas_ref, gtf_transcript, 
 
     ncores = ifelse(is.null(ncores), length(groups), ncores)
 
-    bulks = mclapply(
+    results = mclapply(
             groups,
             mc.cores = ncores,
             function(g) {
@@ -369,8 +413,15 @@ make_group_bulks = function(groups, count_mat, df, lambdas_ref, gtf_transcript, 
                 )
         })
 
+    bad = sapply(results, inherits, what = "try-error")
+
+    if (any(bad)) {
+        log_error(glue('job {paste(which(bad), collapse = ",")} failed'))
+        log_error(results[bad][[1]])
+    }
+
     # unify marker index
-    bulks = bulks %>% 
+    bulks = results %>% 
         bind_rows() %>%
         arrange(CHROM, POS) %>%
         mutate(snp_id = factor(snp_id, unique(snp_id))) %>%
@@ -383,8 +434,9 @@ make_group_bulks = function(groups, count_mat, df, lambdas_ref, gtf_transcript, 
 #' Run mutitple HMMs 
 #' @export
 run_group_hmms = function(
-    bulks, t = 1e-4, gamma = 20, theta_min = 0.08, exp_model = 'lnpois',
-    common_diploid = TRUE, allele_only = FALSE, retest = TRUE, 
+    bulks, t = 1e-4, gamma = 20, theta_min = 0.08,
+    exp_model = 'lnpois', alpha = 1e-4,
+    common_diploid = TRUE, diploid_chroms = NULL, allele_only = FALSE, retest = TRUE, 
     ncores = NULL, verbose = FALSE, debug = FALSE
 ) {
 
@@ -401,8 +453,8 @@ run_group_hmms = function(
     ncores = ifelse(is.null(ncores), n_groups, ncores)
 
     # find common diploid region
-    if (common_diploid) {
-        diploid_out = find_common_diploid(bulks, ncores = ncores)
+    if (common_diploid & !is.null(diploid_chroms)) {
+        diploid_out = find_common_diploid(bulks, gamma = gamma, alpha = alpha, ncores = ncores)
         bulks = diploid_out$bulks
         find_diploid = FALSE
     } else {
@@ -418,6 +470,7 @@ run_group_hmms = function(
                 gamma = gamma, 
                 find_diploid = find_diploid, 
                 allele_only = allele_only, 
+                diploid_chroms = diploid_chroms,
                 retest = retest, 
                 verbose = verbose)
     })
@@ -425,7 +478,8 @@ run_group_hmms = function(
     bad = sapply(results, inherits, what = "try-error")
 
     if (any(bad)) {
-        if (verbose) {log_warn(glue('{sum(bad)} jobs failed'))}
+        log_error(glue('job {paste(which(bad), collapse = ",")} failed'))
+        log_error(results[bad][[1]])
     }
 
     bulks = results %>% bind_rows() %>%
@@ -441,7 +495,7 @@ run_group_hmms = function(
 
 #' Extract consensus CNV segments
 #' @export
-get_segs_consensus = function(bulks, LLR_min = 20, gbuild = 'hg38') {
+get_segs_consensus = function(bulks, LLR_min = 20) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -535,26 +589,23 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
 
 #' Map cells to clones
 #' @export
-cell_to_clone = function(gtree, exp_post, allele_post) {
+cell_to_clone = function(clones, exp_post, allele_post) {
 
-    clones = gtree %>% data.frame() %>% 
-        group_by(GT) %>%
-        summarise(
-            clone_size = n()
-        ) %>%
+    # gtree = mark_tumor_lineage(gtree)
+
+    clone_segs = clones %>%
         mutate(
-            prior_clone = ifelse(GT == '', 0.5, 0.5/(length(unique(GT))- 1))
+            prior_clone = ifelse(GT == '', 0.5, 0.5/(length(unique(GT)) - 1))
         ) %>%
         mutate(seg = GT) %>%
         tidyr::separate_rows(seg, sep = ',') %>%
         mutate(I = 1) %>%
-        tidyr::complete(seg, tidyr::nesting(GT, prior_clone, clone_size), fill = list('I' = 0)) %>%
-        mutate(clone = as.integer(factor(GT))) 
+        tidyr::complete(seg, tidyr::nesting(GT, clone, compartment, prior_clone, clone_size), fill = list('I' = 0))
 
     clone_post = inner_join(
             exp_post %>%
                 filter(cnv_state != 'neu') %>%
-                inner_join(clones, by = c('seg' = 'seg')) %>%
+                inner_join(clone_segs, by = c('seg' = 'seg')) %>%
                 mutate(l_clone = ifelse(I == 1, Z_cnv, Z_n)) %>%
                 group_by(cell, clone, GT, prior_clone) %>%
                 summarise(
@@ -563,7 +614,7 @@ cell_to_clone = function(gtree, exp_post, allele_post) {
                 ),
             allele_post %>%
                 filter(cnv_state != 'neu') %>%
-                inner_join(clones, by = c('seg' = 'seg')) %>%
+                inner_join(clone_segs, by = c('seg' = 'seg')) %>%
                 mutate(l_clone = ifelse(I == 1, Z_cnv, Z_n)) %>%
                 group_by(cell, clone, GT, prior_clone) %>%
                 summarise(
@@ -589,6 +640,14 @@ cell_to_clone = function(gtree, exp_post, allele_post) {
         as.data.table() %>%
         data.table::dcast(cell + clone_opt + GT_opt + p_opt ~ clone, value.var = c('p', 'p_x', 'p_y')) %>%
         as.data.frame()
+
+    tumor_clones = clones %>% 
+        filter(compartment == 'tumor') %>%
+        pull(clone)
+
+    clone_post['p_cnv'] = clone_post[paste0('p_', tumor_clones)] %>% rowSums
+    clone_post['p_cnv_x'] = clone_post[paste0('p_x_', tumor_clones)] %>% rowSums
+    clone_post['p_cnv_y'] = clone_post[paste0('p_y_', tumor_clones)] %>% rowSums
     
     return(clone_post)
     
@@ -753,15 +812,19 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 
 #' get CNV expression posteriors
 #' @export
-get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, alpha = NULL, beta = NULL, ncores = 30, verbose = T, debug = F) {
+get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, alpha = NULL, beta = NULL, use_loh = NULL, ncores = 30, verbose = T, debug = F) {
 
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf_transcript) 
 
-    if (mean(exp_sc$cnv_state == 'neu') < 0.05) {
-        use_loh = TRUE
-        log_info('less than 5% genes are in neutral region - including LOH in baseline')
-    } else {
-        use_loh = FALSE
+    if (is.null(use_loh)) {
+        if (mean(exp_sc$cnv_state == 'neu') < 0.05) {
+            use_loh = TRUE
+            log_info('less than 5% genes are in neutral region - including LOH in baseline')
+        } else {
+            use_loh = FALSE
+        }
+    } else if (use_loh) {
+        log_info('Including LOH in baseline as specified')
     }
     
     cells = colnames(count_mat)
@@ -910,7 +973,7 @@ get_allele_post = function(bulk_all, segs_consensus, df, naive = FALSE) {
             .groups = 'drop'
         ) %>%
         left_join(
-            segs_consensus %>% select(seg = seg_cons, p_loh, p_amp, p_del, p_bamp, p_bdel),
+            segs_consensus %>% select(seg = seg_cons, prior_loh = p_loh, prior_amp = p_amp, prior_del = p_del, prior_bamp = p_bamp, prior_bdel = p_bdel),
             by = 'seg'
         ) %>%
         rowwise() %>%
@@ -924,33 +987,33 @@ get_allele_post = function(bulk_all, segs_consensus, df, naive = FALSE) {
             l00 = l11,
             Z = matrixStats::logSumExp(
                 c(l11 + log(1/2),
-                  l20 + log(p_loh/2),
-                  l10 + log(p_del/2),
-                  l21 + log(p_amp/4),
-                  l31 + log(p_amp/4),
-                  l22 + log(p_bamp/2),
-                  l00 + log(p_bdel/2)
+                  l20 + log(prior_loh/2),
+                  l10 + log(prior_del/2),
+                  l21 + log(prior_amp/4),
+                  l31 + log(prior_amp/4),
+                  l22 + log(prior_bamp/2),
+                  l00 + log(prior_bdel/2)
                  )
             ),
             Z_cnv = matrixStats::logSumExp(
-                c(l20 + log(p_loh/2),
-                  l10 + log(p_del/2),
-                  l21 + log(p_amp/4),
-                  l31 + log(p_amp/4),
-                  l22 + log(p_bamp/2),
-                  l00 + log(p_bdel/2)
+                c(l20 + log(prior_loh/2),
+                  l10 + log(prior_del/2),
+                  l21 + log(prior_amp/4),
+                  l31 + log(prior_amp/4),
+                  l22 + log(prior_bamp/2),
+                  l00 + log(prior_bdel/2)
                  )
             ),
             Z_n = l11 + log(1/2),
             logBF = Z_cnv - Z_n,
-            p_amp = exp(matrixStats::logSumExp(c(l21 + log(p_amp/4), l31 + log(p_amp/4))) - Z),
-            p_amp_sin = exp(l21 + log(p_amp/4) - Z),
-            p_amp_mul = exp(l31 + log(p_amp/4) - Z),
+            p_amp = exp(matrixStats::logSumExp(c(l21 + log(prior_amp/4), l31 + log(prior_amp/4))) - Z),
+            p_amp_sin = exp(l21 + log(prior_amp/4) - Z),
+            p_amp_mul = exp(l31 + log(prior_amp/4) - Z),
             p_neu = exp(l11 + log(1/2) - Z),
-            p_del = exp(l10 + log(p_del/2) - Z),
-            p_loh = exp(l20 + log(p_loh/2) - Z),
-            p_bamp = exp(l22 + log(p_bamp/2) - Z),
-            p_bdel = exp(l22 + log(p_bdel/2) - Z),
+            p_del = exp(l10 + log(prior_del/2) - Z),
+            p_loh = exp(l20 + log(prior_loh/2) - Z),
+            p_bamp = exp(l22 + log(prior_bamp/2) - Z),
+            p_bdel = exp(l22 + log(prior_bdel/2) - Z),
             p_cnv = p_amp + p_del + p_loh + p_bamp + p_bdel
         ) %>%
         ungroup() %>%
@@ -991,30 +1054,64 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
         left_join(
             segs_consensus %>% select(
                 seg = seg_cons,
-                any_of(c('n_genes', 'n_snps', 'p_loh', 'p_amp', 'p_del', 'p_bamp', 'p_bdel'))
+                any_of(c('n_genes', 'n_snps', 'prior_loh' = 'p_loh', 'prior_amp' = 'p_amp', 'prior_del' = 'p_del', 'prior_bamp' = 'p_bamp', 'prior_bdel' = 'p_bdel', 'LLR', 'LLR_x', 'LLR_y'))
             ),
             by = 'seg'
         ) %>%
         rowwise() %>%
         mutate(
+            l11 = l11_x + l11_y,
+            l20 = l20_x + l20_y,
+            l10 = l10_x + l10_y,
+            l21 = l21_x + l21_y,
+            l31 = l31_x + l31_y,
+            l22 = l22_x + l22_y,
+            l00 = l00_x + l00_y,
             Z = matrixStats::logSumExp(
-                c(l11_x + l11_y + log(1/2),
-                  l20_x + l20_y + log(p_loh/2),
-                  l10_x + l10_y + log(p_del/2),
-                  l21_x + l21_y + log(p_amp/4),
-                  l31_x + l31_y + log(p_amp/4),
-                  l22_x + l22_y + log(p_bamp/2),
-                  l00_x + l00_y + log(p_bdel/2))
+                c(l11 + log(1/2),
+                  l20 + log(prior_loh/2),
+                  l10 + log(prior_del/2),
+                  l21 + log(prior_amp/4),
+                  l31 + log(prior_amp/4),
+                  l22 + log(prior_bamp/2),
+                  l00 + log(prior_bdel/2)
+                 )
             ),
             Z_cnv = matrixStats::logSumExp(
-                c(l20_x + l20_y + log(p_loh/2),
-                  l10_x + l10_y + log(p_del/2),
-                  l21_x + l21_y + log(p_amp/4),
-                  l31_x + l31_y + log(p_amp/4),
-                  l22_x + l22_y + log(p_bamp/2),
-                  l00_x + l00_y + log(p_bdel/2))
+                c(l20 + log(prior_loh/2),
+                  l10 + log(prior_del/2),
+                  l21 + log(prior_amp/4),
+                  l31 + log(prior_amp/4),
+                  l22 + log(prior_bamp/2),
+                  l00 + log(prior_bdel/2)
+                 )
             ),
-            Z_n = l11_x + l11_y + log(1/2),
+            # Z = matrixStats::logSumExp(
+            #     c(l11_x + l11_y + log(1/2),
+            #       l20_x + l20_y + log(prior_loh/2),
+            #       l10_x + l10_y + log(prior_del/2),
+            #       l21_x + l21_y + log(prior_amp/4),
+            #       l31_x + l31_y + log(prior_amp/4),
+            #       l22_x + l22_y + log(prior_bamp/2),
+            #       l00_x + l00_y + log(prior_bdel/2))
+            # ),
+            # Z_cnv = matrixStats::logSumExp(
+            #     c(l20_x + l20_y + log(prior_loh/2),
+            #       l10_x + l10_y + log(prior_del/2),
+            #       l21_x + l21_y + log(prior_amp/4),
+            #       l31_x + l31_y + log(prior_amp/4),
+            #       l22_x + l22_y + log(prior_bamp/2),
+            #       l00_x + l00_y + log(prior_bdel/2))
+            # ),
+            p_amp = exp(matrixStats::logSumExp(c(l21 + log(prior_amp/4), l31 + log(prior_amp/4))) - Z),
+            p_amp_sin = exp(l21 + log(prior_amp/4) - Z),
+            p_amp_mul = exp(l31 + log(prior_amp/4) - Z),
+            p_neu = exp(l11 + log(1/2) - Z),
+            p_del = exp(l10 + log(prior_del/2) - Z),
+            p_loh = exp(l20 + log(prior_loh/2) - Z),
+            p_bamp = exp(l22 + log(prior_bamp/2) - Z),
+            p_bdel = exp(l22 + log(prior_bdel/2) - Z),
+            Z_n = l11 + log(1/2),
             logBF = Z_cnv - Z_n,
             logBF_x = Z_cnv_x - Z_n_x,
             logBF_y = Z_cnv_y - Z_n_y,
@@ -1022,6 +1119,10 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
             p_n = exp(Z_n - Z),
             p_cnv_x = 1/(1+exp(-logBF_x)),
             p_cnv_y = 1/(1+exp(-logBF_y))
+        ) %>%
+        rowwise() %>%
+        mutate(
+            cnv_state_mle = c('loh', 'del', 'amp', 'amp', 'bamp')[which.max(c(l20, l10, l21, l31, l22))]
         ) %>%
         ungroup()
 
