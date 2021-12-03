@@ -1,6 +1,6 @@
 # Numbat
 
-<img src="https://user-images.githubusercontent.com/13375875/136429050-609ee367-8d5d-4a63-8fa8-a87171aff01c.png" align="right" width="200">
+<img src="logo.png" align="right" width="200">
 
 Numbat is a haplotype-enhanced CNV caller from single-cell transcriptomics data. It integrates gene expression, allele ratio, and haplotype phasing signals from the human population to accurately profile CNVs in single-cells and infer their lineage relationship. 
 
