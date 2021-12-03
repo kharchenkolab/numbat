@@ -21,8 +21,11 @@ score_tree = function(tree, P) {
     
     logQ[1:n,] = logP_1 - logP_0
 
+    children_dict = phangorn:::allChildren(tree)
+
     for (i in node_order) {
-        children = Children(tree, i)
+        # children = Children(tree, i)
+        children = children_dict[[i]]
         logQ[i,] = logQ[children[1],] + logQ[children[2],]
     }
     

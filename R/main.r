@@ -195,7 +195,7 @@ numbat_subclone = function(
         fwrite(as.data.frame(P), glue('{out_dir}/geno_{i}.tsv'), row.names = T, sep = '\t')
 
         # contruct initial tree
-        dist_mat = dist(rbind(P, 'outgroup' = 1))
+        dist_mat = parallelDist::parDist(rbind(P, 'outgroup' = 1), threads = ncores)
 
         treeUPGMA = phangorn::upgma(dist_mat) %>%
             ape::root(outgroup = 'outgroup') %>%
