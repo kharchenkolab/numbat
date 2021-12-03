@@ -181,7 +181,7 @@ process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = 
     count_mat_obs = count_mat_obs[mut_expressed,,drop=F]
     lambdas_ref = lambdas_ref[mut_expressed]
 
-    if(verbose){message(nrow(count_mat_obs))}
+    if(verbose){message(paste0(nrow(count_mat_obs), ' genes remain after filtering'))}
 
     bulk_obs = count_mat_obs %>%
         rowSums() %>%
