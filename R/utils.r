@@ -512,26 +512,28 @@ switch_prob_bp = function(x, lambda = 1.0728, min_p = 0) {
     pmax(p, min_p)
 }
 # phase switch probablity as a function of genetic distance
-switch_prob_cm = function(x, lambda = 2, min_p = 1e-10) {
-    p = 0.5*(1 - exp(-lambda * x))
+# switch_prob_cm = function(x, lambda = 2, min_p = 1e-10) {
+#     p = 0.5*(1 - exp(-lambda * x))
+#     pmax(p, min_p)
+# }
+switch_prob_cm = function(d, lambda = 2, min_p = 1e-10) {
+    p = (1-exp(-2*lambda*d))/2
     pmax(p, min_p)
 }
 
 fit_switch_prob = function(y, d) {
     
     eta = function(d, lambda, min_p = 1e-10) {
-        p = 0.5*(1 - exp(-lambda * d))
-        pmax(p, min_p)
+        pmax(switch_prob(d, lambda), min_p)
     }
 
     l_lambda = function(y, d, lambda) {
-        sum(log(eta(d[y == 1], lambda))) - lambda * sum(d[y == 0])
+        sum(log(eta(d[y == 1], lambda))) + sum(log(1-eta(d[y == 0], lambda)))
     }
 
     fit = stats4::mle(
         minuslogl = function(lambda) {
             -l_lambda(y, d, lambda)
-
         },
         start = c(5),
         lower = c(1e-7)
