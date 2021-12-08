@@ -4,7 +4,7 @@
 \alias{cell_to_clone}
 \title{Map cells to clones}
 \usage{
-cell_to_clone(gtree, exp_post, allele_post)
+cell_to_clone(clones, exp_post, allele_post)
 }
 \description{
 Map cells to clones

@@ -14,17 +14,18 @@
 #' @import ggplot2
 #' @import ggtree
 #' @import ggraph
+#' @useDynLib numbat
 
 #' @description Main function to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
-#' @param df dataframe of allele counts per cell, produced by preprocess_allele
+#' @param df_allele dataframe of allele counts per cell, produced by preprocess_allele
 #' @param gtf_transcript gtf dataframe of transcripts 
 #' @param genetic_map genetic map
 #' @return a status code
 #' @export
 numbat_subclone = function(
-        count_mat, lambdas_ref, df, gtf_transcript, genetic_map, cell_annot = NULL, 
+        count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, cell_annot = NULL, 
         out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 10000, 
         min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
         ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
@@ -61,7 +62,7 @@ numbat_subclone = function(
         if (verbose) {log_info('Initializing using all-cell bulk ..')}   
         bulk_subtrees = get_bulk(
                 count_mat = count_mat,
-                df = df,
+                df_allele = df_allele,
                 lambdas_ref = lambdas_ref,
                 gtf_transcript = gtf_transcript,
                 genetic_map = genetic_map,
@@ -91,7 +92,7 @@ numbat_subclone = function(
         bulk_subtrees = make_group_bulks(
                 groups = nodes,
                 count_mat = count_mat,
-                df = df, 
+                df_allele = df_allele, 
                 lambdas_ref = lambdas_ref,
                 gtf_transcript = gtf_transcript,
                 genetic_map = genetic_map,
@@ -149,7 +150,7 @@ numbat_subclone = function(
         allele_post = get_allele_post(
             bulk_subtrees,
             segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
-            df
+            df_allele
         )
 
         joint_post = get_joint_post(
@@ -288,7 +289,7 @@ numbat_subclone = function(
         bulk_clones = make_group_bulks(
                 groups = clones,
                 count_mat = count_mat,
-                df = df, 
+                df_allele = df_allele, 
                 lambdas_ref = lambdas_ref,
                 gtf_transcript = gtf_transcript,
                 genetic_map = genetic_map,
@@ -311,7 +312,7 @@ numbat_subclone = function(
         bulk_subtrees = make_group_bulks(
                 groups = subtrees,
                 count_mat = count_mat,
-                df = df, 
+                df_allele = df_allele, 
                 lambdas_ref = lambdas_ref,
                 gtf_transcript = gtf_transcript,
                 genetic_map = genetic_map,
@@ -385,7 +386,7 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F,
 }
 
 #' @export
-make_group_bulks = function(groups, count_mat, df, lambdas_ref, gtf_transcript, genetic_map, min_depth = 0, ncores = NULL) {
+make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_transcript, genetic_map, min_depth = 0, ncores = NULL) {
     
     if (length(groups) == 0) {
         return(data.frame())
@@ -399,7 +400,7 @@ make_group_bulks = function(groups, count_mat, df, lambdas_ref, gtf_transcript, 
             function(g) {
                 get_bulk(
                     count_mat = count_mat[,g$cells],
-                    df = df %>% filter(cell %in% g$cells),
+                    df_allele = df_allele %>% filter(cell %in% g$cells),
                     lambdas_ref = lambdas_ref,
                     gtf_transcript = gtf_transcript,
                     genetic_map = genetic_map,
@@ -919,7 +920,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
 
 #' get CNV allele posteriors
 #' @export
-get_allele_post = function(bulk_all, segs_consensus, df, naive = FALSE) {
+get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
 
     if ((!'sample' %in% colnames(bulk_all)) | (!'sample' %in% colnames(segs_consensus))) {
         bulk_all['sample'] = '0'
@@ -940,7 +941,7 @@ get_allele_post = function(bulk_all, segs_consensus, df, naive = FALSE) {
             by = c('sample', 'seg')
         )
 
-    allele_sc = df %>%
+    allele_sc = df_allele %>%
         mutate(pAD = ifelse(GT == '1|0', AD, DP - AD)) %>%
         select(-snp_index) %>% 
         inner_join(

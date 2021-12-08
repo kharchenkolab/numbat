@@ -7,8 +7,8 @@ test_that("HMM works", {
   message('getting pseudobulk ..')
 
   bulk = get_bulk(
-      count_mat = count_mat_test,
-      df = df_test,
+      count_mat = count_mat_ATC2,
+      df = df_allele_ATC2,
       lambdas_ref = ref_hca,
       gtf_transcript = gtf_transcript,
       genetic_map = genetic_map_hg38,

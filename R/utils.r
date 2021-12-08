@@ -457,9 +457,9 @@ preprocess_allele = function(
 }
 
 #' @export
-get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min_depth = 0, lambda = 0.52, verbose = TRUE) {
+get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, min_depth = 0, lambda = 0.52, verbose = TRUE) {
 
-    if (nrow(df) == 0) {
+    if (nrow(df_allele) == 0) {
         stop('empty allele dataframe - check cell names')
     }
 
@@ -481,7 +481,7 @@ get_bulk = function(count_mat, lambdas_ref, df, gtf_transcript, genetic_map, min
     filter((logFC < 5 & logFC > -5) | Y_obs == 0) %>%
     mutate(w = paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
 
-    allele_bulk = get_allele_bulk(df, genetic_map, lambda = lambda, min_depth = min_depth)
+    allele_bulk = get_allele_bulk(df_allele, genetic_map, lambda = lambda, min_depth = min_depth)
             
     bulk = combine_bulk(
         allele_bulk = allele_bulk,
@@ -581,8 +581,8 @@ annot_cm = function(bulk, genetic_map) {
 }
 
 #' @export
-get_allele_bulk = function(df, genetic_map, lambda = 0.52, min_depth) {
-    pseudobulk = df %>%
+get_allele_bulk = function(df_allele, genetic_map, lambda = 0.52, min_depth) {
+    pseudobulk = df_allele %>%
         filter(GT %in% c('1|0', '0|1')) %>%
         group_by(snp_id, CHROM, POS, REF, ALT, GT, gene) %>%
         summarise(
@@ -2932,7 +2932,7 @@ plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
 }
 
 #' @export
-plot_sc_allele = function(df, bulk_subtrees, clone_post) {
+plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
     
     snp_seg = bulk_subtrees %>%
         filter(!is.na(pAD)) %>%
@@ -2955,7 +2955,7 @@ plot_sc_allele = function(df, bulk_subtrees, clone_post) {
     
     pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 
-    p = df %>% 
+    p = df_allele %>% 
         left_join(
             snp_seg %>% select(snp_id, haplo, cnv_state),
             by = 'snp_id'

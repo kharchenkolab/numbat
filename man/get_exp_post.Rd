@@ -11,6 +11,7 @@ get_exp_post(
   lambdas_ref = NULL,
   alpha = NULL,
   beta = NULL,
+  use_loh = NULL,
   ncores = 30,
   verbose = T,
   debug = F

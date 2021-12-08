@@ -1,4 +1,4 @@
-#'@useDynLib poilogcpp
+#'@useDynLib numbat
 #'@import Rcpp
 NULL
 
