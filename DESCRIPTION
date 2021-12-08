@@ -9,6 +9,8 @@ Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
+LinkingTo: Rcpp
+NeedsCompilation: yes
 Imports:
     dplyr,
     tidyr,

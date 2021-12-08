@@ -14,7 +14,6 @@
 #' @import ggplot2
 #' @import ggtree
 #' @import ggraph
-#' @useDynLib numbat
 
 #' @description Main function to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells

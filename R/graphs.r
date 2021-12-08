@@ -23,11 +23,12 @@ score_tree = function(tree, P) {
 
     children_dict = phangorn:::allChildren(tree)
 
-    for (i in node_order) {
-        # children = Children(tree, i)
-        children = children_dict[[i]]
-        logQ[i,] = logQ[children[1],] + logQ[children[2],]
-    }
+    # for (i in node_order) {
+    #     children = children_dict[[i]]
+    #     logQ[i,] = logQ[children[1],] + logQ[children[2],]
+    # }
+
+    logQ = CgetQ(logQ, children_dict, node_order)
     
     l_matrix = sweep(logQ, 2, colSums(logP_0), FUN = '+')
     
