@@ -2546,7 +2546,7 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
         ggtree(ladderize = T, size = branch_width, layout = layout) %<+%
         mut_nodes +
         layout_dendrogram() +
-        geom_rootedge(size = branch_width) +
+        # geom_rootedge(size = branch_width) +
         theme(
             plot.margin = margin(0,0,0,0),
             axis.title.x = element_blank(),
@@ -2631,7 +2631,7 @@ plot_sc_joint = function(
     p_tree = gtree %>% 
             to_phylo() %>%
             ggtree(ladderize = T, size = branch_width) +
-            geom_rootedge(size = branch_width) +
+            # geom_rootedge(size = branch_width) +
             theme(
                 plot.margin = margin(0,1,0,0, unit = 'mm'),
                 axis.title.x = element_blank(),

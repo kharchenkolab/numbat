@@ -415,7 +415,12 @@ transfer_links = function(G) {
 label_genotype = function(G) {
     id_to_label = igraph::as_data_frame(G, 'vertices') %>% {setNames(.$label, .$id)}
 
-    V(G)$GT = igraph::all_simple_paths(G, from = 1) %>% 
+    # for some reason, the output from all_simple_path is out of order if supplied directly
+    # V(G)$GT = igraph::all_simple_paths(G, from = 1) %>% 
+    V(G)$GT = lapply(
+            2:length(V(G)), 
+            function(v) {first(igraph::all_simple_paths(G, from = 1, to = v), default = NULL)}
+        ) %>%
         purrr::map(as.character) %>%
         purrr::map(function(x) {
             muts = id_to_label[x]
