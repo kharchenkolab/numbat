@@ -453,7 +453,7 @@ run_group_hmms = function(
     ncores = ifelse(is.null(ncores), n_groups, ncores)
 
     # find common diploid region
-    if (common_diploid & !is.null(diploid_chroms)) {
+    if (common_diploid & is.null(diploid_chroms)) {
         diploid_out = find_common_diploid(bulks, gamma = gamma, alpha = alpha, ncores = ncores)
         bulks = diploid_out$bulks
         find_diploid = FALSE
