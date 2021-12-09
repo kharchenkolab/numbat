@@ -14,6 +14,7 @@
 #' @import ggplot2
 #' @import ggtree
 #' @import ggraph
+#' @import patchwork
 #' @useDynLib numbat
 
 #' @description Main function to decompose tumor subclones
@@ -29,7 +30,7 @@ numbat_subclone = function(
         out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 10000, 
         min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
         ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        exclude_normal = FALSE, max_entropy = 0.4, eps = 0, min_LLR = 100
+        exclude_normal = FALSE, max_entropy = 0.4, eps = 0, min_LLR = 100, plot = FALSE
     ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
@@ -330,6 +331,35 @@ numbat_subclone = function(
             )
         
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
+
+        ######## plotting ########
+        if (plot) {
+
+            log_info('Making plots..')
+
+            panel = plot_sc_joint(
+                    gtree,
+                    joint_post,
+                    segs_consensus,
+                    tip_length = 0.2,
+                    branch_width = 0.2,
+                    size = 0.15,
+                    clone_bar = T,
+                    logBF_min = 2,
+                    logBF_max = 5
+                )
+            
+            ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 8, height = 3.5, dpi = 200)
+
+            p = plot_bulks(bulk_subtrees)
+
+            ggsave(glue('{out_dir}/bulk_subtrees_{i}.png'), p, width = 14, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200)
+
+            p = plot_bulks(bulk_clones)
+
+            ggsave(glue('{out_dir}/bulk_clones_{i}.png'), p, width = 14, height = 2*length(unique(bulk_clones$sample)), dpi = 200)
+
+        }
 
         ######## Find consensus CNVs ########
 

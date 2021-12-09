@@ -4,7 +4,7 @@
 #' @param tree phylo object
 #' @param P genotype probability matrix
 #' @export
-score_tree = function(tree, P) {
+score_tree = function(tree, P, get_l_matrix = FALSE) {
     
     tree = reorder(tree, order = 'postorder')
         
@@ -29,10 +29,14 @@ score_tree = function(tree, P) {
     # }
 
     logQ = CgetQ(logQ, children_dict, node_order)
-    
-    l_matrix = sweep(logQ, 2, colSums(logP_0), FUN = '+')
-    
-    l_tree = sum(apply(l_matrix, 2, max))
+
+    if (get_l_matrix) {
+        l_matrix = sweep(logQ, 2, colSums(logP_0), FUN = '+')
+        l_tree = sum(apply(l_matrix, 2, max))
+    } else {
+        l_matrix = NULL
+        l_tree = sum(apply(logQ, 2, max)) + sum(logP_0)
+    }
     
     return(list('l_tree' = l_tree, 'logQ' = logQ, 'l_matrix' = l_matrix))
     
@@ -259,7 +263,7 @@ get_tree_post = function(tree, P) {
     
     sites = colnames(P)
     n = nrow(P)
-    tree_stats = score_tree(tree, P)
+    tree_stats = score_tree(tree, P, get_l_matrix = TRUE)
 
     l_matrix = as.data.frame(tree_stats$l_matrix)
 
