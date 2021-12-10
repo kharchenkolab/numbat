@@ -30,7 +30,7 @@ numbat_subclone = function(
         out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 10000, 
         min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
         ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        exclude_normal = FALSE, max_entropy = 0.4, eps = 0, min_LLR = 100, plot = FALSE
+        exclude_normal = FALSE, max_entropy = 0.5, eps = 1e-5, min_LLR = 100, plot = FALSE
     ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
@@ -235,7 +235,7 @@ numbat_subclone = function(
             simplify_history(tree_post$l_matrix, max_cost = max_cost) %>% 
             label_genotype()
 
-        mut_nodes = G_m %>% igraph::as_data_frame('vertices') %>% select(name = node, site = label)
+        mut_nodes = G_m %>% igraph::as_data_frame('vertices') %>% select(name = node, site = label, clone = id, GT = GT)
 
         # update tree
         gtree = mut_to_tree(tree_post$gtree, mut_nodes)
@@ -249,12 +249,11 @@ numbat_subclone = function(
             activate(nodes) %>%
             data.frame() %>% 
             # mutate(GT = ifelse(compartment == 'normal', '', GT)) %>%
-            group_by(GT, compartment) %>%
+            group_by(GT, clone, compartment) %>%
             summarise(
                 clone_size = n(),
                 .groups = 'drop'
-            ) %>%
-            mutate(clone = as.integer(factor(GT))) 
+            )
 
         clone_post = cell_to_clone(clones, exp_post, allele_post)
 

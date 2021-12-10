@@ -2387,12 +2387,7 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clones = N
         pal_clones = c('gray', RColorBrewer::brewer.pal(n = 8, 'Set1'))
     }
 
-    G_df = G_m %>%
-        as_tbl_graph() %>%
-        mutate(
-            clone = ifelse(GT == "", "0", str_trunc(GT, 20, side = 'center')),
-            id = as.factor(as.integer(factor(GT)))
-        )
+    G_df = G_m %>% as_tbl_graph() %>% mutate(id = factor(id))
 
     if (!label) {
         G_df = G_df %>% activate(edges) %>% mutate(to_label = '')
@@ -2489,7 +2484,11 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
 
 #' @export
 tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NULL, cnv_order = NULL, label_mut = TRUE, cnv_type = TRUE, branch_width = 0.2, tip = T, tip_length = 0.5, pal_annot = NULL, pal_clone = NULL, layout = 'rect', tvn = FALSE, legend = T) {
-           
+    
+    if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
+        gtree = gtree %>% activate(nodes) %>% mutate(clone = as.integer(as.factor(GT)))
+    }
+
     gtree = mark_tumor_lineage(gtree)
 
     joint_post = joint_post %>% filter(cnv_state != 'neu')
@@ -2516,7 +2515,7 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
             mutate(
                 GT = ifelse(compartment == 'normal', '', GT),
                 GT = factor(GT),
-                clone = as.factor(as.integer(GT))
+                clone = as.factor(clone)
             ) %>%
             {setNames(.$clone, .$name)}
     }
@@ -2622,6 +2621,10 @@ plot_sc_joint = function(
         gtree, joint_post, segs_consensus, 
         cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, pal_clone = NULL
     ) {
+
+    if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
+        gtree = gtree %>% activate(nodes) %>% mutate(clone = as.integer(as.factor(GT)))
+    }
           
     gtree = mark_tumor_lineage(gtree)
 
@@ -2706,7 +2709,7 @@ plot_sc_joint = function(
         mutate(
             GT = ifelse(compartment == 'normal', '', GT),
             GT = factor(GT),
-            clone = as.factor(as.integer(GT))
+            clone = as.factor(clone)
         ) %>%
         {setNames(.$clone, .$name)}
 

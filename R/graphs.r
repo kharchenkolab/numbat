@@ -315,10 +315,9 @@ get_tree_post = function(tree, P) {
     return(list('mut_nodes' = mut_nodes, 'gtree' = gtree, 'l_matrix' = l_matrix))
 }
 
-
-
 mut_to_tree = function(gtree, mut_nodes) {
     
+    # transfer mutation to tree
     gtree = gtree %>%
         activate(nodes) %>%
         select(-any_of(c('n_mut', 'l', 'site'))) %>%
@@ -330,6 +329,7 @@ mut_to_tree = function(gtree, mut_nodes) {
         ) %>%
         mutate(n_mut = ifelse(is.na(n_mut), 0, n_mut))
 
+    # get branch length
     gtree = gtree %>% 
         activate(edges) %>%
         select(-any_of(c('length'))) %>%
@@ -342,6 +342,7 @@ mut_to_tree = function(gtree, mut_nodes) {
         ) %>%
         mutate(length = ifelse(leaf, pmax(length, 0.2), length))
 
+    # label genotype on nodes
     node_to_mut = gtree %>% activate(nodes) %>% data.frame() %>% {setNames(.$site, .$id)}
 
     gtree = gtree %>%
@@ -363,6 +364,15 @@ mut_to_tree = function(gtree, mut_nodes) {
             )
         ) %>%
         mutate(GT = ifelse(GT == '' & !is.na(site), site, GT))
+
+    # preserve the clone ids
+    if ('GT' %in% colnames(mut_nodes)) {
+        gtree = gtree %>% activate(nodes) %>%
+            left_join(
+                mut_nodes %>% select(GT, clone),
+                by = 'GT'
+            )
+    }
     
     return(gtree)
 }
@@ -423,7 +433,7 @@ label_genotype = function(G) {
     # V(G)$GT = igraph::all_simple_paths(G, from = 1) %>% 
     V(G)$GT = lapply(
             2:length(V(G)), 
-            function(v) {first(igraph::all_simple_paths(G, from = 1, to = v), default = NULL)}
+            function(v) {dplyr::first(igraph::all_simple_paths(G, from = 1, to = v), default = NULL)}
         ) %>%
         purrr::map(as.character) %>%
         purrr::map(function(x) {
