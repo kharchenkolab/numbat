@@ -7,6 +7,9 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r}
 library(ggplot2)
 library(numbat)
 library(dplyr)
@@ -14,16 +17,18 @@ library(conos)
 library(patchwork)
 ```
 
-```{r}
-con_ATC = readRDS('~/external/MDA/conos_ATC.rds')
-con_sample = con_ATC$samples[['ATC2']]
-```
-
-## Interperting outputs
+## Interperting Numbat outputs
 Numbat produces a number of files in the output folder. Let's load the results using this utility function:
 ```{r}
 res = fetch_results(out_dir = '~/results/test', i = 2)
 ```
+
+```{r}
+# loading conos object for visualization
+con_ATC = readRDS('~/external/MDA/conos_ATC.rds')
+con_sample = con_ATC$samples[['ATC2']]
+```
+### CNV posteriors
 
 First, we can visualize the event-specific posteriors, in single cells:
 ```{r, fig.width = 9, fig.height=9, dpi=300}
@@ -95,6 +100,8 @@ scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint 
 
 ```
 Both expression and allele signal clearly seperates the tumor and normal cells.
+
+## Tumor subclones
 Restricting our attention to the tumor cells, we see that although most events are shared by all tumor cells, deletions on chr5 and chr19 are only present in a subset of the cells:
 ```{r, fig.width = 9, fig.height=9, dpi=300}
 
@@ -158,6 +165,7 @@ p1 | p2
 ```
 The cells from the two tumor subclones seemed to also seperate in expression space.
 
+### Single-cell phylogeny
 The subclones and their evolutionary relationships are discerned by Numbat phylogeny inference. Now we can visualize the detected CNVs and the single-cell phylogeny reconstructed by Numbat in an integrated view:
 ```{r, fig.width = 8, fig.height=3.5, dpi=300}
 plot_sc_joint(
