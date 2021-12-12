@@ -64,7 +64,7 @@ perform_nni = function(tree_init, P, max_iter = 100, ncores = 20, eps = 0.01, ve
         
         ptm = proc.time()
 
-        neighbours = nni(tree_current)
+        neighbours = phangorn::nni(tree_current)
 
         scores = mclapply(
                 mc.cores = ncores,
@@ -259,6 +259,7 @@ l_s_v = function(node, site, gtree, geno) {
     sum
 }
 
+#' @export
 get_tree_post = function(tree, P) {
     
     sites = colnames(P)
@@ -314,7 +315,7 @@ get_tree_post = function(tree, P) {
 
     return(list('mut_nodes' = mut_nodes, 'gtree' = gtree, 'l_matrix' = l_matrix))
 }
-
+#' @export
 mut_to_tree = function(gtree, mut_nodes) {
     
     # transfer mutation to tree
@@ -493,7 +494,7 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
     return(G)
     
 }
-
+#' @export
 simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
 
     # moves = data.frame()
@@ -557,7 +558,7 @@ get_move_opt = function(G, l_matrix) {
 
     return(move_opt)
 }
-
+#' @export
 plot_mut_tree = function(G) {
     
     par(mar = c(0, 0, 0, 0))

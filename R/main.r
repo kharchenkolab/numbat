@@ -30,7 +30,7 @@ numbat_subclone = function(
         out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 10000, 
         min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
         ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        exclude_normal = FALSE, max_entropy = 0.5, eps = 1e-5, min_LLR = 100, plot = FALSE
+        exclude_normal = FALSE, max_entropy = 0.5, eps = 1e-5, min_LLR = 50, plot = TRUE
     ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)

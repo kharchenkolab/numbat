@@ -1,0 +1,183 @@
+---
+title: "Numbat Walkthrough"
+output:
+  rmdformats::robobook
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+library(ggplot2)
+library(numbat)
+library(dplyr)
+library(conos)
+library(patchwork)
+```
+
+```{r}
+con_ATC = readRDS('~/external/MDA/conos_ATC.rds')
+con_sample = con_ATC$samples[['ATC2']]
+```
+
+## Interperting outputs
+Numbat produces a number of files in the output folder. Let's load the results using this utility function:
+```{r}
+res = fetch_results(out_dir = '~/results/test', i = 2)
+```
+
+First, we can visualize the event-specific posteriors, in single cells:
+```{r, fig.width = 9, fig.height=9, dpi=300}
+
+plist = list()
+
+# muts = c('8_1', '5_2', '19_1')
+muts = unique(res$joint_post$seg_label) %>% gtools::mixedsort()
+
+for (mut in muts) {
+    
+    plist[[mut]] = con_sample$plotEmbedding(
+        alpha=0.8,
+        size=1, 
+        plot.na = F, 
+        colors = res$joint_post %>%
+            left_join(res$clone_post %>% select(clone_opt, cell), by = 'cell') %>%
+            filter(seg_label == mut) %>%
+            {setNames(.$p_cnv, .$cell)},
+        show.legend = T,
+        mark.groups = F,
+        plot.theme = theme_bw(),
+        title = mut
+    ) +
+    scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, limits = c(0,1))
+}
+
+wrap_plots(plist, guides = 'collect')
+```
+
+It seems pretty clear that the the CNVs are restricted to a distinct cluster composed of tumor cells. Combinding evidence from all CNVs, Numbat derives an aneuploidy probablity for each cell to distinguish tumor versus normal cells. We can visualize the posterior aneuploidy probablity based on expression evidence only, allele evidence only, and jointly:
+```{r, fig.width = 9, fig.height=3, dpi=300}
+
+p_joint = con_sample$plotEmbedding(
+    alpha=0.8,
+    size=1, 
+    colors = res$clone_post %>%
+        {setNames(.$p_cnv, .$cell)},
+    plot.na = F,
+    plot.theme = theme_bw(),
+    title = 'Joint',
+) +
+scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5)
+
+p_allele = con_sample$plotEmbedding(
+    alpha=0.8,
+    size=1, 
+    colors = res$clone_post %>%
+        {setNames(.$p_cnv_x, .$cell)},
+    plot.na = F,
+    plot.theme = theme_bw(),
+    title = 'Expression',
+) +
+scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5)
+
+p_expr = con_sample$plotEmbedding(
+    alpha=0.8,
+    size=1, 
+    colors = res$clone_post %>%
+        {setNames(.$p_cnv_y, .$cell)},
+    plot.na = F,
+    show.legend = T,
+    plot.theme = theme_bw(),
+    title = 'Allele',
+) +
+scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5)
+
+(p_expr | p_allele | p_joint) + plot_layout(guides = 'collect')
+
+```
+Both expression and allele signal clearly seperates the tumor and normal cells.
+Restricting our attention to the tumor cells, we see that although most events are shared by all tumor cells, deletions on chr5 and chr19 are only present in a subset of the cells:
+```{r, fig.width = 9, fig.height=9, dpi=300}
+
+plist = list()
+
+muts = unique(res$joint_post$seg_label) %>% gtools::mixedsort()
+
+for (mut in muts) {
+    
+    plist[[mut]] = con_sample$plotEmbedding(
+        alpha=0.8,
+        size=1, 
+        plot.na = F, 
+        colors = res$joint_post %>%
+            left_join(res$clone_post %>% select(clone_opt, cell), by = 'cell') %>%
+            filter(clone_opt != 1) %>%
+            filter(seg_label == mut) %>%
+            {setNames(.$p_cnv, .$cell)},
+        show.legend = T,
+        mark.groups = F,
+        plot.theme = theme_bw(),
+        title = mut
+    ) +
+    scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, limits = c(0,1))
+}
+
+wrap_plots(plist, guides = 'collect')
+```
+
+Indeed, there appear to be at least two subclones in the tumor. We can visualize the distinct tumor subclones called by Numbat - note that clone 1 is always the normal cells.
+```{r, fig.width = 6, fig.height=3, dpi=300}
+
+p1 = con_sample$plotEmbedding(
+    alpha=0.8,
+    size=1, 
+    groups = res$clone_post %>%
+        {setNames(.$clone_opt, .$cell)},
+    show.legend = T,
+    mark.groups = F,
+    plot.na = F,
+    plot.theme = theme_bw(),
+    title = 'Genotypes',
+    pal = c('gray', 'royalblue', 'red3')
+)
+
+p2 = con_sample$plotEmbedding(
+    alpha=0.8,
+    size=1, 
+    groups = res$clone_post %>%
+        filter(clone_opt %in% c(2,3)) %>%
+        {setNames(.$clone_opt, .$cell)},
+    show.legend = F,
+    mark.groups = F,
+    plot.na = F,
+    plot.theme = theme_bw(),
+    title = 'Genotypes',
+    pal = c('royalblue', 'red3')
+)
+
+p1 | p2
+```
+The cells from the two tumor subclones seemed to also seperate in expression space.
+
+The subclones and their evolutionary relationships are discerned by Numbat phylogeny inference. Now we can visualize the detected CNVs and the single-cell phylogeny reconstructed by Numbat in an integrated view:
+```{r, fig.width = 8, fig.height=3.5, dpi=300}
+plot_sc_joint(
+    res$gtree,
+    res$joint_post,
+    res$segs_consensus,
+    tip_length = 2,
+    branch_width = 0.2,
+    size = 0.3,
+    clone_bar = T
+) +
+ggtitle('ATC2')
+```
+The detailed mutational history constructed by Numbat can be visualized as well:
+```{r, fig.width = 8, fig.height=2, dpi=300}
+plot_mut_history(res$G_m)
+```
+Here the nodes represent clones (each carrying a distinct genotype) and edges represent mutational events. This essentially tells us that the tumor followed a linear pattern of evolution, where it first acquired the truncal CNVs (deletions that are shared by two subclones) and a subclone arose by additionally acquiring chr5 and chr19 deletions.
+
+Finally, we can visualize the aggregated bulk profiles and HMM results of the subclones:
+```{r, fig.width = 14, fig.height=6, dpi=300}
+plot_bulks(res$bulk_clones, min_depth = 5)
+```

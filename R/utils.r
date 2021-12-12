@@ -2617,6 +2617,7 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
     return(panel)
 }
 
+#' @export
 plot_sc_joint = function(
         gtree, joint_post, segs_consensus, 
         cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, pal_clone = NULL
@@ -2727,11 +2728,12 @@ plot_sc_joint = function(
 
     # external annotation
     if (!is.null(cell_dict)) {
-
+        
         p_annot = data.frame(
                 cell = names(cell_dict),
                 annot = unname(cell_dict)
             ) %>%
+            filter(cell %in% joint_post$cell) %>%
             mutate(cell = factor(cell, cell_order)) %>%
             annot_bar(transpose = T)
 
