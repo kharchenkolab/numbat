@@ -12,6 +12,9 @@ Numbat does not require paired DNA or genotype data and operates solely on the d
 - [Installation](#installation)
 - [Usage](#usage)
 
+A more detailed vignette for interpreting Numbat results is available:
+- [Walkthrough](http://pklab.med.harvard.edu/teng)
+
 # Prerequisites
 Numbat uses cellsnp-lite for generating SNP pileup data and eagle2 for phasing. Please follow their installation instructions and make sure their binary executables can be found in your $PATH.
 
