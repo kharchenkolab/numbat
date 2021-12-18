@@ -14,23 +14,52 @@ library(ggplot2)
 library(numbat)
 library(dplyr)
 library(conos)
+# library(logger)
+# library(stringr)
+# library(magrittr)
+# library(glue)
+library(data.table)
 library(patchwork)
 ```
 
-## Interperting Numbat outputs
+# Interperting Numbat outputs
+In this tutorial, we will illustrate how to use Numbat to reconstruct the single-cell copy number profile and tumor phylogeny from scRNA data, using an aplastic thyroid cancer dataset (ATC2) from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2).
 Numbat produces a number of files in the output folder. Let's load the results using this utility function:
 ```{r}
-res = fetch_results(out_dir = '~/results/test', i = 2)
-```
-
-```{r}
+# loading numbat results
+outdir = '~/results/test'
+res = fetch_results(outdir, i = 2)
 # loading conos object for visualization
 con_ATC = readRDS('~/external/MDA/conos_ATC.rds')
 con_sample = con_ATC$samples[['ATC2']]
 ```
-### CNV posteriors
 
-First, we can visualize the event-specific posteriors, in single cells:
+Numbat first approximates a single-cell phylogeny using window-smoothed average expression values. We can visualize the averaged expression profile and the initial phylogeny as follows:
+```{r, fig.width = 10, fig.height = 3.5, dpi=300}
+gexp.norm.long = fread(glue('{outdir}/gexp.norm.long.tsv.gz'))
+hc = readRDS(glue('{outdir}/hc.rds'))
+
+plot_sc_roll(
+    gexp.norm.long,
+    hc,
+    k = 3,
+    n_sample = 300
+)
+```
+This view is similar to inferCNV and CopyKat. It appears that we have three main clusters: clusters 1 and 2 seem to harbor amplifications on chromosome 5, 7, 19. Cluster 3 does not have obvious CNVs and is presumably the normal cells. However, it is not clear what the CNV events are (their boundaries and copy number states) and how the two tumor populations are related to each other (are they distinct lineages or is one the ancestor of the other?). Let's use Numbat to get a more detailed view of the copy number landscape in this dataset.
+
+## HMM
+Numbat iteratively detects CNVs using a haplotype-enhanced HMM and reconstructs the tumor phylogeny using maximum likelihood using the detected CNV events. Let's first see what events are detected from the HMM in the last iteration:
+```{r, fig.width = 14, fig.height=6, dpi=300}
+
+res$bulk_clones %>%
+    plot_bulks(min_depth = 5)
+```
+Interestingly, we observe widespread loss of heterozygosity in the majority of the chromosomes, which we could not see from the expression view. This also tells us that the likely diploid regions are on chromosome 5,7 and 19.
+
+## CNV posteriors
+
+We can visualize the event-specific posteriors, in single cells:
 ```{r, fig.width = 9, fig.height=9, dpi=300}
 
 plist = list()
@@ -102,7 +131,7 @@ scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint 
 Both expression and allele signal clearly seperates the tumor and normal cells.
 
 ## Tumor subclones
-Restricting our attention to the tumor cells, we see that although most events are shared by all tumor cells, deletions on chr5 and chr19 are only present in a subset of the cells:
+Restricting our attention to the tumor cells, we see that although most events are shared by all tumor cells, some are only present in a subset of the cells:
 ```{r, fig.width = 9, fig.height=9, dpi=300}
 
 plist = list()
@@ -125,14 +154,17 @@ for (mut in muts) {
         plot.theme = theme_bw(),
         title = mut
     ) +
-    scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, limits = c(0,1))
+    scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, limits = c(0,1)) +
+    guides(color = guide_legend(title = 'posterior'))
 }
 
 wrap_plots(plist, guides = 'collect')
 ```
 
-Indeed, there appear to be at least two subclones in the tumor. We can visualize the distinct tumor subclones called by Numbat - note that clone 1 is always the normal cells.
+Interestingly, the two deletions on chr19 are mutually exclusive. Indeed, there appear to be multiple subclones in the tumor. We can visualize the distinct tumor subclones called by Numbat - note that clone 1 is always the normal cells.
 ```{r, fig.width = 6, fig.height=3, dpi=300}
+
+pal = RColorBrewer::brewer.pal(n = 4, 'Set1')
 
 p1 = con_sample$plotEmbedding(
     alpha=0.8,
@@ -144,28 +176,28 @@ p1 = con_sample$plotEmbedding(
     plot.na = F,
     plot.theme = theme_bw(),
     title = 'Genotypes',
-    pal = c('gray', 'royalblue', 'red3')
+    pal = c('gray', pal)
 )
 
 p2 = con_sample$plotEmbedding(
     alpha=0.8,
     size=1, 
     groups = res$clone_post %>%
-        filter(clone_opt %in% c(2,3)) %>%
+        filter(clone_opt != 1) %>%
         {setNames(.$clone_opt, .$cell)},
     show.legend = F,
     mark.groups = F,
     plot.na = F,
     plot.theme = theme_bw(),
     title = 'Genotypes',
-    pal = c('royalblue', 'red3')
+    pal = pal
 )
 
 p1 | p2
 ```
-The cells from the two tumor subclones seemed to also seperate in expression space.
+The cells from the tumor subclones seemed to largely separate in expression space.
 
-### Single-cell phylogeny
+## Single-cell phylogeny
 The subclones and their evolutionary relationships are discerned by Numbat phylogeny inference. Now we can visualize the detected CNVs and the single-cell phylogeny reconstructed by Numbat in an integrated view:
 ```{r, fig.width = 8, fig.height=3.5, dpi=300}
 plot_sc_joint(
@@ -179,13 +211,8 @@ plot_sc_joint(
 ) +
 ggtitle('ATC2')
 ```
-The detailed mutational history constructed by Numbat can be visualized as well:
+The detailed mutational history constructed by Numbat can be visualized as well. Here the nodes represent clones (each carrying a distinct genotype) and edges represent mutational events. 
 ```{r, fig.width = 8, fig.height=2, dpi=300}
 plot_mut_history(res$G_m)
 ```
-Here the nodes represent clones (each carrying a distinct genotype) and edges represent mutational events. This essentially tells us that the tumor followed a linear pattern of evolution, where it first acquired the truncal CNVs (deletions that are shared by two subclones) and a subclone arose by additionally acquiring chr5 and chr19 deletions.
 
-Finally, we can visualize the aggregated bulk profiles and HMM results of the subclones:
-```{r, fig.width = 14, fig.height=6, dpi=300}
-plot_bulks(res$bulk_clones, min_depth = 5)
-```

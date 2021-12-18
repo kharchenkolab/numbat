@@ -1,6 +1,8 @@
-require(extraDistr)
+#' @export
+dbbinom <- function(x, size, alpha = 1, beta = 1, log = FALSE) {
+    extraDistr:::cpp_dbbinom(x, size, alpha, beta, log[1L])
+}
 
-    
 ############ time inhomogenous univariate HMM ############
 
 Viterbi.dthmm.inhom <- function (obj, ...){

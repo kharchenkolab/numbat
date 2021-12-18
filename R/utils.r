@@ -760,7 +760,7 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
 ########################### Analysis ############################
 
 #' @export
-analyze_bulk_lnpois = function(
+analyze_bulk = function(
     Obs, t = 1e-5, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
     exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE,
     phasing = TRUE, roll_phi = TRUE, verbose = TRUE, debug = FALSE, diploid_chroms = NULL,

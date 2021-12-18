@@ -30,7 +30,7 @@ numbat_subclone = function(
         out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 10000, 
         min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
         ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        exclude_normal = FALSE, max_entropy = 0.5, eps = 1e-5, min_LLR = 50, plot = TRUE
+        exclude_normal = FALSE, max_entropy = 0.5, eps = 1e-5, min_LLR = 50, alpha = 1e-4, plot = TRUE
     ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
@@ -69,7 +69,7 @@ numbat_subclone = function(
                 genetic_map = genetic_map,
                 min_depth = min_depth
             ) %>%
-            analyze_bulk_lnpois(t = t, gamma = gamma) %>%
+            analyze_bulk(t = t, gamma = gamma) %>%
             mutate(sample = 0)
 
     } else if (init_method == 'smooth') {
@@ -105,6 +105,7 @@ numbat_subclone = function(
             run_group_hmms(
                 t = t,
                 gamma = gamma,
+                alpha = alpha,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
                 exp_model = exp_model,
@@ -158,6 +159,14 @@ numbat_subclone = function(
             exp_post,
             allele_post,
             segs_consensus)
+
+
+        joint_post = joint_post %>%
+            group_by(seg) %>%
+            mutate(
+                avg_entropy = mean(binary_entropy(p_cnv), na.rm = TRUE)
+            ) %>%
+            ungroup()
         
         fwrite(exp_sc, glue('{out_dir}/exp_sc_{i}.tsv.gz'), sep = '\t')
         fwrite(exp_post, glue('{out_dir}/exp_post_{i}.tsv'), sep = '\t')
@@ -182,10 +191,6 @@ numbat_subclone = function(
         P = joint_post %>%
             filter(cnv_state != 'neu') %>%
             filter(cell %in% cell_sample) %>%
-            group_by(seg) %>%
-            mutate(
-                avg_entropy = mean(binary_entropy(p_cnv), na.rm = TRUE)
-            ) %>%
             filter(avg_entropy < max_entropy & LLR > min_LLR) %>%
             mutate(p_n = 1 - p_cnv) %>%
             mutate(p_n = pmax(pmin(p_n, 1-p_min), p_min)) %>%
@@ -300,6 +305,7 @@ numbat_subclone = function(
             run_group_hmms(
                 t = t,
                 gamma = gamma,
+                alpha = alpha,
                 exp_model = exp_model,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
@@ -323,6 +329,7 @@ numbat_subclone = function(
             run_group_hmms(
                 t = t,
                 gamma = gamma,
+                alpha = alpha,
                 exp_model = exp_model,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
@@ -494,7 +501,7 @@ run_group_hmms = function(
         bulks %>% split(.$sample),
         mc.cores = ncores,
         function(bulk) {
-            bulk %>% analyze_bulk_lnpois(
+            bulk %>% analyze_bulk(
                 t = t,
                 gamma = gamma, 
                 find_diploid = find_diploid, 
@@ -509,6 +516,7 @@ run_group_hmms = function(
     if (any(bad)) {
         log_error(glue('job {paste(which(bad), collapse = ",")} failed'))
         log_error(results[bad][[1]])
+        message(results[bad][[1]])
     }
 
     bulks = results %>% bind_rows() %>%
@@ -807,7 +815,7 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
             )}
         ) %>%
         as.data.frame() %>%
-        set_names(c('gene_index', 'seg_index')) %>%
+        setNames(c('gene_index', 'seg_index')) %>%
         left_join(
             gtf_transcript %>% mutate(gene_index = 1:n()),
             by = c('gene_index')
