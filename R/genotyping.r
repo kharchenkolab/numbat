@@ -4,7 +4,7 @@
 #' @param vcfs vcfR objects
 #' @return a status code
 #' @export
-genotype = function(label, samples, vcfs, outdir) {
+genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE) {
 
     snps = lapply(
             vcfs, function(vcf){get_snps(vcf)}
@@ -31,7 +31,7 @@ genotype = function(label, samples, vcfs, outdir) {
         as.matrix
 
     for (chr in 1:22) {
-        make_vcf_chr(chr, snps, vcf_original, label, outdir, het_only = FALSE)
+        make_vcf_chr(chr, snps, vcf_original, label, outdir, het_only = het_only, chr_prefix = chr_prefix)
     }
 
     return(0)

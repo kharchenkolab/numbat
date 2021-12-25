@@ -107,6 +107,51 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
 }
 
 #' @export
+fit_multi_ref_lnpois = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-6, verbose = FALSE) {
+
+    if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
+        return(list('w' = 1, 'lambdas_bar' = lambdas_ref))
+    }
+
+    # take the union of expressed genes across cell type
+    genes_common = gtf_transcript$gene %>% 
+        intersect(names(Y_obs)) %>%
+        intersect(rownames(lambdas_ref)[rowMeans(lambdas_ref) > min_lambda])
+
+    if (verbose) {
+        log_info(glue('{length(genes_common)} genes common in reference and observation'))
+    }
+
+    Y_obs = Y_obs[genes_common]
+    lambdas_ref = lambdas_ref[genes_common,,drop=F]
+
+    n_ref = ncol(lambdas_ref)
+
+    n = length(Y_obs)
+
+    fit = optim(
+        fn = function(params) {
+            sig = params[1]
+            w = params[2:length(params)]
+            -sum(log(dpoilog(Y_obs, log(d * lambdas_ref %*% w), rep(sig, n))))
+        },
+        method = 'L-BFGS-B',
+        par = c(1, rep(1/n_ref, n_ref)),
+        lower = c(0.01, rep(1e-6, n_ref))
+    )
+
+    sig = fit$par[1]
+    w = fit$par[2:length(fit$par)]
+    mu = log(1/sum(w))
+    w = w * exp(mu)
+    w = set_names(w, colnames(lambdas_ref))
+
+    lambdas_bar = lambdas_ref %*% w %>% {set_names(as.vector(.), rownames(.))}
+
+    return(list('mu' = mu, 'sig' = sig, 'w' = w, 'lambdas_bar' = lambdas_bar))
+}
+
+#' @export
 fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-6, verbose = FALSE) {
 
     if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
@@ -148,6 +193,7 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
 
     return(list('alpha' = alpha, 'beta' = beta, 'w' = w, 'lambdas_bar' = lambdas_bar))
 }
+
 
 Modes <- function(x) {
   ux <- unique(x)
@@ -467,10 +513,10 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
 
     fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
 
-    # if (verbose) {
-        # message('Fitted reference proportions:')
-        # message(paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
-    # }
+    if (verbose) {
+        message('Fitted reference proportions:')
+        message(paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
+    }
     
     gexp_bulk = process_exp_fc(
         count_mat,
@@ -771,7 +817,9 @@ analyze_bulk = function(
         stop('transition probability is not numeric')
     }
 
-    if (!is.null(diploid_chroms)) {
+    if (exp_only) {
+        Obs$diploid = TRUE
+    } else if (!is.null(diploid_chroms)) {
         log_info(glue('Using diploid chromosomes given: {paste0(diploid_chroms, collapse = ",")}'))
         Obs = Obs %>% mutate(diploid = CHROM %in% diploid_chroms)
     } else if (find_diploid) {
