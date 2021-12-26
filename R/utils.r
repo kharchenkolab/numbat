@@ -1863,7 +1863,7 @@ sc_exp_post = function(exp_sc) {
 
 pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 
-
+#' @export
 cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
         "del_up" = "royalblue", "del_down" = "darkblue", 
         "loh_up" = "darkgreen", "loh_down" = "olivedrab4",
@@ -1934,7 +1934,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
             axis.text.x = element_blank(),
             axis.title.x = element_blank()
         ) +
-        scale_color_manual(values = cnv_colors) +
+        scale_color_manual(values = cnv_colors, limits = force) +
         ylim(0,1) +
         facet_grid(.~CHROM, space = 'free_x', scale = 'free_x') +
         geom_vline(xintercept = boundary - 1, color = 'red', size = 0.5, linetype = 'dashed') +
@@ -2017,7 +2017,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
         axis.text.x = element_blank()
     ) +
     facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
-    scale_color_manual(values = cnv_colors) +
+    scale_color_manual(values = cnv_colors, limits = force) +
     guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = FALSE, alpha = FALSE, shape = FALSE) +
     xlab(marker) +
     ylab('')
@@ -2347,7 +2347,7 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clone = NU
         theme_void() +
         scale_x_continuous(expand = expansion(0.2)) +
         scale_y_continuous(expand = expansion(0.2)) + 
-        scale_color_manual(values = pal_clone) +
+        scale_color_manual(values = pal_clone, limits = force) +
         guides(color = 'none')
 
     if (horizontal) {
@@ -2500,7 +2500,7 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
 
     if (tip) {
         p_tree = p_tree + geom_tippoint(aes(color = clone), size=0, stroke = 0.2) +
-            scale_color_manual(values = c('gray', pal_clone))
+            scale_color_manual(values = c('gray', pal_clone), limits = force)
     }
 
     if (label_mut) {
@@ -2640,7 +2640,8 @@ plot_sc_joint = function(
             color = guide_legend(override.aes = c('size' = 1))
         ) +
         scale_color_manual(
-            values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = cnv_colors[['bamp']], 'loh' = 'darkgreen', 'bdel' = 'blue', 'neu' = 'white')
+            values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = cnv_colors[['bamp']], 'loh' = 'darkgreen', 'bdel' = 'blue', 'neu' = 'white'),
+            limits = force
         )
 
     # clone annotation

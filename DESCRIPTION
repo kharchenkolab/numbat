@@ -37,7 +37,7 @@ Imports:
     dendextend,
     ggtree,
     ggraph,
-    bedr
+    parallelDist
 Depends: 
     R (>= 2.10)
 Suggests: 
