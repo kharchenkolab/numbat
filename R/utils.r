@@ -494,7 +494,7 @@ annot_cm = function(bulk, genetic_map) {
             )}
         ) %>%
         as.data.frame() %>%
-        set_names(c('marker_index', 'map_index')) %>%
+        setNames(c('marker_index', 'map_index')) %>%
         left_join(
             bulk %>% mutate(marker_index = 1:n()) %>%
                 select(marker_index, snp_id),
