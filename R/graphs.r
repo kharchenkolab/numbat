@@ -444,6 +444,10 @@ label_genotype = function(G) {
         }) %>%
         c(id_to_label[[1]],.) %>%
         as.character
+
+    # V(G)$clone = igraph::dfs(G, root = 1)$order
+    visit_order = setNames(1:length(V(G)), as.numeric(dfs(G, root = 1)$order))
+    V(G)$clone = visit_order[as.character(as.numeric(V(G)))]
     
     return(G)
 }

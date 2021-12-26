@@ -135,3 +135,114 @@ vcfR_file_fix <- function(file) {
     file.remove(out)
 
 }
+
+#' @export
+preprocess_allele = function(
+    sample,
+    vcf_pu,
+    vcf_phased,
+    AD,
+    DP,
+    barcodes,
+    gtf_transcript
+) {
+
+    # transcript bed
+    transcript_regions = gtf_transcript %>%
+        pull(region) %>%
+        unique %>% bedr::bedr.sort.region(verbose = F)
+
+    # pileup VCF
+    vcf_pu = vcf_pu %>%
+        mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
+        tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
+        mutate_at(c('AD', 'DP', 'OTH'), as.integer) %>%
+        mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_'))
+
+    # pileup count matrices
+    DP = as.data.frame(Matrix::summary(DP)) %>%
+        mutate(
+            cell = barcodes[j],
+            snp_id = vcf_pu$snp_id[i]
+        ) %>%
+        select(-i, -j) %>%
+        rename(DP = x) %>%
+        select(cell, snp_id, DP)
+
+    AD = as.data.frame(Matrix::summary(AD)) %>%
+        mutate(
+            cell = barcodes[j],
+            snp_id = vcf_pu$snp_id[i]
+        ) %>%
+        select(-i, -j) %>%
+        rename(AD = x) %>%
+        select(cell, snp_id, AD)
+
+    df = DP %>% left_join(AD, by = c("cell", "snp_id")) %>%
+        mutate(AD = ifelse(is.na(AD), 0, AD))
+
+    df = df %>% left_join(
+        vcf_pu %>% rename(AD_all = AD, DP_all = DP, OTH_all = OTH),
+        by = 'snp_id')
+
+    df = df %>% mutate(
+            AR = AD/DP,
+            AR_all = AD_all/DP_all
+        )
+
+    df = df %>% dplyr::filter(DP_all > 1 & OTH_all == 0)
+
+    # vcf has duplicated records sometimes
+    df = df %>% distinct() 
+
+    df = df %>% mutate(
+        snp_index = as.integer(factor(snp_id, unique(snp_id))),
+        cell_index = as.integer(factor(cell, sample(unique(cell))))
+    )
+    
+    # phased VCF
+    vcf_phased = vcf_phased %>% mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
+        tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
+        mutate_at(c('AD', 'DP', 'OTH'), as.integer)
+
+    vcf_phased = vcf_phased %>% mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_')) %>%
+        mutate(GT = get(sample))
+
+    vcf_phased = vcf_phased %>% mutate(region = paste0('chr', CHROM, ':', POS, '-', format(POS+1, scientific = F, trim = T)))
+
+    # intersect with gene model
+    vcf_phased_regions = vcf_phased %>%
+        pull(region) %>%
+        bedr::bedr.sort.region(verbose = F)
+
+    overlap_transcript = bedr::bedr(
+        input = list(a = vcf_phased_regions, b = transcript_regions), 
+        method = "intersect", 
+        params = "-loj -sorted",
+        verbose = F
+    ) %>% dplyr::filter(V4 != '.')
+
+    # annotate SNP by gene
+    vcf_phased = vcf_phased %>% left_join(
+        overlap_transcript %>%
+        rename(CHROM = V4, gene_start = V5, gene_end = V6) %>%
+        mutate(
+            gene_start = as.integer(gene_start), 
+            gene_end = as.integer(gene_end),
+            CHROM = as.integer(str_remove(CHROM, 'chr')),
+        ) %>%
+        left_join(
+            gtf_transcript %>% select(CHROM, gene_start, gene_end, gene),
+            by = c('CHROM', 'gene_start', 'gene_end')
+        ) %>%
+        arrange(index, gene) %>%
+        distinct(index, `.keep_all` = T),
+        by = c('region' = 'index')
+    )
+
+    # add annotation to cell counts and pseudobulk
+    df = df %>% left_join(vcf_phased %>% select(snp_id, gene, gene_start, gene_end, GT), by = 'snp_id') 
+    df = df %>% mutate(CHROM = factor(CHROM, unique(CHROM)))
+    
+    return(df)
+}

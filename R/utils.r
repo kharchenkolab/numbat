@@ -392,117 +392,6 @@ process_exp = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101,
 }
 
 #' @export
-preprocess_allele = function(
-    sample,
-    vcf_pu,
-    vcf_phased,
-    AD,
-    DP,
-    barcodes,
-    gtf_transcript
-) {
-
-    # transcript bed
-    transcript_regions = gtf_transcript %>%
-        pull(region) %>%
-        unique %>% bedr::bedr.sort.region(verbose = F)
-
-    # pileup VCF
-    vcf_pu = vcf_pu %>%
-        mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
-        tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
-        mutate_at(c('AD', 'DP', 'OTH'), as.integer) %>%
-        mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_'))
-
-    # pileup count matrices
-    DP = as.data.frame(Matrix::summary(DP)) %>%
-        mutate(
-            cell = barcodes[j],
-            snp_id = vcf_pu$snp_id[i]
-        ) %>%
-        select(-i, -j) %>%
-        rename(DP = x) %>%
-        select(cell, snp_id, DP)
-
-    AD = as.data.frame(Matrix::summary(AD)) %>%
-        mutate(
-            cell = barcodes[j],
-            snp_id = vcf_pu$snp_id[i]
-        ) %>%
-        select(-i, -j) %>%
-        rename(AD = x) %>%
-        select(cell, snp_id, AD)
-
-    df = DP %>% left_join(AD, by = c("cell", "snp_id")) %>%
-        mutate(AD = ifelse(is.na(AD), 0, AD))
-
-    df = df %>% left_join(
-        vcf_pu %>% rename(AD_all = AD, DP_all = DP, OTH_all = OTH),
-        by = 'snp_id')
-
-    df = df %>% mutate(
-            AR = AD/DP,
-            AR_all = AD_all/DP_all
-        )
-
-    df = df %>% filter(DP_all > 1 & OTH_all == 0)
-
-    # vcf has duplicated records sometimes
-    df = df %>% distinct() 
-
-    df = df %>% mutate(
-        snp_index = as.integer(factor(snp_id, unique(snp_id))),
-        cell_index = as.integer(factor(cell, sample(unique(cell))))
-    )
-    
-    # phased VCF
-    vcf_phased = vcf_phased %>% mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
-        tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
-        mutate_at(c('AD', 'DP', 'OTH'), as.integer)
-
-    vcf_phased = vcf_phased %>% mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_')) %>%
-        mutate(GT = get(sample))
-
-    vcf_phased = vcf_phased %>% mutate(region = paste0('chr', CHROM, ':', POS, '-', format(POS+1, scientific = F, trim = T)))
-
-    # intersect with gene model
-    vcf_phased_regions = vcf_phased %>%
-        pull(region) %>%
-        bedr::bedr.sort.region(verbose = F)
-
-    overlap_transcript = bedr::bedr(
-        input = list(a = vcf_phased_regions, b = transcript_regions), 
-        method = "intersect", 
-        params = "-loj -sorted",
-        verbose = F
-    ) %>% filter(V4 != '.')
-
-    # annotate SNP by gene
-    vcf_phased = vcf_phased %>% left_join(
-        overlap_transcript %>%
-        rename(CHROM = V4, gene_start = V5, gene_end = V6) %>%
-        mutate(
-            gene_start = as.integer(gene_start), 
-            gene_end = as.integer(gene_end),
-            CHROM = as.integer(str_remove(CHROM, 'chr')),
-        ) %>%
-        left_join(
-            gtf_transcript %>% select(CHROM, gene_start, gene_end, gene),
-            by = c('CHROM', 'gene_start', 'gene_end')
-        ) %>%
-        arrange(index, gene) %>%
-        distinct(index, `.keep_all` = T),
-        by = c('region' = 'index')
-    )
-
-    # add annotation to cell counts and pseudobulk
-    df = df %>% left_join(vcf_phased %>% select(snp_id, gene, gene_start, gene_end, GT), by = 'snp_id') 
-    df = df %>% mutate(CHROM = factor(CHROM, unique(CHROM)))
-    
-    return(df)
-}
-
-#' @export
 get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, min_depth = 0, lambda = 0.52, verbose = TRUE) {
 
     if (nrow(df_allele) == 0) {
@@ -2298,10 +2187,10 @@ plot_exp_post = function(exp_post, jitter = TRUE) {
 }
 
 #' @export
-plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio = 0.1, pal_clones = NULL, pal_annot = NULL) {
+plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio = 0.1, pal_clone = NULL, pal_annot = NULL) {
 
-    if (is.null(pal_clones)) {
-        pal_clones = c('gray', RColorBrewer::brewer.pal(n = 8, 'Set1'))
+    if (is.null(pal_clone)) {
+        pal_clone = c('gray', RColorBrewer::brewer.pal(n = 8, 'Set1'))
     }
 
     if (is.null(pal_annot)) {
@@ -2392,7 +2281,7 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio 
         facet_grid(.~group, scale = 'free', space = 'free') +
         xlab('') +
         ylab('') + 
-        scale_fill_manual(values = pal_clones) +
+        scale_fill_manual(values = pal_clone) +
         guides(fill = 'none')
 
     if (annot) {
@@ -2429,13 +2318,16 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio 
 }
 
 #' @export
-plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clones = NULL) {
+plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clone = NULL) {
 
-    if (is.null(pal_clones)) {
-        pal_clones = c('gray', RColorBrewer::brewer.pal(n = 8, 'Set1'))
+    G_m = label_genotype(G_m)
+
+    if (is.null(pal_clone)) {
+        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 5, 'Spectral'))
+        pal_clone = c('gray', getPalette(length(V(G_m))))
     }
 
-    G_df = G_m %>% as_tbl_graph() %>% mutate(id = factor(id))
+    G_df = G_m %>% as_tbl_graph() %>% mutate(clone = factor(clone))
 
     if (!label) {
         G_df = G_df %>% activate(edges) %>% mutate(to_label = '')
@@ -2450,12 +2342,12 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clones = N
             end_cap = circle(4, 'mm'),
             start_cap = circle(4, 'mm')
         ) + 
-        geom_node_point(aes(color = id), size = 10) +
-        geom_node_text(aes(label = id), size = 6) +
+        geom_node_point(aes(color = clone), size = 10) +
+        geom_node_text(aes(label = clone), size = 6) +
         theme_void() +
         scale_x_continuous(expand = expansion(0.2)) +
         scale_y_continuous(expand = expansion(0.2)) + 
-        scale_color_manual(values = pal_clones) +
+        scale_color_manual(values = pal_clone) +
         guides(color = 'none')
 
     if (horizontal) {
@@ -2468,11 +2360,11 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clones = N
 getPalette = colorRampPalette(pal)
 
 #' @export
-plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1, tvn = FALSE, tree = TRUE, p_min = 0.5, bar_ratio = 0.1, pal_clones = NULL, pal_annot = NULL) {
+plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1, tvn = FALSE, tree = TRUE, p_min = 0.5, bar_ratio = 0.1, pal_clone = NULL, pal_annot = NULL) {
 
-    if (is.null(pal_clones)) {
+    if (is.null(pal_clone)) {
         n_clones = length(unique(res$clone_post$clone_opt))
-        pal_clones = getPalette(max(V(res$G_m)-1, 8)) %>% c('gray', .) %>% setNames(1:n_clones)
+        pal_clone = getPalette(max(V(res$G_m)-1, 8)) %>% c('gray', .) %>% setNames(1:n_clones)
     } 
     
     if (is.null(pal_annot) & !is.null(cell_annot)) {
@@ -2517,7 +2409,7 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
             by = 'cell'
         ) %>%
         mutate(group = clone_opt) %>%
-        plot_clones(res$gtree, pal_clones = pal_clones, pal_annot = pal_annot, annot = annot, bar_ratio = bar_ratio)
+        plot_clones(res$gtree, pal_clone = pal_clone, pal_annot = pal_annot, annot = annot, bar_ratio = bar_ratio)
 
     plot_title = plot_annotation(title = label, theme = theme(plot.title = element_text(hjust = 0.1)))
 
@@ -2525,7 +2417,7 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
         return(p_clones + plot_title)
     }
 
-    p_mut = res$G_m %>% plot_mut_history(pal_clones = pal_clones) 
+    p_mut = res$G_m %>% plot_mut_history(pal_clone = pal_clone) 
 
     (p_mut / p_clones) + plot_layout(heights = c(ratio, 1)) + plot_title
 }
@@ -2748,7 +2640,7 @@ plot_sc_joint = function(
             color = guide_legend(override.aes = c('size' = 1))
         ) +
         scale_color_manual(
-            values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = 'red', 'mamp' = 'red', 'loh' = 'darkgreen', 'bdel' = 'blue', 'neu' = 'white')
+            values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = cnv_colors[['bamp']], 'loh' = 'darkgreen', 'bdel' = 'blue', 'neu' = 'white')
         )
 
     # clone annotation
@@ -2763,6 +2655,7 @@ plot_sc_joint = function(
         {setNames(.$clone, .$name)}
 
     if (is.null(pal_clone)) {
+        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 5, 'Spectral'))
         pal_clone = c('gray', getPalette(length(unique(clone_dict))))
     }
 

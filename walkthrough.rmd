@@ -53,7 +53,7 @@ Numbat iteratively detects CNVs using a haplotype-enhanced HMM and reconstructs 
 ```{r, fig.width = 14, fig.height=6, dpi=300}
 
 res$bulk_clones %>%
-    plot_bulks(min_depth = 5)
+    plot_bulks(min_depth = 5, phi_mle = TRUE)
 ```
 Interestingly, we observe widespread loss of heterozygosity in the majority of the chromosomes, which we could not see from the expression view. This also tells us that the likely diploid regions are on chromosome 5,7 and 19.
 
@@ -201,7 +201,7 @@ The cells from the tumor subclones seemed to largely separate in expression spac
 The subclones and their evolutionary relationships are discerned by Numbat phylogeny inference. Now we can visualize the detected CNVs and the single-cell phylogeny reconstructed by Numbat in an integrated view:
 ```{r, fig.width = 8, fig.height=3.5, dpi=300}
 plot_sc_joint(
-    res$gtree,
+    res$gtree %>% activate(edges) %>% mutate(length = ifelse(length != 0 & (!leaf), 4, length)),
     res$joint_post,
     res$segs_consensus,
     tip_length = 2,

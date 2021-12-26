@@ -240,7 +240,8 @@ numbat_subclone = function(
             simplify_history(tree_post$l_matrix, max_cost = max_cost) %>% 
             label_genotype()
 
-        mut_nodes = G_m %>% igraph::as_data_frame('vertices') %>% select(name = node, site = label, clone = id, GT = GT)
+        mut_nodes = G_m %>% igraph::as_data_frame('vertices') %>% 
+            select(name = node, site = label, clone = clone, GT = GT)
 
         # update tree
         gtree = mut_to_tree(tree_post$gtree, mut_nodes)

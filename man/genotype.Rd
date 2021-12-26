@@ -4,7 +4,7 @@
 \alias{genotype}
 \title{Main function}
 \usage{
-genotype(label, samples, vcfs, outdir)
+genotype(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE)
 }
 \arguments{
 \item{label}{character string}

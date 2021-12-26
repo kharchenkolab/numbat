@@ -36,7 +36,8 @@ Imports:
     matrixStats,
     dendextend,
     ggtree,
-    ggraph
+    ggraph,
+    bedr
 Depends: 
     R (>= 2.10)
 Suggests: 

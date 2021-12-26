@@ -63,7 +63,7 @@ for (i in 1:n_samples) {
 
 }
 
-cat('Running pileup')
+cat('Running pileup\n')
 
 script = glue('{outdir}/run_pileup.sh')
 
@@ -73,7 +73,7 @@ system(glue('chmod +x {script}'))
 system2(script, stdout = glue("{outdir}/pileup.log"))
 
 ## VCF creation
-cat('Creating VCFs')
+cat('Creating VCFs\n')
 vcfs = lapply(samples, function(sample){read.vcfR(glue('{outdir}/pileup/{sample}/cellSNP.base.vcf'), verbose = F)})
 
 genotype(label, samples, vcfs, glue('{outdir}/phasing'))
@@ -103,7 +103,7 @@ system(glue('chmod +x {script}'))
 system2(script, stdout = glue("{outdir}/phasing.log"))
 
 ## Generate allele count dataframe
-cat('Generating allele count dataframes')
+cat('Generating allele count dataframes\n')
 
 for (sample in samples) {
     
