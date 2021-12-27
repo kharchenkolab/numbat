@@ -55,20 +55,25 @@ usage: pileup_and_phase.r [-h] [--label LABEL] [--samples SAMPLES]
                           [--bams BAMS] [--barcodes BARCODES] [--gmap GMAP]
                           [--snpvcf SNPVCF] [--paneldir PANELDIR]
                           [--outdir OUTDIR] [--ncores NCORES]
+                          [--UMItag UMITAG] [--cellTAG CELLTAG]
 
 Run SNP pileup and phasing with 1000G
 
 optional arguments:
   -h, --help           show this help message and exit
-  --label LABEL        individual label
-  --samples SAMPLES    sample names, comma delimited
-  --bams BAMS          bam files, one per sample, comma delimited
-  --barcodes BARCODES  cell barcodes, one per sample, comma delimited
-  --gmap GMAP          path to genetic map provided by Eagle2
+  --label LABEL        Individual label
+  --samples SAMPLES    Sample names, comma delimited
+  --bams BAMS          BAM files, one per sample, comma delimited
+  --barcodes BARCODES  Cell barcodes, one per sample, comma delimited
+  --gmap GMAP          Path to genetic map provided by Eagle2
   --snpvcf SNPVCF      SNP VCF for pileup
-  --paneldir PANELDIR  directory to phasing reference panel (BCF files)
-  --outdir OUTDIR      output directory
-  --ncores NCORES      number of cores
+  --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
+  --outdir OUTDIR      Output directory
+  --ncores NCORES      Number of cores
+  --UMItag UMITAG      UMI tag in bam. Should be Auto for 10x and None for
+                       Slide-seq
+  --cellTAG CELLTAG    Cell tag in bam. Should be CB for 10x and XC for Slide-
+                       seq
 ```
 
 2. Run Numbat
