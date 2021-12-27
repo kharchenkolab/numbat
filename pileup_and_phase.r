@@ -6,19 +6,20 @@ library(data.table, quietly = T)
 library(dplyr, quietly = T)
 library(vcfR, quietly = T)
 library(Matrix, quietly = T)
-# devtools::load_all('~/Numbat')
 library(numbat)
 
 parser <- ArgumentParser(description='Run SNP pileup and phasing with 1000G')
-parser$add_argument('--label', type = "character", help = "individual label")
-parser$add_argument('--samples', type = "character", help = "sample names, comma delimited")
-parser$add_argument('--bams', type = "character", help = "bam files, one per sample, comma delimited")
-parser$add_argument('--barcodes', type = "character", help = "cell barcodes, one per sample, comma delimited")
-parser$add_argument('--gmap', type = "character", help = "path to genetic map provided by Eagle2")
-parser$add_argument('--snpvcf', type = "character", help = "SNP VCF for pileup")
-parser$add_argument('--paneldir', type = "character", help = "directory to phasing reference panel (BCF files)")
-parser$add_argument('--outdir', type = "character", help = "output directory")
-parser$add_argument('--ncores', type = "integer", help = "number of cores")
+parser$add_argument('--label', type = "character", required = TRUE, help = "Individual label")
+parser$add_argument('--samples', type = "character", required = TRUE, help = "Sample names, comma delimited")
+parser$add_argument('--bams', type = "character", required = TRUE, help = "BAM files, one per sample, comma delimited")
+parser$add_argument('--barcodes', type = "character", required = TRUE, help = "Cell barcodes, one per sample, comma delimited")
+parser$add_argument('--gmap', type = "character", required = TRUE, help = "Path to genetic map provided by Eagle2")
+parser$add_argument('--snpvcf', type = "character", required = TRUE, help = "SNP VCF for pileup")
+parser$add_argument('--paneldir', type = "character", required = TRUE, help = "Directory to phasing reference panel (BCF files)")
+parser$add_argument('--outdir', type = "character", required = TRUE, help = "Output directory")
+parser$add_argument('--ncores', type = "integer", required = TRUE, help = "Number of cores")
+parser$add_argument('--UMItag', default = "Auto", required = FALSE, type = "character", help = "UMI tag in bam. Should be Auto for 10x and None for Slide-seq")
+parser$add_argument('--cellTAG', default = "CB", required = FALSE, type = "character", help = "Cell tag in bam. Should be CB for 10x and XC for Slide-seq")
 
 args <- parser$parse_args()
 
@@ -33,6 +34,8 @@ ncores = args$ncores
 gmap = args$gmap
 snpvcf = args$snpvcf
 paneldir = args$paneldir
+UMItag = args$UMItag
+cellTAG = args$cellTAG
 
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
@@ -57,6 +60,8 @@ for (i in 1:n_samples) {
         '-p {ncores}',
         '--minMAF 0',
         '--minCOUNT 2',
+        '--UMItag {UMItag}',
+        '--cellTAG {cellTAG}',
         .sep = ' ')
 
     cmds = c(cmds, cmd)
@@ -83,7 +88,7 @@ eagle_cmd = function(chr, sample) {
     paste('eagle', 
         glue('--numThreads {ncores}'), 
         glue('--vcfTarget {outdir}/phasing/{label}_chr{chr}.vcf.gz'), 
-        glue('--vcfRef {paneldir}/ALL.chr{chr}.shapeit2_integrated_v1a.GRCh38.20181129.phased.bcf'), 
+        glue('--vcfRef {paneldir}/chr{chr}.genotypes.bcf'), 
         glue('--geneticMapFile={gmap}'), 
         glue('--outPrefix {outdir}/phasing/{label}_chr{chr}.phased'),
     sep = ' ')

@@ -147,11 +147,6 @@ preprocess_allele = function(
     gtf_transcript
 ) {
 
-    # transcript bed
-    transcript_regions = gtf_transcript %>%
-        pull(region) %>%
-        unique %>% bedr::bedr.sort.region(verbose = F)
-
     # pileup VCF
     vcf_pu = vcf_pu %>%
         mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
@@ -210,35 +205,38 @@ preprocess_allele = function(
 
     vcf_phased = vcf_phased %>% mutate(region = paste0('chr', CHROM, ':', POS, '-', format(POS+1, scientific = F, trim = T)))
 
-    # intersect with gene model
-    vcf_phased_regions = vcf_phased %>%
-        pull(region) %>%
-        bedr::bedr.sort.region(verbose = F)
-
-    overlap_transcript = bedr::bedr(
-        input = list(a = vcf_phased_regions, b = transcript_regions), 
-        method = "intersect", 
-        params = "-loj -sorted",
-        verbose = F
-    ) %>% dplyr::filter(V4 != '.')
-
     # annotate SNP by gene
-    vcf_phased = vcf_phased %>% left_join(
-        overlap_transcript %>%
-        rename(CHROM = V4, gene_start = V5, gene_end = V6) %>%
-        mutate(
-            gene_start = as.integer(gene_start), 
-            gene_end = as.integer(gene_end),
-            CHROM = as.integer(str_remove(CHROM, 'chr')),
+    overlap_transcript = GenomicRanges::findOverlaps(
+            vcf_phased %>% {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$POS,
+                    end = .$POS)
+            )},
+            gtf_transcript %>% {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$gene_start,
+                    end = .$gene_end)
+            )}
+        ) %>%
+        as.data.frame() %>%
+        setNames(c('snp_index', 'gene_index')) %>%
+        left_join(
+            vcf_phased %>% mutate(snp_index = 1:n()) %>%
+                select(snp_index, snp_id),
+            by = c('snp_index')
         ) %>%
         left_join(
-            gtf_transcript %>% select(CHROM, gene_start, gene_end, gene),
-            by = c('CHROM', 'gene_start', 'gene_end')
+            gtf_transcript %>% mutate(gene_index = 1:n()),
+            by = c('gene_index')
         ) %>%
-        arrange(index, gene) %>%
-        distinct(index, `.keep_all` = T),
-        by = c('region' = 'index')
-    )
+        arrange(snp_index, gene) %>%
+        distinct(snp_index, `.keep_all` = T)
+
+    vcf_phased = vcf_phased %>%
+        left_join(
+            overlap_transcript %>% select(snp_id, gene, gene_start, gene_end),
+            by = c('snp_id')
+        )
 
     # add annotation to cell counts and pseudobulk
     df = df %>% left_join(vcf_phased %>% select(snp_id, gene, gene_start, gene_end, GT), by = 'snp_id') 
