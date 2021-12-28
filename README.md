@@ -69,7 +69,7 @@ optional arguments:
   --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
   --outdir OUTDIR      Output directory
   --ncores NCORES      Number of cores
-  --UMItag UMITAG      UMI tag in bam. Should be Auto for 10x and None for
+  --UMItag UMITAG      UMI tag in bam. Should be Auto for 10x and XM for
                        Slide-seq
   --cellTAG CELLTAG    Cell tag in bam. Should be CB for 10x and XC for Slide-
                        seq
