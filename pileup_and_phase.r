@@ -18,7 +18,7 @@ parser$add_argument('--snpvcf', type = "character", required = TRUE, help = "SNP
 parser$add_argument('--paneldir', type = "character", required = TRUE, help = "Directory to phasing reference panel (BCF files)")
 parser$add_argument('--outdir', type = "character", required = TRUE, help = "Output directory")
 parser$add_argument('--ncores', type = "integer", required = TRUE, help = "Number of cores")
-parser$add_argument('--UMItag', default = "Auto", required = FALSE, type = "character", help = "UMI tag in bam. Should be Auto for 10x and None for Slide-seq")
+parser$add_argument('--UMItag', default = "Auto", required = FALSE, type = "character", help = "UMI tag in bam. Should be Auto for 10x and XM for Slide-seq")
 parser$add_argument('--cellTAG', default = "CB", required = FALSE, type = "character", help = "Cell tag in bam. Should be CB for 10x and XC for Slide-seq")
 
 args <- parser$parse_args()

@@ -27,7 +27,7 @@
 #' @export
 numbat_subclone = function(
         count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, cell_annot = NULL, 
-        out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 10000, 
+        out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 1e5, 
         min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
         ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
         exclude_normal = FALSE, max_entropy = 0.5, eps = 1e-5, min_LLR = 50, alpha = 1e-4, plot = TRUE
@@ -41,6 +41,8 @@ numbat_subclone = function(
     log_info(paste(
         'Running under parameters:',
         glue('t = {t}'), 
+        glue('alpha = {alpha}'),
+        glue('gamma = {gamma}'),
         glue('min_cells = {min_cells}'), 
         glue('init_k = {init_k}'),
         glue('sample_size = {sample_size}'),
@@ -52,6 +54,8 @@ numbat_subclone = function(
         glue('max_entropy = {max_entropy}'),
         glue('exclude_normal = {exclude_normal}'),
         glue('diploid_chroms = {paste0(diploid_chroms, collapse = ",")}'),
+        glue('ncores = {ncores}'),
+        glue('common_diploid = {common_diploid}'),
         'Input metrics:',
         glue('{ncol(count_mat)} cells'),
         sep = "\n"
@@ -117,11 +121,22 @@ numbat_subclone = function(
         stop('init_method can be raw, bulk, or smooth')
     }
 
+    i = 0
+
     # resolve CNVs
     segs_consensus = get_segs_consensus(bulk_subtrees)
 
-    fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
-    fwrite(segs_consensus, glue('{out_dir}/segs_consensus_0.tsv'), sep = '\t')
+    fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
+    fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
+
+    # initial visualization
+    if (plot) {
+
+        p = plot_bulks(bulk_subtrees)
+
+        ggsave(glue('{out_dir}/bulk_subtrees_{i}.png'), p, width = 14, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200)
+
+    }
 
     normal_cells = c()
 
@@ -185,13 +200,25 @@ numbat_subclone = function(
             cell_sample = cell_sample[!cell_sample %in% normal_cells]
         }
 
+        # filter CNVs
+        joint_post_filtered = joint_post %>%
+            filter(cnv_state != 'neu') %>%
+            filter(cell %in% cell_sample) %>%
+            filter(avg_entropy < max_entropy & LLR > min_LLR)
+
+        if (nrow(joint_post_filtered) == 0) {
+            msg = 'No CNVs remain after filtering! Check threshold'
+            log_error(msg)
+            stop(msg)
+        } else {
+            n_cnv = length(unique(joint_post_filtered$seg))
+            log_info(glue('Using {n_cnv} CNVs to construct phylogeny'))
+        }
+
         # construct genotype probability matrix
         p_min = 1e-10
 
-        P = joint_post %>%
-            filter(cnv_state != 'neu') %>%
-            filter(cell %in% cell_sample) %>%
-            filter(avg_entropy < max_entropy & LLR > min_LLR) %>%
+        P = joint_post_filtered %>%
             mutate(p_n = 1 - p_cnv) %>%
             mutate(p_n = pmax(pmin(p_n, 1-p_min), p_min)) %>%
             reshape2::dcast(cell ~ seg, value.var = 'p_n', fill = 0.5) %>%
@@ -272,10 +299,10 @@ numbat_subclone = function(
         }
 
         clones = clone_post %>% split(.$clone_opt) %>%
-            map(function(c){list(label = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
+            purrr::map(function(c){list(label = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
 
         saveRDS(clones, glue('{out_dir}/clones_{i}.rds'))
-        clones = keep(clones, function(x) x$size > min_cells)
+        clones = purrr::keep(clones, function(x) x$size > min_cells)
 
         subtrees = lapply(1:vcount(G_m), function(v) {
             G_m %>%
@@ -288,7 +315,7 @@ numbat_subclone = function(
         })
 
         saveRDS(subtrees, glue('{out_dir}/subtrees_{i}.rds'))
-        subtrees = keep(subtrees, function(x) x$size > min_cells)
+        subtrees = purrr::keep(subtrees, function(x) x$size > min_cells)
 
         ######## Run HMMs ########
 

@@ -606,7 +606,8 @@ make_psbulk = function(count_mat, cell_annot, verbose = T) {
 
     cells = intersect(colnames(count_mat), cell_annot$cell)
     
-    count_mat = count_mat %>% extract(,cells)
+    count_mat = count_mat[,cells]
+
     cell_annot = cell_annot %>% filter(cell %in% cells)
     
     cell_dict = cell_annot %>% {setNames(.$cell_type, .$cell)} %>% droplevels
@@ -617,9 +618,9 @@ make_psbulk = function(count_mat, cell_annot, verbose = T) {
         message(table(cell_dict))
     }
    
-    M = model.matrix(~ 0 + cell_dict) %>% set_colnames(levels(cell_dict))
+    M = model.matrix(~ 0 + cell_dict) %>% magrittr::set_colnames(levels(cell_dict))
     count_mat_clust = count_mat %*% M
-    exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% set_colnames(colnames(count_mat_clust))
+    exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% magrittr::set_colnames(colnames(count_mat_clust))
     
     return(list('exp_mat' = as.matrix(exp_mat_clust), 'count_mat' = as.matrix(count_mat_clust)))
 }
