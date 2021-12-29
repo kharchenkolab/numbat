@@ -280,6 +280,9 @@ numbat_subclone = function(
                 log_info('Using NJ tree as seed..')
             }
             saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
+        }else{
+            log_info('Only computing UPGMA..')
+            log_info('Using UPGMA tree as seed..')
         }
         
         saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
