@@ -30,7 +30,8 @@ numbat_subclone = function(
         out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 10000, 
         min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
         ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        exclude_normal = FALSE, max_entropy = 0.5, eps = 1e-5, min_LLR = 50, alpha = 1e-4, plot = TRUE
+        exclude_normal = FALSE, max_entropy = 0.5, skip_treenj = FALSE, eps = 1e-5, 
+        min_LLR = 50, alpha = 1e-4, plot = TRUE
     ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
@@ -50,6 +51,7 @@ numbat_subclone = function(
         glue('use_loh = {use_loh}'),
         glue('min_LLR = {min_LLR}'),
         glue('max_entropy = {max_entropy}'),
+        glue('skip_treenj = {skip_treenj}'),
         glue('exclude_normal = {exclude_normal}'),
         glue('diploid_chroms = {paste0(diploid_chroms, collapse = ",")}'),
         'Input metrics:',
@@ -113,14 +115,20 @@ numbat_subclone = function(
                 verbose = verbose
             )
 
+        
+        log_info('done with running group hmm') 
+
     } else {
         stop('init_method can be raw, bulk, or smooth')
     }
 
     # resolve CNVs
-    segs_consensus = get_segs_consensus(bulk_subtrees)
-
+    log_info('writing bulk subtrees')
     fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
+    segs_consensus = get_segs_consensus(bulk_subtrees)
+    log_info('done with segment consensus...') 
+
+    #fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
     fwrite(segs_consensus, glue('{out_dir}/segs_consensus_0.tsv'), sep = '\t')
 
     normal_cells = c()
@@ -146,6 +154,10 @@ numbat_subclone = function(
             gtf_transcript = gtf_transcript,
             ncores = ncores)
 
+        if (verbose) {
+            log_info('Done with get_exp_post ..')
+        }
+
         exp_post = exp_post_res$exp_post
         exp_sc = exp_post_res$exp_sc
         
@@ -155,11 +167,18 @@ numbat_subclone = function(
             df_allele
         )
 
+        if (verbose) {
+            log_info('Done with get_allele_post ..')
+        }
+
         joint_post = get_joint_post(
             exp_post,
             allele_post,
             segs_consensus)
 
+        if (verbose) {
+            log_info('Done with get_allele_post ..')
+        }
 
         joint_post = joint_post %>%
             group_by(seg) %>%
@@ -168,6 +187,10 @@ numbat_subclone = function(
             ) %>%
             ungroup()
         
+        if (verbose) {
+            log_info('Writing to files ..')
+        }
+
         fwrite(exp_sc, glue('{out_dir}/exp_sc_{i}.tsv.gz'), sep = '\t')
         fwrite(exp_post, glue('{out_dir}/exp_post_{i}.tsv'), sep = '\t')
         fwrite(allele_post, glue('{out_dir}/allele_post_{i}.tsv'), sep = '\t')
@@ -208,24 +231,25 @@ numbat_subclone = function(
             ape::drop.tip('outgroup') %>%
             reorder(order = 'postorder')
 
+        UPGMA_score = score_tree(treeUPGMA, as.matrix(P))$l_tree
+        tree_init = treeUPGMA
         # note that dist_mat gets modified
-        treeNJ = phangorn::NJ(dist_mat) %>%
+        if(!skip_treenj){
+            treeNJ = phangorn::NJ(dist_mat) %>%
             ape::root(outgroup = 'outgroup') %>%
             ape::drop.tip('outgroup') %>%
             reorder(order = 'postorder')
+            NJ_score = score_tree(treeNJ, as.matrix(P))$l_tree
 
-        NJ_score = score_tree(treeNJ, as.matrix(P))$l_tree
-        UPGMA_score = score_tree(treeUPGMA, as.matrix(P))$l_tree
-
-        if (UPGMA_score > NJ_score) {
-            tree_init = treeUPGMA
-            log_info('Using UPGMA tree as seed..')
-        } else {
-            tree_init = treeNJ
-            log_info('Using NJ tree as seed..')
+            if (UPGMA_score > NJ_score) {
+                log_info('Using UPGMA tree as seed..')
+            } else {
+                tree_init = treeNJ
+                log_info('Using NJ tree as seed..')
+            }
+            saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
         }
-    
-        saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
+        
         saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
 
         # maximum likelihood tree search with NNI
@@ -374,7 +398,7 @@ numbat_subclone = function(
 
         fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
     }
-
+    # reflect change
     return('Success')
 }
 
@@ -408,7 +432,7 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F,
 
     dist_mat = parallelDist::parDist(gexp.roll.wide, threads = ncores)
     # dist_mat = 1-cor(t(gexp.roll.wide))
-
+    log_info('running hclust...')
     hc = hclust(dist_mat, method = "ward.D2")
 
     cell_annot = data.frame(
@@ -497,7 +521,8 @@ run_group_hmms = function(
     } else {
         find_diploid = TRUE
     }
-    
+
+    log_info('done with finding common diploid') 
     results = mclapply(
         bulks %>% split(.$sample),
         mc.cores = ncores,
@@ -556,6 +581,10 @@ get_segs_consensus = function(bulks, LLR_min = 20) {
         filter(cnv_state != 'neu') %>%
         filter(LLR_y > LLR_min | LLR_x > 100 | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% 
         filter(n_genes >= 20)
+    
+    if(dim(segs_filtered)[[1]] < 0){
+        stop('No non neutral signal is found... probably there is not enough coverage.')
+    }
 
     # reduce to unique intervals
     segs_neu = segs_all %>%
