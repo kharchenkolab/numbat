@@ -69,7 +69,7 @@ optional arguments:
   --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
   --outdir OUTDIR      Output directory
   --ncores NCORES      Number of cores
-  --UMItag UMITAG      UMI tag in bam. Should be Auto for 10x and None for
+  --UMItag UMITAG      UMI tag in bam. Should be Auto for 10x and XM for
                        Slide-seq
   --cellTAG CELLTAG    Cell tag in bam. Should be CB for 10x and XC for Slide-
                        seq
@@ -89,11 +89,14 @@ out = numbat_subclone(
     gtf_transcript, # provided upon loading the package
     genetic_map_hg38, # provided upon loading the package
     min_cells = 20,
-    t = 1e-6,
+    t = 1e-4,
     ncores = 20,
     init_k = 3,
+    min_LLR = 30,
     max_cost = 150,
-    out_dir = glue('~/results/test')
+    alpha = 1e-5,
+    plot = TRUE,
+    out_dir = '~/results/test'
 )
 ```
 3. Visualize results
