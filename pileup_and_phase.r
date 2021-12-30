@@ -86,7 +86,7 @@ system(glue('chmod +x {script}'))
 cat('Creating VCFs\n')
 vcfs = lapply(samples, function(sample){read.vcfR(glue('{outdir}/pileup/{sample}/cellSNP.base.vcf'), verbose = F)})
 
-genotype(label, samples, vcfs, glue('{outdir}/phasing'),chr_prefix = FALSE)
+genotype(label, samples, vcfs, glue('{outdir}/phasing'))
 
 ## phasing
 eagle_cmd = function(chr, sample) {
