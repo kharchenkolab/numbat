@@ -134,22 +134,8 @@ numbat_subclone = function(
     segs_consensus = get_segs_consensus(bulk_subtrees)
     log_info('done with segment consensus...') 
 
-<<<<<<< HEAD
-    fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
-    fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
-
-    # initial visualization
-    if (plot) {
-
-        p = plot_bulks(bulk_subtrees)
-
-        ggsave(glue('{out_dir}/bulk_subtrees_{i}.png'), p, width = 14, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200)
-
-    }
-=======
     #fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
     fwrite(segs_consensus, glue('{out_dir}/segs_consensus_0.tsv'), sep = '\t')
->>>>>>> better error handling when no non-neutral imbalance is found
 
     normal_cells = c()
 
@@ -280,9 +266,6 @@ numbat_subclone = function(
                 log_info('Using NJ tree as seed..')
             }
             saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
-        }else{
-            log_info('Only computing UPGMA..')
-            log_info('Using UPGMA tree as seed..')
         }
         
         saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
@@ -617,7 +600,7 @@ get_segs_consensus = function(bulks, LLR_min = 20) {
         filter(LLR_y > LLR_min | LLR_x > 100 | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% 
         filter(n_genes >= 20)
     
-    if(dim(segs_filtered)[[1]] == 0){
+    if(dim(segs_filtered)[[1]] < 0){
         stop('No non neutral signal is found... probably there is not enough coverage.')
     }
 
