@@ -255,14 +255,16 @@ numbat_subclone = function(
             ape::drop.tip('outgroup') %>%
             reorder(order = 'postorder')
 
+        saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
+
         UPGMA_score = score_tree(treeUPGMA, as.matrix(P))$l_tree
         tree_init = treeUPGMA
         # note that dist_mat gets modified
         if(!skip_nj){
             treeNJ = phangorn::NJ(dist_mat) %>%
-            ape::root(outgroup = 'outgroup') %>%
-            ape::drop.tip('outgroup') %>%
-            reorder(order = 'postorder')
+                ape::root(outgroup = 'outgroup') %>%
+                ape::drop.tip('outgroup') %>%
+                reorder(order = 'postorder')
             NJ_score = score_tree(treeNJ, as.matrix(P))$l_tree
 
             if (UPGMA_score > NJ_score) {
@@ -272,13 +274,11 @@ numbat_subclone = function(
                 log_info('Using NJ tree as seed..')
             }
             saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
-        }else{
+        } else{
             log_info('Only computing UPGMA..')
             log_info('Using UPGMA tree as seed..')
         }
         
-        saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
-
         # maximum likelihood tree search with NNI
         tree_list = perform_nni(tree_init, P, ncores = ncores, eps = eps)
         saveRDS(tree_list, glue('{out_dir}/tree_list_{i}.rds'))
@@ -1122,11 +1122,7 @@ get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
 #' get joint posteriors
 #' @export
 get_joint_post = function(exp_post, allele_post, segs_consensus) {
-
-    cells_common = intersect(exp_post$cell, allele_post$cell)
-    exp_post = exp_post %>% filter(cell %in% cells_common)
-    allele_post = allele_post %>% filter(cell %in% cells_common)
-
+    
     joint_post = exp_post %>%
         filter(cnv_state != 'neu') %>%
         select(
