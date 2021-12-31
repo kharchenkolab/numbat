@@ -609,11 +609,7 @@ get_segs_consensus = function(bulks, LLR_min = 20) {
         filter(LLR_y > LLR_min | LLR_x > 100 | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% 
         filter(n_genes >= 20)
     
-<<<<<<< HEAD
-    if(dim(segs_filtered)[[1]] < 0){
-=======
     if(dim(segs_filtered)[[1]] == 0){
->>>>>>> 424f9865bcb256596f74bb7dacc440820736f523
         stop('No non neutral signal is found... probably there is not enough coverage.')
     }
 
