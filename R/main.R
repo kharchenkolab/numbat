@@ -30,8 +30,8 @@ numbat_subclone = function(
         out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 1e5, 
         min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
         ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        exclude_normal = FALSE, max_entropy = 0.6, skip_nj = FALSE, eps = 1e-5, multi_allelic = TRUE,
-        min_LLR = 50, alpha = 1e-4, plot = TRUE
+        exclude_normal = FALSE, max_entropy = 0.5, skip_nj = FALSE, eps = 1e-5, 
+        min_LLR = 50, alpha = 1e-4, plot = TRUE, sub_sample = FALSE
     ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
@@ -221,11 +221,11 @@ numbat_subclone = function(
             fwrite(joint_post, glue('{out_dir}/joint_post_expand_{i}.tsv'), sep = '\t')
         }
 
-        ######## Build phylogeny ########
-
-        log_info('Building phylogeny ..')
-
-        cell_sample = colnames(count_mat) %>% sample(min(sample_size, length(.)), replace = FALSE)
+        if(sub_sample){
+            cell_sample = colnames(count_mat) %>% sample(min(sample_size, length(.)), replace = FALSE)
+        }else{
+            cell_sample = colnames(count_mat)
+        }
         
         if (exclude_normal) {
             cell_sample = cell_sample[!cell_sample %in% normal_cells]
