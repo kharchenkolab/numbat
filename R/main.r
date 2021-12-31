@@ -958,6 +958,8 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
         if (verbose) {log_warn(glue('{sum(bad)} jobs failed'))}
         log_warn(results[bad][1])
         log_warn(cells[bad][1])
+    } else {
+        log_info('All cells succeeded')
     }
     
     exp_post = results[!bad] %>%
