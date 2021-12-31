@@ -877,7 +877,7 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 
 #' get CNV expression posteriors
 #' @export
-get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, alpha = NULL, beta = NULL, use_loh = NULL, ncores = 30, verbose = T, debug = F) {
+get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, alpha = NULL, beta = NULL, use_loh = NULL, ncores = 30, verbose = TRUE, debug = F) {
 
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf_transcript) 
 
