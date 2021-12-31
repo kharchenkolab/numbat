@@ -53,7 +53,7 @@ numbat_subclone = function(
         glue('use_loh = {use_loh}'),
         glue('min_LLR = {min_LLR}'),
         glue('max_entropy = {max_entropy}'),
-        glue('skip_treenj = {skip_treenj}'),
+        glue('skip_nj = {skip_nj}'),
         glue('exclude_normal = {exclude_normal}'),
         glue('diploid_chroms = {paste0(diploid_chroms, collapse = ",")}'),
         glue('ncores = {ncores}'),
@@ -129,13 +129,19 @@ numbat_subclone = function(
     i = 0
 
     # resolve CNVs
-    log_info('writing bulk subtrees')
+    log_info('writing initial bulks')
     fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
     segs_consensus = get_segs_consensus(bulk_subtrees)
     log_info('done with segment consensus...') 
-
-    #fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
     fwrite(segs_consensus, glue('{out_dir}/segs_consensus_0.tsv'), sep = '\t')
+
+    if (plot) {
+
+        p = plot_bulks(bulk_subtrees)
+
+        ggsave(glue('{out_dir}/bulk_subtrees_{i}.png'), p, width = 14, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200)
+        
+    }
 
     normal_cells = c()
 
@@ -252,7 +258,7 @@ numbat_subclone = function(
         UPGMA_score = score_tree(treeUPGMA, as.matrix(P))$l_tree
         tree_init = treeUPGMA
         # note that dist_mat gets modified
-        if(!skip_treenj){
+        if(!skip_nj){
             treeNJ = phangorn::NJ(dist_mat) %>%
             ape::root(outgroup = 'outgroup') %>%
             ape::drop.tip('outgroup') %>%
