@@ -14,6 +14,7 @@ parser$add_argument('--samples', type = "character", required = TRUE, help = "Sa
 parser$add_argument('--bams', type = "character", required = TRUE, help = "BAM files, one per sample, comma delimited")
 parser$add_argument('--barcodes', type = "character", required = TRUE, help = "Cell barcodes, one per sample, comma delimited")
 parser$add_argument('--gmap', type = "character", required = TRUE, help = "Path to genetic map provided by Eagle2")
+parser$add_argument('--eagle', type = "character", required = TRUE, help = "Path to Eagle2 binary file")
 parser$add_argument('--snpvcf', type = "character", required = TRUE, help = "SNP VCF for pileup")
 parser$add_argument('--paneldir', type = "character", required = TRUE, help = "Directory to phasing reference panel (BCF files)")
 parser$add_argument('--outdir', type = "character", required = TRUE, help = "Output directory")
@@ -32,6 +33,7 @@ n_samples = length(samples)
 label = args$label
 ncores = args$ncores
 gmap = args$gmap
+eagle = args$eagle
 snpvcf = args$snpvcf
 paneldir = args$paneldir
 UMItag = args$UMItag
@@ -74,8 +76,11 @@ script = glue('{outdir}/run_pileup.sh')
 
 list(cmds) %>% fwrite(script, sep = '\n')
 
+# exit <- function() { invokeRestart("abort") }
+# exit()
+
 system(glue('chmod +x {script}'))
-system2(script, stdout = glue("{outdir}/pileup.log"))
+# system2(script, stdout = glue("{outdir}/pileup.log"))
 
 ## VCF creation
 cat('Creating VCFs\n')
@@ -85,7 +90,7 @@ genotype(label, samples, vcfs, glue('{outdir}/phasing'))
 
 ## phasing
 eagle_cmd = function(chr, sample) {
-    paste('eagle', 
+    paste(eagle, 
         glue('--numThreads {ncores}'), 
         glue('--vcfTarget {outdir}/phasing/{label}_chr{chr}.vcf.gz'), 
         glue('--vcfRef {paneldir}/chr{chr}.genotypes.bcf'), 
@@ -104,11 +109,15 @@ script = glue('{outdir}/run_phasing.sh')
 
 list(cmds) %>% fwrite(script, sep = '\n')
 
+
+
 system(glue('chmod +x {script}'))
 system2(script, stdout = glue("{outdir}/phasing.log"))
 
 ## Generate allele count dataframe
 cat('Generating allele count dataframes\n')
+
+
 
 for (sample in samples) {
     
