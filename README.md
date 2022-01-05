@@ -39,6 +39,11 @@ wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
 ```
 
 # Installation
+Note that the dependencies `GenomicRanges` and `ggtree` can be installed via `BiocManager`:
+```
+BiocManager::install("GenomicRanges")
+BiocManager::install("ggtree")
+```
 Install the Numbat R package via:
 ```
 git clone https://github.com/kharchenkolab/Numbat.git
@@ -46,11 +51,6 @@ git clone https://github.com/kharchenkolab/Numbat.git
 Within R,
 ```
 devtools::install_local("./Numbat")
-```
-Note that the dependencies `GenomicRanges` and `ggtree` can be installed via:
-```
-BiocManager::install("GenomicRanges")
-BiocManager::install("ggtree")
 ```
 
 # Usage
