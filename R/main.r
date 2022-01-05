@@ -50,13 +50,13 @@ numbat_subclone = function(
         glue('max_cost = {max_cost}'),
         glue('max_iter = {max_iter}'),
         glue('min_depth = {min_depth}'),
-        glue('use_loh = {str(use_loh)}'),
+        glue('use_loh = {use_loh}'),
         glue('multi_allelic = {multi_allelic}'),
         glue('min_LLR = {min_LLR}'),
         glue('max_entropy = {max_entropy}'),
         glue('skip_nj = {skip_nj}'),
         glue('exclude_normal = {exclude_normal}'),
-        glue('diploid_chroms = {str(paste0(diploid_chroms, collapse = ","))}'),
+        glue('diploid_chroms = {paste0(diploid_chroms, collapse = ",")}'),
         glue('ncores = {ncores}'),
         glue('common_diploid = {common_diploid}'),
         'Input metrics:',
@@ -1240,6 +1240,17 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
 
     log_info('Testing for multi-allelic CNVs ..')
 
+    # default
+    if (is.null(use_loh)) {
+        length_neu = segs_consensus %>% filter(cnv_state == 'neu') %>% pull(seg_length) %>% sum
+        if (length_neu > 1.5e8) {
+            use_loh = TRUE
+            log_info('less than 5% of genome is in neutral region - including LOH in baseline')
+        } else {
+            use_loh = FALSE
+        }
+    }
+
     if (use_loh) {
         ref_states = c('neu', 'loh')
     } else {
@@ -1269,56 +1280,60 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
             n_states = length(unlist(cnv_states))
         ) %>%
         filter(n_states > 1)
-    
-    segs_consensus = segs_consensus %>%
-        left_join(
-            segs_multi,
-            by = 'seg_cons'
-        ) %>%
-        rowwise() %>%
-        mutate(
-            p_del = ifelse(n_states > 1, ifelse('del' %in% cnv_states, 0.5, 0), p_del),
-            p_amp = ifelse(n_states > 1, ifelse('amp' %in% cnv_states, 0.5, 0), p_amp),
-            p_loh = ifelse(n_states > 1, ifelse('loh' %in% cnv_states, 0.5, 0), p_loh),
-            p_bamp = ifelse(n_states > 1, ifelse('bamp' %in% cnv_states, 0.5, 0), p_bamp),
-            p_bdel = ifelse(n_states > 1, ifelse('bdel' %in% cnv_states, 0.5, 0), p_bdel)
-        ) %>%
-        rowwise() %>%
-        mutate(
-            cnv_states = ifelse(is.null(cnv_states), list(cnv_state_post), list(cnv_states)),
-            n_states = sum(cnv_states != 'neu')
-        ) %>%
-        ungroup()
 
     segs = segs_multi$seg_cons
 
     log_info(glue('{length(segs)} multi-allelic CNVs found: {paste(segs, collapse = ",")}'))
+
+    if (length(segs) > 0) {
+        segs_consensus = segs_consensus %>%
+            left_join(
+                segs_multi,
+                by = 'seg_cons'
+            ) %>%
+            rowwise() %>%
+            mutate(
+                cnv_states = ifelse(is.null(cnv_states), list(cnv_state_post), list(cnv_states)),
+                n_states = sum(cnv_states != 'neu')
+            ) %>%
+            mutate(
+                p_del = ifelse(n_states > 1, ifelse('del' %in% cnv_states, 0.5, 0), p_del),
+                p_amp = ifelse(n_states > 1, ifelse('amp' %in% cnv_states, 0.5, 0), p_amp),
+                p_loh = ifelse(n_states > 1, ifelse('loh' %in% cnv_states, 0.5, 0), p_loh),
+                p_bamp = ifelse(n_states > 1, ifelse('bamp' %in% cnv_states, 0.5, 0), p_bamp),
+                p_bdel = ifelse(n_states > 1, ifelse('bdel' %in% cnv_states, 0.5, 0), p_bdel)
+            ) %>%
+            ungroup()
+    }
     
     return(list('segs_consensus' = segs_consensus, 'bulks' = bulks, 'segs_multi' = segs_multi))
 }
 
 expand_states = function(joint_post, segs_consensus) {
-    joint_post %>%
-        left_join(
-            segs_consensus %>% select(seg = seg_cons, cnv_states, n_states),
-            by = 'seg'
-        ) %>%
-        reshape2::melt(
-            measure.vars = c('p_amp', 'p_loh', 'p_del', 'p_bamp'),
-            variable.name = 'cnv_state_expand',
-            value.name = 'p_cnv_expand'
-        ) %>%
-        mutate(
-            cnv_state_expand = c('p_amp' = 'amp', 'p_loh' = 'loh', 'p_del' = 'del', 'p_bamp' = 'bamp')[cnv_state_expand]
-        ) %>%
-        rowwise() %>%
-        filter(cnv_state_expand %in% cnv_states) %>%
-        ungroup() %>%
-        mutate(
-            seg_cnv = paste0(seg, '_', cnv_state_expand)
-        ) %>%
-        mutate(
-            p_cnv = ifelse(n_states > 1, p_cnv_expand, p_cnv),
-            cnv_state = ifelse(n_states > 1, cnv_state_expand, cnv_state),
-        )
+
+    if (any(segs_consensus$n_states > 1)) {
+        joint_post = joint_post %>%
+            left_join(
+                segs_consensus %>% select(seg = seg_cons, cnv_states, n_states),
+                by = 'seg'
+            ) %>%
+            reshape2::melt(
+                measure.vars = c('p_amp', 'p_loh', 'p_del', 'p_bamp'),
+                variable.name = 'cnv_state_expand',
+                value.name = 'p_cnv_expand'
+            ) %>%
+            mutate(
+                cnv_state_expand = c('p_amp' = 'amp', 'p_loh' = 'loh', 'p_del' = 'del', 'p_bamp' = 'bamp')[cnv_state_expand]
+            ) %>%
+            rowwise() %>%
+            filter(cnv_state_expand %in% cnv_states) %>%
+            ungroup() %>%
+            mutate(
+                seg_cnv = ifelse(n_states > 1, paste0(seg, '_', cnv_state_expand), seg),
+                p_cnv = ifelse(n_states > 1, p_cnv_expand, p_cnv),
+                cnv_state = ifelse(n_states > 1, cnv_state_expand, cnv_state)
+            )
+    }
+
+    return(joint_post)
 }
