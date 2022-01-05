@@ -132,7 +132,7 @@ numbat_subclone = function(
     log_info('writing initial bulks')
     fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_0.tsv.gz'), sep = '\t')
     segs_consensus = get_segs_consensus(bulk_subtrees)
-    log_info('done with segment consensus...') 
+    log_info('done with segment consensus...')
     fwrite(segs_consensus, glue('{out_dir}/segs_consensus_0.tsv'), sep = '\t')
 
     if (plot) {
@@ -147,16 +147,12 @@ numbat_subclone = function(
 
     ######## Begin iterations ########
     for (i in 1:max_iter) {
-
-        if (verbose) {
-            log_info('Iteration {i}')
-        }
+        
+        log_info('Iteration {i}')
 
         ######## Evaluate CNV per cell ########
 
-        if (verbose) {
-            log_info('Evaluating CNV per cell ..')
-        }
+        log_info('Evaluating CNV per cell ..')
 
         exp_post_res = get_exp_post(
             segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
@@ -166,9 +162,7 @@ numbat_subclone = function(
             gtf_transcript = gtf_transcript,
             ncores = ncores)
 
-        if (verbose) {
-            log_info('Done with get_exp_post ..')
-        }
+        log_info('Done with get_exp_post ..')
 
         exp_post = exp_post_res$exp_post
         exp_sc = exp_post_res$exp_sc
@@ -179,18 +173,14 @@ numbat_subclone = function(
             df_allele
         )
 
-        if (verbose) {
-            log_info('Done with get_allele_post ..')
-        }
+        log_info('Done with get_allele_post ..')
 
         joint_post = get_joint_post(
             exp_post,
             allele_post,
             segs_consensus)
 
-        if (verbose) {
-            log_info('Done with get_allele_post ..')
-        }
+        log_info('Done with get_joint_post ..')
 
         joint_post = joint_post %>%
             group_by(seg) %>%
@@ -199,9 +189,7 @@ numbat_subclone = function(
             ) %>%
             ungroup()
         
-        if (verbose) {
-            log_info('Writing to files ..')
-        }
+        log_info('Writing to files ..')
 
         fwrite(exp_sc, glue('{out_dir}/exp_sc_{i}.tsv.gz'), sep = '\t')
         fwrite(exp_post, glue('{out_dir}/exp_post_{i}.tsv'), sep = '\t')
@@ -210,9 +198,7 @@ numbat_subclone = function(
 
         ######## Build phylogeny ########
 
-        if (verbose) {
-            log_info('Building phylogeny ..')
-        }
+        log_info('Building phylogeny ..')
 
         cell_sample = colnames(count_mat) %>% sample(min(sample_size, length(.)), replace = FALSE)
         
@@ -318,9 +304,7 @@ numbat_subclone = function(
 
         normal_cells = clone_post %>% filter(GT_opt == '') %>% pull(cell)
 
-        if (verbose) {
-            log_info('Found {length(normal_cells)} normal cells..')
-        }
+        log_info('Found {length(normal_cells)} normal cells..')
 
         clones = clone_post %>% split(.$clone_opt) %>%
             purrr::map(function(c){list(label = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
@@ -524,7 +508,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_trans
 run_group_hmms = function(
     bulks, t = 1e-4, gamma = 20, theta_min = 0.08,
     exp_model = 'lnpois', alpha = 1e-4,
-    common_diploid = TRUE, diploid_chroms = NULL, allele_only = FALSE, retest = TRUE, 
+    common_diploid = TRUE, diploid_chroms = NULL, allele_only = FALSE, retest = TRUE, run_hmm = TRUE,
     ncores = NULL, verbose = FALSE, debug = FALSE
 ) {
 
@@ -541,7 +525,9 @@ run_group_hmms = function(
     ncores = ifelse(is.null(ncores), n_groups, ncores)
 
     # find common diploid region
-    if (common_diploid & is.null(diploid_chroms)) {
+    if (!run_hmm) {
+        find_diploid = FALSE
+    } else if (common_diploid & is.null(diploid_chroms)) {
         diploid_out = find_common_diploid(bulks, gamma = gamma, alpha = alpha, ncores = ncores)
         bulks = diploid_out$bulks
         find_diploid = FALSE
@@ -558,6 +544,7 @@ run_group_hmms = function(
                 t = t,
                 gamma = gamma, 
                 find_diploid = find_diploid, 
+                run_hmm = run_hmm,
                 allele_only = allele_only, 
                 diploid_chroms = diploid_chroms,
                 retest = retest, 
@@ -627,7 +614,8 @@ get_segs_consensus = function(bulks, LLR_min = 20) {
         select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
         mutate(seg_length = seg_end - seg_start)
     
-    segs_consensus = segs_filtered %>% resolve_cnvs() %>% fill_neu_segs(segs_neu)
+    segs_consensus = segs_filtered %>% resolve_cnvs() %>% fill_neu_segs(segs_neu) %>%
+        mutate(cnv_state_post = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post))
 
     return(segs_consensus)
 
@@ -1076,9 +1064,13 @@ get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
         mutate(
             l11 = dbinom(major, total, p = 0.5, log = TRUE),
             l10 = dbinom(major, total, p = 0.9, log = TRUE),
+            l01 = dbinom(major, total, p = 0.1, log = TRUE),
             l20 = dbinom(major, total, p = 0.9, log = TRUE),
+            l02 = dbinom(major, total, p = 0.1, log = TRUE),
             l21 = dbinom(major, total, p = 0.66, log = TRUE),
+            l12 = dbinom(major, total, p = 0.33, log = TRUE),
             l31 = dbinom(major, total, p = 0.75, log = TRUE),
+            l13 = dbinom(major, total, p = 0.25, log = TRUE),
             l22 = l11,
             l00 = l11,
             Z = matrixStats::logSumExp(
@@ -1134,7 +1126,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
             allele_post %>% select(
                 cell, seg, l11_y = l11, l20_y = l20, l10_y = l10, l21_y = l21, l31_y = l31, l22_y = l22, l00_y = l00,
                 n_snp = total,
-                Z_y = Z, Z_cnv_y = Z_cnv, Z_n_y = Z_n
+                Z_y = Z, Z_cnv_y = Z_cnv, Z_n_y = Z_n, MAF, major, total
             ),
             c("cell", "seg")
         ) %>%
@@ -1214,7 +1206,8 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
         ) %>%
         rowwise() %>%
         mutate(
-            cnv_state_mle = c('loh', 'del', 'amp', 'amp', 'bamp')[which.max(c(l20, l10, l21, l31, l22))]
+            cnv_state_mle = c('neu', 'loh', 'del', 'amp', 'amp', 'bamp')[which.max(c(l11, l20, l10, l21, l31, l22))],
+            cn_mle = c('11', '20', '10', '21', '31', '22')[which.max(c(l11, l20, l10, l21, l31, l22))]
         ) %>%
         ungroup()
 

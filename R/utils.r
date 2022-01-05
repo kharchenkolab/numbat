@@ -698,7 +698,7 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
 #' @export
 analyze_bulk = function(
     Obs, t = 1e-5, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
-    exp_only = FALSE, allele_only = FALSE, retest = TRUE, hskd = TRUE,
+    exp_only = FALSE, allele_only = FALSE, run_hmm = TRUE, retest = TRUE,
     phasing = TRUE, roll_phi = TRUE, verbose = TRUE, debug = FALSE, diploid_chroms = NULL,
     find_diploid = TRUE, classify_allele = FALSE
 ) {
@@ -727,45 +727,47 @@ analyze_bulk = function(
         {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs), approx = F)}
         
     Obs = Obs %>% mutate(mu = fit@coef[1], sig = fit@coef[2])
-    
-    Obs = Obs %>% 
-        mutate(gamma = gamma) %>%
-        group_by(CHROM) %>%
-        mutate(state = 
-            run_hmm_mv_inhom(
-                pAD = pAD,
-                DP = DP, 
-                p_s = p_s,
-                Y_obs = Y_obs, 
-                lambda_ref = lambda_ref, 
-                d_total = na.omit(unique(d_obs)),
-                phi_neu = 1,
-                phi_amp = 2^(0.25),
-                phi_del = 2^(-0.25),
-                phi_bamp = 2^(0.25),
-                phi_bdel = 2^(-0.25),
-                mu = mu,
-                sig = sig,
-                t = t,
-                gamma = unique(gamma),
-                theta_min = theta_min,
-                prior = prior,
-                bal_cnv = bal_cnv,
-                exp_only = exp_only,
-                allele_only = allele_only,
-                classify_allele = classify_allele,
-                phasing = phasing,
-                exp_model = 'lnpois'
-            )
-        ) %>% 
-        mutate(cnv_state = str_remove(state, '_down|_up')) %>%
-        annot_segs %>%
-        smooth_segs %>%
-        annot_segs %>%
-        ungroup() %>%
-        group_by(CHROM) %>%
-        mutate(seg_start = min(POS), seg_end = max(POS)) %>%
-        ungroup()
+
+    if (run_hmm) {
+        Obs = Obs %>% 
+            mutate(gamma = gamma) %>%
+            group_by(CHROM) %>%
+            mutate(state = 
+                run_hmm_mv_inhom(
+                    pAD = pAD,
+                    DP = DP, 
+                    p_s = p_s,
+                    Y_obs = Y_obs, 
+                    lambda_ref = lambda_ref, 
+                    d_total = na.omit(unique(d_obs)),
+                    phi_neu = 1,
+                    phi_amp = 2^(0.25),
+                    phi_del = 2^(-0.25),
+                    phi_bamp = 2^(0.25),
+                    phi_bdel = 2^(-0.25),
+                    mu = mu,
+                    sig = sig,
+                    t = t,
+                    gamma = unique(gamma),
+                    theta_min = theta_min,
+                    prior = prior,
+                    bal_cnv = bal_cnv,
+                    exp_only = exp_only,
+                    allele_only = allele_only,
+                    classify_allele = classify_allele,
+                    phasing = phasing,
+                    exp_model = 'lnpois'
+                )
+            ) %>% 
+            mutate(cnv_state = str_remove(state, '_down|_up')) %>%
+            annot_segs %>%
+            smooth_segs %>%
+            annot_segs %>%
+            ungroup() %>%
+            group_by(CHROM) %>%
+            mutate(seg_start = min(POS), seg_end = max(POS)) %>%
+            ungroup()
+    }
 
     # rolling theta estimates
     Obs = annot_theta_roll(Obs)
