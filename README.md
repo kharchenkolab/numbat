@@ -47,6 +47,11 @@ Within R,
 ```
 devtools::install_local("./Numbat")
 ```
+Note that the dependencies `GenomicRanges` and `ggtree` can be installed via:
+```
+BiocManager::install("GenomicRanges")
+BiocManager::install("ggtree")
+```
 
 # Usage
 1. Run the preprocessing script (`pileup_and_phase.r`): collect allele data and phase SNPs
