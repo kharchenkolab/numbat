@@ -1218,3 +1218,53 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
     
     return(joint_post)
 }
+
+test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 50, p_min = 0.95, diploid_chroms = NULL) {
+    
+    if (use_loh) {
+        ref_states = c('neu', 'loh')
+    } else {
+        ref_states = c('neu')
+    }
+    
+    bulks = bulks %>% annot_consensus(segs_consensus)
+    
+    if (!is.null(diploid_chroms)) {
+        bulks = bulks %>% mutate(diploid = CHROM %in% diploid_chroms)
+    } else {
+        bulks = bulks %>% mutate(diploid = cnv_state %in% ref_states)
+    }
+    
+    bulks = bulks %>% 
+        run_group_hmms(run_hmm = F) %>%
+        mutate(state_post = ifelse(LLR < LLR_min | is.na(LLR), 'neu', state_post))
+    
+    segs_multi = bulks %>% 
+        distinct(sample, CHROM, seg_cons, LLR, p_amp, p_del, p_loh, p_bamp, cnv_state_post) %>%
+        rowwise() %>%
+        mutate(p_max = max(c(p_amp, p_del, p_loh, p_bamp))) %>%
+        filter(LLR > LLR_min & p_max > p_min) %>%
+        group_by(seg_cons) %>%
+        summarise(
+            cnv_states = list(sort(unique(cnv_state_post))),
+            n_states = length(unlist(cnv_states))
+        ) %>%
+        filter(n_states > 1)
+    
+    segs_consensus = segs_consensus %>%
+        left_join(
+            segs_multi,
+            by = 'seg_cons'
+        ) %>%
+        rowwise() %>%
+        mutate(
+            p_del = ifelse(n_states > 1, ifelse('del' %in% cnv_states, 0.5, 0), p_del),
+            p_amp = ifelse(n_states > 1, ifelse('amp' %in% cnv_states, 0.5, 0), p_amp),
+            p_loh = ifelse(n_states > 1, ifelse('loh' %in% cnv_states, 0.5, 0), p_loh),
+            p_bamp = ifelse(n_states > 1, ifelse('bamp' %in% cnv_states, 0.5, 0), p_bamp),
+            p_bdel = ifelse(n_states > 1, ifelse('bdel' %in% cnv_states, 0.5, 0), p_bdel)
+        ) %>%
+        ungroup()
+    
+    return(list('segs_consensus' = segs_consensus, 'bulks' = bulks, 'segs_multi' = segs_multi))
+}
