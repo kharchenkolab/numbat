@@ -392,7 +392,7 @@ process_exp = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101,
 }
 
 #' @export
-get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, min_depth = 0, lambda = 0.52, verbose = TRUE) {
+get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, min_depth = 0, lambda = 2, verbose = TRUE) {
 
     if (nrow(df_allele) == 0) {
         stop('empty allele dataframe - check cell names')
@@ -436,24 +436,11 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
         mutate(CHROM = factor(as.integer(CHROM)))
 }
 
-
-# phase switch probablity as a function of genomic distance
-switch_prob = function(x, pad = 0.01) {
-    1-pmax(pmin(2.8 - 0.38 * log10(x), 1 - pad), 0.5 + pad)
-}
-
-switch_prob_bp = function(x, lambda = 1.0728, min_p = 0) {
-    p = 0.5*(1 - exp(-lambda * x/1e6))
-    pmax(p, min_p)
-}
 # phase switch probablity as a function of genetic distance
-# switch_prob_cm = function(x, lambda = 2, min_p = 1e-10) {
-#     p = 0.5*(1 - exp(-lambda * x))
-#     pmax(p, min_p)
-# }
-switch_prob_cm = function(d, lambda = 2, min_p = 1e-10) {
+switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
     p = (1-exp(-2*lambda*d))/2
-    pmax(p, min_p)
+    p = pmax(p, min_p)
+    p = ifelse(is.na(d), 0, p)
 }
 
 fit_switch_prob = function(y, d) {
@@ -516,7 +503,7 @@ annot_cm = function(bulk, genetic_map) {
 }
 
 #' @export
-get_allele_bulk = function(df_allele, genetic_map, lambda = 0.52, min_depth) {
+get_allele_bulk = function(df_allele, genetic_map, lambda = 1, min_depth) {
     pseudobulk = df_allele %>%
         filter(GT %in% c('1|0', '0|1')) %>%
         group_by(snp_id, CHROM, POS, REF, ALT, GT, gene) %>%
@@ -539,12 +526,8 @@ get_allele_bulk = function(df_allele, genetic_map, lambda = 0.52, min_depth) {
         filter(n() > 1) %>%
         mutate(
             inter_snp_cm = c(NA, cM[2:length(cM)] - cM[1:(length(cM)-1)]),
-            p_s = switch_prob_cm(inter_snp_cm, lambda)
+            p_s = switch_prob_cm(inter_snp_cm, lambda = lambda)
         ) %>%
-        # mutate(
-        #     inter_snp_dist = c(NA, POS[2:length(POS)] - POS[1:(length(POS)-1)]),
-        #     p_s = switch_prob_bp(inter_snp_dist)
-        # ) %>%
         ungroup()
 }
 
@@ -704,8 +687,8 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
 
 #' @export
 analyze_bulk = function(
-    Obs, t = 1e-5, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
-    exp_only = FALSE, allele_only = FALSE, run_hmm = TRUE, retest = TRUE,
+    bulk, t = 1e-5, gamma = 20, theta_min = 0.08, bal_cnv = TRUE, prior = NULL,
+    exp_only = FALSE, allele_only = FALSE, run_hmm = TRUE, retest = TRUE, lambda = 1,
     phasing = TRUE, roll_phi = TRUE, verbose = TRUE, debug = FALSE, diploid_chroms = NULL,
     find_diploid = TRUE, classify_allele = FALSE
 ) {
@@ -714,30 +697,33 @@ analyze_bulk = function(
         stop('transition probability is not numeric')
     }
 
+    # update transition probablity
+    bulk = bulk %>% mutate(p_s = switch_prob_cm(inter_snp_cm, lambda = lambda))
+
     if (exp_only) {
-        Obs$diploid = TRUE
+        bulk$diploid = TRUE
     } else if (!is.null(diploid_chroms)) {
         log_info(glue('Using diploid chromosomes given: {paste0(diploid_chroms, collapse = ",")}'))
-        Obs = Obs %>% mutate(diploid = CHROM %in% diploid_chroms)
+        bulk = bulk %>% mutate(diploid = CHROM %in% diploid_chroms)
     } else if (find_diploid) {
-        out = find_common_diploid(Obs, gamma = gamma, t = t)
-        Obs = out$bulks
+        out = find_common_diploid(bulk, gamma = gamma, t = t)
+        bulk = out$bulks
         bal_cnv = out$bamp
-    } else if (!'diploid' %in% colnames(Obs)) {
+    } else if (!'diploid' %in% colnames(bulk)) {
         stop('Must define diploid region if not given')
     }
 
-    fit = Obs %>%
+    # fit expression baseline
+    fit = bulk %>%
         filter(!is.na(Y_obs)) %>%
         filter(logFC < 8 & logFC > -8) %>%
         filter(diploid) %>%
         {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs), approx = F)}
         
-    Obs = Obs %>% mutate(mu = fit@coef[1], sig = fit@coef[2])
+    bulk = bulk %>% mutate(mu = fit@coef[1], sig = fit@coef[2])
 
     if (run_hmm) {
-        Obs = Obs %>% 
-            mutate(gamma = gamma) %>%
+        bulk = bulk %>% 
             group_by(CHROM) %>%
             mutate(state = 
                 run_hmm_mv_inhom(
@@ -777,7 +763,7 @@ analyze_bulk = function(
     }
 
     # rolling theta estimates
-    Obs = annot_theta_roll(Obs)
+    bulk = annot_theta_roll(bulk)
     
     # retest CNVs
     if (retest & (!exp_only)) {
@@ -786,9 +772,9 @@ analyze_bulk = function(
             message('Retesting CNVs..')
         }
 
-        segs_post = retest_cnv(Obs, exp_model = 'lnpois', allele_only = allele_only)
+        segs_post = retest_cnv(bulk, gamma = gamma, exp_model = 'lnpois', allele_only = allele_only)
         
-        Obs = Obs %>% 
+        bulk = bulk %>% 
             select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM')])) %>%
             left_join(segs_post, by = c('seg', 'CHROM')) %>%
             mutate(
@@ -802,24 +788,36 @@ analyze_bulk = function(
             )) %>%
             mutate(state_post = str_remove(state_post, '_NA'))
 
-        Obs = Obs %>% classify_alleles()
+        bulk = bulk %>% classify_alleles()
 
-        Obs = annot_theta_roll(Obs)
+        bulk = annot_theta_roll(bulk)
         
     } else {
-        Obs = Obs %>% mutate(state_post = state, cnv_state_post = cnv_state)
+        bulk = bulk %>% mutate(state_post = state, cnv_state_post = cnv_state)
     }
     
     if (verbose) {
         message('Finishing..')
     }
 
+    # annotate phi MLE for all segments
+    bulk = bulk %>%
+        group_by(seg) %>%
+        mutate(
+            approx_lik_exp(
+                Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
+                mu = mu[!is.na(Y_obs)],
+                sig = sig[!is.na(Y_obs)]
+            )
+        ) %>%
+        ungroup()
+
     if (roll_phi) {
         # rolling phi estimates
-        Obs = Obs %>% 
+        bulk = bulk %>% 
             select(-any_of('phi_mle_roll')) %>%
             left_join(
-                Obs %>% 
+                bulk %>% 
                     group_by(CHROM) %>%
                     filter(!is.na(Y_obs)) %>%
                     filter(Y_obs > 0) %>%
@@ -833,8 +831,12 @@ analyze_bulk = function(
         mutate(phi_mle_roll = zoo::na.locf(phi_mle_roll, na.rm=FALSE)) %>%
         ungroup()
     }
-    
-    return(Obs)
+
+    # store these info here
+    bulk$lambda = lambda 
+    bulk$gamma = gamma
+
+    return(bulk)
 }
 
 # classify alleles using viterbi and forward-backward
@@ -1017,7 +1019,7 @@ simes_p = function(p.vals, n_dim) {
 # multi-sample generalization
 #' @export
 find_common_diploid = function(
-    bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, alpha = 1e-4,
+    bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, alpha = 1e-4, 
     bal_consensus = NULL, ncores = 5, debug = F, verbose = T) {
 
     if (!'sample' %in% colnames(bulks)) {
@@ -1497,7 +1499,7 @@ binary_entropy = function(p) {
 }
 
 #' @export
-retest_cnv = function(bulk, exp_model = 'lnpois', allele_only = FALSE) {
+retest_cnv = function(bulk, exp_model = 'lnpois', gamma = 20, allele_only = FALSE) {
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     
@@ -2590,8 +2592,8 @@ plot_sc_joint = function(
         )
     }
 
-    if (!'cnv_state_map' %in% colnames(joint_post)) {
-        joint_post = joint_post %>% mutate(cnv_state_map = cnv_state)
+    if ('cnv_state_map' %in% colnames(joint_post)) {
+        joint_post = joint_post %>% mutate(cnv_state = cnv_state_map)
     }
 
     gtree = mark_tumor_lineage(gtree)
@@ -2635,11 +2637,14 @@ plot_sc_joint = function(
     first_tumor_index = which(cell_order %in% tumor_cells)[1]
 
     p_segs = ggplot(
-            D %>% mutate(logBF = pmax(pmin(logBF, logBF_max), logBF_min))
+            D %>% mutate(
+                cnv_state = ifelse(cnv_state == 'neu', NA, cnv_state),
+                logBF = pmax(pmin(logBF, logBF_max), logBF_min)
+            )
         ) +
         theme_classic() +
         geom_segment(
-            aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state_map, alpha = logBF),
+            aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state, alpha = logBF),
             size = size
         ) +
         geom_segment(
@@ -2664,11 +2669,13 @@ plot_sc_joint = function(
         scale_alpha_continuous(range = c(0,1)) +
         guides(
             alpha = 'none',
-            color = guide_legend(override.aes = c('size' = 1), title = 'CNV state')
+            # alpha = guide_legend(),
+            color = guide_legend(override.aes = c(size = 1), title = 'CNV state')
         ) +
         scale_color_manual(
-            values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = cnv_colors[['bamp']], 'loh' = 'darkgreen', 'bdel' = 'blue', 'neu' = 'white'),
-            limits = force
+            values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = cnv_colors[['bamp']], 'loh' = 'darkgreen', 'bdel' = 'blue'),
+            limits = force,
+            na.translate = F
         )
 
     # clone annotation

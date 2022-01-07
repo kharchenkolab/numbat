@@ -1059,6 +1059,45 @@ compute_posterior = function(sc_post) {
     ungroup()
 }
 
+# #' do bayesian averaging to get posteriors
+# #' @export
+# compute_posterior = function(sc_post) {
+#     sc_post %>% 
+#     rowwise() %>%
+#     mutate(
+#         Z_21 = l21 + log(prior_amp/8),
+#         Z_12 = l12 + log(prior_amp/8),
+#         Z_31 = l31 + log(prior_amp/8),
+#         Z_13 = l13 + log(prior_amp/8),
+#         Z_amp = matrixStats::logSumExp(c(Z_21, Z_12, Z_31, Z_13)),
+#         Z_loh = l20 + log(prior_loh/2),
+#         Z_del = l10 + log(prior_del/2),
+#         Z_bamp = l22 + log(prior_bamp/2),
+#         Z_bdel = l00 + log(prior_bdel/2),
+#         Z_n = l11 + log(1/2),
+#         Z = matrixStats::logSumExp(
+#             c(Z_n, Z_loh, Z_del, Z_amp, Z_bamp, Z_bdel)
+#         ),
+#         Z_cnv = matrixStats::logSumExp(
+#             c(Z_loh, Z_del, Z_amp, Z_bamp, Z_bdel)
+#         ),
+#         p_21 = exp(Z_21 - Z),
+#         p_12 = exp(Z_12 - Z),
+#         p_31 = exp(Z_31 - Z),
+#         p_13 = exp(Z_13 - Z),
+#         p_amp = exp(Z_amp - Z),
+#         p_neu = exp(Z_n - Z),
+#         p_del = exp(Z_del - Z),
+#         p_loh = exp(Z_loh - Z),
+#         p_bamp = exp(Z_bamp - Z),
+#         p_bdel = exp(Z_bdel - Z),
+#         logBF = Z_cnv - Z_n,
+#         p_cnv = exp(Z_cnv - Z),
+#         p_n = exp(Z_n - Z)
+#     ) %>%
+#     ungroup()
+# }
+
 #' get CNV allele posteriors
 #' @export
 get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
