@@ -648,11 +648,18 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
     
     f = glue('{out_dir}/segs_consensus_{i-1}.tsv')
     if (file.exists(f)) {
-        res[['segs_consensus']] = fread(f)
+        segs_consensus = fread(f)
     } else {
         f = glue('{out_dir}/segs_consensus_{i}.tsv')
-        res[['segs_consensus']] = fread(f)
+        segs_consensus = fread(f)
     }
+
+    if ('cnv_states' %in% colnames(segs_consensus)) {
+        segs_consensus = segs_consensus  %>% 
+            mutate(cnv_states = str_split(cnv_states, '\\|'))
+    }
+
+    res[['segs_consensus']] = segs_consensus
 
     f = glue('{out_dir}/bulk_subtrees_{i}.tsv.gz')
     if (file.exists(f)) {
@@ -1750,7 +1757,7 @@ get_nodes_celltree = function(hc, clusters) {
     # convert to list
     nodes = nodes %>%
         split(.$node) %>%
-        map(function(node){list(label = unique(node$node), members = unique(node$cluster), cells = node$cell, size = length(node$cell))})
+        map(function(node){list(sample = unique(node$node), members = unique(node$cluster), cells = node$cell, size = length(node$cell))})
     
     return(nodes)
     
@@ -1890,7 +1897,8 @@ cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
         "theta_2_up" = "darkgreen", "theta_2_down" = "olivedrab4",
         "theta_up_1" = "darkgreen", "theta_down_1" = "olivedrab4",
         "theta_up_2" = "darkgreen", "theta_down_2" = "olivedrab4",
-        '0|1' = 'red', '1|0' = 'blue'
+        '0|1' = 'red', '1|0' = 'blue',
+        'major' = '#66C2A5', 'minor' = '#FC8D62'
     )
 
 #' @export
@@ -1973,7 +1981,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 }
 
 #' @export
-plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = TRUE, allele_only = FALSE, phi_mle = FALSE, use_pos = FALSE, legend = TRUE) {
+plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = TRUE, allele_only = FALSE, phi_mle = FALSE, use_pos = FALSE, legend = TRUE) {
 
     if (!'state_post' %in% colnames(Obs)) {
         Obs = Obs %>% mutate(state_post = state)
@@ -1993,37 +2001,40 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
     D = Obs %>% 
         mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
         mutate(pBAF = ifelse(DP >= min_depth, pBAF, NA)) %>%
-        reshape2::melt(measure.vars = c('logFC', 'pBAF'))
+        mutate(pHF = pBAF) %>%
+        reshape2::melt(measure.vars = c('logFC', 'pHF'))
 
     if (allele_only) {
-        D = D %>% filter(variable == 'pBAF')
+        D = D %>% filter(variable == 'pHF')
     }
 
     p = ggplot(
-        D,
-        aes(x = get(marker), y = value, color = state_post),
-        na.rm=TRUE
-    ) +
-    geom_point(
-        aes(shape = str_detect(state_post, '_2'), alpha = str_detect(state_post, '_2')),
-        size = dot_size,
-        # stroke = 0.3,
-        # alpha = 0.5
-    ) +
-    scale_alpha_discrete(range = c(0.5, 1)) +
-    scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 15)) +
-    theme_classic() +
-    theme(
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.background = element_blank(),
-        axis.text.x = element_blank()
-    ) +
-    facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
-    scale_color_manual(values = cnv_colors, limits = force) +
-    guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = FALSE, alpha = FALSE, shape = FALSE) +
-    xlab(marker) +
-    ylab('')
+            D,
+            aes(x = get(marker), y = value, color = state_post),
+            na.rm=TRUE
+        ) +
+        geom_point(
+            aes(
+                shape = str_detect(state_post, '_2'),
+                alpha = str_detect(state_post, '_2')
+            ),
+            size = dot_size
+        ) +
+        scale_alpha_discrete(range = c(dot_alpha, 1)) +
+        scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 15)) +
+        theme_classic() +
+        theme(
+            panel.spacing = unit(0, 'mm'),
+            panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+            strip.background = element_blank(),
+            axis.text.x = element_blank()
+        ) +
+        facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
+        # scale_x_continuous(expand = expansion(add = 5)) +
+        scale_color_manual(values = cnv_colors, limits = force) +
+        guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = FALSE, alpha = FALSE, shape = FALSE) +
+        xlab(marker) +
+        ylab('')
 
     if (!legend) {
         p = p + guides(color = FALSE, fill = FALSE, alpha = FALSE, shape = FALSE)
@@ -2065,14 +2076,14 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
     if (theta_roll) {
         p = p + geom_line(
             inherit.aes = FALSE,
-            data = D %>% mutate(variable = 'pBAF'),
+            data = D %>% mutate(variable = 'pHF'),
             aes(x = snp_index, y = 0.5 - theta_hat_roll, color = paste0(cnv_state_post, '_down')),
             # color = 'black',
             size = 0.35
         ) +
         geom_line(
             inherit.aes = FALSE,
-            data = D %>% mutate(variable = 'pBAF'),
+            data = D %>% mutate(variable = 'pHF'),
             aes(x = snp_index, y = 0.5 + theta_hat_roll, color = paste0(cnv_state_post, '_up')),
             # color = 'gray',
             size = 0.35
@@ -2083,7 +2094,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, exp_limit = 2, min_depth = 10, theta
 }
 
 #' @export
-plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, phi_mle = FALSE, allele_only = FALSE, use_pos = FALSE, ncol = 1, legend = TRUE, title = TRUE) {
+plot_bulks = function(bulk_all, min_depth = 8, dot_alpha = 0.5, fc_correct = TRUE, phi_mle = FALSE, allele_only = FALSE, use_pos = FALSE, ncol = 1, legend = TRUE, title = TRUE) {
 
     options(warn = -1)
     plot_list = bulk_all %>%
@@ -2096,6 +2107,7 @@ plot_bulks = function(bulk_all, min_depth = 8, fc_correct = TRUE, phi_mle = FALS
 
                 p = plot_psbulk(
                         bulk, 
+                        dot_alpha = dot_alpha,
                         min_depth = min_depth, fc_correct = fc_correct,
                         phi_mle = phi_mle, use_pos = use_pos, legend = legend,
                         allele_only = allele_only
@@ -2563,13 +2575,25 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
 #' @export
 plot_sc_joint = function(
         gtree, joint_post, segs_consensus, 
-        cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, pal_clone = NULL
+        cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, 
+        logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, pal_clone = NULL
     ) {
 
     if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
         gtree = gtree %>% activate(nodes) %>% mutate(clone = as.integer(as.factor(GT)))
     }
-          
+
+    if (!'n_states' %in% colnames(segs_consensus)) {
+        segs_consensus = segs_consensus %>% mutate(
+            n_states = ifelse(cnv_state == 'neu', 1, 0), 
+            cnv_states = cnv_state
+        )
+    }
+
+    if (!'cnv_state_map' %in% colnames(joint_post)) {
+        joint_post = joint_post %>% mutate(cnv_state_map = cnv_state)
+    }
+
     gtree = mark_tumor_lineage(gtree)
 
     gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
@@ -2596,7 +2620,7 @@ plot_sc_joint = function(
     # cell heatmap
     D = joint_post %>% 
             inner_join(
-                segs_consensus %>% select(seg = seg_cons, CHROM, seg_start, seg_end),
+                segs_consensus %>% select(seg = seg_cons, CHROM, seg_start, seg_end, n_states, cnv_states),
                 by = c('seg', 'CHROM')
             ) %>%
             mutate(cell = factor(cell, cell_order)) %>%
@@ -2615,7 +2639,7 @@ plot_sc_joint = function(
         ) +
         theme_classic() +
         geom_segment(
-            aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state, alpha = logBF),
+            aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state_map, alpha = logBF),
             size = size
         ) +
         geom_segment(
@@ -2640,7 +2664,7 @@ plot_sc_joint = function(
         scale_alpha_continuous(range = c(0,1)) +
         guides(
             alpha = 'none',
-            color = guide_legend(override.aes = c('size' = 1))
+            color = guide_legend(override.aes = c('size' = 1), title = 'CNV state')
         ) +
         scale_color_manual(
             values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = cnv_colors[['bamp']], 'loh' = 'darkgreen', 'bdel' = 'blue', 'neu' = 'white'),

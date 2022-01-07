@@ -50,7 +50,7 @@ numbat_subclone = function(
         glue('max_cost = {max_cost}'),
         glue('max_iter = {max_iter}'),
         glue('min_depth = {min_depth}'),
-        glue('use_loh = {use_loh}'),
+        glue('use_loh = {ifelse(is.null(use_loh), "auto", use_loh)}'),
         glue('multi_allelic = {multi_allelic}'),
         glue('min_LLR = {min_LLR}'),
         glue('max_entropy = {max_entropy}'),
@@ -132,9 +132,9 @@ numbat_subclone = function(
     segs_consensus = get_segs_consensus(bulk_subtrees)
 
     if (multi_allelic) {
-
+        # only test the leaf nodes
         out = test_multi_allelic(
-            bulk_subtrees,
+            bulk_subtrees %>% filter(sample %in% 1:init_k),
             segs_consensus,
             use_loh = use_loh,
             diploid_chroms = diploid_chroms)
@@ -180,6 +180,8 @@ numbat_subclone = function(
 
         exp_post = exp_post_res$exp_post
         exp_sc = exp_post_res$exp_sc
+
+        fwrite(exp_sc, glue('{out_dir}/exp_sc_{i}.tsv.gz'), sep = '\t')
         
         allele_post = get_allele_post(
             bulk_subtrees,
@@ -202,13 +204,22 @@ numbat_subclone = function(
                 avg_entropy = mean(binary_entropy(p_cnv), na.rm = TRUE)
             ) %>%
             ungroup()
-        
-        log_info('Writing to files ..')
 
-        fwrite(exp_sc, glue('{out_dir}/exp_sc_{i}.tsv.gz'), sep = '\t')
         fwrite(exp_post, glue('{out_dir}/exp_post_{i}.tsv'), sep = '\t')
         fwrite(allele_post, glue('{out_dir}/allele_post_{i}.tsv'), sep = '\t')
         fwrite(joint_post, glue('{out_dir}/joint_post_{i}.tsv'), sep = '\t')
+
+        if (multi_allelic) {
+            log_info('Expanding allelic states..')
+            # expand multi-allelic segments into multiple CNV states
+            joint_post = expand_states(joint_post, segs_consensus)
+            exp_post = expand_states(exp_post, segs_consensus)
+            allele_post = expand_states(allele_post, segs_consensus)
+
+            fwrite(exp_post, glue('{out_dir}/exp_post_expand_{i}.tsv'), sep = '\t')
+            fwrite(allele_post, glue('{out_dir}/allele_post_expand_{i}.tsv'), sep = '\t')
+            fwrite(joint_post, glue('{out_dir}/joint_post_expand_{i}.tsv'), sep = '\t')
+        }
 
         ######## Build phylogeny ########
 
@@ -224,8 +235,7 @@ numbat_subclone = function(
         joint_post_filtered = joint_post %>%
             filter(cnv_state != 'neu') %>%
             filter(cell %in% cell_sample) %>%
-            filter(avg_entropy < max_entropy & LLR > min_LLR) %>%
-            mutate(seg_cnv = seg)
+            filter(avg_entropy < max_entropy & LLR > min_LLR)
 
         if (nrow(joint_post_filtered) == 0) {
             msg = 'No CNVs remain after filtering! Check threshold'
@@ -236,18 +246,13 @@ numbat_subclone = function(
             log_info(glue('Using {n_cnv} CNVs to construct phylogeny'))
         }
 
-        if (multi_allelic) {
-            # expand multi-allelic segments into multiple CNV states
-            joint_post_filtered = expand_states(joint_post_filtered, segs_consensus)
-        }
-
         # construct genotype probability matrix
         p_min = 1e-10
 
         P = joint_post_filtered %>%
             mutate(p_n = 1 - p_cnv) %>%
             mutate(p_n = pmax(pmin(p_n, 1-p_min), p_min)) %>%
-            reshape2::dcast(cell ~ seg_cnv, value.var = 'p_n', fill = 0.5) %>%
+            reshape2::dcast(cell ~ seg, value.var = 'p_n', fill = 0.5) %>%
             tibble::column_to_rownames('cell') %>%
             as.matrix
 
@@ -314,7 +319,7 @@ numbat_subclone = function(
             # mutate(GT = ifelse(compartment == 'normal', '', GT)) %>%
             group_by(GT, clone, compartment) %>%
             summarise(
-                clone_size = n(),
+                clone_size = sum(leaf),
                 .groups = 'drop'
             )
 
@@ -327,7 +332,7 @@ numbat_subclone = function(
         log_info('Found {length(normal_cells)} normal cells..')
 
         clones = clone_post %>% split(.$clone_opt) %>%
-            purrr::map(function(c){list(label = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
+            purrr::map(function(c){list(sample = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
 
         saveRDS(clones, glue('{out_dir}/clones_{i}.rds'))
         clones = purrr::keep(clones, function(x) x$size > min_cells)
@@ -339,7 +344,7 @@ numbat_subclone = function(
             filter(!is.na(rank)) %>%
             data.frame() %>%
             inner_join(clone_post, by = c('GT' = 'GT_opt')) %>%
-            {list(label = v, members = unique(.$GT), clones = unique(.$clone), cells = .$cell, size = length(.$cell))}
+            {list(sample = v, members = unique(.$GT), clones = unique(.$clone), cells = .$cell, size = length(.$cell))}
         })
 
         saveRDS(subtrees, glue('{out_dir}/subtrees_{i}.rds'))
@@ -515,7 +520,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_trans
                 mutate(
                     n_cells = g$size,
                     members = paste0(g$members, collapse = ';'),
-                    sample = g$label
+                    sample = g$sample
                 )
         })
 
@@ -569,7 +574,6 @@ run_group_hmms = function(
         find_diploid = TRUE
     }
 
-    log_info('done with finding common diploid') 
     results = mclapply(
         bulks %>% split(.$sample),
         mc.cores = ncores,
@@ -606,7 +610,7 @@ run_group_hmms = function(
 
 #' Extract consensus CNV segments
 #' @export
-get_segs_consensus = function(bulks, LLR_min = 20) {
+get_segs_consensus = function(bulks, LLR_min = 20, max_overlap = 0.45) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -631,7 +635,7 @@ get_segs_consensus = function(bulks, LLR_min = 20) {
         filter(n_genes >= 20)
     
     if(dim(segs_filtered)[[1]] == 0){
-        stop('No non neutral signal is found... probably there is not enough coverage.')
+        stop('No CNV remains after filtering')
     }
 
     # reduce to unique intervals
@@ -648,7 +652,11 @@ get_segs_consensus = function(bulks, LLR_min = 20) {
         select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
         mutate(seg_length = seg_end - seg_start)
     
-    segs_consensus = segs_filtered %>% resolve_cnvs() %>% fill_neu_segs(segs_neu) %>%
+    segs_consensus = segs_filtered %>% 
+        resolve_cnvs(
+            max_overlap = max_overlap
+        ) %>% 
+        fill_neu_segs(segs_neu) %>%
         mutate(cnv_state_post = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post))
 
     return(segs_consensus)
@@ -764,6 +772,8 @@ cell_to_clone = function(clones, exp_post, allele_post) {
     clone_post['p_cnv'] = clone_post[paste0('p_', tumor_clones)] %>% rowSums
     clone_post['p_cnv_x'] = clone_post[paste0('p_x_', tumor_clones)] %>% rowSums
     clone_post['p_cnv_y'] = clone_post[paste0('p_y_', tumor_clones)] %>% rowSums
+
+    clone_post = clone_post %>% mutate(compartment_opt = ifelse(p_cnv > 0.5, 'tumor', 'normal'))
     
     return(clone_post)
     
@@ -772,7 +782,7 @@ cell_to_clone = function(clones, exp_post, allele_post) {
 #' @param segs_all a dataframe containing info of all CNV segments from multiple samples
 #' @return consensus CNV segments
 #' @export
-resolve_cnvs = function(segs_all, debug = FALSE) {
+resolve_cnvs = function(segs_all, max_overlap = 0.5, debug = FALSE) {
             
     V = segs_all %>% ungroup() %>% mutate(vertex = 1:n(), .before = 1)
 
@@ -807,7 +817,7 @@ resolve_cnvs = function(segs_all, debug = FALSE) {
             frac_overlap_x = len_overlap/len_x,
             frac_overlap_y = len_overlap/len_y
         ) %>%
-        filter(!(frac_overlap_x < 0.5 & frac_overlap_y < 0.5))
+        filter(!(frac_overlap_x < max_overlap & frac_overlap_y < max_overlap))
 
     G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
 
@@ -832,7 +842,7 @@ resolve_cnvs = function(segs_all, debug = FALSE) {
 #' @param exp_sc Single cell expression data matrix
 #' @return expression likelihoods
 #' @export
-get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL, mu = NULL, sigma = NULL) {
+get_exp_likelihoods_lnpois = function(exp_sc, diploid_chroms = NULL, use_loh = FALSE, depth_obs = NULL, mu = NULL, sigma = NULL) {
 
     exp_sc = exp_sc %>% filter(lambda_ref > 0)
     
@@ -847,8 +857,14 @@ get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL,
     }
 
     if (is.null(mu) | is.null(sigma)) {
-        fit = exp_sc %>% filter(cnv_state %in% ref_states) %>% {fit_lnpois(.$Y_obs, .$lambda_ref, depth_obs)}
 
+        if (!is.null(diploid_chroms)) {
+            exp_sc_diploid = exp_sc %>% filter(CHROM %in% diploid_chroms)
+        } else {
+            exp_sc_diploid = exp_sc %>% filter(cnv_state %in% ref_states)
+        }
+
+        fit = exp_sc_diploid %>% {fit_lnpois(.$Y_obs, .$lambda_ref, depth_obs)}
         mu = fit@coef[1]
         sigma = fit@coef[2]
     }
@@ -865,6 +881,7 @@ get_exp_likelihoods_lnpois = function(exp_sc, use_loh = FALSE, depth_obs = NULL,
             l21 = l_lnpois(Y_obs, lambda_ref, depth_obs, mu, sigma, phi = 1.5),
             l31 = l_lnpois(Y_obs, lambda_ref, depth_obs, mu, sigma, phi = 2),
             l22 = l31,
+            l32 = l_lnpois(Y_obs, lambda_ref, depth_obs, mu, sigma, phi = 2.5),
             l00 = l_lnpois(Y_obs, lambda_ref, depth_obs, mu, sigma, phi = 0.25),
             mu = mu,
             sigma = sigma,
@@ -928,7 +945,7 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 
 #' get CNV expression posteriors
 #' @export
-get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, alpha = NULL, beta = NULL, use_loh = NULL, ncores = 30, verbose = TRUE, debug = F) {
+get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, diploid_chroms = NULL, use_loh = NULL, ncores = 30, verbose = TRUE, debug = F) {
 
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf_transcript) 
 
@@ -968,7 +985,10 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
                     lambda_obs = Y_obs/sum(Y_obs),
                     logFC = log2(lambda_obs/lambda_ref)
                 ) %>%
-                get_exp_likelihoods_lnpois(use_loh) %>%
+                get_exp_likelihoods_lnpois(
+                    use_loh = use_loh,
+                    diploid_chroms = diploid_chroms
+                ) %>%
                 mutate(cell = cell, ref = ref)
 
         }
@@ -989,7 +1009,10 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
         mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) %>%
         rowwise() %>%
         left_join(
-            segs_consensus %>% select(CHROM, seg = seg_cons, prior_loh = p_loh, prior_amp = p_amp, prior_del = p_del, prior_bamp = p_bamp, prior_bdel = p_bdel),
+            segs_consensus %>% select(
+                CHROM, seg = seg_cons, 
+                prior_loh = p_loh, prior_amp = p_amp, prior_del = p_del, prior_bamp = p_bamp, prior_bdel = p_bdel
+            ),
             by = 'seg'
         ) %>%
         # if the opposite state has a very small prior, and phi is in the opposite direction,
@@ -998,42 +1021,42 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
             vars(contains('prior')),
             function(x) {ifelse(x < 0.05, 0, x)}
         ) %>%
-        rowwise() %>%
-        mutate(
-            Z = matrixStats::logSumExp(
-                c(l11 + log(1/2),
-                  l20 + log(prior_loh/2),
-                  l10 + log(prior_del/2),
-                  l21 + log(prior_amp/4),
-                  l31 + log(prior_amp/4),
-                  l22 + log(prior_bamp/2),
-                  l00 + log(prior_bdel/2))
-            ),
-            Z_cnv = matrixStats::logSumExp(
-                c(l20 + log(prior_loh/2),
-                l10 + log(prior_del/2),
-                l21 + log(prior_amp/4),
-                l31 + log(prior_amp/4),
-                l22 + log(prior_bamp/2),
-                l00 + log(prior_bdel/2))
-            ),
-            Z_n = l11 + log(1/2),
-            logBF = Z_cnv - Z_n,
-            p_amp = exp(matrixStats::logSumExp(c(l21 + log(prior_amp/4), l31 + log(prior_amp/4))) - Z),
-            p_amp_sin = exp(l21 + log(prior_amp/4) - Z),
-            p_amp_mul = exp(l31 + log(prior_amp/4) - Z),
-            p_neu = exp(l11 + log(1/2) - Z),
-            p_del = exp(l10 + log(prior_del/2) - Z),
-            p_loh = exp(l20 + log(prior_loh/2) - Z),
-            p_bamp = exp(l22 + log(prior_bamp/2) - Z),
-            p_bdel = exp(l00 + log(prior_bdel/2) - Z),
-            p_cnv = p_amp + p_del + p_loh + p_bamp + p_bdel
-        ) %>%
-        ungroup() %>%
+        compute_posterior() %>%
         mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
         mutate(seg_label = factor(seg_label, unique(seg_label)))
     
     return(list('exp_post' = exp_post, 'exp_sc' = exp_sc, 'best_refs' = best_refs))
+}
+
+#' do bayesian averaging to get posteriors
+#' @export
+compute_posterior = function(sc_post) {
+    sc_post %>% 
+    rowwise() %>%
+    mutate(
+        Z_amp = matrixStats::logSumExp(c(l21 + log(prior_amp/4), l31 + log(prior_amp/4))),
+        Z_loh = l20 + log(prior_loh/2),
+        Z_del = l10 + log(prior_del/2),
+        Z_bamp = l22 + log(prior_bamp/2),
+        Z_bdel = l00 + log(prior_bdel/2),
+        Z_n = l11 + log(1/2),
+        Z = matrixStats::logSumExp(
+            c(Z_n, Z_loh, Z_del, Z_amp, Z_bamp, Z_bdel)
+        ),
+        Z_cnv = matrixStats::logSumExp(
+            c(Z_loh, Z_del, Z_amp, Z_bamp, Z_bdel)
+        ),
+        p_amp = exp(Z_amp - Z),
+        p_neu = exp(Z_n - Z),
+        p_del = exp(Z_del - Z),
+        p_loh = exp(Z_loh - Z),
+        p_bamp = exp(Z_bamp - Z),
+        p_bdel = exp(Z_bdel - Z),
+        logBF = Z_cnv - Z_n,
+        p_cnv = exp(Z_cnv - Z),
+        p_n = exp(Z_n - Z)
+    ) %>%
+    ungroup()
 }
 
 #' get CNV allele posteriors
@@ -1091,7 +1114,9 @@ get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
             .groups = 'drop'
         ) %>%
         left_join(
-            segs_consensus %>% select(seg = seg_cons, prior_loh = p_loh, prior_amp = p_amp, prior_del = p_del, prior_bamp = p_bamp, prior_bdel = p_bdel),
+            segs_consensus %>% select(seg = seg_cons, 
+                prior_loh = p_loh, prior_amp = p_amp, prior_del = p_del, prior_bamp = p_bamp, prior_bdel = p_bdel
+            ),
             by = 'seg'
         ) %>%
         rowwise() %>%
@@ -1105,40 +1130,12 @@ get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
             l12 = dbinom(major, total, p = 0.33, log = TRUE),
             l31 = dbinom(major, total, p = 0.75, log = TRUE),
             l13 = dbinom(major, total, p = 0.25, log = TRUE),
+            l32 = dbinom(major, total, p = 0.6, log = TRUE),
             l22 = l11,
-            l00 = l11,
-            Z = matrixStats::logSumExp(
-                c(l11 + log(1/2),
-                  l20 + log(prior_loh/2),
-                  l10 + log(prior_del/2),
-                  l21 + log(prior_amp/4),
-                  l31 + log(prior_amp/4),
-                  l22 + log(prior_bamp/2),
-                  l00 + log(prior_bdel/2)
-                 )
-            ),
-            Z_cnv = matrixStats::logSumExp(
-                c(l20 + log(prior_loh/2),
-                  l10 + log(prior_del/2),
-                  l21 + log(prior_amp/4),
-                  l31 + log(prior_amp/4),
-                  l22 + log(prior_bamp/2),
-                  l00 + log(prior_bdel/2)
-                 )
-            ),
-            Z_n = l11 + log(1/2),
-            logBF = Z_cnv - Z_n,
-            p_amp = exp(matrixStats::logSumExp(c(l21 + log(prior_amp/4), l31 + log(prior_amp/4))) - Z),
-            p_amp_sin = exp(l21 + log(prior_amp/4) - Z),
-            p_amp_mul = exp(l31 + log(prior_amp/4) - Z),
-            p_neu = exp(l11 + log(1/2) - Z),
-            p_del = exp(l10 + log(prior_del/2) - Z),
-            p_loh = exp(l20 + log(prior_loh/2) - Z),
-            p_bamp = exp(l22 + log(prior_bamp/2) - Z),
-            p_bdel = exp(l22 + log(prior_bdel/2) - Z),
-            p_cnv = p_amp + p_del + p_loh + p_bamp + p_bdel
+            l00 = l11
         ) %>%
         ungroup() %>%
+        compute_posterior() %>%
         mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
         mutate(seg_label = factor(seg_label, unique(seg_label)))
 
@@ -1149,26 +1146,28 @@ get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
 #' @export
 get_joint_post = function(exp_post, allele_post, segs_consensus) {
     
-    joint_post = exp_post %>%
-        filter(cnv_state != 'neu') %>%
-        select(
-            cell, CHROM, seg, cnv_state, l11_x = l11, l20_x = l20,
-            l10_x = l10, l21_x = l21, l31_x = l31, l22_x = l22, l00_x = l00,
-            Z_x = Z, Z_cnv_x = Z_cnv, Z_n_x = Z_n
-        ) %>%
-        full_join(
-            allele_post %>% select(
-                cell, seg, l11_y = l11, l20_y = l20, l10_y = l10, l21_y = l21, l31_y = l31, l22_y = l22, l00_y = l00,
-                n_snp = total,
-                Z_y = Z, Z_cnv_y = Z_cnv, Z_n_y = Z_n, MAF, major, total
+    joint_post = full_join(
+            exp_post %>%
+                filter(cnv_state != 'neu') %>%
+                select(
+                    cell, CHROM, seg, cnv_state, 
+                    l11_x = l11, l20_x = l20, l10_x = l10, l21_x = l21, l31_x = l31, l22_x = l22, l00_x = l00,
+                    Z_x = Z, Z_cnv_x = Z_cnv, Z_n_x = Z_n, logBF_x = logBF
+                ),
+            allele_post %>% 
+                select(
+                    cell, seg, 
+                    l11_y = l11, l20_y = l20, l10_y = l10, l21_y = l21, l31_y = l31, l22_y = l22, l00_y = l00,
+                    Z_y = Z, Z_cnv_y = Z_cnv, Z_n_y = Z_n, logBF_y = logBF,
+                    n_snp = total, MAF, major, total
             ),
             c("cell", "seg")
         ) %>%
         mutate(cnv_state = tidyr::replace_na(cnv_state, 'loh')) %>%
         mutate_at(
-                vars(matches("_x|_y")),
-                function(x) tidyr::replace_na(x, 0)
-            ) %>%
+            vars(matches("_x|_y")),
+            function(x) tidyr::replace_na(x, 0)
+        ) %>%
         left_join(
             segs_consensus %>% select(
                 seg = seg_cons,
@@ -1176,7 +1175,6 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
             ),
             by = 'seg'
         ) %>%
-        rowwise() %>%
         mutate(
             l11 = l11_x + l11_y,
             l20 = l20_x + l20_y,
@@ -1185,46 +1183,16 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
             l31 = l31_x + l31_y,
             l22 = l22_x + l22_y,
             l00 = l00_x + l00_y,
-            Z = matrixStats::logSumExp(
-                c(l11 + log(1/2),
-                  l20 + log(prior_loh/2),
-                  l10 + log(prior_del/2),
-                  l21 + log(prior_amp/4),
-                  l31 + log(prior_amp/4),
-                  l22 + log(prior_bamp/2),
-                  l00 + log(prior_bdel/2)
-                 )
-            ),
-            Z_cnv = matrixStats::logSumExp(
-                c(l20 + log(prior_loh/2),
-                  l10 + log(prior_del/2),
-                  l21 + log(prior_amp/4),
-                  l31 + log(prior_amp/4),
-                  l22 + log(prior_bamp/2),
-                  l00 + log(prior_bdel/2)
-                 )
-            ),
-            p_amp = exp(matrixStats::logSumExp(c(l21 + log(prior_amp/4), l31 + log(prior_amp/4))) - Z),
-            p_amp_sin = exp(l21 + log(prior_amp/4) - Z),
-            p_amp_mul = exp(l31 + log(prior_amp/4) - Z),
-            p_neu = exp(l11 + log(1/2) - Z),
-            p_del = exp(l10 + log(prior_del/2) - Z),
-            p_loh = exp(l20 + log(prior_loh/2) - Z),
-            p_bamp = exp(l22 + log(prior_bamp/2) - Z),
-            p_bdel = exp(l22 + log(prior_bdel/2) - Z),
-            Z_n = l11 + log(1/2),
-            logBF = Z_cnv - Z_n,
-            logBF_x = Z_cnv_x - Z_n_x,
-            logBF_y = Z_cnv_y - Z_n_y,
-            p_cnv = exp(Z_cnv - Z),
-            p_n = exp(Z_n - Z),
+        ) %>%
+        compute_posterior() %>%
+        mutate(
             p_cnv_x = 1/(1+exp(-logBF_x)),
             p_cnv_y = 1/(1+exp(-logBF_y))
         ) %>%
         rowwise() %>%
         mutate(
             cnv_state_mle = c('neu', 'loh', 'del', 'amp', 'amp', 'bamp')[which.max(c(l11, l20, l10, l21, l31, l22))],
-            cn_mle = c('11', '20', '10', '21', '31', '22')[which.max(c(l11, l20, l10, l21, l31, l22))]
+            cnv_state_map = c('neu', 'loh', 'del', 'amp', 'bamp')[which.max(c(p_neu, p_loh, p_del, p_amp, p_bamp))],
         ) %>%
         ungroup()
 
@@ -1236,7 +1204,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
     return(joint_post)
 }
 
-test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 50, p_min = 0.95, diploid_chroms = NULL) {
+test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 100, p_min = 0.999, diploid_chroms = NULL) {
 
     log_info('Testing for multi-allelic CNVs ..')
 
@@ -1309,31 +1277,44 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
     return(list('segs_consensus' = segs_consensus, 'bulks' = bulks, 'segs_multi' = segs_multi))
 }
 
-expand_states = function(joint_post, segs_consensus) {
+expand_states = function(sc_post, segs_consensus) {
 
     if (any(segs_consensus$n_states > 1)) {
-        joint_post = joint_post %>%
+        sc_post = sc_post %>%
             left_join(
                 segs_consensus %>% select(seg = seg_cons, cnv_states, n_states),
                 by = 'seg'
             ) %>%
             reshape2::melt(
-                measure.vars = c('p_amp', 'p_loh', 'p_del', 'p_bamp'),
+                measure.vars = c('p_amp', 'p_loh', 'p_del', 'p_bamp', 'p_bdel'),
                 variable.name = 'cnv_state_expand',
                 value.name = 'p_cnv_expand'
             ) %>%
             mutate(
-                cnv_state_expand = c('p_amp' = 'amp', 'p_loh' = 'loh', 'p_del' = 'del', 'p_bamp' = 'bamp')[cnv_state_expand]
+                cnv_state_expand = c('p_amp' = 'amp', 'p_loh' = 'loh', 'p_del' = 'del', 'p_bamp' = 'bamp', 'p_bdel' = 'bdel')[cnv_state_expand]
             ) %>%
             rowwise() %>%
             filter(cnv_state_expand %in% cnv_states) %>%
             ungroup() %>%
             mutate(
-                seg_cnv = ifelse(n_states > 1, paste0(seg, '_', cnv_state_expand), seg),
+                seg = ifelse(n_states > 1, paste0(seg, '_', cnv_state_expand), seg),
                 p_cnv = ifelse(n_states > 1, p_cnv_expand, p_cnv),
                 cnv_state = ifelse(n_states > 1, cnv_state_expand, cnv_state)
-            )
+            ) %>%
+            mutate(
+                Z_cnv = case_when(
+                    n_states <= 1 ~ Z_cnv,
+                    cnv_state == 'loh' ~ Z_loh,
+                    cnv_state == 'del' ~ Z_del,
+                    cnv_state == 'bamp' ~ Z_bamp,
+                    cnv_state == 'amp' ~ Z_amp,
+                    cnv_state == 'bdel' ~ Z_bdel
+                )
+            ) %>%
+            ungroup()
+    } else {
+        log_info('No multi-allelic CNVs, skipping ..')
     }
 
-    return(joint_post)
+    return(sc_post)
 }
