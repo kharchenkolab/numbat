@@ -549,6 +549,7 @@ calc_trans_mat = function(t, p_s, w, states_cn, states_phase) {
 
 }
 
+### final model ###
 run_hmm_mv_inhom = function(
     pAD, DP, p_s, Y_obs = 0, lambda_ref = 0, d_total = 0, theta_min = 0.08, theta_neu = 0,
     bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), 
@@ -723,7 +724,7 @@ run_hmm_mv_inhom2 = function(
                 get_trans_probs(
                     cn_from = 'neu', phase_from = 'up',
                     cn_to = states_cn[to], phase_to = states_phase[to],
-                    t = t * 100, p_s = 0.5, w)
+                    t = min(t * 100, 0.5), p_s = 0.5, w)
             })
     }
         

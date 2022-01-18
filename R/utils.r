@@ -446,7 +446,7 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
 fit_switch_prob = function(y, d) {
     
     eta = function(d, lambda, min_p = 1e-10) {
-        pmax(switch_prob(d, lambda), min_p)
+        switch_prob_cm(d, lambda)
     }
 
     l_lambda = function(y, d, lambda) {
@@ -462,6 +462,43 @@ fit_switch_prob = function(y, d) {
     )
     
     return(fit@coef)
+}
+
+switch_prob_mle = function(pAD, DP, d, theta, gamma = 20) {
+
+    fit = optim(
+            par = 1, 
+            function(lambda) {
+                p_s = switch_prob_cm(d, lambda)
+                -calc_allele_lik(pAD, DP, p_s, theta, gamma)
+            },
+            method = 'L-BFGS-B',
+            lower = 0,
+            hessian = TRUE
+        )
+    
+    return(fit)
+    
+}
+
+switch_prob_mle2 = function(pAD, DP, d, gamma = 20) {
+
+    fit = optim(
+            par = c(1, 0.4), 
+            function(params) {
+                lambda = params[1]
+                theta = params[2]
+                p_s = switch_prob_cm(d, lambda)
+                -calc_allele_lik(pAD, DP, p_s, theta, gamma)
+            },
+            method = 'L-BFGS-B',
+            lower = c(0,0),
+            upper = c(NA,0.499),
+            hessian = TRUE
+        )
+    
+    return(fit)
+    
 }
 
 annot_cm = function(bulk, genetic_map) {
@@ -700,7 +737,7 @@ analyze_bulk = function(
     # update transition probablity
     bulk = bulk %>% mutate(p_s = switch_prob_cm(inter_snp_cm, lambda = lambda))
 
-    if (exp_only) {
+    if (exp_only | allele_only) {
         bulk$diploid = TRUE
     } else if (!is.null(diploid_chroms)) {
         log_info(glue('Using diploid chromosomes given: {paste0(diploid_chroms, collapse = ",")}'))
@@ -788,6 +825,7 @@ analyze_bulk = function(
             )) %>%
             mutate(state_post = str_remove(state_post, '_NA'))
 
+        # note that this uses restest cnv states
         bulk = bulk %>% classify_alleles()
 
         bulk = annot_theta_roll(bulk)
@@ -860,13 +898,6 @@ classify_alleles = function(Obs) {
                 p_up < 0.5 & GT == '1|0' ~ 'minor',
                 p_up < 0.5 & GT == '0|1' ~ 'major'
             ),
-            # mpc = HiddenMarkov::Viterbi(get_allele_hmm(pAD, DP, p_s, theta = unique(theta_mle), gamma = 20))$y,
-            # haplo_mpc = case_when(
-            #     mpc == 1 & GT == '1|0' ~ 'major',
-            #     mpc == 1 & GT == '0|1' ~ 'minor',
-            #     mpc == 2 & GT == '1|0' ~ 'minor',
-            #     mpc == 2 & GT == '0|1' ~ 'major'
-            # ),
             haplo_naive = ifelse(AR < 0.5, 'minor', 'major')
         ) %>%
         ungroup() %>%
@@ -919,7 +950,7 @@ annot_segs = function(Obs) {
             arrange(CHROM, snp_index) %>%
             mutate(boundary = c(0, cnv_state[2:length(cnv_state)] != cnv_state[1:(length(cnv_state)-1)])) %>%
             group_by(CHROM) %>%
-            mutate(seg = paste0(CHROM, '_', (cumsum(boundary)+1))) %>%
+            mutate(seg = paste0(CHROM, letters[cumsum(boundary)+1])) %>%
             arrange(CHROM) %>%
             mutate(seg = factor(seg, unique(seg))) %>%
             ungroup() %>%
@@ -1991,9 +2022,21 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
 
     if (use_pos) {
         marker = 'POS'
+        marker_label = 'Position'
     } else {
         marker = 'snp_index'
+        marker_label = 'SNP index'
     }
+
+    # fix retest states 
+    Obs = Obs %>% 
+        mutate(
+            theta_level = ifelse(str_detect(state_post, '_2'), 2, 1),
+            state_post = ifelse(
+                cnv_state_post %in% c('amp', 'loh', 'del'),
+                ifelse(p_up > 0.5, paste0(cnv_state_post, '_', theta_level, '_', 'up'), paste0(cnv_state_post, '_', theta_level, '_', 'down')),
+                state_post
+        ))
 
     # correct for baseline bias
     if (fc_correct & !allele_only) {
@@ -2026,14 +2069,15 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
         scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 15)) +
         theme_classic() +
         theme(
-            panel.spacing = unit(0, 'mm'),
+            panel.spacing.x = unit(0, 'mm'),
+            panel.spacing.y = unit(1, 'mm'),
             panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
             strip.background = element_blank(),
             axis.text.x = element_blank()
         ) +
         facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
         # scale_x_continuous(expand = expansion(add = 5)) +
-        scale_color_manual(values = cnv_colors, limits = force) +
+        scale_color_manual(values = cnv_colors, limits = force, na.translate = F) +
         guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = FALSE, alpha = FALSE, shape = FALSE) +
         xlab(marker) +
         ylab('')
@@ -2091,6 +2135,8 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
             size = 0.35
         )
     } 
+
+    p = p + xlab(marker_label)
     
     return(p)
 }
@@ -2577,8 +2623,9 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
 #' @export
 plot_sc_joint = function(
         gtree, joint_post, segs_consensus, 
-        cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, 
-        logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, pal_clone = NULL
+        cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
+        logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
+        multi_allelic = FALSE
     ) {
 
     if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
@@ -2592,15 +2639,11 @@ plot_sc_joint = function(
         )
     }
 
-    if ('cnv_state_map' %in% colnames(joint_post)) {
-        joint_post = joint_post %>% mutate(cnv_state = cnv_state_map)
-    }
-
     gtree = mark_tumor_lineage(gtree)
 
     gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
 
-    # tree visualization
+    # plot phylogeny 
     p_tree = gtree %>% 
             to_phylo() %>%
             ggtree(ladderize = T, size = branch_width) +
@@ -2619,8 +2662,7 @@ plot_sc_joint = function(
 
     cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
 
-    # cell heatmap
-    D = joint_post %>% 
+    joint_post = joint_post %>% 
             inner_join(
                 segs_consensus %>% select(seg = seg_cons, CHROM, seg_start, seg_end, n_states, cnv_states),
                 by = c('seg', 'CHROM')
@@ -2628,6 +2670,38 @@ plot_sc_joint = function(
             mutate(cell = factor(cell, cell_order)) %>%
             mutate(cell_index = as.integer(droplevels(cell))) 
 
+    if (multi_allelic) {
+        joint_post = joint_post %>% mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
+    }
+
+    # add clone lines
+    if (clone_line) {
+
+        leafs = res[[sample]]$gtree %>% 
+                activate(nodes) %>% 
+                filter(leaf) %>%
+                as.data.frame()
+
+        clones = unique(leafs$clone)
+        clones = clones[clones != 1]
+
+        clone_indices = sapply(
+            clones,
+            function(c) {                
+                
+                clone_cells = leafs %>% filter(clone == c) %>% pull(name)
+                
+                first_clone_index = which(cell_order %in% clone_cells)[1]
+
+                return(first_clone_index)
+                
+            }
+        )
+    } else {
+        clone_indices = c()
+    }
+
+    # add tumor vs normal line
     tumor_cells = gtree %>% 
         activate(nodes) %>% filter(leaf) %>%
         as.data.frame() %>% 
@@ -2636,15 +2710,17 @@ plot_sc_joint = function(
 
     first_tumor_index = which(cell_order %in% tumor_cells)[1]
 
+    # plot CNVs
     p_segs = ggplot(
-            D %>% mutate(
+            joint_post %>% mutate(
                 cnv_state = ifelse(cnv_state == 'neu', NA, cnv_state),
-                logBF = pmax(pmin(logBF, logBF_max), logBF_min)
+                logBF = pmax(pmin(logBF, logBF_max), logBF_min),
+                p_cnv = pmax(p_cnv, p_min),
             )
         ) +
         theme_classic() +
         geom_segment(
-            aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state, alpha = logBF),
+            aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state, alpha = p_cnv),
             size = size
         ) +
         geom_segment(
@@ -2652,7 +2728,8 @@ plot_sc_joint = function(
             aes(x = seg_start, xend = seg_end, y = 1, yend = 1),
             data = segs_consensus, size = 0, color = 'white', alpha = 0
         ) +
-        geom_hline(yintercept = first_tumor_index, color = 'royalblue', size = 0.5, linetype = 'dashed') +
+        geom_hline(yintercept = c(first_tumor_index, clone_indices), color = 'royalblue', size = 0.5, linetype = 'dashed') +
+        # geom_hline(yintercept = c(first_tumor_index, clone_indices), color = 'gray', size = 0.5, linetype = 'solid') +
         theme(
             panel.spacing = unit(0, 'mm'),
             panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
@@ -2674,6 +2751,7 @@ plot_sc_joint = function(
         ) +
         scale_color_manual(
             values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = cnv_colors[['bamp']], 'loh' = 'darkgreen', 'bdel' = 'blue'),
+            labels = c('amp' = 'AMP', 'del' = 'DEL', 'bamp' = 'BAMP', 'loh' = 'CNLoH', 'bdel' = 'BDEL'),
             limits = force,
             na.translate = F
         )
@@ -2685,12 +2763,13 @@ plot_sc_joint = function(
         mutate(
             GT = ifelse(compartment == 'normal', '', GT),
             GT = factor(GT),
+            clone = ifelse(compartment == 'normal', 1, clone),
             clone = as.factor(clone)
         ) %>%
         {setNames(.$clone, .$name)}
 
     if (is.null(pal_clone)) {
-        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 5, 'Spectral'))
+        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 10, 'Spectral'))
         pal_clone = c('gray', getPalette(length(unique(clone_dict))))
     }
 
@@ -2699,8 +2778,8 @@ plot_sc_joint = function(
             annot = unname(clone_dict)
         ) %>%
         mutate(cell = factor(cell, cell_order)) %>%
-        annot_bar(transpose = T, legend = clone_legend) +
-        scale_fill_manual(values =pal_clone)
+        annot_bar(transpose = T, legend = clone_legend, legend_title = 'Clone') +
+        scale_fill_manual(values = pal_clone)
 
     # external annotation
     if (!is.null(cell_dict)) {
@@ -2711,7 +2790,7 @@ plot_sc_joint = function(
             ) %>%
             filter(cell %in% joint_post$cell) %>%
             mutate(cell = factor(cell, cell_order)) %>%
-            annot_bar(transpose = T)
+            annot_bar(transpose = T, legend_title = 'Annotation')
 
         if (clone_bar) {
             (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(1, 0.25, 0.25, 15), guides = 'collect')
@@ -2725,7 +2804,13 @@ plot_sc_joint = function(
     }
 }
 
-annot_bar = function(D, transpose = FALSE, legend = TRUE) {
+rename_seg = function(seg) {
+    chr = str_split(seg, '_')[[1]][1]
+    id = as.integer(str_split(seg, '_')[[1]][2])
+    paste0(chr, letters[id])
+}
+
+annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '') {
     p = ggplot(
         D,
         aes(x = cell, y = '', fill = annot)
@@ -2751,7 +2836,7 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE) {
     }
 
     if (legend) {
-        p = p + guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = NULL))
+        p = p + guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = legend_title))
     } else {
         p = p + guides(fill = 'none')
     }
@@ -2847,7 +2932,8 @@ plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50) {
             panel.spacing = unit(0, 'mm'),
             panel.border = element_rect(size = 0.5, color = 'wheat4', fill = NA)
         ) +
-        facet_grid(cluster~CHROM, scale = 'free', space = 'free')
+        facet_grid(cluster~CHROM, scale = 'free', space = 'free') +
+        guides(fill = guide_legend(title = 'Expression\nmagnitude'))
     
     (p_tree | p_heatmap) + plot_layout(widths = c(1,10))
     # p_heatmap

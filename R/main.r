@@ -30,7 +30,7 @@ numbat_subclone = function(
         out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 1e5, 
         min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
         ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        exclude_normal = FALSE, max_entropy = 0.5, skip_nj = FALSE, eps = 1e-5, multi_allelic = TRUE,
+        exclude_normal = FALSE, max_entropy = 0.6, skip_nj = FALSE, eps = 1e-5, multi_allelic = TRUE,
         min_LLR = 50, alpha = 1e-4, plot = TRUE
     ) {
     
@@ -610,7 +610,7 @@ run_group_hmms = function(
 
 #' Extract consensus CNV segments
 #' @export
-get_segs_consensus = function(bulks, LLR_min = 20, max_overlap = 0.45) {
+get_segs_consensus = function(bulks, LLR_min = 20, min_overlap = 0.45) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -654,7 +654,7 @@ get_segs_consensus = function(bulks, LLR_min = 20, max_overlap = 0.45) {
     
     segs_consensus = segs_filtered %>% 
         resolve_cnvs(
-            max_overlap = max_overlap
+            min_overlap = min_overlap
         ) %>% 
         fill_neu_segs(segs_neu) %>%
         mutate(cnv_state_post = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post))
@@ -782,7 +782,7 @@ cell_to_clone = function(clones, exp_post, allele_post) {
 #' @param segs_all a dataframe containing info of all CNV segments from multiple samples
 #' @return consensus CNV segments
 #' @export
-resolve_cnvs = function(segs_all, max_overlap = 0.5, debug = FALSE) {
+resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
             
     V = segs_all %>% ungroup() %>% mutate(vertex = 1:n(), .before = 1)
 
@@ -817,7 +817,7 @@ resolve_cnvs = function(segs_all, max_overlap = 0.5, debug = FALSE) {
             frac_overlap_x = len_overlap/len_x,
             frac_overlap_y = len_overlap/len_y
         ) %>%
-        filter(!(frac_overlap_x < max_overlap & frac_overlap_y < max_overlap))
+        filter(!(frac_overlap_x < min_overlap & frac_overlap_y < min_overlap))
 
     G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
 
