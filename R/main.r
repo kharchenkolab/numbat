@@ -63,6 +63,10 @@ numbat_subclone = function(
         glue('{ncol(count_mat)} cells'),
         sep = "\n"
     ))
+    ######## Basic Check ##########
+    if (length(intersect(colnames(count_mat), df_allele$cell)) == 0){
+        stop('Recheck the count_mat and df_allele argumets, no matching cell names')
+    }
 
     ######## Initialization ########
     i = 0
