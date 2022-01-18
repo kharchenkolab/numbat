@@ -80,7 +80,7 @@ list(cmds) %>% fwrite(script, sep = '\n')
 # exit()
 
 system(glue('chmod +x {script}'))
-# system2(script, stdout = glue("{outdir}/pileup.log"))
+#system2(script, stdout = glue("{outdir}/pileup.log"))
 
 ## VCF creation
 cat('Creating VCFs\n')
