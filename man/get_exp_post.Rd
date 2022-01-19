@@ -9,11 +9,10 @@ get_exp_post(
   count_mat,
   gtf_transcript,
   lambdas_ref = NULL,
-  alpha = NULL,
-  beta = NULL,
+  diploid_chroms = NULL,
   use_loh = NULL,
   ncores = 30,
-  verbose = T,
+  verbose = TRUE,
   debug = F
 )
 }

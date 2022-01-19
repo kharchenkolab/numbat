@@ -15,6 +15,7 @@ run_group_hmms(
   diploid_chroms = NULL,
   allele_only = FALSE,
   retest = TRUE,
+  run_hmm = TRUE,
   ncores = NULL,
   verbose = FALSE,
   debug = FALSE

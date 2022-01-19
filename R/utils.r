@@ -3166,3 +3166,9 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
     p_cnv/p_annot/p_markers + plot_layout(heights = c(0.5,0.5,10), guides = 'collect')
     
 }
+
+do_plot = function(p, f, w, h, out_dir = '~/figures') {
+    ggsave(filename = paste0(out_dir, '/', f, '.png'), plot = p, width = w, height = h, device = 'png', dpi = 300)
+    options(repr.plot.width = w, repr.plot.height = h, repr.plot.res = 300)
+    print(p)
+}
