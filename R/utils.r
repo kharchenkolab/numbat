@@ -2063,7 +2063,8 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
                 shape = str_detect(state_post, '_2'),
                 alpha = str_detect(state_post, '_2')
             ),
-            size = dot_size
+            size = dot_size,
+            na.rm = TRUE
         ) +
         scale_alpha_discrete(range = c(dot_alpha, 1)) +
         scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 15)) +
