@@ -270,7 +270,7 @@ numbat_subclone = function(
 
         UPGMA_score = score_tree(treeUPGMA, as.matrix(P))$l_tree
         tree_init = treeUPGMA
-        # note that dist_mat gets modified
+        # note that dist_mat gets modified by NJ
         if(!skip_nj){
             treeNJ = phangorn::NJ(dist_mat) %>%
                 ape::root(outgroup = 'outgroup') %>%
@@ -331,20 +331,23 @@ numbat_subclone = function(
 
         log_info('Found {length(normal_cells)} normal cells..')
 
+        # form cell groupings
         clones = clone_post %>% split(.$clone_opt) %>%
             purrr::map(function(c){list(sample = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
 
         saveRDS(clones, glue('{out_dir}/clones_{i}.rds'))
         clones = purrr::keep(clones, function(x) x$size > min_cells)
 
-        subtrees = lapply(1:vcount(G_m), function(v) {
+        clone_to_node = setNames(V(G_m)$id, V(G_m)$clone)
+
+        subtrees = lapply(1:vcount(G_m), function(c) {
             G_m %>%
             as_tbl_graph %>% 
-            mutate(rank = dfs_rank(root = v)) %>%
+            mutate(rank = dfs_rank(root = clone_to_node[[as.character(c)]])) %>%
             filter(!is.na(rank)) %>%
             data.frame() %>%
             inner_join(clone_post, by = c('GT' = 'GT_opt')) %>%
-            {list(sample = v, members = unique(.$GT), clones = unique(.$clone), cells = .$cell, size = length(.$cell))}
+            {list(sample = c, members = unique(.$GT), clones = unique(.$clone), cells = .$cell, size = length(.$cell))}
         })
 
         saveRDS(subtrees, glue('{out_dir}/subtrees_{i}.rds'))

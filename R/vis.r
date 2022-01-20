@@ -1157,6 +1157,12 @@ plot_sc_joint = function(
 
     first_tumor_index = which(cell_order %in% tumor_cells)[1]
 
+    chrom_labeller <- function(chr){
+        # chr[as.integer(chr) %% 2 == 0] = ''
+        chr[chr %in% c(19, 21, 22)] = ''
+        return(chr)
+    }
+
     # plot CNVs
     p_segs = ggplot(
             joint_post %>% mutate(
@@ -1189,7 +1195,7 @@ plot_sc_joint = function(
         ) +
         scale_x_continuous(expand = expansion(0)) +
         scale_y_continuous(expand = expansion(0)) +
-        facet_grid(.~CHROM, space = 'free', scale = 'free') +
+        facet_grid(.~CHROM, space = 'free', scale = 'free', labeller = labeller(CHROM = chrom_labeller)) +
         scale_alpha_continuous(range = c(0,1)) +
         guides(
             alpha = 'none',

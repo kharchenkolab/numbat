@@ -13,7 +13,9 @@ LinkingTo: Rcpp
 NeedsCompilation: yes
 Imports:
     dplyr,
+    reshape2,
     tidyr,
+    gtools,
 	data.table,
     logger,
 	stringr,
