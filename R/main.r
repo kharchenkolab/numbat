@@ -705,7 +705,7 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
         mutate(cnv_state = tidyr::replace_na(cnv_state, 'neu')) %>%
         arrange(CHROM, seg_start) %>%
         group_by(CHROM) %>%
-        mutate(seg_cons = paste0(CHROM, '_', letters[1:n()])) %>%
+        mutate(seg_cons = paste0(CHROM, letters[1:n()])) %>%
         ungroup() %>%
         mutate(CHROM = factor(CHROM, 1:22)) %>%
         arrange(CHROM)
