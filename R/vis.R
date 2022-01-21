@@ -1072,7 +1072,7 @@ plot_sc_joint = function(
         gtree, joint_post, segs_consensus, 
         cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
         logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
-        multi_allelic = FALSE
+        multi_allelic = FALSE, tree_height = 1
     ) {
 
     if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
@@ -1103,7 +1103,9 @@ plot_sc_joint = function(
                 axis.line.y = element_blank(),
                 axis.ticks.y = element_blank(),
                 # axis.text.y = element_text(size = 5)
-                axis.text.y = element_blank()
+                axis.text.y = element_blank(),
+                panel.background = element_rect(fill = "transparent",colour = NA),
+                plot.background = element_rect(fill = "transparent", color = NA)
             ) +
             guides(color = F)
 
@@ -1191,7 +1193,9 @@ plot_sc_joint = function(
             axis.title = element_blank(),
             axis.ticks = element_blank(),
             plot.margin = margin(0,0,5,0, unit = 'mm'),
-            axis.line = element_blank()
+            axis.line = element_blank(),
+            # panel.background = element_rect(fill = "transparent",colour = NA),
+            # plot.background = element_rect(fill = "transparent", color = NA)
         ) +
         scale_x_continuous(expand = expansion(0)) +
         scale_y_continuous(expand = expansion(0)) +
@@ -1246,13 +1250,13 @@ plot_sc_joint = function(
             annot_bar(transpose = T, legend_title = 'Annotation')
 
         if (clone_bar) {
-            (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(1, 0.25, 0.25, 15), guides = 'collect')
+            (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')
         } else {
-            (p_tree | p_annot | p_segs) + plot_layout(widths = c(1, 0.25, 15), guides = 'collect')
+            (p_tree | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 15), guides = 'collect')
         }
     } else if (clone_bar) {
-        (p_tree | p_clone | p_segs) + plot_layout(widths = c(1, 0.25, 15), guides = 'collect')
+        (p_tree | p_clone | p_segs) + plot_layout(widths = c(tree_height, 0.25, 15), guides = 'collect')
     } else {
-        (p_tree | p_segs) + plot_layout(widths = c(1, 15), guides = 'collect')
+        (p_tree | p_segs) + plot_layout(widths = c(tree_height, 15), guides = 'collect')
     }
 }
