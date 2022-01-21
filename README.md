@@ -54,7 +54,7 @@ devtools::install_local("./Numbat")
 ```
 
 # Usage
-1. Run the preprocessing script (`pileup_and_phase.r`): collect allele data and phase SNPs
+1. Run the preprocessing script (`pileup_and_phase.R`): collect allele data and phase SNPs
 ```
 usage: pileup_and_phase.r [-h] --label LABEL --samples SAMPLES --bams BAMS
                           --barcodes BARCODES --gmap GMAP --snpvcf SNPVCF
