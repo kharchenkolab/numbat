@@ -10,6 +10,32 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// allChildrenCPP
+List allChildrenCPP(const IntegerMatrix orig);
+RcppExport SEXP _numbat_allChildrenCPP(SEXP origSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const IntegerMatrix >::type orig(origSEXP);
+    rcpp_result_gen = Rcpp::wrap(allChildrenCPP(orig));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cppdbbinom
+NumericVector cppdbbinom(const NumericVector& x, const NumericVector& size, const NumericVector& alpha, const NumericVector& beta, const bool& log_prob);
+RcppExport SEXP _numbat_cppdbbinom(SEXP xSEXP, SEXP sizeSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP log_probSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type size(sizeSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type log_prob(log_probSEXP);
+    rcpp_result_gen = Rcpp::wrap(cppdbbinom(x, size, alpha, beta, log_prob));
+    return rcpp_result_gen;
+END_RCPP
+}
 // poilog2
 NumericVector poilog2(NumericVector x, NumericVector y, double my1, double my2, double sig1, double sig2, double ro, int nrN);
 RcppExport SEXP _numbat_poilog2(SEXP xSEXP, SEXP ySEXP, SEXP my1SEXP, SEXP my2SEXP, SEXP sig1SEXP, SEXP sig2SEXP, SEXP roSEXP, SEXP nrNSEXP) {
@@ -57,6 +83,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_numbat_allChildrenCPP", (DL_FUNC) &_numbat_allChildrenCPP, 1},
+    {"_numbat_cppdbbinom", (DL_FUNC) &_numbat_cppdbbinom, 5},
     {"_numbat_poilog2", (DL_FUNC) &_numbat_poilog2, 8},
     {"_numbat_poilog1", (DL_FUNC) &_numbat_poilog1, 4},
     {"_numbat_CgetQ", (DL_FUNC) &_numbat_CgetQ, 3},
