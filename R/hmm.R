@@ -1,14 +1,40 @@
 #' @export
 dbbinom <- function(x, size, alpha = 1, beta = 1, log = FALSE) {
-    extraDistr:::cpp_dbbinom(x, size, alpha, beta, log[1L])
+    cppdbbinom(x, size, alpha, beta, log[1L])
 }
+
+
+#' @keywords internal  
+makedensity <- function(distn){
+    ## https://github.com/cran/HiddenMarkov/blob/master/R/makedensity.R
+    dname <- paste("d", distn[1], sep="")
+    x <- paste("function(x, pm, pn=NULL, log=FALSE)
+         do.call(\"", dname, "\", c(list(x=x), pm, pn,", sep="")
+    if (distn[1]=="glm") x <- paste(x, " list(family=\"", distn[2],
+         "\", link=\"", distn[3], "\"),", sep="")
+    eval(parse(text=paste(x, " list(log=log)))", sep="")))
+}
+
+
+#' @keywords internal
+getj <- function(x, j){
+    ## https://github.com/cran/HiddenMarkov/blob/master/R/getj.R
+    #   get the jth "row" from a list
+    if (is.null(x)) return(NULL)
+    n <- length(x)
+    for (i in 1:n)
+        x[[i]] <- x[[i]][j]
+    return(x)
+}
+
+
 
 ############ time inhomogenous univariate HMM ############
 
 Viterbi.dthmm.inhom <- function (obj, ...){
 #     print('Solving univariate nonhomogenous markov chain')
     x <- obj$x
-    dfunc <- HiddenMarkov:::makedensity(obj$distn)
+    dfunc <- makedensity(obj$distn)
     n <- length(x)
     m <- nrow(obj$Pi[[1]])
     nu <- matrix(NA, nrow = n, ncol = m)
@@ -17,7 +43,7 @@ Viterbi.dthmm.inhom <- function (obj, ...){
     nu[1, ] <- log(obj$delta) 
 
     if (!is.na(x[1])) {
-        nu[1, ] <- nu[1, ] + dfunc(x=x[1], obj$pm, HiddenMarkov:::getj(obj$pn, 1), log=TRUE)
+        nu[1, ] <- nu[1, ] + dfunc(x=x[1], obj$pm, getj(obj$pn, 1), log=TRUE)
     }
     
     logPi <- lapply(obj$Pi, log)
@@ -26,7 +52,7 @@ Viterbi.dthmm.inhom <- function (obj, ...){
         matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
         nu[i, ] <- apply(matrixnu + logPi[[i]], 2, max)
         if (!is.na(x[i])) {
-            nu[i, ] <- nu[i, ] + dfunc(x=x[i], obj$pm, HiddenMarkov:::getj(obj$pn, i), log=TRUE)
+            nu[i, ] <- nu[i, ] + dfunc(x=x[i], obj$pm, getj(obj$pn, i), log=TRUE)
         }
     }
 #     if (any(nu[n, ] == -Inf)) 
@@ -163,14 +189,14 @@ forward_back_allele = function (obj, ...) {
     }
     
     x <- obj$x
-    p_x <- HiddenMarkov:::makedensity(obj$distn)
+    p_x <- makedensity(obj$distn)
     
     m <- nrow(obj$Pi[[1]])
     n <- length(x)
     
     logprob = sapply(1:m, function(k) {
         
-        l_x = p_x(x = x,  HiddenMarkov:::getj(obj$pm, k), obj$pn, log = TRUE)
+        l_x = p_x(x = x,  getj(obj$pm, k), obj$pn, log = TRUE)
         
         l_x[is.na(l_x)] = 0
         
@@ -228,14 +254,14 @@ forward_back_allele = function (obj, ...) {
 likelihood_allele = function (obj, ...) {
         
     x <- obj$x
-    p_x <- HiddenMarkov:::makedensity(obj$distn)
+    p_x <- makedensity(obj$distn)
     
     m <- nrow(obj$Pi[[1]])
     n <- length(x)
     
     logprob = sapply(1:m, function(k) {
         
-        l_x = p_x(x = x,  HiddenMarkov:::getj(obj$pm, k), obj$pn, log = TRUE)
+        l_x = p_x(x = x,  getj(obj$pm, k), obj$pn, log = TRUE)
         
         l_x[is.na(l_x)] = 0
         
@@ -312,10 +338,10 @@ calc_allele_maxlik = function (pAD, DP, p_s, theta, gamma = 20) {
 Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
 
     x <- object$x
-    dfunc <- HiddenMarkov:::makedensity(object$distn)
+    dfunc <- makedensity(object$distn)
     
     x2 <- object$x2
-    dfunc2 <- HiddenMarkov:::makedensity(object$distn2)
+    dfunc2 <- makedensity(object$distn2)
 
     n <- length(x)
     m <- nrow(object$Pi[[1]])
@@ -328,7 +354,7 @@ Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
     
         
     if (!is.na(x[1])) {
-        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, HiddenMarkov:::getj(object$pn, 1), log = TRUE)
+        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, getj(object$pn, 1), log = TRUE)
     }
     
     if (!is.na(x2[1])) {
@@ -350,7 +376,7 @@ Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
         nu[i, ] = apply(matrixnu + logPi[[i]], 2, max)
             
         if (!is.na(x[i])) {
-            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, HiddenMarkov:::getj(object$pn, i), log = TRUE)
+            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, getj(object$pn, i), log = TRUE)
         }
         
         if (!is.na(x2[i])) {
@@ -380,10 +406,10 @@ Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
 Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
 
     x <- object$x
-    dfunc <- HiddenMarkov:::makedensity(object$distn)
+    dfunc <- makedensity(object$distn)
     
     x2 <- object$x2
-    dfunc2 <- HiddenMarkov:::makedensity(object$distn2)
+    dfunc2 <- makedensity(object$distn2)
 
     n <- length(x)
     m <- nrow(object$Pi[,,1])
@@ -395,7 +421,7 @@ Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
     
         
     if (!is.na(x[1])) {
-        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, HiddenMarkov:::getj(object$pn, 1), log = TRUE)
+        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, getj(object$pn, 1), log = TRUE)
     }
     
     if (!is.na(x2[1])) {
@@ -417,7 +443,7 @@ Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
         nu[i, ] = apply(matrixnu + logPi[,,i], 2, max)
             
         if (!is.na(x[i])) {
-            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, HiddenMarkov:::getj(object$pn, i), log = TRUE)
+            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, getj(object$pn, i), log = TRUE)
         }
         
         if (!is.na(x2[i])) {
@@ -454,17 +480,17 @@ Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
 forward.mv.inhom = function (obj, ...) {
     
     x <- obj$x
-    p_x <- HiddenMarkov:::makedensity(obj$distn)
+    p_x <- makedensity(obj$distn)
     
     y <- obj$y
-    p_y <- HiddenMarkov:::makedensity(obj$distn_y)
+    p_y <- makedensity(obj$distn_y)
     
     m <- nrow(obj$Pi[[1]])
     n <- length(x)
     
     logprob = sapply(1:m, function(k) {
         
-        l_x = p_x(x = x,  HiddenMarkov:::getj(obj$pm, k), obj$pn, log = TRUE)
+        l_x = p_x(x = x, getj(obj$pm, k), obj$pn, log = TRUE)
         
         l_x[is.na(l_x)] = 0
         
