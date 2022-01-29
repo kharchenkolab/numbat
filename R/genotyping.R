@@ -61,7 +61,7 @@ get_snps = function(vcf) {
 make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE, chr_prefix = TRUE) {
     
     chr_snps = snps %>%
-        filter(CHROM == chr) %>%
+        filter(CHROM == chr | CHROM == paste0('chr', chr)) %>%
         mutate(
             het = 0.1 <= AR & AR <= 0.9,
             hom_alt = AR == 1 & DP >= 10,
