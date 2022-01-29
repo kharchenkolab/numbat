@@ -7,23 +7,19 @@ Description: Numbat is a computational method that infers copy number variations
 License: MIT
 Encoding: UTF-8
 LazyData: true
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.2
-LinkingTo: Rcpp
-NeedsCompilation: yes
 Imports:
     dplyr,
     reshape2,
     tidyr,
     gtools,
-	data.table,
+    data.table,
     logger,
-	stringr,
-	glue,
-	vcfR,
-	purrr,
-	magrittr,
-	parallel,
+    stringr,
+    glue,
+    vcfR,
+    purrr,
+    magrittr,
+    parallel,
     tidygraph,
     extraDistr,
     igraph,
@@ -44,4 +40,9 @@ Depends:
     R (>= 2.10)
 Suggests: 
     testthat (>= 3.0.0)
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+LinkingTo: Rcpp
+NeedsCompilation: yes
+SystemRequirements: C++11
 Config/testthat/edition: 3

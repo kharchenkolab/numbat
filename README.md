@@ -2,7 +2,7 @@
 
 <img src="logo.png" align="right" width="200">
 
-Numbat is a haplotype-enhanced CNV caller from single-cell transcriptomics data. It integrates gene expression, allele ratio, and haplotype phasing signals from the human population to accurately profile CNVs in single-cells and infer their lineage relationship. 
+Numbat is a haplotype-enhanced CNV caller from single-cell transcriptomics data. It integrates signals from gene expression, allelic ratio, and population haplotype structures to accurately infer allele-specific CNVs in single cells and reconstruct their lineage relationship. 
 
 Numbat can be used to 1. detect allele-specific copy number variations from single-cells 2. differentiate tumor versus normal cells in the tumor microenvironment 3. infer the clonal architecture and evolutionary history of profiled tumors. 
 
@@ -54,9 +54,9 @@ devtools::install_local("./Numbat")
 ```
 
 # Usage
-1. Run the preprocessing script (`pileup_and_phase.r`): collect allele data and phase SNPs
+1. Run the preprocessing script (`pileup_and_phase.R`): collect allele data and phase SNPs
 ```
-usage: pileup_and_phase.r [-h] --label LABEL --samples SAMPLES --bams BAMS
+usage: pileup_and_phase.R [-h] --label LABEL --samples SAMPLES --bams BAMS
                           --barcodes BARCODES --gmap GMAP --snpvcf SNPVCF
                           --paneldir PANELDIR --outdir OUTDIR --ncores NCORES
                           [--UMItag UMITAG] [--cellTAG CELLTAG]
@@ -94,12 +94,8 @@ out = numbat_subclone(
     gtf_transcript, # provided upon loading the package
     genetic_map_hg38, # provided upon loading the package
     min_cells = 20,
-    t = 1e-4,
+    t = 1e-5,
     ncores = 20,
-    init_k = 3,
-    min_LLR = 30,
-    max_cost = 150,
-    alpha = 1e-5,
     plot = TRUE,
     out_dir = '~/results/test'
 )
