@@ -133,8 +133,8 @@ ggtitle('ATC2')
 - `exp_post_{i}.tsv`: single-cell expression posteriors 
 - `allele_post_{i}.tsv`: single-cell allele posteriors 
 - `joint_post_{i}.tsv`: single-cell joint posteriors 
-- `treeUPGMA.rds`: UPGMA tree
-- `treeNJ.rds`: NJ tree
+- `treeUPGMA_{i}.rds`: UPGMA tree
+- `treeNJ_{i}.rds`: NJ tree
 - `tree_list_{i}.rds`: list of candidate phylogeneies in the maximum likelihood tree search
 - `tree_final_{i}.rds`: final tree after simplification
 - `mut_graph_{i}.rds`: final mutation history
