@@ -156,8 +156,8 @@ poilogMLE <- function(n,startVals=c(mu=1,sig=2),nboot=0,zTrunc=TRUE,
   est <- list('par'=c('mu'=fit$par[1],'sig'=exp(fit$par[2])),'p'=fit$par[3],'logLval'=-fit$value,'gof'=NULL,boot=NULL)
   
   if (nboot>0){
-    cat(paste('estimates: mu: ',round(fit$par[1],3),' sig ',round(exp(fit$par[2]),3),sep=''),'\n')
-    cat('********     bootstrapping    ********\n')
+    message(paste('estimates: mu: ',round(fit$par[1],3),' sig ',round(exp(fit$par[2]),3),sep=''),'\n')
+    message('********     bootstrapping    ********\n')
     bMat <- matrix(NA,nboot,3)
     colnames(bMat) <- c('mu','sig2','logLval')
     count <- 0

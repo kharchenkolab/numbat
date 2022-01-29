@@ -4,6 +4,9 @@
 
 using namespace Rcpp;
 
+// refer to:
+// https://github.com/evanbiederstedt/poilogcpp
+
 // Function declarations
 double poilog(int x, double my, double sig);
 double bipoilog(int x, int y, double my1, double my2, double sig1, double sig2, double ro);
