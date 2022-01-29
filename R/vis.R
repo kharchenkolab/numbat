@@ -243,13 +243,14 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
     
 }
 
+#' @keywords internal
 do_plot = function(p, f, w, h, out_dir = '~/figures') {
     ggsave(filename = paste0(out_dir, '/', f, '.png'), plot = p, width = w, height = h, device = 'png', dpi = 300)
     options(repr.plot.width = w, repr.plot.height = h, repr.plot.res = 300)
     print(p)
 }
 
-
+#' @keywords internal
 annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '') {
     p = ggplot(
         D,

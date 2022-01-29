@@ -159,6 +159,7 @@ mark_tumor_lineage = function(gtree) {
     
 }
 
+#' @keywords internal
 parse_scistree = function(out_file, geno, joint_post) {
     
     MLtree = fread(out_file, skip = 'Constructed single cell phylogeny', fill=TRUE, sep = ':', nrow = 1) %>%
@@ -194,6 +195,7 @@ parse_scistree = function(out_file, geno, joint_post) {
     return(list('MLtree' = MLtree, 'cnv_order' = cnv_order, 'G' = Gopt, 'NJtree' = NJtree))
 }
 
+#' @keywords internal
 label_mut_tree = function(G, mut_assign) {
 
     # fix the root node
@@ -229,6 +231,7 @@ label_mut_tree = function(G, mut_assign) {
     return(G)
 }
 
+#' @keywords internal
 get_mut_tree = function(gtree, mut_assign) {
 
     G = gtree %>%
@@ -255,6 +258,7 @@ get_mut_tree = function(gtree, mut_assign) {
 }
 
 # compute site branch likelihood
+#' @keywords internal
 l_s_v = function(node, site, gtree, geno) {
     
     gtree %>%
@@ -391,6 +395,7 @@ mut_to_tree = function(gtree, mut_nodes) {
     return(gtree)
 }
 
+#' @keywords internal
 to_phylo = function(gtree) {
     
     phytree = gtree %>% ape::as.phylo()
@@ -402,6 +407,7 @@ to_phylo = function(gtree) {
     return(phytree)
 }
 
+#' @keywords internal
 label_edges = function(G) {
     
     edge_df = G %>% igraph::as_data_frame('edges') %>%
@@ -422,6 +428,7 @@ label_edges = function(G) {
     return(G)
 }
 
+#' @keywords internal
 transfer_links = function(G) {
     
     edge_df = G %>% igraph::as_data_frame('edges') %>%
@@ -440,6 +447,7 @@ transfer_links = function(G) {
     return(G)
 }
 
+#' @keywords internal
 label_genotype = function(G) {
     id_to_label = igraph::as_data_frame(G, 'vertices') %>% {setNames(.$label, .$id)}
 
@@ -466,6 +474,7 @@ label_genotype = function(G) {
 }
 
 # merge adjacent set of nodes
+#' @keywords internal
 contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
     
     vset = unlist(vset)
@@ -511,6 +520,7 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
     return(G)
     
 }
+
 #' @export
 simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
 
@@ -542,6 +552,7 @@ simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
     return(G)
 }
 
+#' @keywords internal
 get_move_cost = function(muts, node_ori, node_tar, l_matrix) {
 
     if (muts == '') {
@@ -555,6 +566,7 @@ get_move_cost = function(muts, node_ori, node_tar, l_matrix) {
     sum(l_matrix[node_ori, muts] - l_matrix[node_tar, muts])
 }
 
+#' @keywords internal
 get_move_opt = function(G, l_matrix) {
     
     move_opt = G %>% igraph::as_data_frame('edges') %>%
@@ -575,6 +587,7 @@ get_move_opt = function(G, l_matrix) {
 
     return(move_opt)
 }
+
 #' @export
 plot_mut_tree = function(G) {
     

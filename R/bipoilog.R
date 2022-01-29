@@ -1,8 +1,11 @@
-#'@useDynLib numbat
+#'@useDynLib Numbat
 #'@import Rcpp
 NULL
 
 
+## refer to https://github.com/evanbiederstedt/poilogcpp
+
+#' @keywords internal  
 rbipoilog <- function(S,mu1,mu2,sig1,sig2,rho,nu1=1,nu2=1,condS=FALSE,keep0=FALSE){
   
   sim <- function(nr){
@@ -46,7 +49,7 @@ rbipoilog <- function(S,mu1,mu2,sig1,sig2,rho,nu1=1,nu2=1,condS=FALSE,keep0=FALS
   return(simMat)
 }
 
-   
+#' @keywords internal  
 rpoilog <- function(S,mu,sig,nu=1,condS=FALSE,keep0=FALSE){
    
   sim <- function(nr){
@@ -80,6 +83,7 @@ rpoilog <- function(S,mu,sig,nu=1,condS=FALSE,keep0=FALSE){
   return(simVec)
 }
 
+#' @keywords internal  
 dbipoilog <- function(n1,n2,mu1,mu2,sig1,sig2,rho){
   
   if (length(n1)!=length(n2)) stop('n1 and n2 have unequal length')
@@ -98,7 +102,7 @@ dbipoilog <- function(n1,n2,mu1,mu2,sig1,sig2,rho){
 }
 
 #' @export
-dpoilog <- function(x,mu,sig, log=F){
+dpoilog <- function(x, mu, sig, log=FALSE){
   if (!(length(x) == length(mu) & length(x) == length(sig))) stop('All parameters must be same length') 
   if (any((x[x!=0]/trunc(x[x!=0]))!=1)) stop('all x must be integers')
   if (any(x<0)) stop('one or several values of x are negative')
@@ -119,6 +123,7 @@ dpoilog <- function(x,mu,sig, log=F){
   }
 }
 
+#' @keywords internal  
 poilogMLE <- function(n,startVals=c(mu=1,sig=2),nboot=0,zTrunc=TRUE,
                      method='BFGS',control=list(maxit=1000)){
   
@@ -179,7 +184,7 @@ poilogMLE <- function(n,startVals=c(mu=1,sig=2),nboot=0,zTrunc=TRUE,
 }
 
 
-
+#' @keywords internal  
 bipoilogMLE <- function(n1,n2=NULL,startVals=c(mu1=1,mu2=1,sig1=2,sig2=2,rho=0.5),
                        nboot=0,zTrunc=TRUE,file=NULL,
                        method='BFGS',control=list(maxit=1000)){

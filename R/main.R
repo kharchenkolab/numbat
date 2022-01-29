@@ -15,9 +15,10 @@
 #' @import ggtree
 #' @import ggraph
 #' @import patchwork
-#' @useDynLib numbat
+#' @useDynLib Numbat
+NULL
 
-#' @description Main function to decompose tumor subclones
+#' Main function to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe of allele counts per cell, produced by preprocess_allele
@@ -456,6 +457,7 @@ numbat_subclone = function(
 }
 
 #' Run smoothed expression-based hclust
+#' @keywords internal
 exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F, k = 5, ncores = 10, verbose = T) {
 
     if (multi_ref) {
@@ -1246,6 +1248,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
     return(joint_post)
 }
 
+#' @keywords internal
 test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 100, p_min = 0.999, diploid_chroms = NULL) {
 
     log_info('Testing for multi-allelic CNVs ..')
@@ -1319,6 +1322,7 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
     return(list('segs_consensus' = segs_consensus, 'bulks' = bulks, 'segs_multi' = segs_multi))
 }
 
+#' @keywords internal
 expand_states = function(sc_post, segs_consensus) {
 
     if (any(segs_consensus$n_states > 1)) {

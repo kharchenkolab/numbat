@@ -195,6 +195,7 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
 }
 
 
+#' @keywords internal
 Modes <- function(x) {
   ux <- unique(x)
   tab <- tabulate(match(x, ux))
@@ -437,12 +438,14 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
 }
 
 # phase switch probablity as a function of genetic distance
+#' @keywords internal
 switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
     p = (1-exp(-2*lambda*d))/2
     p = pmax(p, min_p)
     p = ifelse(is.na(d), 0, p)
 }
 
+#' @keywords internal
 fit_switch_prob = function(y, d) {
     
     eta = function(d, lambda, min_p = 1e-10) {
@@ -464,6 +467,7 @@ fit_switch_prob = function(y, d) {
     return(fit@coef)
 }
 
+#' @keywords internal
 switch_prob_mle = function(pAD, DP, d, theta, gamma = 20) {
 
     fit = optim(
@@ -481,6 +485,7 @@ switch_prob_mle = function(pAD, DP, d, theta, gamma = 20) {
     
 }
 
+#' @keywords internal
 switch_prob_mle2 = function(pAD, DP, d, gamma = 20) {
 
     fit = optim(
@@ -501,6 +506,7 @@ switch_prob_mle2 = function(pAD, DP, d, gamma = 20) {
     
 }
 
+#' @keywords internal
 annot_cm = function(bulk, genetic_map) {
 
     bulk = bulk %>% ungroup()
@@ -913,6 +919,7 @@ classify_alleles = function(Obs) {
     return(Obs)
 }
 
+#' @keywords internal
 annot_theta_roll = function(Obs) {   
 
     Obs = Obs %>% 
@@ -943,6 +950,7 @@ annot_theta_roll = function(Obs) {
     return(Obs)
 }
 
+#' @keywords internal
 annot_segs = function(Obs) {
 
     Obs = Obs %>% 
@@ -968,6 +976,7 @@ annot_segs = function(Obs) {
     return(Obs)
 }
 
+#' @keywords internal
 annot_haplo_segs = function(Obs) {
 
     Obs = Obs %>% 
@@ -991,6 +1000,7 @@ annot_haplo_segs = function(Obs) {
     return(Obs)
 }
 
+#' @keywords internal
 smooth_segs = function(bulk, min_genes = 10) {
     bulk %>% group_by(seg) %>%
         mutate(
@@ -1043,6 +1053,7 @@ annot_consensus = function(bulk, segs_consensus) {
     return(bulk)
 }
 
+#' @keywords internal
 simes_p = function(p.vals, n_dim) {
     n_dim * min(sort(p.vals)/seq_along(p.vals))
 }
@@ -1251,6 +1262,7 @@ find_common_diploid = function(
     return(list('bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'test_dat' = test_dat, 'FC' = FC, 'cliques' = cliques))
 }
 
+#' @keywords internal
 get_segs_neu = function(bulks_all) {
     segs_neu = bulks_all %>% filter(cnv_state == "neu") %>%
         group_by(sample, seg, CHROM) %>% 
@@ -1268,6 +1280,7 @@ get_segs_neu = function(bulks_all) {
 }
 
 # get all internal nodes, for cluster tree
+#' @keywords internal
 get_internal_nodes = function(den, node) {
 
     membership = data.frame(
@@ -1294,10 +1307,12 @@ get_internal_nodes = function(den, node) {
     return(rbind(membership, membership_l, membership_r))
 }
 
+#' @keywords internal
 phi_hat_seg = function(y_vec, lambda_vec, depth) {
     sum(y_vec)/(sum(lambda_vec) * depth)
 }
 
+#' @keywords internal
 phi_hat_roll = function(y_vec, lambda_vec, depth, h) {
     n = length(y_vec)
     sapply(
@@ -1310,12 +1325,14 @@ phi_hat_roll = function(y_vec, lambda_vec, depth, h) {
 }
 
 # homoskd
+#' @keywords internal
 phi_hat_lnpois = function(Y_obs, lambda_ref, d, mu, sig) {
     logFC = log((Y_obs/d)/lambda_ref)
     exp(mean(logFC - mu))
 }
 
 # heterskd generalization
+#' @keywords internal
 phi_hat_lnpois = function(Y_obs, lambda_ref, d, mu, sig) { 
         
     if (length(mu) == 1 & length(sig) == 1) {
@@ -1329,6 +1346,7 @@ phi_hat_lnpois = function(Y_obs, lambda_ref, d, mu, sig) {
     exp(sum((logFC - mu) * weights)/sum(weights))
 }
 
+#' @keywords internal
 phi_hat_lnpois_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
     n = length(Y_obs)
     
@@ -1346,7 +1364,7 @@ phi_hat_lnpois_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
     )
 }
 
-
+#' @keywords internal
 theta_hat_seg = function(major_count, minor_count) {
     major_total = sum(major_count)
     minor_total = sum(minor_count)
@@ -1354,6 +1372,7 @@ theta_hat_seg = function(major_count, minor_count) {
     return(MAF - 0.5)
 }
 
+#' @keywords internal
 theta_hat_roll = function(major_count, minor_count, h) {
     n = length(major_count)
     sapply(
@@ -1366,6 +1385,7 @@ theta_hat_roll = function(major_count, minor_count, h) {
 }
 
 # vectorized version
+#' @keywords internal
 phi_hat_seg_sc = function(y_mat, lambda_total, d_vec) {
     colSums(y_mat)/(lambda_total * d_vec)
 }
@@ -1404,7 +1424,7 @@ calc_phi_mle = function(Y_obs, lambda_ref, d, alpha, beta, lower = 0.2, upper = 
     return(res@coef)
 }
 
-
+#' @keywords internal
 calc_phi_mle_loglink = function(Y_obs, lambda_ref, d, alpha, beta) {
     
     if (length(Y_obs) == 0) {
@@ -1422,6 +1442,7 @@ calc_phi_mle_loglink = function(Y_obs, lambda_ref, d, alpha, beta) {
     return(res@coef)
 }
 
+#' @keywords internal
 phi_mle_roll = function(Y_obs, lambda_ref, alpha, beta, d_obs, h) {
     n = length(Y_obs)
     sapply(
@@ -1433,6 +1454,7 @@ phi_mle_roll = function(Y_obs, lambda_ref, alpha, beta, d_obs, h) {
     )
 }
 
+#' @keywords internal
 l_bbinom = function(AD, DP, alpha, beta) {
     sum(dbbinom(AD, DP, alpha, beta, log = TRUE))
 }
@@ -1480,6 +1502,7 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
 }
 
 # Poisson LogNormal model
+#' @keywords internal
 l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
     if (any(sig <= 0)) {stop(glue('negative sigma. value: {sig}'))}
     if (length(sig) == 1) {sig = rep(sig, length(Y_obs))}
@@ -1507,6 +1530,7 @@ fit_lnpois = function(Y_obs, lambda_ref, d, approx = F) {
     return(fit)
 }
 
+#' @keywords internal
 calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, upper = 10) {
     
     if (length(Y_obs) == 0) {
@@ -1523,6 +1547,7 @@ calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, uppe
     
 }
 
+#' @keywords internal
 binary_entropy = function(p) {
     H = -p*log2(p)-(1-p)*log2(1-p)
     H[is.na(H)] = 0
@@ -1620,6 +1645,7 @@ retest_cnv = function(bulk, exp_model = 'lnpois', gamma = 20, allele_only = FALS
     return(segs_post)
 }
 
+#' @keywords internal
 approx_lik_ar = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 0.25, gamma = 20) {
     
     if (length(pAD) <= 10) {
@@ -1645,7 +1671,7 @@ approx_lik_ar = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 0.2
     return(tibble('theta_mle' = mu, 'theta_sigma' = sigma))
 }
 
-
+#' @keywords internal
 approx_maxlik_ar = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 0.25, gamma = 20) {
     
     if (length(pAD) <= 10) {
@@ -1671,6 +1697,7 @@ approx_maxlik_ar = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 
     return(tibble('theta_mle' = mu, 'theta_sigma' = sigma, 'l_max' = -fit$value))
 }
 
+#' @keywords internal
 approx_lik_exp = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, model = 'lnpois', lower = 0.2, upper = 10, start = 1) {
     
     if (length(Y_obs) == 0) {
@@ -1704,11 +1731,10 @@ approx_lik_exp = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = 
         sd = 0
     }
 
-    
-    
     return(tibble('phi_mle' = mean, 'phi_sigma' = sd))
 }
 
+#' @keywords internal
 approx_post_exp = function(Y_obs, lambda_ref, d, alpha, beta, sigma_0, lower = 0.2, upper = 10, start = 1) {
     
     if (length(Y_obs) == 0) {
@@ -1734,6 +1760,7 @@ approx_post_exp = function(Y_obs, lambda_ref, d, alpha, beta, sigma_0, lower = 0
     return(tibble('phi_map' = mu, 'phi_sigma' = sigma))
 }
 
+#' @keywords internal
 pnorm.range = function(lower, upper, mu, sd) {
     if (sd == 0) {
         return(1)
@@ -1742,6 +1769,7 @@ pnorm.range = function(lower, upper, mu, sd) {
 }
 
 # for a cell tree
+#' @keywords internal
 get_internal_nodes_sc = function(den, node, labels) {
 
     membership = data.frame(
@@ -1772,6 +1800,7 @@ get_internal_nodes_sc = function(den, node, labels) {
     return(rbind(membership, membership_l, membership_r))
 }
 
+#' @keywords internal
 get_nodes_celltree = function(hc, clusters) {
         
     # internal nodes
@@ -1796,7 +1825,7 @@ get_nodes_celltree = function(hc, clusters) {
     
 }
 
-
+#' @keywords internal
 calc_cluster_dist = function(count_mat, cell_annot) {
 
     if (!is(count_mat, 'matrix')) {
@@ -1824,6 +1853,7 @@ calc_cluster_dist = function(count_mat, cell_annot) {
     
 }
 
+#' @keywords internal
 calc_theta_mle = function(pAD, DP, p_s, lower = 0.01, upper = 0.49, start = 0.25, gamma = 20) {
     
     if(length(pAD) == 0) {
@@ -1842,6 +1872,7 @@ calc_theta_mle = function(pAD, DP, p_s, lower = 0.01, upper = 0.49, start = 0.25
     return(res$par)
 }
 
+#' @keywords internal
 calc_allele_LLR = function(pAD, DP, p_s, theta_mle, theta_0 = 0, gamma = 20) {
     if (length(pAD) <= 1) {
         return(0)
@@ -1851,6 +1882,7 @@ calc_allele_LLR = function(pAD, DP, p_s, theta_mle, theta_0 = 0, gamma = 20) {
     return(l_1 - l_0)
 }
 
+#' @keywords internal
 calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, model = 'gpois') {
     if (length(Y_obs) == 0) {
         return(0)
@@ -1866,6 +1898,7 @@ calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, alpha = NULL, beta = NULL
     return(l_1 - l_0)
 }
 
+#' @keywords internal
 sc_exp_post = function(exp_sc) {
 
     eps = 0.15
@@ -1902,6 +1935,7 @@ sc_exp_post = function(exp_sc) {
     return(res)
 }
 
+#' @keywords internal
 rename_seg = function(seg) {
     chr = str_split(seg, '_')[[1]][1]
     id = as.integer(str_split(seg, '_')[[1]][2])
