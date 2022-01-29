@@ -2,7 +2,7 @@
 
 <img src="logo.png" align="right" width="200">
 
-Numbat is a haplotype-enhanced CNV caller from single-cell transcriptomics data. It integrates gene expression, allele ratio, and haplotype phasing signals from the human population to accurately profile CNVs in single-cells and infer their lineage relationship. 
+Numbat is a haplotype-enhanced CNV caller from single-cell transcriptomics data. It integrates signals from gene expression, allelic ratio, and population haplotype structures to accurately infer allele-specific CNVs in single cells and reconstruct their lineage relationship. 
 
 Numbat can be used to 1. detect allele-specific copy number variations from single-cells 2. differentiate tumor versus normal cells in the tumor microenvironment 3. infer the clonal architecture and evolutionary history of profiled tumors. 
 
