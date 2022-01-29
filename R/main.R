@@ -93,7 +93,7 @@ numbat_subclone = function(
             ncores = ncores
         )
 
-        fwrite(clust$gexp$gexp.norm.long, glue('{out_dir}/gexp.norm.long.tsv.gz'), sep = '\t', nThread = min(10, ncores))
+        fwrite(clust$gexp_roll_wide, glue('{out_dir}/gexp_roll_wide.tsv.gz'), sep = '\t', nThread = min(10, ncores))
         saveRDS(clust$hc, glue('{out_dir}/hc.rds'))
         saveRDS(clust$nodes, glue('{out_dir}/hc_nodes.rds'))
 
@@ -456,35 +456,26 @@ numbat_subclone = function(
 }
 
 #' Run smoothed expression-based hclust
-exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F, k = 5, ncores = 10, verbose = T) {
+exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores = 10, verbose = T) {
 
-    if (multi_ref) {
-        gexp = process_exp2(
-            count_mat_obs,
-            lambdas_ref,
-            gtf_transcript,
-            verbose = verbose
-        )
-    } else {
-        Y_obs = rowSums(count_mat_obs)
+    Y_obs = rowSums(count_mat_obs)
 
-        fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
+    fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
 
-        gexp = process_exp(
-            count_mat_obs,
-            fit$lambdas_bar,
-            gtf_transcript,
-            verbose = verbose
-        )
-    }
+    gexp_norm_long = process_exp_sc(
+        count_mat_obs,
+        fit$lambdas_bar,
+        gtf_transcript,
+        verbose = verbose
+    )
     
-    gexp.roll.wide = gexp$gexp.norm.long %>%
+    gexp_roll_wide = gexp_norm_long %>%
         reshape2::dcast(cell ~ gene, value.var = 'exp_rollmean') %>%
         tibble::column_to_rownames('cell') %>%
         as.matrix
 
-    dist_mat = parallelDist::parDist(gexp.roll.wide, threads = ncores)
-    # dist_mat = 1-cor(t(gexp.roll.wide))
+    dist_mat = parallelDist::parDist(gexp_roll_wide, threads = ncores)
+
     log_info('running hclust...')
     hc = hclust(dist_mat, method = "ward.D2")
 
@@ -496,7 +487,7 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F,
 
     nodes = get_nodes_celltree(hc, cutree(hc, k = k))
 
-    return(list('cell_annot' = cell_annot, 'nodes' = nodes, 'gexp' = gexp, 'hc' = hc, 'fit' = fit))
+    return(list('cell_annot' = cell_annot, 'nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc, 'fit' = fit))
 }
 
 #' @export

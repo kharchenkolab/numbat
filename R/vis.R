@@ -3,7 +3,7 @@
 pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 
 #' @export
-cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
+cnv_colors = c("neu" = "gray", 
         "del_up" = "royalblue", "del_down" = "darkblue", 
         "loh_up" = "darkgreen", "loh_down" = "olivedrab4",
         "amp_up" = "red", "amp_down" = "tomato3",
@@ -20,7 +20,7 @@ cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
         "loh_up_2" = "darkgreen", "loh_down_2" = "olivedrab4",
         "amp_up_2" = "red", "amp_down_2" = "tomato3",
         "bamp" = "salmon", "bdel" = "skyblue",
-        "amp" = "tomato3", "loh" = "olivedrab4", "del" = "royalblue", "neu2" = "gray30",
+        "amp" = "tomato3", "loh" = "olivedrab4", "del" = "royalblue",
         "theta_up" = "darkgreen", "theta_down" = "olivedrab4",
         "theta_1_up" = "darkgreen", "theta_1_down" = "olivedrab4",
         "theta_2_up" = "darkgreen", "theta_2_down" = "olivedrab4",
@@ -30,6 +30,12 @@ cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
         'major' = '#66C2A5', 'minor' = '#FC8D62'
     )
 
+cnv_labels = names(cnv_colors) %>%
+    str_remove_all('_') %>% 
+    str_to_upper() %>%
+    str_replace('UP', '(major)') %>%
+    str_replace('DOWN', '(minor)') %>%
+    setNames(names(cnv_colors))
 
 #' @export
 plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
@@ -548,7 +554,12 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
         ) +
         facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
         # scale_x_continuous(expand = expansion(add = 5)) +
-        scale_color_manual(values = cnv_colors, limits = force, na.translate = F) +
+        scale_color_manual(
+            values = cnv_colors,
+            limits = force,
+            labels = cnv_labels,
+            na.translate = F
+        ) +
         guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = FALSE, alpha = FALSE, shape = FALSE) +
         xlab(marker) +
         ylab('')

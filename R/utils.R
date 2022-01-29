@@ -201,161 +201,19 @@ Modes <- function(x) {
   ux[tab == max(tab)]
 }
 
-# for gamma poisson model
+#' process single-cell gene expression data
+#' @param count_mat observed gene count matrices
+#' @param lambdas_ref expression values in reference profile
+#' @param gtf_transcript transcript dataframe
+#' @return logx+1 transformed normalized expression values for single cells in a long dataframe
 #' @export
-process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = TRUE) {
-    
-    genes_annotated = gtf_transcript$gene %>% 
-        intersect(rownames(count_mat_obs)) %>%
-        intersect(names(lambdas_ref))
+process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
 
-    depth_obs = sum(count_mat_obs)
-    
-    count_mat_obs = count_mat_obs[genes_annotated,,drop=F]
-    lambdas_ref = lambdas_ref[genes_annotated]
-
-    lambdas_obs = rowSums(count_mat_obs)/depth_obs
-
-    # filter for mutually expressed genes
-    min_both = 2
-    
-    mut_expressed = ((lambdas_ref * 1e6 > min_both & lambdas_obs * 1e6 > min_both) |
-        (lambdas_ref > mean(lambdas_ref[lambdas_ref != 0])) |
-        (lambdas_obs > mean(lambdas_obs[lambdas_obs != 0]))) &
-        (lambdas_ref > 0)
-    
-    count_mat_obs = count_mat_obs[mut_expressed,,drop=F]
+    mut_expressed = filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = verbose)
+    count_mat = count_mat[mut_expressed,,drop=F]
     lambdas_ref = lambdas_ref[mut_expressed]
-
-    if(verbose){message(paste0(nrow(count_mat_obs), ' genes remain after filtering'))}
-
-    bulk_obs = count_mat_obs %>%
-        rowSums() %>%
-        data.frame() %>%
-        setNames('Y_obs') %>%
-        tibble::rownames_to_column('gene') %>%
-        mutate(lambda_obs = (Y_obs/depth_obs)) %>%
-        mutate(lambda_ref = lambdas_ref[gene]) %>%
-        mutate(d_obs = depth_obs) %>%
-        left_join(gtf_transcript, by = "gene") 
-    
-    # annotate using GTF
-    bulk_obs = bulk_obs %>%
-        mutate(gene = droplevels(factor(gene, gtf_transcript$gene))) %>%
-        mutate(gene_index = as.integer(gene)) %>%
-        arrange(gene) %>%
-        mutate(CHROM = factor(CHROM)) %>%
-        mutate(
-            logFC = log2(lambda_obs) - log2(lambda_ref),
-            lnFC = log(lambda_obs) - log(lambda_ref),
-            logFC = ifelse(is.infinite(logFC), NA, logFC),
-            lnFC = ifelse(is.infinite(lnFC), NA, lnFC)
-        ) %>%
-        group_by(CHROM) %>%
-        mutate(
-            phi_hat_roll = phi_hat_roll(Y_obs, lambda_ref, depth_obs, h = 50)
-        ) %>%
-        ungroup()
-    
-    return(list('bulk' = bulk_obs,
-                'count_mat_obs' = count_mat_obs,
-               'depth_obs' = depth_obs))
-}
-
-# match cells with best reference
-#' @export
-process_exp2 = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
-
-    count_mat_obs = as.matrix(count_mat_obs)
-
-    lambdas_ref = as.matrix(lambdas_ref)
-    
-    genes_annotated = gtf_transcript$gene %>% 
-        intersect(rownames(count_mat_obs)) %>%
-        intersect(rownames(lambdas_ref))
-
-    depth_obs = sum(count_mat_obs)
-
-    count_mat_obs = count_mat_obs[genes_annotated,,drop=F]
-    lambdas_ref = lambdas_ref[genes_annotated,]
-
-    lambdas_obs = rowSums(count_mat_obs)/depth_obs
-
-    # filter for mutually expressed genes
-    min_both = 2
-
-    mut_expressed = ((rowSums(lambdas_ref * 1e6 > min_both) > 0 & lambdas_obs * 1e6 > min_both) | 
-        (lambdas_obs > mean(lambdas_obs[lambdas_obs != 0])))
-
-    count_mat_obs = count_mat_obs[mut_expressed,,drop=F]
-    lambdas_ref = lambdas_ref[mut_expressed,]
-    
-    if(verbose){message(nrow(count_mat_obs))}
-
-    exp_mat = scale(count_mat_obs, center=FALSE, scale=colSums(count_mat_obs))
-
-    if (verbose) {message('choosing best references by correlation')}
-    cors = cor(log2(exp_mat * 1e6 + 1), log2(lambdas_ref * 1e6 + 1)[rownames(exp_mat),])
-    best_refs = apply(cors, 1, function(x) {colnames(cors)[which.max(x)]})
-    exp_mat_ref = lambdas_ref[,best_refs] %>% set_colnames(names(best_refs))
-    
-    exp_mat_norm = log2(exp_mat * 1e6 + 1) - log2(exp_mat_ref * 1e6 + 1)
-    
-    gexp.norm = exp_mat_norm %>% as.data.frame() %>%
-        tibble::rownames_to_column('gene') %>%
-        inner_join(gtf_transcript, by = "gene") %>%
-        filter(!(CHROM == 6 & gene_start < 33480577 & gene_end > 28510120)) %>%
-        mutate(gene = droplevels(factor(gene, gtf_transcript$gene))) %>%
-        mutate(gene_index = as.integer(gene)) %>% 
-        mutate(CHROM = as.integer(CHROM)) %>%
-        arrange(CHROM, gene)
-
-    gexp.norm.long = gexp.norm %>% 
-        reshape2::melt(
-            id.var = c('gene', 'gene_index', 'region', 'gene_start', 'gene_end', 'CHROM', 'gene_length'),
-            variable.name = 'cell',
-            value.name = 'exp') %>%
-        ungroup()
-
-    gexp.norm.long = gexp.norm.long %>%
-        group_by(cell, CHROM) %>%
-        mutate(exp_rollmean = caTools::runmean(exp, k = window, align = "center")) %>%
-        ungroup()
-    
-    return(list('gexp.norm.long' = gexp.norm.long, 'gexp.norm' = gexp.norm, 'exp_mat' = exp_mat, 'best_refs' = best_refs))
-}
-
-# compare bulk vs single cells
-#' @export
-process_exp = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
-
-    count_mat_obs = as.matrix(count_mat_obs)
-    
-    genes_annotated = gtf_transcript$gene %>% 
-        intersect(rownames(count_mat_obs)) %>%
-        intersect(names(lambdas_ref))
-
-    depth_obs = sum(count_mat_obs)
-
-    count_mat_obs = count_mat_obs[genes_annotated,,drop=F]
-    lambdas_ref = lambdas_ref[genes_annotated]
-
-    lambdas_obs = rowSums(count_mat_obs)/depth_obs
-
-    # filter for mutually expressed genes
-    min_both = 2
-
-    mut_expressed = ((lambdas_ref * 1e6 > min_both & lambdas_obs * 1e6 > min_both) |
-        (lambdas_ref > mean(lambdas_ref[lambdas_ref != 0])) |
-        (lambdas_obs > mean(lambdas_obs[lambdas_obs != 0]))) &
-        (lambdas_ref > 0)
-
-    count_mat_obs = count_mat_obs[mut_expressed,,drop=F]
-    lambdas_ref = lambdas_ref[mut_expressed]
-    
-    if(verbose){message(nrow(count_mat_obs))}
-    
-    exp_mat = scale(count_mat_obs, center=FALSE, scale=colSums(count_mat_obs))
+        
+    exp_mat = scale(count_mat, center=FALSE, scale=colSums(count_mat))
 
     exp_mat_norm = log2(exp_mat * 1e6 + 1) - log2(lambdas_ref * 1e6 + 1)
 
@@ -388,9 +246,95 @@ process_exp = function(count_mat_obs, lambdas_ref, gtf_transcript, window = 101,
         mutate(exp_rollmean = caTools::runmean(exp, k = window, align = "center")) %>%
         ungroup()
     
-    return(list('gexp.norm.long' = gexp.norm.long, 'gexp.norm' = gexp.norm, 'exp_mat' = exp_mat))
+    return(gexp.norm.long)
 }
 
+#' filter for mutually expressed genes
+#' @param count_mat observed gene count matrices
+#' @param lambdas_ref expression values in reference profile
+#' @param gtf_transcript transcript dataframe
+#' @return list of genes that are kept after filtering
+#' @export
+filter_genes = function(count_mat, lambdas_ref, gtf_transcript, verbose = T) {
+
+    genes_annotated = gtf_transcript$gene %>% 
+        intersect(rownames(count_mat)) %>%
+        intersect(names(lambdas_ref))
+
+    depth_obs = sum(count_mat)
+
+    count_mat = count_mat[genes_annotated,,drop=F]
+    lambdas_ref = lambdas_ref[genes_annotated]
+
+    lambdas_obs = rowSums(count_mat)/depth_obs
+
+    min_both = 2
+
+    mut_expressed = ((lambdas_ref * 1e6 > min_both & lambdas_obs * 1e6 > min_both) |
+        (lambdas_ref > mean(lambdas_ref[lambdas_ref != 0])) |
+        (lambdas_obs > mean(lambdas_obs[lambdas_obs != 0]))) &
+        (lambdas_ref > 0)
+
+    retained = names(mut_expressed)[mut_expressed]
+
+    if (verbose) {
+        message(glue('number of genes left: {length(retained)}'))
+    }
+
+    return(retained)
+}
+
+#' Aggregate into bulk expression profile
+#' @param count_mat observed gene count matrices
+#' @param lambdas_ref expression values in reference profile
+#' @param gtf_transcript transcript dataframe
+#' @return a dataframe of bulk gene expression profile
+#' @export
+get_exp_bulk = function(count_mat, lambdas_ref, gtf_transcript, verbose = TRUE) {
+
+    depth_obs = sum(count_mat)
+    
+    mut_expressed = filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = verbose)
+    count_mat = count_mat[mut_expressed,,drop=F]
+    lambdas_ref = lambdas_ref[mut_expressed]
+
+    bulk_obs = count_mat %>%
+        rowSums() %>%
+        data.frame() %>%
+        setNames('Y_obs') %>%
+        tibble::rownames_to_column('gene') %>%
+        mutate(lambda_obs = (Y_obs/depth_obs)) %>%
+        mutate(lambda_ref = lambdas_ref[gene]) %>%
+        mutate(d_obs = depth_obs) %>%
+        left_join(gtf_transcript, by = "gene") 
+    
+    # annotate using GTF
+    bulk_obs = bulk_obs %>%
+        mutate(gene = droplevels(factor(gene, gtf_transcript$gene))) %>%
+        mutate(gene_index = as.integer(gene)) %>%
+        arrange(gene) %>%
+        mutate(CHROM = factor(CHROM)) %>%
+        mutate(
+            logFC = log2(lambda_obs) - log2(lambda_ref),
+            lnFC = log(lambda_obs) - log(lambda_ref),
+            logFC = ifelse(is.infinite(logFC), NA, logFC),
+            lnFC = ifelse(is.infinite(lnFC), NA, lnFC)
+        ) %>%
+        group_by(CHROM) %>%
+        mutate(
+            phi_hat_roll = phi_hat_roll(Y_obs, lambda_ref, depth_obs, h = 50)
+        ) %>%
+        ungroup()
+    
+    return(bulk_obs)
+}
+
+#' Aggregate into combined bulk expression and allele profile
+#' @param count_mat observed gene count matrices
+#' @param lambdas_ref expression values in reference profile
+#' @param df_allele allele dataframe
+#' @param gtf_transcript transcript dataframe
+#' @return a dataframe of bulk gene expression and allele profile
 #' @export
 get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, min_depth = 0, lambda = 2, verbose = TRUE) {
 
@@ -407,21 +351,24 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
         message(paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
     }
     
-    gexp_bulk = process_exp_fc(
-        count_mat,
-        fit$lambdas_bar,
-        gtf_transcript,
-        verbose = verbose
-    )$bulk %>%
-    filter((logFC < 5 & logFC > -5) | Y_obs == 0) %>%
-    mutate(w = paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
+    gexp_bulk = get_exp_bulk(
+            count_mat,
+            fit$lambdas_bar,
+            gtf_transcript,
+            verbose = verbose
+        ) %>%
+        filter((logFC < 5 & logFC > -5) | Y_obs == 0) %>%
+        mutate(w = paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
 
-    allele_bulk = get_allele_bulk(df_allele, genetic_map, lambda = lambda, min_depth = min_depth)
+    allele_bulk = get_allele_bulk(
+        df_allele,
+        genetic_map,
+        lambda = lambda,
+        min_depth = min_depth)
             
     bulk = combine_bulk(
         allele_bulk = allele_bulk,
-        gexp_bulk = gexp_bulk
-    )
+        gexp_bulk = gexp_bulk)
 
     if (any(duplicated(bulk$snp_id))) {
         stop('duplicated SNPs, check genotypes')
