@@ -456,6 +456,7 @@ numbat_subclone = function(
 }
 
 #' Run smoothed expression-based hclust
+#' @keywords internal 
 exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores = 10, verbose = T) {
 
     Y_obs = rowSums(count_mat_obs)
@@ -1197,6 +1198,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
     return(joint_post)
 }
 
+#' @keywords internal 
 test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 100, p_min = 0.999, diploid_chroms = NULL) {
 
     log_info('Testing for multi-allelic CNVs ..')
@@ -1270,6 +1272,7 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
     return(list('segs_consensus' = segs_consensus, 'bulks' = bulks, 'segs_multi' = segs_multi))
 }
 
+#' @keywords internal 
 expand_states = function(sc_post, segs_consensus) {
 
     if (any(segs_consensus$n_states > 1)) {
@@ -1311,3 +1314,4 @@ expand_states = function(sc_post, segs_consensus) {
 
     return(sc_post)
 }
+

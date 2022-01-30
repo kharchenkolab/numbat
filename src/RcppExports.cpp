@@ -12,7 +12,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 
 // allChildrenCPP
 List allChildrenCPP(const IntegerMatrix orig);
-RcppExport SEXP _numbat_allChildrenCPP(SEXP origSEXP) {
+RcppExport SEXP _Numbat_allChildrenCPP(SEXP origSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -23,7 +23,7 @@ END_RCPP
 }
 // cppdbbinom
 NumericVector cppdbbinom(const NumericVector& x, const NumericVector& size, const NumericVector& alpha, const NumericVector& beta, const bool& log_prob);
-RcppExport SEXP _numbat_cppdbbinom(SEXP xSEXP, SEXP sizeSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP log_probSEXP) {
+RcppExport SEXP _Numbat_cppdbbinom(SEXP xSEXP, SEXP sizeSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP log_probSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -38,7 +38,7 @@ END_RCPP
 }
 // poilog2
 NumericVector poilog2(NumericVector x, NumericVector y, double my1, double my2, double sig1, double sig2, double ro, int nrN);
-RcppExport SEXP _numbat_poilog2(SEXP xSEXP, SEXP ySEXP, SEXP my1SEXP, SEXP my2SEXP, SEXP sig1SEXP, SEXP sig2SEXP, SEXP roSEXP, SEXP nrNSEXP) {
+RcppExport SEXP _Numbat_poilog2(SEXP xSEXP, SEXP ySEXP, SEXP my1SEXP, SEXP my2SEXP, SEXP sig1SEXP, SEXP sig2SEXP, SEXP roSEXP, SEXP nrNSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -56,7 +56,7 @@ END_RCPP
 }
 // poilog1
 NumericVector poilog1(NumericVector x, NumericVector my, NumericVector sig, int nrN);
-RcppExport SEXP _numbat_poilog1(SEXP xSEXP, SEXP mySEXP, SEXP sigSEXP, SEXP nrNSEXP) {
+RcppExport SEXP _Numbat_poilog1(SEXP xSEXP, SEXP mySEXP, SEXP sigSEXP, SEXP nrNSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -70,7 +70,7 @@ END_RCPP
 }
 // CgetQ
 NumericMatrix CgetQ(NumericMatrix logQ, List children_dict, IntegerVector node_order);
-RcppExport SEXP _numbat_CgetQ(SEXP logQSEXP, SEXP children_dictSEXP, SEXP node_orderSEXP) {
+RcppExport SEXP _Numbat_CgetQ(SEXP logQSEXP, SEXP children_dictSEXP, SEXP node_orderSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -83,15 +83,15 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_numbat_allChildrenCPP", (DL_FUNC) &_numbat_allChildrenCPP, 1},
-    {"_numbat_cppdbbinom", (DL_FUNC) &_numbat_cppdbbinom, 5},
-    {"_numbat_poilog2", (DL_FUNC) &_numbat_poilog2, 8},
-    {"_numbat_poilog1", (DL_FUNC) &_numbat_poilog1, 4},
-    {"_numbat_CgetQ", (DL_FUNC) &_numbat_CgetQ, 3},
+    {"_Numbat_allChildrenCPP", (DL_FUNC) &_Numbat_allChildrenCPP, 1},
+    {"_Numbat_cppdbbinom", (DL_FUNC) &_Numbat_cppdbbinom, 5},
+    {"_Numbat_poilog2", (DL_FUNC) &_Numbat_poilog2, 8},
+    {"_Numbat_poilog1", (DL_FUNC) &_Numbat_poilog1, 4},
+    {"_Numbat_CgetQ", (DL_FUNC) &_Numbat_CgetQ, 3},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_numbat(DllInfo *dll) {
+RcppExport void R_init_Numbat(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }
