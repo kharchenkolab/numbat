@@ -11,6 +11,7 @@ Numbat does not require paired DNA or genotype data and operates solely on the d
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Output descriptions](#output-descriptions)
 
 A more detailed vignette for interpreting Numbat results is available:
 - [Walkthrough](http://pklab.med.harvard.edu/teng)
