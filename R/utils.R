@@ -202,7 +202,12 @@ Modes <- function(x) {
   ux[tab == max(tab)]
 }
 
-# for gamma poisson model
+#' Process single-cell gene expression data
+#'
+#' @param count_mat observed gene count matrices
+#' @param lambdas_ref expression values in reference profile
+#' @param gtf_transcript transcript dataframe
+#' @return logx+1 transformed normalized expression values for single cells in a long dataframe
 #' @export
 process_exp_fc = function(count_mat_obs, lambdas_ref, gtf_transcript, verbose = TRUE) {
     

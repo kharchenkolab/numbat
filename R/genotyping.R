@@ -3,12 +3,9 @@
 #' @param label character string 
 #' @param samples list of strings
 #' @param vcfs vcfR objects
-#' @param outdir something
-#' @param het_only boolean (default=FALSE)
-#' @param chr_prefix boolean (default=TRUE)
 #' @return a status code
 #' @export
-genotype = function(label, samples, vcfs, outdir, het_only=FALSE, chr_prefix=TRUE) {
+genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE) {
 
     snps = lapply(
             vcfs, function(vcf){get_snps(vcf)}
@@ -41,9 +38,8 @@ genotype = function(label, samples, vcfs, outdir, het_only=FALSE, chr_prefix=TRU
     return(0)
 }
 
-#' Process VCFs into SNP dataframe
+#' process VCFs into SNP dataframe
 #' @param vcf vcfR object
-#' @keywords internal 
 get_snps = function(vcf) {
 
     snps = as.data.frame(vcf@fix) %>%
@@ -67,7 +63,7 @@ get_snps = function(vcf) {
 make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE, chr_prefix = TRUE) {
     
     chr_snps = snps %>%
-        filter(CHROM == chr) %>%
+        filter(CHROM == chr | CHROM == paste0('chr', chr)) %>%
         mutate(
             het = 0.1 <= AR & AR <= 0.9,
             hom_alt = AR == 1 & DP >= 10,
@@ -143,16 +139,6 @@ vcfR_file_fix <- function(file) {
 
 }
 
-
-#' description
-#' @param sample
-#' @param vcf_pu
-#' @param vcf_phased
-#' @param AD
-#' @param DP
-#' @param barcodes
-#' @param gtf_transcript
-#' @return something
 #' @export
 preprocess_allele = function(
     sample,
@@ -261,3 +247,4 @@ preprocess_allele = function(
     
     return(df)
 }
+

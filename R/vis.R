@@ -1,9 +1,10 @@
+
 ########################### Visualizations ############################
 
 pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 
 #' @export
-cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
+cnv_colors = c("neu" = "gray", 
         "del_up" = "royalblue", "del_down" = "darkblue", 
         "loh_up" = "darkgreen", "loh_down" = "olivedrab4",
         "amp_up" = "red", "amp_down" = "tomato3",
@@ -20,7 +21,7 @@ cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
         "loh_up_2" = "darkgreen", "loh_down_2" = "olivedrab4",
         "amp_up_2" = "red", "amp_down_2" = "tomato3",
         "bamp" = "salmon", "bdel" = "skyblue",
-        "amp" = "tomato3", "loh" = "olivedrab4", "del" = "royalblue", "neu2" = "gray30",
+        "amp" = "tomato3", "loh" = "olivedrab4", "del" = "royalblue",
         "theta_up" = "darkgreen", "theta_down" = "olivedrab4",
         "theta_1_up" = "darkgreen", "theta_1_down" = "olivedrab4",
         "theta_2_up" = "darkgreen", "theta_2_down" = "olivedrab4",
@@ -30,6 +31,12 @@ cnv_colors = c("neu" = "gray", "neu_up" = "gray", "neu_down" = "gray20",
         'major' = '#66C2A5', 'minor' = '#FC8D62'
     )
 
+cnv_labels = names(cnv_colors) %>%
+    str_remove_all('_') %>% 
+    str_to_upper() %>%
+    str_replace('UP', '(major)') %>%
+    str_replace('DOWN', '(minor)') %>%
+    setNames(names(cnv_colors))
 
 #' @export
 plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
@@ -243,20 +250,28 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
     
 }
 
-#' @keywords internal
 do_plot = function(p, f, w, h, out_dir = '~/figures') {
     ggsave(filename = paste0(out_dir, '/', f, '.png'), plot = p, width = w, height = h, device = 'png', dpi = 300)
     options(repr.plot.width = w, repr.plot.height = h, repr.plot.res = 300)
     print(p)
 }
 
-#' @keywords internal
-annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '') {
+
+annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL) {
+
+    if (is.null(pal_annot)) {
+        pal_annot = getPalette(length(unique(D$annot)))
+    }
+
     p = ggplot(
         D,
         aes(x = cell, y = '', fill = annot)
     ) +
-    geom_tile(width=1, height=0.9) +
+    geom_tile(width=1, height=0.9, size = 0) +
+    # geom_segment(
+    #     aes(x = cell, xend = cell, y = -0.5, yend = 0.5, color = annot),
+    #     size = size
+    # ) +
     theme_void() +
     scale_y_discrete(expand = expansion(0)) +
     scale_x_discrete(expand = expansion(0)) +
@@ -269,7 +284,8 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '') {
         # axis.text = element_text(size = 8),
         axis.text = element_blank(),
         plot.margin = margin(0.5,0,0.5,0, unit = 'mm')
-    ) 
+    )
+    # scale_fill_manual(values = pal_annot)
 
     if (transpose) {
         p = p + coord_flip() +
@@ -343,7 +359,7 @@ cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5, cn
 }
 
 #' @export
-plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50) {
+plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50, reverse = TRUE, plot_tree = TRUE) {
 
     cells = unique(gexp.norm.long$cell)
     
@@ -352,6 +368,11 @@ plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50) {
     p_tree = ggtree(hc, size = 0.2)
 
     cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
+
+    chrom_labeller <- function(chr){
+        chr[chr %in% c(18, 21)] = ''
+        return(chr)
+    }
     
     p_heatmap = gexp.norm.long %>%
         filter(cell %in% cell_sample) %>%
@@ -359,10 +380,10 @@ plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50) {
         mutate(cluster = cutree(hc, k = k)[as.character(cell)]) %>%
         arrange(cell) %>%
         mutate(cluster = factor(cluster, rev(unique(cluster)))) %>%
-        ggplot(
-            aes(x = gene_index, y = cell, fill = exp_rollmean)
-        ) +
-        geom_tile() +
+        mutate(cell_index = as.integer(cell)) %>%
+        ggplot() +
+        geom_tile(aes(x = gene_index, y = cell, fill = exp_rollmean)) +
+        # geom_rect(aes(xmin = gene_start, xmax = gene_end, ymin = cell_index - 0.5, ymax = cell_index + 0.5, fill = exp_rollmean)) +
         scale_fill_gradient2(low = 'blue', high = 'red', mid = 'white', midpoint = 0, limits = c(-lim,lim), oob = scales::squish) +
         theme_void() +
         scale_x_discrete(expand = expansion(0)) +
@@ -371,15 +392,24 @@ plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50) {
             axis.text.y = element_blank(),
             legend.position = 'top',
             panel.spacing = unit(0, 'mm'),
-            panel.border = element_rect(size = 0.5, color = 'wheat4', fill = NA)
+            panel.border = element_rect(size = 0.5, color = 'wheat4', fill = NA),
+            strip.text.y = element_blank(),
+            # axis.title.y = element_text(angle = 90),
+            # axis.title.x = element_text()
         ) +
-        facet_grid(cluster~CHROM, scale = 'free', space = 'free') +
-        guides(fill = guide_legend(title = 'Expression\nmagnitude'))
+        facet_grid(cluster~CHROM, scale = 'free', space = 'free', labeller = labeller(CHROM = chrom_labeller)) +
+        guides(fill = guide_colorbar(title = 'Expression\nmagnitude')) +
+        xlab('Gene index') +
+        ylab('Cell')
     
-    (p_tree | p_heatmap) + plot_layout(widths = c(1,10))
-    # p_heatmap
-    
+    if (plot_tree) {
+        (p_tree | p_heatmap) + plot_layout(widths = c(1,10))
+    } else {
+        p_heatmap
+    }
 }
+
+
 
 #' @export
 show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
@@ -469,7 +499,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
 
     if (use_pos) {
         marker = 'POS'
-        marker_label = 'Position'
+        marker_label = 'Genomic position'
     } else {
         marker = 'snp_index'
         marker_label = 'SNP index'
@@ -525,7 +555,12 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
         ) +
         facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
         # scale_x_continuous(expand = expansion(add = 5)) +
-        scale_color_manual(values = cnv_colors, limits = force, na.translate = F) +
+        scale_color_manual(
+            values = cnv_colors,
+            limits = force,
+            labels = cnv_labels,
+            na.translate = F
+        ) +
         guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = FALSE, alpha = FALSE, shape = FALSE) +
         xlab(marker) +
         ylab('')
@@ -1015,7 +1050,8 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
     }
 
     if (label_mut) {
-        p_tree = p_tree + geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = 1, fill = 'red') +
+        p_tree = p_tree + 
+            geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = 1, fill = 'red') +
             geom_text2(
                 aes(x = branch, label = str_trunc(site, 20, side = 'center')),
                 size = 2, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
@@ -1073,7 +1109,7 @@ plot_sc_joint = function(
         gtree, joint_post, segs_consensus, 
         cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
         logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
-        multi_allelic = FALSE, tree_height = 1
+        pal_annot = NULL, multi_allelic = FALSE, tree_height = 1, annot_title = 'Annotation'
     ) {
 
     if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
@@ -1161,7 +1197,6 @@ plot_sc_joint = function(
     first_tumor_index = which(cell_order %in% tumor_cells)[1]
 
     chrom_labeller <- function(chr){
-        # chr[as.integer(chr) %% 2 == 0] = ''
         chr[chr %in% c(19, 21, 22)] = ''
         return(chr)
     }
@@ -1191,10 +1226,13 @@ plot_sc_joint = function(
             panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
             strip.background = element_blank(),
             axis.text = element_blank(),
-            axis.title = element_blank(),
+            axis.title.y = element_blank(),
+            axis.title.x = element_text(size = 10),
             axis.ticks = element_blank(),
             plot.margin = margin(0,0,5,0, unit = 'mm'),
             axis.line = element_blank(),
+            legend.box.background = element_blank(),
+            legend.background = element_blank(),
             # panel.background = element_rect(fill = "transparent",colour = NA),
             # plot.background = element_rect(fill = "transparent", color = NA)
         ) +
@@ -1212,7 +1250,8 @@ plot_sc_joint = function(
             labels = c('amp' = 'AMP', 'del' = 'DEL', 'bamp' = 'BAMP', 'loh' = 'CNLoH', 'bdel' = 'BDEL'),
             limits = force,
             na.translate = F
-        )
+        ) +
+        xlab('Genomic position')
 
     # clone annotation
     clone_dict = gtree %>%
@@ -1236,7 +1275,7 @@ plot_sc_joint = function(
             annot = unname(clone_dict)
         ) %>%
         mutate(cell = factor(cell, cell_order)) %>%
-        annot_bar(transpose = T, legend = clone_legend, legend_title = 'Clone') +
+        annot_bar(transpose = T, legend = clone_legend, legend_title = 'Clone', size = size) +
         scale_fill_manual(values = pal_clone)
 
     # external annotation
@@ -1248,7 +1287,7 @@ plot_sc_joint = function(
             ) %>%
             filter(cell %in% joint_post$cell) %>%
             mutate(cell = factor(cell, cell_order)) %>%
-            annot_bar(transpose = T, legend_title = 'Annotation')
+            annot_bar(transpose = T, pal_annot = pal_annot, legend_title = annot_title, size = size)
 
         if (clone_bar) {
             (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')

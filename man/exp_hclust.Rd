@@ -8,7 +8,6 @@ exp_hclust(
   count_mat_obs,
   lambdas_ref,
   gtf_transcript,
-  multi_ref = F,
   k = 5,
   ncores = 10,
   verbose = T
@@ -17,3 +16,4 @@ exp_hclust(
 \description{
 Run smoothed expression-based hclust
 }
+\keyword{internal}

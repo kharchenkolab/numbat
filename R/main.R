@@ -15,10 +15,9 @@
 #' @import ggtree
 #' @import ggraph
 #' @import patchwork
-#' @useDynLib Numbat
-NULL
+#' @useDynLib numbat
 
-#' Main function to decompose tumor subclones
+#' @description Main function to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe of allele counts per cell, produced by preprocess_allele
@@ -94,7 +93,7 @@ numbat_subclone = function(
             ncores = ncores
         )
 
-        fwrite(clust$gexp$gexp.norm.long, glue('{out_dir}/gexp.norm.long.tsv.gz'), sep = '\t', nThread = min(10, ncores))
+        fwrite(clust$gexp_roll_wide, glue('{out_dir}/gexp_roll_wide.tsv.gz'), sep = '\t', nThread = min(10, ncores))
         saveRDS(clust$hc, glue('{out_dir}/hc.rds'))
         saveRDS(clust$nodes, glue('{out_dir}/hc_nodes.rds'))
 
@@ -457,36 +456,27 @@ numbat_subclone = function(
 }
 
 #' Run smoothed expression-based hclust
-#' @keywords internal
-exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F, k = 5, ncores = 10, verbose = T) {
+#' @keywords internal 
+exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores = 10, verbose = T) {
 
-    if (multi_ref) {
-        gexp = process_exp2(
-            count_mat_obs,
-            lambdas_ref,
-            gtf_transcript,
-            verbose = verbose
-        )
-    } else {
-        Y_obs = rowSums(count_mat_obs)
+    Y_obs = rowSums(count_mat_obs)
 
-        fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
+    fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
 
-        gexp = process_exp(
-            count_mat_obs,
-            fit$lambdas_bar,
-            gtf_transcript,
-            verbose = verbose
-        )
-    }
+    gexp_norm_long = process_exp_sc(
+        count_mat_obs,
+        fit$lambdas_bar,
+        gtf_transcript,
+        verbose = verbose
+    )
     
-    gexp.roll.wide = gexp$gexp.norm.long %>%
+    gexp_roll_wide = gexp_norm_long %>%
         reshape2::dcast(cell ~ gene, value.var = 'exp_rollmean') %>%
         tibble::column_to_rownames('cell') %>%
         as.matrix
 
-    dist_mat = parallelDist::parDist(gexp.roll.wide, threads = ncores)
-    # dist_mat = 1-cor(t(gexp.roll.wide))
+    dist_mat = parallelDist::parDist(gexp_roll_wide, threads = ncores)
+
     log_info('running hclust...')
     hc = hclust(dist_mat, method = "ward.D2")
 
@@ -498,7 +488,7 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, multi_ref = F,
 
     nodes = get_nodes_celltree(hc, cutree(hc, k = k))
 
-    return(list('cell_annot' = cell_annot, 'nodes' = nodes, 'gexp' = gexp, 'hc' = hc, 'fit' = fit))
+    return(list('cell_annot' = cell_annot, 'nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc, 'fit' = fit))
 }
 
 #' @export
@@ -1020,8 +1010,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
             ),
             by = 'seg'
         ) %>%
-        # if the opposite state has a very small prior, and phi is in the opposite direction,
-        # then CNV posterior can still be high which is miselading
+        # if the opposite state has a very small prior, and phi is in the opposite direction, then CNV posterior can still be high which is miselading
         mutate_at(
             vars(contains('prior')),
             function(x) {ifelse(x < 0.05, 0, x)}
@@ -1063,45 +1052,6 @@ compute_posterior = function(sc_post) {
     ) %>%
     ungroup()
 }
-
-# #' do bayesian averaging to get posteriors
-# #' @export
-# compute_posterior = function(sc_post) {
-#     sc_post %>% 
-#     rowwise() %>%
-#     mutate(
-#         Z_21 = l21 + log(prior_amp/8),
-#         Z_12 = l12 + log(prior_amp/8),
-#         Z_31 = l31 + log(prior_amp/8),
-#         Z_13 = l13 + log(prior_amp/8),
-#         Z_amp = matrixStats::logSumExp(c(Z_21, Z_12, Z_31, Z_13)),
-#         Z_loh = l20 + log(prior_loh/2),
-#         Z_del = l10 + log(prior_del/2),
-#         Z_bamp = l22 + log(prior_bamp/2),
-#         Z_bdel = l00 + log(prior_bdel/2),
-#         Z_n = l11 + log(1/2),
-#         Z = matrixStats::logSumExp(
-#             c(Z_n, Z_loh, Z_del, Z_amp, Z_bamp, Z_bdel)
-#         ),
-#         Z_cnv = matrixStats::logSumExp(
-#             c(Z_loh, Z_del, Z_amp, Z_bamp, Z_bdel)
-#         ),
-#         p_21 = exp(Z_21 - Z),
-#         p_12 = exp(Z_12 - Z),
-#         p_31 = exp(Z_31 - Z),
-#         p_13 = exp(Z_13 - Z),
-#         p_amp = exp(Z_amp - Z),
-#         p_neu = exp(Z_n - Z),
-#         p_del = exp(Z_del - Z),
-#         p_loh = exp(Z_loh - Z),
-#         p_bamp = exp(Z_bamp - Z),
-#         p_bdel = exp(Z_bdel - Z),
-#         logBF = Z_cnv - Z_n,
-#         p_cnv = exp(Z_cnv - Z),
-#         p_n = exp(Z_n - Z)
-#     ) %>%
-#     ungroup()
-# }
 
 #' get CNV allele posteriors
 #' @export
@@ -1248,7 +1198,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
     return(joint_post)
 }
 
-#' @keywords internal
+#' @keywords internal 
 test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 100, p_min = 0.999, diploid_chroms = NULL) {
 
     log_info('Testing for multi-allelic CNVs ..')
@@ -1322,7 +1272,7 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
     return(list('segs_consensus' = segs_consensus, 'bulks' = bulks, 'segs_multi' = segs_multi))
 }
 
-#' @keywords internal
+#' @keywords internal 
 expand_states = function(sc_post, segs_consensus) {
 
     if (any(segs_consensus$n_states > 1)) {
@@ -1364,3 +1314,4 @@ expand_states = function(sc_post, segs_consensus) {
 
     return(sc_post)
 }
+

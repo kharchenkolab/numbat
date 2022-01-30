@@ -221,7 +221,7 @@ label_mut_tree = function(G, mut_assign) {
     V(G)$node = G %>%
         igraph::as_data_frame('vertices') %>%
         left_join(
-            mut_assign %>% rename(node = name),
+            mut_assign %>% dplyr::rename(node = name),
             by = c('label' = 'site')
         ) %>%
         pull(node)
@@ -332,6 +332,7 @@ get_tree_post = function(tree, P) {
 
     return(list('mut_nodes' = mut_nodes, 'gtree' = gtree, 'l_matrix' = l_matrix))
 }
+
 #' @export
 mut_to_tree = function(gtree, mut_nodes) {
     
@@ -402,7 +403,7 @@ to_phylo = function(gtree) {
     phytree$edge.length = gtree %>% activate(edges) %>% data.frame() %>% pull(length)
     
     n_mut_root = gtree %>% activate(nodes) %>% filter(node_is_root()) %>% pull(n_mut)
-    phytree$root.edge = -n_mut_root
+    phytree$root.edge = n_mut_root
     
     return(phytree)
 }
