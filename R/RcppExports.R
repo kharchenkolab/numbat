@@ -2,22 +2,22 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 allChildrenCPP <- function(orig) {
-    .Call('_numbat_allChildrenCPP', PACKAGE = 'numbat', orig)
+    .Call('_Numbat_allChildrenCPP', PACKAGE = 'Numbat', orig)
 }
 
 cppdbbinom <- function(x, size, alpha, beta, log_prob = FALSE) {
-    .Call('_numbat_cppdbbinom', PACKAGE = 'numbat', x, size, alpha, beta, log_prob)
+    .Call('_Numbat_cppdbbinom', PACKAGE = 'Numbat', x, size, alpha, beta, log_prob)
 }
 
 poilog2 <- function(x, y, my1, my2, sig1, sig2, ro, nrN) {
-    .Call('_numbat_poilog2', PACKAGE = 'numbat', x, y, my1, my2, sig1, sig2, ro, nrN)
+    .Call('_Numbat_poilog2', PACKAGE = 'Numbat', x, y, my1, my2, sig1, sig2, ro, nrN)
 }
 
 poilog1 <- function(x, my, sig, nrN) {
-    .Call('_numbat_poilog1', PACKAGE = 'numbat', x, my, sig, nrN)
+    .Call('_Numbat_poilog1', PACKAGE = 'Numbat', x, my, sig, nrN)
 }
 
 CgetQ <- function(logQ, children_dict, node_order) {
-    .Call('_numbat_CgetQ', PACKAGE = 'numbat', logQ, children_dict, node_order)
+    .Call('_Numbat_CgetQ', PACKAGE = 'Numbat', logQ, children_dict, node_order)
 }
 

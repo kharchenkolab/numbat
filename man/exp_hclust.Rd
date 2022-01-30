@@ -16,3 +16,4 @@ exp_hclust(
 \description{
 Run smoothed expression-based hclust
 }
+\keyword{internal}

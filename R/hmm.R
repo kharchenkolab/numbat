@@ -31,6 +31,7 @@ getj <- function(x, j){
 
 ############ time inhomogenous univariate HMM ############
 
+#' @keywords internal
 Viterbi.dthmm.inhom <- function (obj, ...){
 #     print('Solving univariate nonhomogenous markov chain')
     x <- obj$x
@@ -67,6 +68,7 @@ Viterbi.dthmm.inhom <- function (obj, ...){
 }
 
 # one theta level
+#' @keywords internal
 run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
 
     gamma = unique(gamma)
@@ -123,6 +125,7 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
 }
 
 # two theta levels
+#' @keywords internal
 run_hmm_inhom2 = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
 
     gamma = unique(gamma)
@@ -180,7 +183,7 @@ run_hmm_inhom2 = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, 
     return(solution)
 }
 
-
+#' @keywords internal
 forward_back_allele = function (obj, ...) {
 
     # case of one-data point
@@ -251,6 +254,7 @@ forward_back_allele = function (obj, ...) {
 }
 
 # only compute total log likelihood
+#' @keywords internal
 likelihood_allele = function (obj, ...) {
         
     x <- obj$x
@@ -296,6 +300,7 @@ likelihood_allele = function (obj, ...) {
     return(LL)
 }
 
+#' @keywords internal
 get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
 
     states = c("theta_up", "theta_down")
@@ -320,13 +325,15 @@ get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
 
     return(hmm)
 }
-                             
+    
+#' @keywords internal                         
 calc_allele_lik = function (pAD, DP, p_s, theta, gamma = 20) {
     hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma)
     LL = likelihood_allele(hmm)
     return(LL)
 }
 
+#' @keywords internal
 calc_allele_maxlik = function (pAD, DP, p_s, theta, gamma = 20) {
     hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma)
     LL = HiddenMarkov::Viterbi(hmm)$LL
@@ -335,6 +342,7 @@ calc_allele_maxlik = function (pAD, DP, p_s, theta, gamma = 20) {
 
 ############ time inhomogenous multivariate HMM ############
 
+#' @keywords internal
 Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
 
     x <- object$x
@@ -403,6 +411,7 @@ Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
     return(y)
 }
 
+#' @keywords internal
 Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
 
     x <- object$x
@@ -477,6 +486,7 @@ Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
     return(list(y = y, LL = LL))
 }
 
+#' @keywords internal
 forward.mv.inhom = function (obj, ...) {
     
     x <- obj$x
@@ -538,6 +548,7 @@ forward.mv.inhom = function (obj, ...) {
 }
 
 # cn/phase are sclars, only p_s is vectorized
+#' @keywords internal
 get_trans_probs = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
 
     if (cn_from == 'neu' & cn_to == 'neu') {
@@ -564,6 +575,7 @@ get_trans_probs = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
     return(p)
 }
 
+#' @keywords internal
 calc_trans_mat = function(t, p_s, w, states_cn, states_phase) {
 
     sapply(1:length(states_cn), function(from) {
@@ -576,6 +588,7 @@ calc_trans_mat = function(t, p_s, w, states_cn, states_phase) {
 }
 
 ### final model ###
+#' @keywords internal
 run_hmm_mv_inhom = function(
     pAD, DP, p_s, Y_obs = 0, lambda_ref = 0, d_total = 0, theta_min = 0.08, theta_neu = 0,
     bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), 
@@ -716,6 +729,7 @@ run_hmm_mv_inhom = function(
     return(states[as.character(MPC$y)])
 }
 
+#' @keywords internal
 run_hmm_mv_inhom2 = function(
     pAD, DP, p_s, Y_obs, lambda_ref, d_total, 
     theta_min = 0.08, theta_neu = 0.065, bal_cnv = TRUE, 

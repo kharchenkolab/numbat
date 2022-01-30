@@ -1,3 +1,4 @@
+
 #' Main function
 #' @param label character string 
 #' @param samples list of strings
@@ -58,6 +59,7 @@ get_snps = function(vcf) {
 }
 
 ## per chrom function
+#' @keywords internal 
 make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE, chr_prefix = TRUE) {
     
     chr_snps = snps %>%
@@ -127,6 +129,7 @@ make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE
     
 }
 
+#' @keywords internal 
 vcfR_file_fix <- function(file) {
 
     out <- R.utils::gunzip(file)
@@ -244,3 +247,4 @@ preprocess_allele = function(
     
     return(df)
 }
+
