@@ -1676,3 +1676,16 @@ rename_seg = function(seg) {
     id = as.integer(str_split(seg, '_')[[1]][2])
     paste0(chr, letters[id])
 }
+
+read_if_exist = function(f) {
+
+    if (file.exists(f)) {
+        if (str_detect(f, 'tsv|txt|csv')) {
+            return(fread(f))
+        } else if (str_detect(f, 'rds')) {
+            return(readRDS(f))
+        } else {
+            return(NULL)
+        }
+    }
+}
