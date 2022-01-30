@@ -123,6 +123,7 @@ ggtitle('ATC2')
 ![image](https://user-images.githubusercontent.com/13375875/144479138-0cf007cd-a979-4910-835d-fd20b920ba67.png)
 
 # Output descriptions
+The file names are post-fixed with the `i`th iteration of phylogeny optimization.
 - `gexp_roll_wide.tsv.gz`: window-smoothed normalized expression profiles of single cells
 - `hc.rds`: hierarchical clustering result based on smoothed expression
 - `bulk_subtrees_{i}.tsv.gz`: pseudobulk HMM profiles based on subtrees defined by current cell lineage tree
