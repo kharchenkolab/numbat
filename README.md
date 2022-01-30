@@ -46,11 +46,7 @@ BiocManager::install("ggtree")
 ```
 Install the Numbat R package via:
 ```
-git clone https://github.com/kharchenkolab/Numbat.git
-```
-Within R,
-```
-devtools::install_local("./Numbat")
+devtools::install_github("https://github.com/kharchenkolab/Numbat")
 ```
 
 # Usage
