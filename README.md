@@ -100,9 +100,10 @@ out = numbat_subclone(
     out_dir = '~/results/test'
 )
 ```
-3. Visualize results
+# Understanding results
+Numbat generates a number of files in the output folder. A comprehensive list can be found [here](#output-descriptions).
 
-Numbat generates a number of files in the output folder. The main results can be loaded by this function:
+The main results can be loaded by this function:
 ```
 res = fetch_results(out_dir, i = 2)
 ```
@@ -121,4 +122,23 @@ ggtitle('ATC2')
 ```
 ![image](https://user-images.githubusercontent.com/13375875/144479138-0cf007cd-a979-4910-835d-fd20b920ba67.png)
 
-
+# Output descriptions
+- `gexp_roll_wide.tsv.gz`: window-smoothed normalized expression profiles of single cells
+- `hc.rds`: hierarchical clustering result based on smoothed expression
+- `bulk_subtrees_{i}.tsv.gz`: pseudobulk HMM profiles based on subtrees defined by current cell lineage tree
+- `segs_consensus_{i}.tsv.gz`: consensus segments from subtree pseudobulk HMMs
+- `bulk_clones_{i}.tsv.gz`: pseudobulk HMM profiles based on clones defined by current cell lineage tree
+- `bulk_clones_{i}.png`: visualization of clone pseudobulk HMM profiles
+- `exp_sc_{i}.tsv.gz`: single-cell expression profiles used for single-cell CNV testing
+- `exp_post_{i}.tsv`: single-cell expression posteriors 
+- `allele_post_{i}.tsv`: single-cell allele posteriors 
+- `joint_post_{i}.tsv`: single-cell joint posteriors 
+- `treeUPGMA_{i}.rds`: UPGMA tree
+- `treeNJ_{i}.rds`: NJ tree
+- `tree_list_{i}.rds`: list of candidate phylogeneies in the maximum likelihood tree search
+- `tree_final_{i}.rds`: final tree after simplification
+- `mut_graph_{i}.rds`: final mutation history
+- `clone_post_{i}.rds`: clone assignment and tumor versus normal classification posteriors
+- `bulk_subtrees_{i}.png`: visualization of subtree pseudobulk HMM profiles 
+- `bulk_clones_{i}.png`: visualization of clone pseudobulk HMM profiles 
+- `panel_{i}.png`: visualization of combined phylogeny and CNV heatmap
