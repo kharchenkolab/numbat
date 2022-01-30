@@ -1,8 +1,9 @@
+############ allele HMM ############
+
 #' @export
 dbbinom <- function(x, size, alpha = 1, beta = 1, log = FALSE) {
     cppdbbinom(x, size, alpha, beta, log[1L])
 }
-
 
 #' @keywords internal  
 makedensity <- function(distn){
@@ -26,8 +27,6 @@ getj <- function(x, j){
         x[[i]] <- x[[i]][j]
     return(x)
 }
-
-
 
 ############ time inhomogenous univariate HMM ############
 
@@ -340,7 +339,7 @@ calc_allele_maxlik = function (pAD, DP, p_s, theta, gamma = 20) {
     return(LL)
 }
 
-############ time inhomogenous multivariate HMM ############
+############ Joint HMM ############
 
 #' @keywords internal
 Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
@@ -587,7 +586,8 @@ calc_trans_mat = function(t, p_s, w, states_cn, states_phase) {
 
 }
 
-### final model ###
+########## HMM wrappers ###########
+#' one theta level
 #' @keywords internal
 run_hmm_mv_inhom = function(
     pAD, DP, p_s, Y_obs = 0, lambda_ref = 0, d_total = 0, theta_min = 0.08, theta_neu = 0,
@@ -729,6 +729,7 @@ run_hmm_mv_inhom = function(
     return(states[as.character(MPC$y)])
 }
 
+#' two theta level
 #' @keywords internal
 run_hmm_mv_inhom2 = function(
     pAD, DP, p_s, Y_obs, lambda_ref, d_total, 
