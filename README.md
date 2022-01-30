@@ -11,6 +11,7 @@ Numbat does not require paired DNA or genotype data and operates solely on the d
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Output descriptions](#output-descriptions)
 
 A more detailed vignette for interpreting Numbat results is available:
 - [Walkthrough](http://pklab.med.harvard.edu/teng)
@@ -46,11 +47,7 @@ BiocManager::install("ggtree")
 ```
 Install the Numbat R package via:
 ```
-git clone https://github.com/kharchenkolab/Numbat.git
-```
-Within R,
-```
-devtools::install_local("./Numbat")
+devtools::install_github("https://github.com/kharchenkolab/Numbat")
 ```
 
 # Usage
@@ -123,6 +120,7 @@ ggtitle('ATC2')
 ![image](https://user-images.githubusercontent.com/13375875/144479138-0cf007cd-a979-4910-835d-fd20b920ba67.png)
 
 # Output descriptions
+The file names are post-fixed with the `i`th iteration of phylogeny optimization.
 - `gexp_roll_wide.tsv.gz`: window-smoothed normalized expression profiles of single cells
 - `hc.rds`: hierarchical clustering result based on smoothed expression
 - `bulk_subtrees_{i}.tsv.gz`: pseudobulk HMM profiles based on subtrees defined by current cell lineage tree
