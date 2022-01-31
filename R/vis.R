@@ -892,12 +892,13 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clone = NU
         geom_node_text(aes(label = clone), size = 6) +
         theme_void() +
         scale_x_continuous(expand = expansion(0.2)) +
-        scale_y_continuous(expand = expansion(0.2)) + 
         scale_color_manual(values = pal_clone, limits = force) +
         guides(color = 'none')
 
     if (horizontal) {
         p = p + coord_flip() + scale_y_reverse(expand = expansion(0.2))
+    } else {
+        p = p + scale_y_continuous(expand = expansion(0.2))
     }
 
     return(p)
