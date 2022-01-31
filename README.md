@@ -81,7 +81,7 @@ optional arguments:
 
 In this example (ATC2 from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2)), the gene expression count matrix and allele dataframe are already prepared for you.
 ```
-library(numbat)
+library(Numbat)
 
 # run
 out = numbat_subclone(
@@ -100,24 +100,18 @@ out = numbat_subclone(
 # Understanding results
 Numbat generates a number of files in the output folder. A comprehensive list can be found [here](#output-descriptions).
 
-The main results can be loaded by this function:
+The results can be summarized using a `Numbat` object:
 ```
-res = fetch_results(out_dir = './test', i = 2)
+numbat = Numbat$new(out_dir = './test', i = 2)
 ```
 
 Now we can visualize the single-cell CNV profiles and lineage relationships:
 ```
-plot_sc_joint(
-    res$gtree,
-    res$joint_post,
-    res$segs_consensus,
-    tip_length = 2,
-    branch_width = 0.2,
-    size = 0.3
-) +
-ggtitle('ATC2')
+numbat$plot_heatmap(
+    clone_bar = TRUE
+)
 ```
-![image](https://user-images.githubusercontent.com/13375875/144479138-0cf007cd-a979-4910-835d-fd20b920ba67.png)
+![image](https://user-images.githubusercontent.com/13375875/151874913-c75b760b-98f3-4d2f-a080-efb21a67529c.png)
 
 # Output descriptions
 The file names are post-fixed with the `i`th iteration of phylogeny optimization.
