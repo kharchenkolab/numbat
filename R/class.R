@@ -8,14 +8,22 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @field label
     label = 'sample',
 
-    initialize = function(out_dir, verbose=TRUE) {
+    #' @description initialize Numbat class
+    #' @param out_dir output directory
+    #' @param i get results from which iteration
+    #' @return a new 'Numbat' object
+    initialize = function(out_dir, i = 2, verbose=TRUE) {
 
         self$out_dir = out_dir
 
-        self$fetch_results(out_dir)
+        self$fetch_results(out_dir, i = i)
 
     },
 
+    #' @description fetch results from the Numbat output directory
+    #' @param out_dir output directory
+    #' @param i get results from which iteration
+    #' @return NULL
     fetch_results = function(out_dir, i = 2) {
 
         self$joint_post = fread(glue('{out_dir}/joint_post_{i}.tsv'))
@@ -33,14 +41,23 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
 
     },
 
-    plot_heatmap = function(annot = NULL, multi_allelic = FALSE, clone_bar = FALSE, tip_length = 1, p_min = 0.5, branch_width = 0.2, size = 0.1) {
+    #' @description plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
+    #' @param annot named list of cell annotation
+    #' @param clone_bar where to show clone annotation
+    #' @param p_min minimum probability threshold to filter the calls
+    #' @param tip_length tree tip length
+    #' @param branch_width tree branch width
+    #' @param line_width heatmap line width
+    #' @param multi_allelic whether to show different allelic states for same CNV
+    #' @return a ggplot object
+    plot_heatmap = function(annot = NULL, clone_bar = FALSE, multi_allelic = FALSE, p_min = 0.5, tip_length = 1, branch_width = 0.2, line_width = 0.1) {
         plot_sc_joint(  
             self$gtree,
             self$joint_post,
             self$segs_consensus,
-            tip_length = 1,
-            branch_width = 0.2,
-            size = 0.075,
+            tip_length = tip_length,
+            branch_width = branch_width,
+            size = line_width,
             p_min = p_min,
             clone_bar = clone_bar,
             multi_allelic = multi_allelic,
@@ -48,14 +65,24 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
         )
     },
     
+    #' @description plot the mutation history of the tumor
+    #' @param horizontal horizontal layout or vertical
+    #' @param label whether to label the mutations on edges
+    #' @return a ggplot object
     plot_mut_history = function(horizontal = TRUE, label = TRUE) {
         plot_mut_history(self$mut_graph, horizontal = horizontal, label = label)
     },
 
+    #' @description plot the bulk CNV profiles
+    #' @param what whether to visualize clones or subtrees
+    #' @param min_depth minimum allele coverage to filter SNPs
+    #' @param ncol number of columns in the plot panel
+    #' @param legend whether to display CNV state legend
+    #' @return a ggplot object
     plot_bulks = function(what = 'clones', min_depth = 8, phi_mle = TRUE, ncol = 1, legend = FALSE) {
 
         if (!what %in% c('clones', 'subtrees')) {
-            stop('what = clones or subtrees')
+            stop("The parameter 'what' must match one of these values: 'clones' or 'subtrees'")
         }
 
         if (what == 'clones') {
