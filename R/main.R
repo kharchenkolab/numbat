@@ -15,7 +15,7 @@
 #' @import ggtree
 #' @import ggraph
 #' @import patchwork
-#' @useDynLib numbat
+#' @useDynLib Numbat
 
 #' @description Run workflow to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
