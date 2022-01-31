@@ -9,3 +9,4 @@ get_joint_post(exp_post, allele_post, segs_consensus)
 \description{
 get joint posteriors
 }
+\keyword{internal}

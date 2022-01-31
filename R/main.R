@@ -17,21 +17,42 @@
 #' @import patchwork
 #' @useDynLib numbat
 
-#' @description Main function to decompose tumor subclones
+#' @description Run workflow to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe of allele counts per cell, produced by preprocess_allele
 #' @param gtf_transcript gtf dataframe of transcripts 
-#' @param genetic_map genetic map
+#' @param genetic_map a genetic map dataframe
+#' @param out_dir output directory
+#' @param gamma dispersion parameter for the Beta-Binomial allele model
+#' @param t transition probability
+#' @param init_method initialization method, either "smooth" (clustering based on smoothed expression) or "bulk" (all cell pseudobulk)
+#' @param init_k number of clusters in the initial clustering
+#' @param sample_size subsampling size
+#' @param min_cells minimum number of cells to run HMM on
+#' @param max_cost maximum cost to simplify the phylogeny
+#' @param max_iter maximum number of iterations to run the phyologeny optimization
+#' @param min_dpeth minimum allele depth 
+#' @param common_diploid whether to find common diploid regions in a group of peusdobulks
+#' @param ncores number of threads to use
+#' @param max_entropy entorpy threshold to filter CNVs by
+#' @param min_LLR minimum LLR to filter CNVs by 
+#' @param eps convergence threshold for ML tree search
+#' @param multi_allelic whether to call multi-allelic CNVs
+#' @param use_loh whether to include LOH regions in the expression baseline
+#' @param skip_nj whether to skip NJ tree construction and only use UPGMA
+#' @param exclude_normal whether to exclude normal cells in the tree construction
+#' @param diploid_chroms known diploid chromosomes
 #' @return a status code
 #' @export
 numbat_subclone = function(
-        count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, cell_annot = NULL, 
-        out_dir = './', t = 1e-5, gamma = 20, init_method = 'smooth', init_k = 3, sample_size = 1e5, 
-        min_cells = 10, max_cost = ncol(count_mat) * 0.3, max_iter = 2, min_depth = 0, common_diploid = TRUE,
-        ncores = 30, exp_model = 'lnpois', verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        exclude_normal = FALSE, max_entropy = 0.6, skip_nj = FALSE, eps = 1e-5, multi_allelic = TRUE,
-        min_LLR = 50, alpha = 1e-4, plot = TRUE
+        count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, 
+        out_dir = './', max_iter = 2, t = 1e-5, gamma = 20, min_LLR = 50, alpha = 1e-4, eps = 1e-5, max_entropy = 0.6, 
+        init_method = 'smooth', init_k = 3, sample_size = 1e5, min_cells = 10, max_cost = ncol(count_mat) * 0.3, 
+        min_depth = 0, common_diploid = TRUE, ncores = 30, exp_model = 'lnpois', 
+        verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
+        exclude_normal = FALSE, skip_nj = FALSE, multi_allelic = TRUE,
+        plot = TRUE
     ) {
     
     dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
@@ -312,18 +333,7 @@ numbat_subclone = function(
         saveRDS(gtree, glue('{out_dir}/tree_final_{i}.rds'))
         saveRDS(G_m, glue('{out_dir}/mut_graph_{i}.rds'))
 
-        # map cells to the phylogeny
-        clones = gtree %>%
-            activate(nodes) %>%
-            data.frame() %>% 
-            # mutate(GT = ifelse(compartment == 'normal', '', GT)) %>%
-            group_by(GT, clone, compartment) %>%
-            summarise(
-                clone_size = sum(leaf),
-                .groups = 'drop'
-            )
-
-        clone_post = cell_to_clone(clones, exp_post, allele_post)
+        clone_post = cell_to_clone(gtree, exp_post, allele_post)
 
         fwrite(clone_post, glue('{out_dir}/clone_post_{i}.tsv'), sep = '\t')
 
@@ -491,7 +501,8 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores 
     return(list('cell_annot' = cell_annot, 'nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc, 'fit' = fit))
 }
 
-#' @export
+#' Make a group of pseudobulks
+#' @keywords internal 
 make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_transcript, genetic_map, min_depth = 0, ncores = NULL) {
     
     if (length(groups) == 0) {
@@ -603,7 +614,11 @@ run_group_hmms = function(
     return(bulks)
 }
 
-#' Extract consensus CNV segments
+#' @description Extract consensus CNV segments
+#' @param bulks pseudobulks dataframe
+#' @param LLR_min LLR threshold to filter CNVs 
+#' @param min_overlap minimum overlap fraction to determine count two events as as overlapping
+#' @return consensus segments dataframe
 #' @export
 get_segs_consensus = function(bulks, LLR_min = 20, min_overlap = 0.45) {
 
@@ -658,10 +673,11 @@ get_segs_consensus = function(bulks, LLR_min = 20, min_overlap = 0.45) {
 
 }
 
+#' @description Fill neutral regions into consensus segments
 #' @param segs_consensus a dataframe containing info of all CNV segments from multiple samples
 #' @param segs_neu neutral segments
 #' @return collections of neutral and aberrant segments with no gaps
-#' @export
+#' @keywords internal
 fill_neu_segs = function(segs_consensus, segs_neu) {
     
     # take complement of consensus aberrant segs
@@ -705,12 +721,23 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
     return(segs_consensus)
 }
 
-
-#' Map cells to clones
+#' @description Map cells to the phylogeny (or genotypes) based on CNV posteriors
+#' @param gtree a cell lineage tree as a tidygraph object
+#' @param exp_post expression posteriors
+#' @param allele_post allele posteriors
+#' @return clone posteriors
 #' @export
-cell_to_clone = function(clones, exp_post, allele_post) {
+cell_to_clone = function(gtree, exp_post, allele_post) {
 
-    # gtree = mark_tumor_lineage(gtree)
+    clones = gtree %>%
+        activate(nodes) %>%
+        data.frame() %>% 
+        # mutate(GT = ifelse(compartment == 'normal', '', GT)) %>%
+        group_by(GT, clone, compartment) %>%
+        summarise(
+            clone_size = sum(leaf),
+            .groups = 'drop'
+        )
 
     clone_segs = clones %>%
         mutate(
@@ -834,9 +861,9 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
     return(segs_consensus)
 }
 
-#' @param exp_sc Single cell expression data matrix
-#' @return expression likelihoods
-#' @export
+#' @description get the single cell expression likelihoods
+#' @param exp_sc single-cell expression dataframe
+#' @keywords internal
 get_exp_likelihoods_lnpois = function(exp_sc, diploid_chroms = NULL, use_loh = FALSE, depth_obs = NULL, mu = NULL, sigma = NULL) {
 
     exp_sc = exp_sc %>% filter(lambda_ref > 0)
@@ -886,11 +913,12 @@ get_exp_likelihoods_lnpois = function(exp_sc, diploid_chroms = NULL, use_loh = F
     return(res)
 }
 
-#' @param segs_consensus
-#' @param count_mat
-#' @param gtf_transcript
-#' @return CNV expression posteriors
-#' @export
+#' @description get the single cell expression dataframe
+#' @param segs_consensus consensus segments
+#' @param count_mat gene expression count matrix
+#' @param gtf_transcript transcript dataframe
+#' @return single cell expression dataframe
+#' @keywords internal
 get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 
     gene_seg = GenomicRanges::findOverlaps(
@@ -938,8 +966,14 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
     return(exp_sc)
 }
 
-#' get CNV expression posteriors
-#' @export
+
+#' @description compute single-cell expression posteriors
+#' @param segs_consensus consensus segments
+#' @param count_mat gene expression count matrix
+#' @param gtf_transcript transcript dataframe
+#' @param lambdas_ref reference expression matrix
+#' @return expression posterior datatframe
+#' @keywords internal
 get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, diploid_chroms = NULL, use_loh = NULL, ncores = 30, verbose = TRUE, debug = F) {
 
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf_transcript) 
@@ -1022,8 +1056,8 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     return(list('exp_post' = exp_post, 'exp_sc' = exp_sc, 'best_refs' = best_refs))
 }
 
-#' do bayesian averaging to get posteriors
-#' @export
+#' @description do bayesian averaging to get posteriors
+#' @keywords internal
 compute_posterior = function(sc_post) {
     sc_post %>% 
     rowwise() %>%
@@ -1054,7 +1088,7 @@ compute_posterior = function(sc_post) {
 }
 
 #' get CNV allele posteriors
-#' @export
+#' @keywords internal
 get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
 
     if ((!'sample' %in% colnames(bulk_all)) | (!'sample' %in% colnames(segs_consensus))) {
@@ -1137,7 +1171,7 @@ get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
 }
 
 #' get joint posteriors
-#' @export
+#' @keywords internal
 get_joint_post = function(exp_post, allele_post, segs_consensus) {
     
     joint_post = full_join(
@@ -1198,6 +1232,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
     return(joint_post)
 }
 
+#' test for multi-allelic CNVs
 #' @keywords internal 
 test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 100, p_min = 0.999, diploid_chroms = NULL) {
 
@@ -1272,6 +1307,7 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
     return(list('segs_consensus' = segs_consensus, 'bulks' = bulks, 'segs_multi' = segs_multi))
 }
 
+#' expand multi-allelic CNVs into separate entries in the single-cell posterior dataframe
 #' @keywords internal 
 expand_states = function(sc_post, segs_consensus) {
 

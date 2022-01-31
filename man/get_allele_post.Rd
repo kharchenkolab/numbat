@@ -9,3 +9,4 @@ get_allele_post(bulk_all, segs_consensus, df_allele, naive = FALSE)
 \description{
 get CNV allele posteriors
 }
+\keyword{internal}
