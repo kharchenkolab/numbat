@@ -94,7 +94,7 @@ out = numbat_subclone(
     t = 1e-5,
     ncores = 20,
     plot = TRUE,
-    out_dir = '~/results/test'
+    out_dir = './test'
 )
 ```
 # Understanding results
@@ -102,7 +102,7 @@ Numbat generates a number of files in the output folder. A comprehensive list ca
 
 The main results can be loaded by this function:
 ```
-res = fetch_results(out_dir, i = 2)
+res = fetch_results(out_dir = './test', i = 2)
 ```
 
 Now we can visualize the single-cell CNV profiles and lineage relationships:
