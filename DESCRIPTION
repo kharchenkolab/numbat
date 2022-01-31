@@ -14,6 +14,7 @@ Imports:
     reshape2,
     tidyr,
     gtools,
+    R.utils,
     data.table,
     logger,
     stringr,
