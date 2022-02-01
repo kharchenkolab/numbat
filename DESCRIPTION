@@ -31,14 +31,15 @@ Imports:
     zoo,
     GenomicRanges,
     HiddenMarkov,
-    Hotelling,
-    ggplot2,
     caTools,
     matrixStats,
+    parallelDist,
     dendextend,
+    ggplot2,
     ggtree,
     ggraph,
-    parallelDist
+    Rcpp,
+    patchwork
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
