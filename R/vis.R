@@ -1121,12 +1121,13 @@ plot_sc_joint = function(
     #     gtree = gtree %>% activate(nodes) %>% mutate(clone = as.integer(as.factor(GT)))
     # }
 
-    # if (!'n_states' %in% colnames(segs_consensus)) {
-    #     segs_consensus = segs_consensus %>% mutate(
-    #         n_states = ifelse(cnv_state == 'neu', 1, 0), 
-    #         cnv_states = cnv_state
-    #     )
-    # }
+    # if multi allelic module was not enabled
+    if (!'n_states' %in% colnames(segs_consensus)) {
+        segs_consensus = segs_consensus %>% mutate(
+            n_states = ifelse(cnv_state == 'neu', 1, 0), 
+            cnv_states = cnv_state
+        )
+    }
 
     gtree = mark_tumor_lineage(gtree)
 
