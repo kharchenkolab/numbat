@@ -8,11 +8,10 @@ test_that("HMM works", {
 
   bulk = get_bulk(
       count_mat = count_mat_ATC2,
-      df = df_allele_ATC2,
+      df_allele = df_allele_ATC2,
       lambdas_ref = ref_hca,
-      gtf_transcript = gtf_transcript,
-      genetic_map = genetic_map_hg38,
-      min_depth = 0
+      gtf_transcript = gtf_hg38,
+      genetic_map = genetic_map_hg38
   )
 
   message('running HMM..')
