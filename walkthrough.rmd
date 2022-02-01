@@ -11,13 +11,10 @@ knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 
 ```{r}
 library(ggplot2)
-library(numbat)
+library(Numbat)
 library(dplyr)
 library(conos)
-# library(logger)
-# library(stringr)
-# library(magrittr)
-# library(glue)
+library(glue)
 library(data.table)
 library(patchwork)
 ```
@@ -27,8 +24,8 @@ In this tutorial, we will illustrate how to use Numbat to reconstruct the single
 Numbat produces a number of files in the output folder. Let's load the results using this utility function:
 ```{r}
 # loading numbat results
-outdir = '~/results/test'
-res = fetch_results(outdir, i = 2)
+outdir = '~/ATC2_test'
+numbat = Numbat$new(outdir, i = 2)
 # loading conos object for visualization
 con_ATC = readRDS('~/external/MDA/conos_ATC.rds')
 con_sample = con_ATC$samples[['ATC2']]

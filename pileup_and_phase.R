@@ -84,7 +84,7 @@ system(glue('chmod +x {script}'))
 
 ## VCF creation
 cat('Creating VCFs\n')
-vcfs = lapply(samples, function(sample){read.vcfR(glue('{outdir}/pileup/{sample}/cellSNP.base.vcf'), verbose = F)})
+vcfs = lapply(samples, function(sample){vcfR::read.vcfR(glue('{outdir}/pileup/{sample}/cellSNP.base.vcf'), verbose = F)})
 
 genotype(label, samples, vcfs, glue('{outdir}/phasing'))
 

@@ -160,42 +160,6 @@ mark_tumor_lineage = function(gtree) {
 }
 
 #' @keywords internal
-parse_scistree = function(out_file, geno, joint_post) {
-    
-    MLtree = fread(out_file, skip = 'Constructed single cell phylogeny', fill=TRUE, sep = ':', nrow = 1) %>%
-        colnames %>% .[2] %>% paste0(';') %>%
-        treeio::read.tree(text = .) %>%
-        ape::compute.brlen(method = 1)
-
-    NJtree = grep('Neighbor joining tree from noisy genotypes', readLines(out_file), value = T) %>%
-        str_remove('Neighbor joining tree from noisy genotypes: ') %>%
-        paste0(';') %>%
-        treeio::read.tree(text = .) 
-
-    NJtree$tip.label = colnames(geno)[as.integer(NJtree$tip.label)]
-
-    cnv_order = grep('Mutation tree', readLines(out_file), value = T) %>% str_remove_all('\\(|\\)|\\^|Mutation tree:|,| ') %>%
-        str_split('#') %>% unlist %>% str_subset('') 
-    
-    options(warn = -1)
-    
-    Gopt = fread(out_file, skip = 'Imputed genotypes', header = F, sep = ' ', nrows = nrow(geno)) %>%
-        select(-V1) %>%
-        mutate(V2 = as.integer(purrr::map(str_split(V2, '\t'),2))) %>%
-        set_colnames(colnames(geno)) %>%
-        mutate(seg = rownames(geno)) %>% 
-        reshape2::melt(id.var = 'seg', variable.name = 'cell', value.name = 'p_cnv') %>%
-        mutate(logBF = ifelse(p_cnv == 0, -5, 5)) %>%
-        left_join(
-            joint_post %>% distinct(seg, seg_label, cnv_state),
-            by = 'seg'
-        )
-    options(warn = 0)
-    
-    return(list('MLtree' = MLtree, 'cnv_order' = cnv_order, 'G' = Gopt, 'NJtree' = NJtree))
-}
-
-#' @keywords internal
 label_mut_tree = function(G, mut_assign) {
 
     # fix the root node
@@ -203,8 +167,9 @@ label_mut_tree = function(G, mut_assign) {
         
         V(G)$id = V(G)$id + 1
         
-        G = G %>% add_vertices(1, attr = list('label' = ' ', 'id' = 1)) %>%
-            add_edges(c(length(V(G))+1,1)) 
+        G = G %>% 
+            igraph::add_vertices(1, attr = list('label' = ' ', 'id' = 1)) %>%
+            igraph::add_edges(c(length(V(G))+1,1)) 
     }
 
     G = G %>% as_tbl_graph() %>% arrange(id != 1) %>%
@@ -467,8 +432,7 @@ label_genotype = function(G) {
         c(id_to_label[[1]],.) %>%
         as.character
 
-    # V(G)$clone = igraph::dfs(G, root = 1)$order
-    visit_order = setNames(1:length(V(G)), as.numeric(dfs(G, root = 1)$order))
+    visit_order = setNames(1:length(V(G)), as.numeric(igraph::dfs(G, root = 1)$order))
     V(G)$clone = visit_order[as.character(as.numeric(V(G)))]
     
     return(G)
@@ -485,7 +449,7 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
     }
     
     # reorder the nodes according to graph
-    vorder = V(G)$label[dfs(G, root = 1)$order]
+    vorder = V(G)$label[igraph::dfs(G, root = 1)$order]
     vset = vorder[vorder %in% vset]
     
     vset_ids = V(G)[label %in% vset]
@@ -499,7 +463,7 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
         ids_new[(max(vset_ids)+1):length(ids_new)] = ids_new[(max(vset_ids)+1):length(ids_new)] - length(vset_ids) + 1
     }
 
-    G = G %>% contract(
+    G = G %>% igraph::contract(
         ids_new,
         vertex.attr.comb = list(label = function(x){paste0(sort(x), collapse = ',')}, node = "first", "ignore")
     )

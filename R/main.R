@@ -1,20 +1,16 @@
 #' @import logger
 #' @import dplyr
-#' @import data.table
+#' @importFrom data.table fread fwrite as.data.table
 #' @import stringr
 #' @import glue
-#' @import phangorn
-#' @import vcfR
-#' @import purrr
-#' @import magrittr
-#' @import parallel
-#' @import igraph
+#' @importFrom parallel mclapply
 #' @import tidygraph
-#' @import extraDistr
 #' @import ggplot2
 #' @import ggtree
 #' @import ggraph
+#' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
+#' @importFrom extraDistr dgpois
 #' @useDynLib Numbat
 
 #' @description Run workflow to decompose tumor subclones
@@ -55,7 +51,7 @@ numbat_subclone = function(
         plot = TRUE
     ) {
     
-    dir.create(out_dir, showWarnings = TRUE, recursive = TRUE)
+    dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
     if (file.exists(logfile)) {file.remove(logfile)}
     log_appender(appender_file(logfile))
@@ -114,11 +110,16 @@ numbat_subclone = function(
             ncores = ncores
         )
 
-        fwrite(clust$gexp_roll_wide, glue('{out_dir}/gexp_roll_wide.tsv.gz'), sep = '\t', nThread = min(10, ncores))
+        fwrite(
+            as.data.frame(clust$gexp_roll_wide) %>% tibble::rownames_to_column('cell'),
+            glue('{out_dir}/gexp_roll_wide.tsv.gz'),
+            sep = '\t',
+            nThread = min(4, ncores)
+        )
         saveRDS(clust$hc, glue('{out_dir}/hc.rds'))
         saveRDS(clust$nodes, glue('{out_dir}/hc_nodes.rds'))
 
-        nodes = keep(clust$nodes, function(x) x$size > min_cells)
+        nodes = purrr::keep(clust$nodes, function(x) x$size > min_cells)
 
         bulk_subtrees = make_group_bulks(
                 groups = nodes,
@@ -1234,7 +1235,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
 
 #' test for multi-allelic CNVs
 #' @keywords internal 
-test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 100, p_min = 0.999, diploid_chroms = NULL) {
+test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 100, p_min = 0.995, diploid_chroms = NULL) {
 
     log_info('Testing for multi-allelic CNVs ..')
 
@@ -1302,6 +1303,12 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
                 p_bdel = ifelse(n_states > 1, ifelse('bdel' %in% cnv_states, 0.5, 0), p_bdel)
             ) %>%
             ungroup()
+    } else {
+        segs_consensus = segs_consensus %>% 
+            mutate(
+                n_states = ifelse(cnv_state == 'neu', 1, 0),
+                cnv_states = cnv_state
+            )
     }
     
     return(list('segs_consensus' = segs_consensus, 'bulks' = bulks, 'segs_multi' = segs_multi))

@@ -100,9 +100,9 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
     w = fit$par[2:length(fit$par)]
     beta = 1/sum(w)
     w = w * beta
-    w = set_names(w, colnames(lambdas_ref))
+    w = setNames(w, colnames(lambdas_ref))
 
-    lambdas_bar = lambdas_ref %*% w %>% {set_names(as.vector(.), rownames(.))}
+    lambdas_bar = lambdas_ref %*% w %>% {setNames(as.vector(.), rownames(.))}
 
     return(list('alpha' = alpha, 'beta' = beta, 'w' = w, 'lambdas_bar' = lambdas_bar))
 }
@@ -1003,7 +1003,7 @@ annot_consensus = function(bulk, segs_consensus) {
             )}
         ) %>%
         as.data.frame() %>%
-        set_names(c('marker_index', 'seg_index')) %>%
+        setNames(c('marker_index', 'seg_index')) %>%
         left_join(
             bulk %>% mutate(marker_index = 1:n()) %>%
                 select(marker_index, snp_id),
@@ -1126,7 +1126,7 @@ find_common_diploid = function(
                 function(sample) {
                     t(combn(segs_bal, 2)) %>% 
                         as.data.frame() %>%
-                        set_names(c('i', 'j')) %>%
+                        setNames(c('i', 'j')) %>%
                         mutate(s = sample)
                 }
             ) %>% 
@@ -1488,7 +1488,7 @@ get_nodes_celltree = function(hc, clusters) {
     # convert to list
     nodes = nodes %>%
         split(.$node) %>%
-        map(function(node){list(sample = unique(node$node), members = unique(node$cluster), cells = node$cell, size = length(node$cell))})
+        purrr::map(function(node){list(sample = unique(node$node), members = unique(node$cluster), cells = node$cell, size = length(node$cell))})
     
     return(nodes)
     

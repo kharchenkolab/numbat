@@ -1,4 +1,3 @@
-
 #' Main function
 #' @param label character string 
 #' @param samples list of strings

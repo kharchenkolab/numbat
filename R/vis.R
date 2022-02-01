@@ -1,4 +1,3 @@
-
 ########################### Visualizations ############################
 
 pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
@@ -359,9 +358,14 @@ cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5, cn
 }
 
 #' @export
-plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50, reverse = TRUE, plot_tree = TRUE) {
+plot_sc_roll = function(gexp_roll_wide, hc, k, gtf_transcript, lim = 0.8, n_sample = 50, reverse = TRUE, plot_tree = TRUE) {
 
-    cells = unique(gexp.norm.long$cell)
+    gexp_norm_long = gexp_roll_wide %>% 
+        reshape2::melt(id.var = 'cell', variable.name = 'gene', value.name = 'exp_rollmean') %>%
+        left_join(gtf_transcript, by = 'gene') %>%
+        mutate(gene_index = as.integer(factor(gene, unique(gene))))
+
+    cells = unique(gexp_norm_long$cell)
     
     cell_sample = sample(cells, min(n_sample, length(cells)), replace = FALSE)
         
@@ -374,7 +378,7 @@ plot_sc_roll = function(gexp.norm.long, hc, k, lim = 0.8, n_sample = 50, reverse
         return(chr)
     }
     
-    p_heatmap = gexp.norm.long %>%
+    p_heatmap = gexp_norm_long %>%
         filter(cell %in% cell_sample) %>%
         mutate(cell = factor(cell, cell_order)) %>%
         mutate(cluster = cutree(hc, k = k)[as.character(cell)]) %>%
@@ -1113,16 +1117,16 @@ plot_sc_joint = function(
         pal_annot = NULL, multi_allelic = FALSE, tree_height = 1, annot_title = 'Annotation'
     ) {
 
-    if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
-        gtree = gtree %>% activate(nodes) %>% mutate(clone = as.integer(as.factor(GT)))
-    }
+    # if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
+    #     gtree = gtree %>% activate(nodes) %>% mutate(clone = as.integer(as.factor(GT)))
+    # }
 
-    if (!'n_states' %in% colnames(segs_consensus)) {
-        segs_consensus = segs_consensus %>% mutate(
-            n_states = ifelse(cnv_state == 'neu', 1, 0), 
-            cnv_states = cnv_state
-        )
-    }
+    # if (!'n_states' %in% colnames(segs_consensus)) {
+    #     segs_consensus = segs_consensus %>% mutate(
+    #         n_states = ifelse(cnv_state == 'neu', 1, 0), 
+    #         cnv_states = cnv_state
+    #     )
+    # }
 
     gtree = mark_tumor_lineage(gtree)
 
@@ -1276,7 +1280,7 @@ plot_sc_joint = function(
             annot = unname(clone_dict)
         ) %>%
         mutate(cell = factor(cell, cell_order)) %>%
-        annot_bar(transpose = T, legend = clone_legend, legend_title = 'Clone', size = size) +
+        annot_bar(transpose = T, legend = clone_legend, legend_title = 'Genotype', size = size) +
         scale_fill_manual(values = pal_clone)
 
     # external annotation

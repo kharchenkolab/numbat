@@ -7,16 +7,20 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
   public = list(
     #' @field label
     label = 'sample',
+    gtf = NULL,
 
     #' @description initialize Numbat class
     #' @param out_dir output directory
     #' @param i get results from which iteration
+    #' @param verbose verbosity
     #' @return a new 'Numbat' object
-    initialize = function(out_dir, i = 2, verbose=TRUE) {
+    initialize = function(out_dir, i = 2, gtf = gtf_hg38, verbose=TRUE) {
 
         self$out_dir = out_dir
 
         self$fetch_results(out_dir, i = i)
+
+        self$gtf = gtf
 
     },
 
@@ -38,6 +42,8 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
         self$mut_graph = readRDS(glue('{out_dir}/mut_graph_{i}.rds'))
         self$gtree = readRDS(glue('{out_dir}/tree_final_{i}.rds'))
         self$clone_post = fread(glue('{out_dir}/clone_post_{i}.tsv'))
+        self$gexp_roll_wide = fread(glue('{outdir}/gexp_roll_wide.tsv.gz'))
+        self$hc = readRDS(glue('{outdir}/hc.rds'))
 
     },
 
@@ -50,7 +56,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @param line_width heatmap line width
     #' @param multi_allelic whether to show different allelic states for same CNV
     #' @return a ggplot object
-    plot_heatmap = function(annot = NULL, clone_bar = FALSE, multi_allelic = FALSE, p_min = 0.5, tip_length = 1, branch_width = 0.2, line_width = 0.1) {
+    plot_phylo_heatmap = function(annot = NULL, clone_bar = FALSE, multi_allelic = FALSE, p_min = 0.5, tip_length = 1, branch_width = 0.2, line_width = 0.1) {
         plot_sc_joint(  
             self$gtree,
             self$joint_post,
@@ -62,6 +68,22 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             clone_bar = clone_bar,
             multi_allelic = multi_allelic,
             cell_dict = annot
+        )
+    },
+
+    #' @description plot window-smoothed expression profiles
+    #' @param k number of clusters
+    #' @param hc where to show clone annotation
+    #' @param n_sample number of cells to subsample
+    #' @return a ggplot object
+    plot_exp_roll = function(k = 3, n_sample = 300) {
+        
+        plot_sc_roll(
+            self$gexp_roll_wide,
+            self$hc,
+            self$gtf,
+            k = k,
+            n_sample = n_sample
         )
     },
     
@@ -78,6 +100,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @param min_depth minimum allele coverage to filter SNPs
     #' @param ncol number of columns in the plot panel
     #' @param legend whether to display CNV state legend
+    #' @param phi_mle whether to plot expression fold change estimates
     #' @return a ggplot object
     plot_bulks = function(what = 'clones', min_depth = 8, phi_mle = TRUE, ncol = 1, legend = FALSE) {
 
