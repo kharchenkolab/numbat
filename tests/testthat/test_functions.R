@@ -16,7 +16,7 @@ test_that("HMM works", {
 
   message('running HMM..')
 
-  bulk = bulk %>% analyze_bulk(t = 1e-5)
+  bulk = analyze_bulk(bulk, t = 1e-5)
   
 })
 

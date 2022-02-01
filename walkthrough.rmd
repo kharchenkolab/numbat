@@ -33,15 +33,8 @@ con_sample = con_ATC$samples[['ATC2']]
 
 Numbat first approximates a single-cell phylogeny using window-smoothed average expression values. We can visualize the averaged expression profile and the initial phylogeny as follows:
 ```{r, fig.width = 10, fig.height = 3.5, dpi=300}
-gexp.norm.long = fread(glue('{outdir}/gexp.norm.long.tsv.gz'))
-hc = readRDS(glue('{outdir}/hc.rds'))
 
-plot_sc_roll(
-    gexp.norm.long,
-    hc,
-    k = 3,
-    n_sample = 300
-)
+numbat$plot_exp_roll(k = 3, n_sample = 300)
 ```
 This view is similar to inferCNV and CopyKat. It appears that we have three main clusters: clusters 1 and 2 seem to harbor amplifications on chromosome 5, 7, 19. Cluster 3 does not have obvious CNVs and is presumably the normal cells. However, it is not clear what the CNV events are (their boundaries and copy number states) and how the two tumor populations are related to each other (are they distinct lineages or is one the ancestor of the other?). Let's use Numbat to get a more detailed view of the copy number landscape in this dataset.
 
