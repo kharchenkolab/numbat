@@ -107,7 +107,7 @@ numbat = Numbat$new(out_dir = './test', i = 2)
 
 Now we can visualize the single-cell CNV profiles and lineage relationships:
 ```
-numbat$plot_heatmap(
+numbat$plot_phylo_heatmap(
     clone_bar = TRUE
 )
 ```
