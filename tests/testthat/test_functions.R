@@ -1,3 +1,6 @@
+
+library(Numbat)
+
 test_that("dpoilog works", {
   expect_equal(dpoilog(c(1,11),c(1,1),c(1,1)), c(0.175733342664327, 0.0150105250670325))
 })
@@ -8,16 +11,15 @@ test_that("HMM works", {
 
   bulk = get_bulk(
       count_mat = count_mat_ATC2,
-      df = df_allele_ATC2,
+      df_allele = df_allele_ATC2,
       lambdas_ref = ref_hca,
-      gtf_transcript = gtf_transcript,
-      genetic_map = genetic_map_hg38,
-      min_depth = 0
+      gtf_transcript = gtf_hg38,
+      genetic_map = genetic_map_hg38
   )
 
   message('running HMM..')
 
-  bulk = bulk %>% analyze_bulk(t = 1e-5)
+  bulk = analyze_bulk(bulk, t = 1e-5)
   
 })
 
