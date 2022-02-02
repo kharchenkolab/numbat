@@ -1,5 +1,5 @@
 ---
-title: "Numbat walkthrough"
+title: ""
 documentclass: book
 output:
   bookdown::gitbook:
@@ -10,7 +10,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 ```
 
-# Interpreting Numbat outputs
+# Interpreting Numbat outputs {-}
 In this tutorial, we will illustrate how to visualize and interpret Numbat output, using a triple-negative breast cancer dataset (TNBC1) from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2). We will use `pagoda2` for visualizing cells in low-dimensional expression space.
 
 ```{r}
