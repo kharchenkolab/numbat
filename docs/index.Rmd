@@ -1,5 +1,4 @@
 ---
-title: "Interpreting Numbat outputs"
 documentclass: book
 output:
   bookdown::gitbook: default
@@ -8,6 +7,8 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 ```
+
+# Interpreting Numbat outputs
 
 In this tutorial, we will illustrate how to visualize and interpret Numbat output, using a triple-negative breast cancer dataset (TNBC1) from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2). We will use `pagoda2` for visualizing cells in low-dimensional expression space.
 
@@ -72,11 +73,73 @@ for (mut in muts) {
         plot.theme = theme_bw(),
         title = paste0(mut, '(', cnv_type, ')')
     ) +
-    scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, limits = c(0,1))
+    scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, limits = c(0,1), name = 'Posterior')
 }
 
 wrap_plots(plist, guides = 'collect')
 ```
+
+## Clonal assignments
+Numbat aggregates signals across subclone-specific CNVs to probabilistically assign cells to subclones. The information regarding clonal assignments are contained in the `nb$clone_post` dataframe.
+```{r}
+nb$clone_post %>% head() %>% select(cell, clone_opt, p_1, p_2, p_3, p_4)
+```
+Here `clone_opt` denotes the maximum likelihood assignment of a cell to a specific clone. `p_{1..4}` are the detailed breakdown of the posterior probability that the cell belongs to each clone, respectively. Let's visualize the clonal decomposition in a tSNE embedding.
+```{r, fig.width = 3, fig.height=3, dpi=300}
+pagoda$plotEmbedding(
+    alpha=0.8,
+    size=1, 
+    groups = nb$clone_post %>%
+        {setNames(.$clone_opt, .$cell)},
+    plot.na = F,
+    plot.theme = theme_bw(),
+    title = 'Genotypes',
+    pal = mypal
+)
+```
+
+## Tumor versus normal probability
+Combining evidence from all CNVs, Numbat derives an aneuploidy probability for each cell to distinguish tumor versus normal cells. We can visualize the posterior aneuploidy probability based on expression evidence only, allele evidence only, and jointly:
+```{r, fig.width = 9, fig.height=3, dpi=300}
+
+p_joint = pagoda$plotEmbedding(
+    alpha=0.8,
+    size=1, 
+    colors = nb$clone_post %>%
+        {setNames(.$p_cnv, .$cell)},
+    plot.na = F,
+    plot.theme = theme_bw(),
+    title = 'Joint',
+) +
+scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, name = 'Posterior')
+
+p_allele = pagoda$plotEmbedding(
+    alpha=0.8,
+    size=1, 
+    colors = nb$clone_post %>%
+        {setNames(.$p_cnv_x, .$cell)},
+    plot.na = F,
+    plot.theme = theme_bw(),
+    title = 'Expnbsion',
+) +
+scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, name = 'Posterior')
+
+p_expr = pagoda$plotEmbedding(
+    alpha=0.8,
+    size=1, 
+    colors = nb$clone_post %>%
+        {setNames(.$p_cnv_y, .$cell)},
+    plot.na = F,
+    show.legend = T,
+    plot.theme = theme_bw(),
+    title = 'Allele',
+) +
+scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, name = 'Posterior')
+
+(p_expr | p_allele | p_joint) + plot_layout(guides = 'collect')
+
+```
+Both expression and allele signal clearly separate the tumor and normal cells.
 
 ## Tumor phylogeny
 We can get a more detailed view of the reconstructed single-cell phylogeny as below.
@@ -117,68 +180,6 @@ The clone-level mutational history constructed by Numbat can be visualized. Here
 ```{r, fig.width = 6, fig.height=3, dpi=300}
 nb$plot_mut_history(pal_clone = mypal)
 ```
-
-## Clonal assignments
-Numbat aggregates signals across subclone-specific CNVs to probabilistically assign cells to subclones. The information regarding clonal assignments are contained in the `nb$clone_post` dataframe.
-```{r}
-nb$clone_post %>% head() %>% select(cell, clone_opt, p_1, p_2, p_3, p_4)
-```
-Here `clone_opt` denotes the maximum likelihood assignment of a cell to a specific clone. `p_{1..4}` are the detailed breakdown of the posterior probability that the cell belongs to each clone, respectively. Let's visualize the clonal decomposition in a tSNE embedding.
-```{r, fig.width = 3, fig.height=3, dpi=300}
-pagoda$plotEmbedding(
-    alpha=0.8,
-    size=1, 
-    groups = nb$clone_post %>%
-        {setNames(.$clone_opt, .$cell)},
-    plot.na = F,
-    plot.theme = theme_bw(),
-    title = 'Genotypes',
-    pal = mypal
-)
-```
-
-## Tumor versus normal probability
-Combining evidence from all CNVs, Numbat derives an aneuploidy probability for each cell to distinguish tumor versus normal cells. We can visualize the posterior aneuploidy probability based on expression evidence only, allele evidence only, and jointly:
-```{r, fig.width = 9, fig.height=3, dpi=300}
-
-p_joint = pagoda$plotEmbedding(
-    alpha=0.8,
-    size=1, 
-    colors = nb$clone_post %>%
-        {setNames(.$p_cnv, .$cell)},
-    plot.na = F,
-    plot.theme = theme_bw(),
-    title = 'Joint',
-) +
-scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5)
-
-p_allele = pagoda$plotEmbedding(
-    alpha=0.8,
-    size=1, 
-    colors = nb$clone_post %>%
-        {setNames(.$p_cnv_x, .$cell)},
-    plot.na = F,
-    plot.theme = theme_bw(),
-    title = 'Expnbsion',
-) +
-scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5)
-
-p_expr = pagoda$plotEmbedding(
-    alpha=0.8,
-    size=1, 
-    colors = nb$clone_post %>%
-        {setNames(.$p_cnv_y, .$cell)},
-    plot.na = F,
-    show.legend = T,
-    plot.theme = theme_bw(),
-    title = 'Allele',
-) +
-scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5)
-
-(p_expr | p_allele | p_joint) + plot_layout(guides = 'collect')
-
-```
-Both expression and allele signal clearly separate the tumor and normal cells.
 
 ## Bulk CNV profiles
 To get a better sense of the raw CNV signals, we can visualize the pseudobulk CNV profiles of the respective clones by the below function:
