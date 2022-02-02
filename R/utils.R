@@ -1191,6 +1191,7 @@ find_common_diploid = function(
                     setNames(c('sample', i))
             }) %>%
             Reduce(x = ., f = function(x,y){full_join(x, y, by = 'sample')}) %>%
+            tibble::remove_rownames() %>%
             tibble::column_to_rownames('sample')
 
         }

@@ -38,7 +38,9 @@ Imports:
     dendextend,
     ggtree,
     ggraph,
-    parallelDist
+    parallelDist,
+    Rcpp,
+    patchwork
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

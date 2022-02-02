@@ -1,3 +1,3 @@
-library(numbat)
+library(Numbat)
 
-testthat::test_check("numbat")
+testthat::test_check("Numbat")

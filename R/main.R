@@ -41,7 +41,7 @@
 #' @param diploid_chroms known diploid chromosomes
 #' @return a status code
 #' @export
-numbat_subclone = function(
+run_numbat = function(
         count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, 
         out_dir = './', max_iter = 2, t = 1e-5, gamma = 20, min_LLR = 50, alpha = 1e-4, eps = 1e-5, max_entropy = 0.6, 
         init_method = 'smooth', init_k = 3, sample_size = 1e5, min_cells = 10, max_cost = ncol(count_mat) * 0.3, 
