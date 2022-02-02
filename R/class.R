@@ -43,21 +43,22 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
         self$mut_graph = readRDS(glue('{out_dir}/mut_graph_{i}.rds'))
         self$gtree = readRDS(glue('{out_dir}/tree_final_{i}.rds'))
         self$clone_post = fread(glue('{out_dir}/clone_post_{i}.tsv'))
-        self$gexp_roll_wide = fread(glue('{outdir}/gexp_roll_wide.tsv.gz'))
-        self$hc = readRDS(glue('{outdir}/hc.rds'))
+        self$gexp_roll_wide = fread(glue('{out_dir}/gexp_roll_wide.tsv.gz'))
+        self$hc = readRDS(glue('{out_dir}/hc.rds'))
 
     },
 
     #' @description plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
     #' @param annot named list of cell annotation
-    #' @param clone_bar where to show clone annotation
+    #' @param geno_bar where to show genotype annotation
+    #' @param pal_clone clone color palette
     #' @param p_min minimum probability threshold to filter the calls
     #' @param tip_length tree tip length
     #' @param branch_width tree branch width
     #' @param line_width heatmap line width
     #' @param multi_allelic whether to show different allelic states for same CNV
     #' @return a ggplot object
-    plot_phylo_heatmap = function(annot = NULL, clone_bar = FALSE, multi_allelic = FALSE, p_min = 0.5, tip_length = 1, branch_width = 0.2, line_width = 0.1) {
+    plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, multi_allelic = FALSE, p_min = 0.5, tip_length = 1, branch_width = 0.2, line_width = 0.1) {
         plot_sc_joint(  
             self$gtree,
             self$joint_post,
@@ -66,9 +67,10 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             branch_width = branch_width,
             size = line_width,
             p_min = p_min,
-            clone_bar = clone_bar,
+            clone_bar = geno_bar,
             multi_allelic = multi_allelic,
-            cell_dict = annot
+            cell_dict = annot,
+            pal_clone = pal_clone
         )
     },
 
@@ -91,9 +93,11 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @description plot the mutation history of the tumor
     #' @param horizontal horizontal layout or vertical
     #' @param label whether to label the mutations on edges
+    #' @param pal_clone clone color palette
     #' @return a ggplot object
-    plot_mut_history = function(horizontal = TRUE, label = TRUE) {
-        plot_mut_history(self$mut_graph, horizontal = horizontal, label = label)
+    plot_mut_history = function(horizontal = TRUE, label = TRUE, pal_clone = NULL) {
+        p = plot_mut_history(self$mut_graph, horizontal = horizontal, label = label, pal_clone)
+        return(p)
     },
 
     #' @description plot the bulk CNV profiles
