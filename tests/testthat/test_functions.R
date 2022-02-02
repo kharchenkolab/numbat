@@ -17,9 +17,13 @@ test_that("HMM works", {
       genetic_map = genetic_map_hg38
   )
 
+  expect_equal(length(bulk), 28)
+
   message('running HMM..')
 
   bulk = analyze_bulk(bulk, t = 1e-5)
+
+  expect_equal(length(bulk), 78)
   
 })
 
