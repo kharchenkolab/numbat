@@ -1,5 +1,11 @@
 # Numbat
 
+<!-- badges: start -->
+
+[![<kharchenkolab>](https://circleci.com/gh/kharchenkolab/Numbat.svg?style=svg)](https://app.circleci.com/pipelines/github/kharchenkolab/Numbat)
+  
+<!-- badges: end -->
+
 <img src="logo.png" align="right" width="200">
 
 Numbat is a haplotype-enhanced CNV caller from single-cell transcriptomics data. It integrates signals from gene expression, allelic ratio, and population haplotype structures to accurately infer allele-specific CNVs in single cells and reconstruct their lineage relationship. 
