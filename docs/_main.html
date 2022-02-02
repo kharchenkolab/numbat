@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Numbat walkthrough</title>
+  <meta name="description" content="Numbat walkthrough" />
+  <meta name="generator" content="bookdown 0.24 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Numbat walkthrough" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Numbat walkthrough" />
+  
+  
+  
+
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+
+
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.0.1/anchor-sections.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.0.1/anchor-sections.js"></script>
+
+
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li class="chapter" data-level="0.1" data-path=""><a href="#copy-number-landscape-and-single-cell-phylogeny"><i class="fa fa-check"></i><b>0.1</b> Copy number landscape and single-cell phylogeny</a></li>
+<li class="chapter" data-level="0.2" data-path=""><a href="#single-cell-cnv-calls"><i class="fa fa-check"></i><b>0.2</b> Single-cell CNV calls</a></li>
+<li class="chapter" data-level="0.3" data-path=""><a href="#clonal-assignments"><i class="fa fa-check"></i><b>0.3</b> Clonal assignments</a></li>
+<li class="chapter" data-level="0.4" data-path=""><a href="#tumor-versus-normal-probability"><i class="fa fa-check"></i><b>0.4</b> Tumor versus normal probability</a></li>
+<li class="chapter" data-level="0.5" data-path=""><a href="#tumor-phylogeny"><i class="fa fa-check"></i><b>0.5</b> Tumor phylogeny</a></li>
+<li class="chapter" data-level="0.6" data-path=""><a href="#bulk-cnv-profiles"><i class="fa fa-check"></i><b>0.6</b> Bulk CNV profiles</a></li>
+<li class="chapter" data-level="0.7" data-path=""><a href="#copy-number-landscape-and-single-cell-phylogeny-1"><i class="fa fa-check"></i><b>0.7</b> Copy number landscape and single-cell phylogeny</a></li>
+<li class="chapter" data-level="0.8" data-path=""><a href="#single-cell-cnv-calls-1"><i class="fa fa-check"></i><b>0.8</b> Single-cell CNV calls</a></li>
+<li class="chapter" data-level="0.9" data-path=""><a href="#clonal-assignments-1"><i class="fa fa-check"></i><b>0.9</b> Clonal assignments</a></li>
+<li class="chapter" data-level="0.10" data-path=""><a href="#tumor-versus-normal-probability-1"><i class="fa fa-check"></i><b>0.10</b> Tumor versus normal probability</a></li>
+<li class="chapter" data-level="0.11" data-path=""><a href="#tumor-phylogeny-1"><i class="fa fa-check"></i><b>0.11</b> Tumor phylogeny</a></li>
+<li class="chapter" data-level="0.12" data-path=""><a href="#bulk-cnv-profiles-1"><i class="fa fa-check"></i><b>0.12</b> Bulk CNV profiles</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Numbat walkthrough</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="header">
+<h1 class="title">Numbat walkthrough</h1>
+</div>
+<p>In this tutorial, we will illustrate how to visualize and interpret Numbat output, using a triple-negative breast cancer dataset (TNBC1) from <a href="https://www.nature.com/articles/s41587-020-00795-2">Gao et al</a>. We will use <code>pagoda2</code> for visualizing cells in low-dimensional expression space.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># devtools::load_all(&#39;~/Numbat&#39;)</span>
+<span class="kw">library</span>(ggplot2)
+<span class="kw">library</span>(Numbat)
+<span class="kw">library</span>(dplyr)
+<span class="kw">library</span>(glue)
+<span class="kw">library</span>(data.table)
+<span class="kw">library</span>(ggtree)
+<span class="kw">library</span>(stringr)
+<span class="kw">library</span>(tidygraph)
+<span class="kw">library</span>(patchwork)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># summarize output files into a Numbat object</span>
+nb =<span class="st"> </span>Numbat<span class="op">$</span><span class="kw">new</span>(<span class="dt">out_dir =</span> <span class="st">&#39;~/paper_data/numbat_out/TNBC1_demo&#39;</span>)
+<span class="co"># read saved pagoda2 object</span>
+pagoda =<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">&#39;~/paper_data/conos_objects/TNBC1.rds&#39;</span>)</code></pre></div>
+<div id="copy-number-landscape-and-single-cell-phylogeny" class="section level2">
+<h2><span class="header-section-number">0.1</span> Copy number landscape and single-cell phylogeny</h2>
+<p>As an overview, we can visualize the CNV calls in single-cells and their evolutionary relationships in an integrated view:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mypal =<span class="st"> </span><span class="kw">c</span>(<span class="st">&#39;gray&#39;</span>, <span class="st">&quot;#377EB8&quot;</span>, <span class="st">&quot;#4DAF4A&quot;</span>, <span class="st">&quot;#984EA3&quot;</span>)
+  
+nb<span class="op">$</span><span class="kw">plot_phylo_heatmap</span>(
+  <span class="dt">geno_bar =</span> <span class="ot">TRUE</span>, 
+  <span class="dt">p_min =</span> <span class="fl">0.9</span>,
+  <span class="dt">pal_clone =</span> mypal,
+  <span class="dt">multi_allelic =</span> <span class="ot">TRUE</span>
+)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-4-1.png" width="2400" /> In this visualization, the single-cell phylogeny (left) is juxtaposed with a heatmap of single-cell CNV calls (right). The CNV calls are colored by the type of alterations (AMP, amplification, BAMP, balanced amplification, DEL, deletion, CNLoH, copy-neutral loss of heterozygosity). The colorbar in-between differentiates the distinct genetic populations (genotype). This tells us that the dataset mainly consists of three cell populations, a normal population (gray) and two tumor subclones (green and yellow).</p>
+</div>
+<div id="single-cell-cnv-calls" class="section level2">
+<h2><span class="header-section-number">0.2</span> Single-cell CNV calls</h2>
+<p>Numbat probabilistically evaluates the presence/absence of CNVs in single cells. The cell-level CNV posteriors are stored in the <code>nb$joint_post</code> dataframe:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(nb<span class="op">$</span>joint_post) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(cell, CHROM, seg, cnv_state, p_cnv, p_cnv_x, p_cnv_y)</code></pre></div>
+<pre><code>##                        cell CHROM seg cnv_state      p_cnv   p_cnv_x    p_cnv_y
+## 1: TNBC1_AAACCTGCACCTTGTC-1    10 10a       amp 0.43169520 0.8213868 0.13928365
+## 2: TNBC1_AAACCTGCACCTTGTC-1    10 10c       loh 0.01890174 0.4958024 0.01921461
+## 3: TNBC1_AAACCTGCACCTTGTC-1    11 11b       loh 0.47301842 0.4333595 0.56156802
+## 4: TNBC1_AAACCTGCACCTTGTC-1    11 11c       amp 0.88050832 0.8409645 0.58105281
+## 5: TNBC1_AAACCTGCACCTTGTC-1    11 11d       loh 0.91233692 0.4969244 0.91242479
+## 6: TNBC1_AAACCTGCACCTTGTC-1    12 12b       loh 0.96215438 0.4972205 0.96255714</code></pre>
+<p>which contains cell-level information on specific CNV segments (<code>seg</code>), their alteration type (<code>cnv_state</code>), the joint posterior probability of the CNV (<code>p_cnv</code>), the expression-based posterior (<code>p_cnv_x</code>), and the allele-based posterior (<code>p_cnv_y</code>). We can visualize the event-specific posteriors in a expression-based tSNE embedding:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">plist =<span class="st"> </span><span class="kw">list</span>()
+
+muts =<span class="st"> </span><span class="kw">c</span>(<span class="st">&#39;1b&#39;</span>, <span class="st">&#39;3c&#39;</span>, <span class="st">&#39;4c&#39;</span>)
+<span class="co"># muts = unique(nb$joint_post$seg_label) %&gt;% gtools::mixedsort()</span>
+cnv_type =<span class="st"> </span>nb<span class="op">$</span>joint_post <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">distinct</span>(seg, cnv_state) <span class="op">%&gt;%</span><span class="st"> </span>{<span class="kw">setNames</span>(.<span class="op">$</span>cnv_state, .<span class="op">$</span>seg)}
+
+<span class="cf">for</span> (mut <span class="cf">in</span> muts) {
+    
+    plist[[mut]] =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
+        <span class="dt">alpha=</span><span class="fl">0.8</span>,
+        <span class="dt">size=</span><span class="dv">1</span>, 
+        <span class="dt">plot.na =</span> F, 
+        <span class="dt">colors =</span> nb<span class="op">$</span>joint_post <span class="op">%&gt;%</span>
+<span class="st">            </span><span class="kw">filter</span>(seg <span class="op">==</span><span class="st"> </span>mut) <span class="op">%&gt;%</span>
+<span class="st">            </span>{<span class="kw">setNames</span>(.<span class="op">$</span>p_cnv, .<span class="op">$</span>cell)},
+        <span class="dt">show.legend =</span> T,
+        <span class="dt">mark.groups =</span> F,
+        <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
+        <span class="dt">title =</span> <span class="kw">paste0</span>(mut, <span class="st">&#39;(&#39;</span>, cnv_type, <span class="st">&#39;)&#39;</span>)
+    ) <span class="op">+</span>
+<span class="st">    </span><span class="kw">scale_color_gradient2</span>(<span class="dt">low =</span> <span class="st">&#39;royalblue&#39;</span>, <span class="dt">mid =</span> <span class="st">&#39;white&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red3&#39;</span>, <span class="dt">midpoint =</span> <span class="fl">0.5</span>, <span class="dt">limits =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>), <span class="dt">name =</span> <span class="st">&#39;Posterior&#39;</span>)
+}
+
+<span class="kw">wrap_plots</span>(plist, <span class="dt">guides =</span> <span class="st">&#39;collect&#39;</span>)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-6-1.png" width="2700" /></p>
+</div>
+<div id="clonal-assignments" class="section level2">
+<h2><span class="header-section-number">0.3</span> Clonal assignments</h2>
+<p>Numbat aggregates signals across subclone-specific CNVs to probabilistically assign cells to subclones. The information regarding clonal assignments are contained in the <code>nb$clone_post</code> dataframe.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">head</span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(cell, clone_opt, p_<span class="dv">1</span>, p_<span class="dv">2</span>, p_<span class="dv">3</span>, p_<span class="dv">4</span>)</code></pre></div>
+<pre><code>##                        cell clone_opt          p_1          p_2          p_3
+## 1: TNBC1_AAACCTGCACCTTGTC-1         4 5.081008e-57 2.300414e-16 7.396132e-27
+## 2: TNBC1_AAACGGGAGTCCTCCT-1         1 1.000000e+00 2.232812e-51 1.591547e-84
+## 3: TNBC1_AAACGGGTCCAGAGGA-1         4 1.427456e-81 5.475283e-09 3.109571e-26
+## 4: TNBC1_AAAGATGCAGTTTACG-1         3 2.141061e-18 2.950639e-04 6.176669e-01
+## 5: TNBC1_AAAGCAACAGGAATGC-1         4 1.704233e-51 8.305804e-09 3.074182e-30
+## 6: TNBC1_AAAGCAATCGGAATCT-1         3 3.121428e-84 1.001983e-25 1.000000e+00
+##             p_4
+## 1: 1.000000e+00
+## 2: 1.744050e-65
+## 3: 1.000000e+00
+## 4: 3.820380e-01
+## 5: 1.000000e+00
+## 6: 9.979171e-24</code></pre>
+<p>Here <code>clone_opt</code> denotes the maximum likelihood assignment of a cell to a specific clone. <code>p_{1..4}</code> are the detailed breakdown of the posterior probability that the cell belongs to each clone, respectively. Let's visualize the clonal decomposition in a tSNE embedding.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
+    <span class="dt">alpha=</span><span class="fl">0.8</span>,
+    <span class="dt">size=</span><span class="dv">1</span>, 
+    <span class="dt">groups =</span> nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span>
+<span class="st">        </span>{<span class="kw">setNames</span>(.<span class="op">$</span>clone_opt, .<span class="op">$</span>cell)},
+    <span class="dt">plot.na =</span> F,
+    <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
+    <span class="dt">title =</span> <span class="st">&#39;Genotypes&#39;</span>,
+    <span class="dt">pal =</span> mypal
+)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-8-1.png" width="900" /></p>
+</div>
+<div id="tumor-versus-normal-probability" class="section level2">
+<h2><span class="header-section-number">0.4</span> Tumor versus normal probability</h2>
+<p>Combining evidence from all CNVs, Numbat derives an aneuploidy probability for each cell to distinguish tumor versus normal cells. We can visualize the posterior aneuploidy probability based on expression evidence only, allele evidence only, and jointly:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">p_joint =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
+    <span class="dt">alpha=</span><span class="fl">0.8</span>,
+    <span class="dt">size=</span><span class="dv">1</span>, 
+    <span class="dt">colors =</span> nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span>
+<span class="st">        </span>{<span class="kw">setNames</span>(.<span class="op">$</span>p_cnv, .<span class="op">$</span>cell)},
+    <span class="dt">plot.na =</span> F,
+    <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
+    <span class="dt">title =</span> <span class="st">&#39;Joint&#39;</span>,
+) <span class="op">+</span>
+<span class="kw">scale_color_gradient2</span>(<span class="dt">low =</span> <span class="st">&#39;royalblue&#39;</span>, <span class="dt">mid =</span> <span class="st">&#39;white&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red3&#39;</span>, <span class="dt">midpoint =</span> <span class="fl">0.5</span>, <span class="dt">name =</span> <span class="st">&#39;Posterior&#39;</span>)
+
+p_allele =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
+    <span class="dt">alpha=</span><span class="fl">0.8</span>,
+    <span class="dt">size=</span><span class="dv">1</span>, 
+    <span class="dt">colors =</span> nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span>
+<span class="st">        </span>{<span class="kw">setNames</span>(.<span class="op">$</span>p_cnv_x, .<span class="op">$</span>cell)},
+    <span class="dt">plot.na =</span> F,
+    <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
+    <span class="dt">title =</span> <span class="st">&#39;Expnbsion&#39;</span>,
+) <span class="op">+</span>
+<span class="kw">scale_color_gradient2</span>(<span class="dt">low =</span> <span class="st">&#39;royalblue&#39;</span>, <span class="dt">mid =</span> <span class="st">&#39;white&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red3&#39;</span>, <span class="dt">midpoint =</span> <span class="fl">0.5</span>, <span class="dt">name =</span> <span class="st">&#39;Posterior&#39;</span>)
+
+p_expr =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
+    <span class="dt">alpha=</span><span class="fl">0.8</span>,
+    <span class="dt">size=</span><span class="dv">1</span>, 
+    <span class="dt">colors =</span> nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span>
+<span class="st">        </span>{<span class="kw">setNames</span>(.<span class="op">$</span>p_cnv_y, .<span class="op">$</span>cell)},
+    <span class="dt">plot.na =</span> F,
+    <span class="dt">show.legend =</span> T,
+    <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
+    <span class="dt">title =</span> <span class="st">&#39;Allele&#39;</span>,
+) <span class="op">+</span>
+<span class="kw">scale_color_gradient2</span>(<span class="dt">low =</span> <span class="st">&#39;royalblue&#39;</span>, <span class="dt">mid =</span> <span class="st">&#39;white&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red3&#39;</span>, <span class="dt">midpoint =</span> <span class="fl">0.5</span>, <span class="dt">name =</span> <span class="st">&#39;Posterior&#39;</span>)
+
+(p_expr <span class="op">|</span><span class="st"> </span>p_allele <span class="op">|</span><span class="st"> </span>p_joint) <span class="op">+</span><span class="st"> </span><span class="kw">plot_layout</span>(<span class="dt">guides =</span> <span class="st">&#39;collect&#39;</span>)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-9-1.png" width="2700" /> Both expression and allele signal clearly separate the tumor and normal cells.</p>
+</div>
+<div id="tumor-phylogeny" class="section level2">
+<h2><span class="header-section-number">0.5</span> Tumor phylogeny</h2>
+<p>The clone-level mutational history constructed by Numbat can also be visualized. Here the nodes represent clones (each carrying a distinct genotype) and edges represent mutational events.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span><span class="kw">plot_mut_history</span>(<span class="dt">pal_clone =</span> mypal)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-10-1.png" width="1800" /></p>
+</div>
+<div id="bulk-cnv-profiles" class="section level2">
+<h2><span class="header-section-number">0.6</span> Bulk CNV profiles</h2>
+<p>To get a better sense of the raw CNV signals, we can visualize the pseudobulk CNV profiles of the respective clones by the below function:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span><span class="kw">plot_bulks</span>()</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-11-1.png" width="4200" /></p>
+
+<p>In this tutorial, we will illustrate how to visualize and interpret Numbat output, using a triple-negative breast cancer dataset (TNBC1) from <a href="https://www.nature.com/articles/s41587-020-00795-2">Gao et al</a>. We will use <code>pagoda2</code> for visualizing cells in low-dimensional expression space.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># devtools::load_all(&#39;~/Numbat&#39;)</span>
+<span class="kw">library</span>(ggplot2)
+<span class="kw">library</span>(Numbat)
+<span class="kw">library</span>(dplyr)
+<span class="kw">library</span>(glue)
+<span class="kw">library</span>(data.table)
+<span class="kw">library</span>(ggtree)
+<span class="kw">library</span>(stringr)
+<span class="kw">library</span>(tidygraph)
+<span class="kw">library</span>(patchwork)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># summarize output files into a Numbat object</span>
+nb =<span class="st"> </span>Numbat<span class="op">$</span><span class="kw">new</span>(<span class="dt">out_dir =</span> <span class="st">&#39;~/paper_data/numbat_out/TNBC1_demo&#39;</span>)
+<span class="co"># read saved pagoda2 object</span>
+pagoda =<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">&#39;~/paper_data/conos_objects/TNBC1.rds&#39;</span>)</code></pre></div>
+</div>
+<div id="copy-number-landscape-and-single-cell-phylogeny-1" class="section level2">
+<h2><span class="header-section-number">0.7</span> Copy number landscape and single-cell phylogeny</h2>
+<p>As an overview, we can visualize the CNV calls in single-cells and their evolutionary relationships in an integrated view:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mypal =<span class="st"> </span><span class="kw">c</span>(<span class="st">&#39;gray&#39;</span>, <span class="st">&quot;#377EB8&quot;</span>, <span class="st">&quot;#4DAF4A&quot;</span>, <span class="st">&quot;#984EA3&quot;</span>)
+  
+nb<span class="op">$</span><span class="kw">plot_phylo_heatmap</span>(
+  <span class="dt">geno_bar =</span> <span class="ot">TRUE</span>, 
+  <span class="dt">p_min =</span> <span class="fl">0.9</span>,
+  <span class="dt">pal_clone =</span> mypal,
+  <span class="dt">multi_allelic =</span> <span class="ot">TRUE</span>
+)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-14-1.png" width="2400" /> In this visualization, the single-cell phylogeny (left) is juxtaposed with a heatmap of single-cell CNV calls (right). The CNV calls are colored by the type of alterations (AMP, amplification, BAMP, balanced amplification, DEL, deletion, CNLoH, copy-neutral loss of heterozygosity). The colorbar in-between differentiates the distinct genetic populations (genotype). This tells us that the dataset mainly consists of three cell populations, a normal population (gray) and two tumor subclones (green and yellow).</p>
+</div>
+<div id="single-cell-cnv-calls-1" class="section level2">
+<h2><span class="header-section-number">0.8</span> Single-cell CNV calls</h2>
+<p>Numbat probabilistically evaluates the presence/absence of CNVs in single cells. The cell-level CNV posteriors are stored in the <code>nb$joint_post</code> dataframe:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(nb<span class="op">$</span>joint_post) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(cell, CHROM, seg, cnv_state, p_cnv, p_cnv_x, p_cnv_y)</code></pre></div>
+<pre><code>##                        cell CHROM seg cnv_state      p_cnv   p_cnv_x    p_cnv_y
+## 1: TNBC1_AAACCTGCACCTTGTC-1    10 10a       amp 0.43169520 0.8213868 0.13928365
+## 2: TNBC1_AAACCTGCACCTTGTC-1    10 10c       loh 0.01890174 0.4958024 0.01921461
+## 3: TNBC1_AAACCTGCACCTTGTC-1    11 11b       loh 0.47301842 0.4333595 0.56156802
+## 4: TNBC1_AAACCTGCACCTTGTC-1    11 11c       amp 0.88050832 0.8409645 0.58105281
+## 5: TNBC1_AAACCTGCACCTTGTC-1    11 11d       loh 0.91233692 0.4969244 0.91242479
+## 6: TNBC1_AAACCTGCACCTTGTC-1    12 12b       loh 0.96215438 0.4972205 0.96255714</code></pre>
+<p>which contains cell-level information on specific CNV segments (<code>seg</code>), their alteration type (<code>cnv_state</code>), the joint posterior probability of the CNV (<code>p_cnv</code>), the expression-based posterior (<code>p_cnv_x</code>), and the allele-based posterior (<code>p_cnv_y</code>). We can visualize the event-specific posteriors in a expression-based tSNE embedding:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">plist =<span class="st"> </span><span class="kw">list</span>()
+
+muts =<span class="st"> </span><span class="kw">c</span>(<span class="st">&#39;1b&#39;</span>, <span class="st">&#39;3c&#39;</span>, <span class="st">&#39;4c&#39;</span>)
+<span class="co"># muts = unique(nb$joint_post$seg_label) %&gt;% gtools::mixedsort()</span>
+cnv_type =<span class="st"> </span>nb<span class="op">$</span>joint_post <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">distinct</span>(seg, cnv_state) <span class="op">%&gt;%</span><span class="st"> </span>{<span class="kw">setNames</span>(.<span class="op">$</span>cnv_state, .<span class="op">$</span>seg)}
+
+<span class="cf">for</span> (mut <span class="cf">in</span> muts) {
+    
+    plist[[mut]] =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
+        <span class="dt">alpha=</span><span class="fl">0.8</span>,
+        <span class="dt">size=</span><span class="dv">1</span>, 
+        <span class="dt">plot.na =</span> F, 
+        <span class="dt">colors =</span> nb<span class="op">$</span>joint_post <span class="op">%&gt;%</span>
+<span class="st">            </span><span class="kw">filter</span>(seg <span class="op">==</span><span class="st"> </span>mut) <span class="op">%&gt;%</span>
+<span class="st">            </span>{<span class="kw">setNames</span>(.<span class="op">$</span>p_cnv, .<span class="op">$</span>cell)},
+        <span class="dt">show.legend =</span> T,
+        <span class="dt">mark.groups =</span> F,
+        <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
+        <span class="dt">title =</span> <span class="kw">paste0</span>(mut, <span class="st">&#39;(&#39;</span>, cnv_type, <span class="st">&#39;)&#39;</span>)
+    ) <span class="op">+</span>
+<span class="st">    </span><span class="kw">scale_color_gradient2</span>(<span class="dt">low =</span> <span class="st">&#39;royalblue&#39;</span>, <span class="dt">mid =</span> <span class="st">&#39;white&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red3&#39;</span>, <span class="dt">midpoint =</span> <span class="fl">0.5</span>, <span class="dt">limits =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">1</span>), <span class="dt">name =</span> <span class="st">&#39;Posterior&#39;</span>)
+}
+
+<span class="kw">wrap_plots</span>(plist, <span class="dt">guides =</span> <span class="st">&#39;collect&#39;</span>)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-16-1.png" width="2700" /></p>
+</div>
+<div id="clonal-assignments-1" class="section level2">
+<h2><span class="header-section-number">0.9</span> Clonal assignments</h2>
+<p>Numbat aggregates signals across subclone-specific CNVs to probabilistically assign cells to subclones. The information regarding clonal assignments are contained in the <code>nb$clone_post</code> dataframe.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">head</span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(cell, clone_opt, p_<span class="dv">1</span>, p_<span class="dv">2</span>, p_<span class="dv">3</span>, p_<span class="dv">4</span>)</code></pre></div>
+<pre><code>##                        cell clone_opt          p_1          p_2          p_3
+## 1: TNBC1_AAACCTGCACCTTGTC-1         4 5.081008e-57 2.300414e-16 7.396132e-27
+## 2: TNBC1_AAACGGGAGTCCTCCT-1         1 1.000000e+00 2.232812e-51 1.591547e-84
+## 3: TNBC1_AAACGGGTCCAGAGGA-1         4 1.427456e-81 5.475283e-09 3.109571e-26
+## 4: TNBC1_AAAGATGCAGTTTACG-1         3 2.141061e-18 2.950639e-04 6.176669e-01
+## 5: TNBC1_AAAGCAACAGGAATGC-1         4 1.704233e-51 8.305804e-09 3.074182e-30
+## 6: TNBC1_AAAGCAATCGGAATCT-1         3 3.121428e-84 1.001983e-25 1.000000e+00
+##             p_4
+## 1: 1.000000e+00
+## 2: 1.744050e-65
+## 3: 1.000000e+00
+## 4: 3.820380e-01
+## 5: 1.000000e+00
+## 6: 9.979171e-24</code></pre>
+<p>Here <code>clone_opt</code> denotes the maximum likelihood assignment of a cell to a specific clone. <code>p_{1..4}</code> are the detailed breakdown of the posterior probability that the cell belongs to each clone, respectively. Let's visualize the clonal decomposition in a tSNE embedding.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
+    <span class="dt">alpha=</span><span class="fl">0.8</span>,
+    <span class="dt">size=</span><span class="dv">1</span>, 
+    <span class="dt">groups =</span> nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span>
+<span class="st">        </span>{<span class="kw">setNames</span>(.<span class="op">$</span>clone_opt, .<span class="op">$</span>cell)},
+    <span class="dt">plot.na =</span> F,
+    <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
+    <span class="dt">title =</span> <span class="st">&#39;Genotypes&#39;</span>,
+    <span class="dt">pal =</span> mypal
+)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-18-1.png" width="900" /></p>
+</div>
+<div id="tumor-versus-normal-probability-1" class="section level2">
+<h2><span class="header-section-number">0.10</span> Tumor versus normal probability</h2>
+<p>Combining evidence from all CNVs, Numbat derives an aneuploidy probability for each cell to distinguish tumor versus normal cells. We can visualize the posterior aneuploidy probability based on expression evidence only, allele evidence only, and jointly:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">p_joint =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
+    <span class="dt">alpha=</span><span class="fl">0.8</span>,
+    <span class="dt">size=</span><span class="dv">1</span>, 
+    <span class="dt">colors =</span> nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span>
+<span class="st">        </span>{<span class="kw">setNames</span>(.<span class="op">$</span>p_cnv, .<span class="op">$</span>cell)},
+    <span class="dt">plot.na =</span> F,
+    <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
+    <span class="dt">title =</span> <span class="st">&#39;Joint&#39;</span>,
+) <span class="op">+</span>
+<span class="kw">scale_color_gradient2</span>(<span class="dt">low =</span> <span class="st">&#39;royalblue&#39;</span>, <span class="dt">mid =</span> <span class="st">&#39;white&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red3&#39;</span>, <span class="dt">midpoint =</span> <span class="fl">0.5</span>, <span class="dt">name =</span> <span class="st">&#39;Posterior&#39;</span>)
+
+p_allele =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
+    <span class="dt">alpha=</span><span class="fl">0.8</span>,
+    <span class="dt">size=</span><span class="dv">1</span>, 
+    <span class="dt">colors =</span> nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span>
+<span class="st">        </span>{<span class="kw">setNames</span>(.<span class="op">$</span>p_cnv_x, .<span class="op">$</span>cell)},
+    <span class="dt">plot.na =</span> F,
+    <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
+    <span class="dt">title =</span> <span class="st">&#39;Expnbsion&#39;</span>,
+) <span class="op">+</span>
+<span class="kw">scale_color_gradient2</span>(<span class="dt">low =</span> <span class="st">&#39;royalblue&#39;</span>, <span class="dt">mid =</span> <span class="st">&#39;white&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red3&#39;</span>, <span class="dt">midpoint =</span> <span class="fl">0.5</span>, <span class="dt">name =</span> <span class="st">&#39;Posterior&#39;</span>)
+
+p_expr =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
+    <span class="dt">alpha=</span><span class="fl">0.8</span>,
+    <span class="dt">size=</span><span class="dv">1</span>, 
+    <span class="dt">colors =</span> nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span>
+<span class="st">        </span>{<span class="kw">setNames</span>(.<span class="op">$</span>p_cnv_y, .<span class="op">$</span>cell)},
+    <span class="dt">plot.na =</span> F,
+    <span class="dt">show.legend =</span> T,
+    <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
+    <span class="dt">title =</span> <span class="st">&#39;Allele&#39;</span>,
+) <span class="op">+</span>
+<span class="kw">scale_color_gradient2</span>(<span class="dt">low =</span> <span class="st">&#39;royalblue&#39;</span>, <span class="dt">mid =</span> <span class="st">&#39;white&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red3&#39;</span>, <span class="dt">midpoint =</span> <span class="fl">0.5</span>, <span class="dt">name =</span> <span class="st">&#39;Posterior&#39;</span>)
+
+(p_expr <span class="op">|</span><span class="st"> </span>p_allele <span class="op">|</span><span class="st"> </span>p_joint) <span class="op">+</span><span class="st"> </span><span class="kw">plot_layout</span>(<span class="dt">guides =</span> <span class="st">&#39;collect&#39;</span>)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-19-1.png" width="2700" /> Both expression and allele signal clearly separate the tumor and normal cells.</p>
+</div>
+<div id="tumor-phylogeny-1" class="section level2">
+<h2><span class="header-section-number">0.11</span> Tumor phylogeny</h2>
+<p>The clone-level mutational history constructed by Numbat can also be visualized. Here the nodes represent clones (each carrying a distinct genotype) and edges represent mutational events.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span><span class="kw">plot_mut_history</span>(<span class="dt">pal_clone =</span> mypal)</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-20-1.png" width="1800" /></p>
+</div>
+<div id="bulk-cnv-profiles-1" class="section level2">
+<h2><span class="header-section-number">0.12</span> Bulk CNV profiles</h2>
+<p>To get a better sense of the raw CNV signals, we can visualize the pseudobulk CNV profiles of the respective clones by the below function:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span><span class="kw">plot_bulks</span>()</code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-21-1.png" width="4200" /></p>
+
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"whatsapp": false,
+"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"view": {
+"link": null,
+"text": null
+},
+"download": null,
+"search": {
+"engine": "fuse",
+"options": null
+},
+"toc": {
+"collapse": "subsection"
+}
+});
+});
+</script>
+
+</body>
+
+</html>
