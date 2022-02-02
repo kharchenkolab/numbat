@@ -1117,10 +1117,6 @@ plot_sc_joint = function(
         pal_annot = NULL, multi_allelic = FALSE, tree_height = 1, annot_title = 'Annotation'
     ) {
 
-    # if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
-    #     gtree = gtree %>% activate(nodes) %>% mutate(clone = as.integer(as.factor(GT)))
-    # }
-
     # if multi allelic module was not enabled
     if (!'n_states' %in% colnames(segs_consensus)) {
         segs_consensus = segs_consensus %>% mutate(
