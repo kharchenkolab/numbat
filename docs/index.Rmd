@@ -75,7 +75,6 @@ which contains cell-level information on specific CNV segments (`seg`), their al
 plist = list()
 
 muts = c('1b', '3c', '4c')
-# muts = unique(nb$joint_post$seg_label) %>% gtools::mixedsort()
 cnv_type = nb$joint_post %>% distinct(seg, cnv_state) %>% {setNames(.$cnv_state, .$seg)}
 
 for (mut in muts) {
