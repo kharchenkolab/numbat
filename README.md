@@ -14,6 +14,8 @@ Numbat can be used to 1. detect allele-specific copy number variations from scRN
 
 Numbat does not require paired DNA or genotype data and operates solely on the donor scRNA-data data (for example, 10x Cell Ranger output).
 
+  <img width="867" alt="Screen Shot 2022-02-03 at 12 05 47 PM" src="https://user-images.githubusercontent.com/13375875/152392495-024f89c6-0010-4e53-8375-9eb8a64dbe73.png">
+
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
