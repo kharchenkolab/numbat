@@ -496,10 +496,22 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 }
 
 #' @export
-plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = TRUE, allele_only = FALSE, phi_mle = FALSE, use_pos = FALSE, legend = TRUE) {
+plot_psbulk = function(
+    bulk, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_depth = 10, theta_roll = FALSE,
+    fc_correct = TRUE, allele_only = FALSE, phi_mle = FALSE, use_pos = FALSE, legend = TRUE,
+    LLR_min = 0
+    ) {
 
-    if (!'state_post' %in% colnames(Obs)) {
-        Obs = Obs %>% mutate(state_post = state)
+    if (!'state_post' %in% colnames(bulk)) {
+        bulk = bulk %>% mutate(state_post = state)
+    }
+
+    if (LLR_min != 0) {
+        bulk = bulk %>% mutate(
+            LLR = ifelse(is.na(LLR), 0, LLR),
+            cnv_state_post = ifelse(LLR < LLR_min, 'neu', cnv_state_post),
+            state_post = ifelse(LLR < LLR_min, 'neu', state_post)
+        )
     }
 
     if (use_pos) {
@@ -511,7 +523,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
     }
 
     # fix retest states 
-    Obs = Obs %>% 
+    bulk = bulk %>% 
         mutate(
             theta_level = ifelse(str_detect(state_post, '_2'), 2, 1),
             state_post = ifelse(
@@ -522,10 +534,10 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
 
     # correct for baseline bias
     if (fc_correct & !allele_only) {
-        Obs = Obs %>% mutate(logFC = logFC - mu)
+        bulk = bulk %>% mutate(logFC = logFC - mu)
     }
 
-    D = Obs %>% 
+    D = bulk %>% 
         mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
         mutate(pBAF = ifelse(DP >= min_depth, pBAF, NA)) %>%
         mutate(pHF = pBAF) %>%
@@ -575,7 +587,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
     }
 
     if (phi_mle) {
-        segs = Obs %>% 
+        segs = bulk %>% 
             distinct(CHROM, seg, seg_start, seg_start_index, seg_end, seg_end_index, phi_mle) %>%
             mutate(variable = 'logFC') %>%
             filter(log2(phi_mle) < exp_limit)
@@ -599,7 +611,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
     } else if (!allele_only) {
         p = p + geom_line(
             inherit.aes = FALSE,
-            data = Obs %>% mutate(variable = 'logFC') %>% filter(log2(phi_mle_roll) < exp_limit),
+            data = bulk %>% mutate(variable = 'logFC') %>% filter(log2(phi_mle_roll) < exp_limit),
             aes(x = get(marker), y = log2(phi_mle_roll), group = '1'),
             color = 'darkred',
             size = 0.35
@@ -630,7 +642,11 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
 }
 
 #' @export
-plot_bulks = function(bulk_all, min_depth = 8, dot_alpha = 0.5, fc_correct = TRUE, phi_mle = FALSE, allele_only = FALSE, use_pos = FALSE, ncol = 1, legend = TRUE, title = TRUE) {
+plot_bulks = function(
+    bulk_all, min_depth = 8, dot_alpha = 0.5, fc_correct = TRUE,
+    phi_mle = FALSE, allele_only = FALSE, use_pos = FALSE, 
+    ncol = 1, legend = TRUE, title = TRUE, LLR_min = 0
+    ) {
 
     options(warn = -1)
     plot_list = bulk_all %>%
@@ -646,7 +662,8 @@ plot_bulks = function(bulk_all, min_depth = 8, dot_alpha = 0.5, fc_correct = TRU
                         dot_alpha = dot_alpha,
                         min_depth = min_depth, fc_correct = fc_correct,
                         phi_mle = phi_mle, use_pos = use_pos, legend = legend,
-                        allele_only = allele_only
+                        allele_only = allele_only,
+                        LLR_min = LLR_min
                     ) + 
                     theme(
                         title = element_text(size = 8),
@@ -972,6 +989,70 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
     p_mut = res$G_m %>% plot_mut_history(pal_clone = pal_clone) 
 
     (p_mut / p_clones) + plot_layout(heights = c(ratio, 1)) + plot_title
+}
+
+#' @export
+plot_sc_tree = function(gtree, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, pal_clone = NULL,tip_length = 0.5) {
+
+    mut_nodes = gtree %>% activate(nodes) %>%
+      filter(!is.na(site)) %>% data.frame() %>%
+      select(name, site)
+    
+    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
+    
+    clone_dict = gtree %>%
+        activate(nodes) %>%
+        data.frame %>%
+        mutate(
+            GT = ifelse(compartment == 'normal', '', GT),
+            GT = factor(GT),
+            clone = as.factor(clone)
+        ) %>%
+      {setNames(.$clone, .$name)}
+    
+    OTU_dict = lapply(levels(clone_dict), function(x) names(clone_dict[clone_dict == x])) %>% setNames(levels(clone_dict))
+
+    p_tree = gtree %>% 
+        to_phylo() %>%
+        groupOTU(
+            OTU_dict,
+            'clone'
+        ) %>%
+        ggtree(ladderize = T, size = branch_width) %<+%
+        mut_nodes +
+        layout_dendrogram() +
+        geom_rootedge(size = branch_width) +
+        theme(
+            plot.margin = margin(0,0,0,0),
+            axis.title.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.text.x = element_blank(),
+            axis.line.y = element_line(size = 0.2),
+            axis.ticks.y = element_line(size = 0.2),
+            axis.text.y = element_text(size = 8)
+        ) +
+        geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
+        geom_text2(
+            aes(x = branch, label = str_trunc(site, 20, side = 'center')),
+            size = label_size, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
+        ) +
+        guides(color = F) +
+        xlab('Number of mutations')
+
+    if (tip) {
+
+        if (is.null(pal_clone)) {
+            getPalette = colorRampPalette(pal)
+            pal_clone = getPalette(nrow(mut_nodes) + 1)
+        }
+
+        p_tree = p_tree + 
+            geom_tippoint(aes(color = as.factor(clone)), size=1, stroke = 0.2) +
+            scale_color_manual(values = pal_clone, limits = force)
+    }
+    
+    return(p_tree)
+    
 }
 
 #' @export

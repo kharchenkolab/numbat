@@ -10,13 +10,12 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 ```
 
-# Interpreting Numbat outputs {-}
+# Interpreting Numbat outputs
 In this tutorial, we will illustrate how to visualize and interpret Numbat output, using a triple-negative breast cancer dataset (TNBC1) from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2). We will use `pagoda2` for visualizing cells in low-dimensional expression space.
 
 ```{r}
 library(ggplot2)
-# library(Numbat)
-devtools::load_all('~/Numbat')
+library(numbat)
 library(dplyr)
 library(glue)
 library(data.table)
@@ -28,7 +27,7 @@ library(patchwork)
 
 ```{r}
 # summarize output files into a Numbat object
-nb = Numbat$new(out_dir = '~/paper_data/numbat_out/TNBC1_demo')
+nb = numbat$new(out_dir = '~/paper_data/numbat_out/TNBC1_demo')
 # read saved pagoda2 object
 pagoda = readRDS('~/paper_data/conos_objects/TNBC1.rds')
 ```
@@ -48,7 +47,7 @@ nb$plot_phylo_heatmap(
 In this visualization, the single-cell phylogeny (left) is juxtaposed with a heatmap of single-cell CNV calls (right). The CNV calls are colored by the type of alterations (AMP, amplification, BAMP, balanced amplification, DEL, deletion, CNLoH, copy-neutral loss of heterozygosity). The colorbar in-between differentiates the distinct genetic populations (genotype). The dashed blue line separates the predicted tumor versus normal cells. This tells us that the dataset mainly consists of three cell populations, a normal population (gray) and two tumor subclones (green and yellow). 
 
 ## Consensus copy number segments
-Let's take a look at the consensus segments to better understand what CNVs are called across different cells.
+Let's take a look at the consensus segments.
 ```{r, fig.width = 14, fig.height = 1.7, dpi=300}
 nb$segs_consensus %>% plot_consensus()
 ```
@@ -56,15 +55,13 @@ nb$segs_consensus %>% plot_consensus()
 ## Bulk CNV profiles
 We can also visualize these CNV events in pseudobulks where the data is more rich, aggregating cells by clone:
 ```{r, fig.width = 13, fig.height=6, dpi=300}
-# Log-likelihood ratio cutoff
-LLR_min = 50
-  
+
 nb$bulk_clones %>% 
-  mutate(
-    cnv_state_post = ifelse(LLR < LLR_min, 'neu', cnv_state_post),
-    state_post = ifelse(LLR < LLR_min, 'neu', state_post)
-  ) %>%
-  plot_bulks(phi_mle = TRUE, legend = FALSE)
+  plot_bulks(
+    LLR_min = 50, # Log-likelihood ratio cutoff
+    phi_mle = TRUE,
+    legend = FALSE
+  )
 ```
 
 ## Single-cell CNV calls
@@ -164,7 +161,18 @@ scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint 
 Both expression and allele signal clearly separate the tumor and normal cells.
 
 ## Tumor phylogeny
-The clone-level mutational history constructed by Numbat can also be visualized. Here the nodes represent clones (each carrying a distinct genotype) and edges represent mutational events. 
+Let's take a closer look at the inferred single cell phylogeny and where the mutations occurred.
+```{r, fig.width = 6, fig.height=3, dpi=300}
+plot_sc_tree(
+  nb$gtree, 
+  label_size = 3, 
+  branch_width = 0.5, 
+  tip_length = 0.5,
+  pal_clone = mypal, 
+  tip = TRUE
+)
+```
+The mutational history can also be represented on the clone level, where cells with the same genotype are aggregated into one node.
 ```{r, fig.width = 6, fig.height=3, dpi=300}
 nb$plot_mut_history(pal_clone = mypal)
 ```
