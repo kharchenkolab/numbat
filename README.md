@@ -89,7 +89,7 @@ optional arguments:
 
 In this example (ATC2 from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2)), the gene expression count matrix and allele dataframe are already prepared for you.
 ```
-library(Numbat)
+library(numbat)
 
 # run
 out = run_numbat(
