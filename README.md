@@ -106,14 +106,14 @@ out = run_numbat(
 # Understanding results
 Numbat generates a number of files in the output folder. A comprehensive list can be found [here](#output-descriptions).
 
-The results can be summarized using a `Numbat` object:
+The results can be summarized using a `numbat` object:
 ```
-numbat = Numbat$new(out_dir = './test', i = 2)
+nb = numbat$new(out_dir = './test', i = 2)
 ```
 
 Now we can visualize the single-cell CNV profiles and lineage relationships:
 ```
-numbat$plot_phylo_heatmap(
+nb$plot_phylo_heatmap(
     clone_bar = TRUE
 )
 ```
