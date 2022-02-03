@@ -201,7 +201,7 @@ get_exp_bulk = function(count_mat, lambdas_ref, gtf_transcript, verbose = TRUE) 
     depth_obs = sum(count_mat)
     
     mut_expressed = filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = verbose)
-    count_mat = count_mat[mut_expressed,,drop=F]
+    count_mat = count_mat[mut_expressed,,drop=FALSE]
     lambdas_ref = lambdas_ref[mut_expressed]
 
     bulk_obs = count_mat %>%
@@ -318,6 +318,7 @@ combine_bulk = function(allele_bulk, exp_bulk) {
 }
 
 #' Aggregate into combined bulk expression and allele profile
+#'
 #' @param count_mat observed gene count matrices
 #' @param lambdas_ref expression values in reference profile
 #' @param df_allele allele dataframe
@@ -976,8 +977,8 @@ smooth_segs = function(bulk, min_genes = 10) {
         ) %>%
         ungroup() %>%
         group_by(CHROM) %>%
-        mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = F, na.rm=FALSE)) %>%
-        mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = T, na.rm=FALSE)) %>%
+        mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = FALSE, na.rm=FALSE)) %>%
+        mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = TRUE, na.rm=FALSE)) %>%
         ungroup()
 }
 
@@ -1038,7 +1039,7 @@ annot_consensus = function(bulk, segs_consensus) {
 #' @export
 find_common_diploid = function(
     bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, alpha = 1e-4, 
-    ncores = 5, debug = F, verbose = T) {
+    ncores = 5, debug = FALSE, verbose = TRUE) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -1157,7 +1158,7 @@ find_common_diploid = function(
         # E = tests %>% filter(q > alpha | delta_max < log(fc_min))
         E = tests %>% filter(q > alpha)
 
-        G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
+        G = igraph::graph_from_data_frame(d=E, vertices=V, directed=FALSE)
 
         if (grouping == 'component') {
 
@@ -1197,7 +1198,7 @@ find_common_diploid = function(
         }
 
         # choose diploid clique based on min FC in case there's a tie
-        diploid_cluster = as.integer(names(sort(apply(FC[,Modes(apply(FC, 1, which.min)),drop=F], 2, min))))[1]
+        diploid_cluster = as.integer(names(sort(apply(FC[,Modes(apply(FC, 1, which.min)),drop=FALSE], 2, min))))[1]
 
         fc_max = sapply(colnames(FC), function(c) {FC[,c] - FC[,diploid_cluster]}) %>% max %>% exp
         

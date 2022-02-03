@@ -2,7 +2,7 @@
 
 #' @export
 dbbinom <- function(x, size, alpha = 1, beta = 1, log = FALSE) {
-    cppdbbinom(x, size, alpha, beta, log[1L])
+    cppdbinom(x, size, alpha, beta, log[1L])
 }
 
 #' @keywords internal  

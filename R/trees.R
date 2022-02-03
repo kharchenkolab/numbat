@@ -9,8 +9,10 @@ phangorn_allChildren <- function(x) {
     parent <- x$edge[, 1]
     children <- x$edge[, 2]
     res <- vector("list", max(x$edge))
-    for (i in seq_along(parent)) res[[parent[i]]] <- c(res[[parent[i]]],
-                                                       children[i])
+    for (i in seq_along(parent)){
+        res[[parent[i]]] <- c(res[[parent[i]]],children[i])
+    }
+    
     return(res)
   }
   else {
