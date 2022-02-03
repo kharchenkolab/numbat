@@ -15,7 +15,8 @@ In this tutorial, we will illustrate how to visualize and interpret Numbat outpu
 
 ```{r}
 library(ggplot2)
-library(Numbat)
+# library(Numbat)
+devtools::load_all('~/Numbat')
 library(dplyr)
 library(glue)
 library(data.table)
@@ -44,7 +45,27 @@ nb$plot_phylo_heatmap(
   multi_allelic = TRUE
 )
 ```
-In this visualization, the single-cell phylogeny (left) is juxtaposed with a heatmap of single-cell CNV calls (right). The CNV calls are colored by the type of alterations (AMP, amplification, BAMP, balanced amplification, DEL, deletion, CNLoH, copy-neutral loss of heterozygosity). The colorbar in-between differentiates the distinct genetic populations (genotype). This tells us that the dataset mainly consists of three cell populations, a normal population (gray) and two tumor subclones (green and yellow). 
+In this visualization, the single-cell phylogeny (left) is juxtaposed with a heatmap of single-cell CNV calls (right). The CNV calls are colored by the type of alterations (AMP, amplification, BAMP, balanced amplification, DEL, deletion, CNLoH, copy-neutral loss of heterozygosity). The colorbar in-between differentiates the distinct genetic populations (genotype). The dashed blue line separates the predicted tumor versus normal cells. This tells us that the dataset mainly consists of three cell populations, a normal population (gray) and two tumor subclones (green and yellow). 
+
+## Consensus copy number segments
+Let's take a look at the consensus segments to better understand what CNVs are called across different cells.
+```{r, fig.width = 14, fig.height = 1.7, dpi=300}
+nb$segs_consensus %>% plot_consensus()
+```
+
+## Bulk CNV profiles
+We can also visualize these CNV events in pseudobulks where the data is more rich, aggregating cells by clone:
+```{r, fig.width = 13, fig.height=6, dpi=300}
+# Log-likelihood ratio cutoff
+LLR_min = 50
+  
+nb$bulk_clones %>% 
+  mutate(
+    cnv_state_post = ifelse(LLR < LLR_min, 'neu', cnv_state_post),
+    state_post = ifelse(LLR < LLR_min, 'neu', state_post)
+  ) %>%
+  plot_bulks(phi_mle = TRUE, legend = FALSE)
+```
 
 ## Single-cell CNV calls
 Numbat probabilistically evaluates the presence/absence of CNVs in single cells. The cell-level CNV posteriors are stored in the `nb$joint_post` dataframe:
@@ -148,10 +169,5 @@ The clone-level mutational history constructed by Numbat can also be visualized.
 nb$plot_mut_history(pal_clone = mypal)
 ```
 
-## Bulk CNV profiles
-To get a better sense of the raw CNV signals, we can visualize the pseudobulk CNV profiles of the respective clones by the below function:
-```{r, fig.width = 14, fig.height=6, dpi=300}
-nb$plot_bulks()
-```
 
 

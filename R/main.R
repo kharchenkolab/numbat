@@ -1264,9 +1264,12 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
         bulks = bulks %>% mutate(diploid = cnv_state %in% ref_states)
     }
     
+    # retest CNVs
     bulks = bulks %>% 
         run_group_hmms(run_hmm = F) %>%
-        mutate(state_post = ifelse(LLR < LLR_min | is.na(LLR), 'neu', state_post))
+        mutate(
+            LLR = ifelse(is.na(LLR), 0, LLR)
+        )
     
     segs_multi = bulks %>% 
         distinct(sample, CHROM, seg_cons, LLR, p_amp, p_del, p_loh, p_bamp, cnv_state_post) %>%

@@ -105,11 +105,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <ul class="summary">
 <li class="chapter" data-level="" data-path=""><a href="#interpreting-numbat-outputs"><i class="fa fa-check"></i>Interpreting Numbat outputs</a><ul>
 <li class="chapter" data-level="0.1" data-path=""><a href="#copy-number-landscape-and-single-cell-phylogeny"><i class="fa fa-check"></i><b>0.1</b> Copy number landscape and single-cell phylogeny</a></li>
-<li class="chapter" data-level="0.2" data-path=""><a href="#single-cell-cnv-calls"><i class="fa fa-check"></i><b>0.2</b> Single-cell CNV calls</a></li>
-<li class="chapter" data-level="0.3" data-path=""><a href="#clonal-assignments"><i class="fa fa-check"></i><b>0.3</b> Clonal assignments</a></li>
-<li class="chapter" data-level="0.4" data-path=""><a href="#tumor-versus-normal-probability"><i class="fa fa-check"></i><b>0.4</b> Tumor versus normal probability</a></li>
-<li class="chapter" data-level="0.5" data-path=""><a href="#tumor-phylogeny"><i class="fa fa-check"></i><b>0.5</b> Tumor phylogeny</a></li>
-<li class="chapter" data-level="0.6" data-path=""><a href="#bulk-cnv-profiles"><i class="fa fa-check"></i><b>0.6</b> Bulk CNV profiles</a></li>
+<li class="chapter" data-level="0.2" data-path=""><a href="#consensus-copy-number-segments"><i class="fa fa-check"></i><b>0.2</b> Consensus copy number segments</a></li>
+<li class="chapter" data-level="0.3" data-path=""><a href="#bulk-cnv-profiles"><i class="fa fa-check"></i><b>0.3</b> Bulk CNV profiles</a></li>
+<li class="chapter" data-level="0.4" data-path=""><a href="#single-cell-cnv-calls"><i class="fa fa-check"></i><b>0.4</b> Single-cell CNV calls</a></li>
+<li class="chapter" data-level="0.5" data-path=""><a href="#clonal-assignments"><i class="fa fa-check"></i><b>0.5</b> Clonal assignments</a></li>
+<li class="chapter" data-level="0.6" data-path=""><a href="#tumor-versus-normal-probability"><i class="fa fa-check"></i><b>0.6</b> Tumor versus normal probability</a></li>
+<li class="chapter" data-level="0.7" data-path=""><a href="#tumor-phylogeny"><i class="fa fa-check"></i><b>0.7</b> Tumor phylogeny</a></li>
 </ul></li>
 </ul>
 
@@ -134,7 +135,8 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h1>Interpreting Numbat outputs</h1>
 <p>In this tutorial, we will illustrate how to visualize and interpret Numbat output, using a triple-negative breast cancer dataset (TNBC1) from <a href="https://www.nature.com/articles/s41587-020-00795-2">Gao et al</a>. We will use <code>pagoda2</code> for visualizing cells in low-dimensional expression space.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(ggplot2)
-<span class="kw">library</span>(Numbat)
+<span class="co"># library(Numbat)</span>
+devtools<span class="op">::</span><span class="kw">load_all</span>(<span class="st">&#39;~/Numbat&#39;</span>)
 <span class="kw">library</span>(dplyr)
 <span class="kw">library</span>(glue)
 <span class="kw">library</span>(data.table)
@@ -157,10 +159,30 @@ nb<span class="op">$</span><span class="kw">plot_phylo_heatmap</span>(
   <span class="dt">pal_clone =</span> mypal,
   <span class="dt">multi_allelic =</span> <span class="ot">TRUE</span>
 )</code></pre></div>
-<p><img src="index_files/figure-html/unnamed-chunk-4-1.png" width="2400" /> In this visualization, the single-cell phylogeny (left) is juxtaposed with a heatmap of single-cell CNV calls (right). The CNV calls are colored by the type of alterations (AMP, amplification, BAMP, balanced amplification, DEL, deletion, CNLoH, copy-neutral loss of heterozygosity). The colorbar in-between differentiates the distinct genetic populations (genotype). This tells us that the dataset mainly consists of three cell populations, a normal population (gray) and two tumor subclones (green and yellow).</p>
+<p><img src="index_files/figure-html/unnamed-chunk-4-1.png" width="2400" /> In this visualization, the single-cell phylogeny (left) is juxtaposed with a heatmap of single-cell CNV calls (right). The CNV calls are colored by the type of alterations (AMP, amplification, BAMP, balanced amplification, DEL, deletion, CNLoH, copy-neutral loss of heterozygosity). The colorbar in-between differentiates the distinct genetic populations (genotype). The dashed blue line separates the predicted tumor versus normal cells. This tells us that the dataset mainly consists of three cell populations, a normal population (gray) and two tumor subclones (green and yellow).</p>
+</div>
+<div id="consensus-copy-number-segments" class="section level2">
+<h2><span class="header-section-number">0.2</span> Consensus copy number segments</h2>
+<p>Let's take a look at the consensus segments to better understand what CNVs are called across different cells.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span>segs_consensus <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">plot_consensus</span>()</code></pre></div>
+<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" width="4200" /></p>
+</div>
+<div id="bulk-cnv-profiles" class="section level2">
+<h2><span class="header-section-number">0.3</span> Bulk CNV profiles</h2>
+<p>We can also visualize these CNV events in pseudobulks where the data is more rich, aggregating cells by clone:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Log-likelihood ratio cutoff</span>
+LLR_min =<span class="st"> </span><span class="dv">50</span>
+  
+nb<span class="op">$</span>bulk_clones <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate</span>(
+    <span class="dt">cnv_state_post =</span> <span class="kw">ifelse</span>(LLR <span class="op">&lt;</span><span class="st"> </span>LLR_min, <span class="st">&#39;neu&#39;</span>, cnv_state_post),
+    <span class="dt">state_post =</span> <span class="kw">ifelse</span>(LLR <span class="op">&lt;</span><span class="st"> </span>LLR_min, <span class="st">&#39;neu&#39;</span>, state_post)
+  ) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">plot_bulks</span>(<span class="dt">phi_mle =</span> <span class="ot">TRUE</span>, <span class="dt">legend =</span> <span class="ot">FALSE</span>)</code></pre></div>
+<p><img src="index_files/figure-html/unnamed-chunk-6-1.png" width="3900" /></p>
 </div>
 <div id="single-cell-cnv-calls" class="section level2">
-<h2><span class="header-section-number">0.2</span> Single-cell CNV calls</h2>
+<h2><span class="header-section-number">0.4</span> Single-cell CNV calls</h2>
 <p>Numbat probabilistically evaluates the presence/absence of CNVs in single cells. The cell-level CNV posteriors are stored in the <code>nb$joint_post</code> dataframe:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(nb<span class="op">$</span>joint_post) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(cell, CHROM, seg, cnv_state, p_cnv, p_cnv_x, p_cnv_y)</code></pre></div>
 <pre><code>##                        cell CHROM seg cnv_state      p_cnv   p_cnv_x    p_cnv_y
@@ -195,10 +217,10 @@ cnv_type =<span class="st"> </span>nb<span class="op">$</span>joint_post <span c
 }
 
 <span class="kw">wrap_plots</span>(plist, <span class="dt">guides =</span> <span class="st">&#39;collect&#39;</span>)</code></pre></div>
-<p><img src="index_files/figure-html/unnamed-chunk-6-1.png" width="2700" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-8-1.png" width="2700" /></p>
 </div>
 <div id="clonal-assignments" class="section level2">
-<h2><span class="header-section-number">0.3</span> Clonal assignments</h2>
+<h2><span class="header-section-number">0.5</span> Clonal assignments</h2>
 <p>Numbat aggregates signals across subclone-specific CNVs to probabilistically assign cells to subclones. The information regarding clonal assignments are contained in the <code>nb$clone_post</code> dataframe.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span>clone_post <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">head</span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(cell, clone_opt, p_<span class="dv">1</span>, p_<span class="dv">2</span>, p_<span class="dv">3</span>, p_<span class="dv">4</span>)</code></pre></div>
 <pre><code>##                        cell clone_opt          p_1          p_2          p_3
@@ -226,10 +248,10 @@ cnv_type =<span class="st"> </span>nb<span class="op">$</span>joint_post <span c
     <span class="dt">title =</span> <span class="st">&#39;Genotypes&#39;</span>,
     <span class="dt">pal =</span> mypal
 )</code></pre></div>
-<p><img src="index_files/figure-html/unnamed-chunk-8-1.png" width="900" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-10-1.png" width="900" /></p>
 </div>
 <div id="tumor-versus-normal-probability" class="section level2">
-<h2><span class="header-section-number">0.4</span> Tumor versus normal probability</h2>
+<h2><span class="header-section-number">0.6</span> Tumor versus normal probability</h2>
 <p>Combining evidence from all CNVs, Numbat derives an aneuploidy probability for each cell to distinguish tumor versus normal cells. We can visualize the posterior aneuploidy probability based on expression evidence only, allele evidence only, and jointly:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">p_joint =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
     <span class="dt">alpha=</span><span class="fl">0.8</span>,
@@ -266,19 +288,13 @@ p_expr =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw"
 <span class="kw">scale_color_gradient2</span>(<span class="dt">low =</span> <span class="st">&#39;royalblue&#39;</span>, <span class="dt">mid =</span> <span class="st">&#39;white&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red3&#39;</span>, <span class="dt">midpoint =</span> <span class="fl">0.5</span>, <span class="dt">name =</span> <span class="st">&#39;Posterior&#39;</span>)
 
 (p_expr <span class="op">|</span><span class="st"> </span>p_allele <span class="op">|</span><span class="st"> </span>p_joint) <span class="op">+</span><span class="st"> </span><span class="kw">plot_layout</span>(<span class="dt">guides =</span> <span class="st">&#39;collect&#39;</span>)</code></pre></div>
-<p><img src="index_files/figure-html/unnamed-chunk-9-1.png" width="2700" /> Both expression and allele signal clearly separate the tumor and normal cells.</p>
+<p><img src="index_files/figure-html/unnamed-chunk-11-1.png" width="2700" /> Both expression and allele signal clearly separate the tumor and normal cells.</p>
 </div>
 <div id="tumor-phylogeny" class="section level2">
-<h2><span class="header-section-number">0.5</span> Tumor phylogeny</h2>
+<h2><span class="header-section-number">0.7</span> Tumor phylogeny</h2>
 <p>The clone-level mutational history constructed by Numbat can also be visualized. Here the nodes represent clones (each carrying a distinct genotype) and edges represent mutational events.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span><span class="kw">plot_mut_history</span>(<span class="dt">pal_clone =</span> mypal)</code></pre></div>
-<p><img src="index_files/figure-html/unnamed-chunk-10-1.png" width="1800" /></p>
-</div>
-<div id="bulk-cnv-profiles" class="section level2">
-<h2><span class="header-section-number">0.6</span> Bulk CNV profiles</h2>
-<p>To get a better sense of the raw CNV signals, we can visualize the pseudobulk CNV profiles of the respective clones by the below function:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span><span class="kw">plot_bulks</span>()</code></pre></div>
-<p><img src="index_files/figure-html/unnamed-chunk-11-1.png" width="4200" /></p>
+<p><img src="index_files/figure-html/unnamed-chunk-12-1.png" width="1800" /></p>
 </div>
 </div>
             </section>

@@ -30,6 +30,7 @@ cnv_colors = c("neu" = "gray",
         'major' = '#66C2A5', 'minor' = '#FC8D62'
     )
 
+#' @export
 cnv_labels = names(cnv_colors) %>%
     str_remove_all('_') %>% 
     str_to_upper() %>%
@@ -1108,6 +1109,57 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
 
     return(panel)
 }
+
+#' @export
+plot_consensus = function(segs) {
+  
+    chrom_labeller <- function(chr){
+        chr[chr %in% c(19, 21, 22)] = ''
+        return(chr)
+    }
+    
+    ggplot(
+        segs
+    ) +
+    geom_rect(
+        aes(xmin = seg_start, xmax = seg_end, ymin = -0.5, ymax = 0.5, fill = cnv_state_post)
+    ) +
+    theme_void() +
+    theme(
+        panel.spacing = unit(1, 'mm'),
+        strip.background = element_blank(),
+        strip.text.y = element_text(angle = 0),
+        plot.margin = margin(0, 0, 0, 0),
+        legend.position = 'top'
+    ) +
+    facet_grid(~CHROM, space = 'free_x', scale = 'free', labeller = labeller(CHROM = chrom_labeller)) +
+    scale_fill_manual(
+      values = cnv_colors,
+      labels = cnv_labels,
+      name = 'CN states'
+    ) +
+    ggrepel::geom_text_repel(
+        aes(x = (seg_start+seg_end)/2, y = -0.5,
+            label = str_remove(seg_cons, '\\d+')),
+        min.segment.length = 0,
+        vjust = 1, 
+        hjust = 0,
+        direction = 'x',
+        segment.curvature = -0.2,
+        segment.ncp = 3,
+        segment.angle = 30,
+        segment.inflect = TRUE,
+        max.overlaps = 3
+    ) +
+    scale_y_continuous(
+        expand = expansion(add = c(0.5, 0))
+    ) +
+    scale_x_continuous(
+        expand = expansion(mult = 0.05)
+    )
+}
+
+
 
 #' @export
 plot_sc_joint = function(
