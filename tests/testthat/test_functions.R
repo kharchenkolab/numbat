@@ -1,5 +1,5 @@
 
-library(Numbat)
+library(numbat)
 
 test_that("dpoilog works", {
   expect_equal(dpoilog(c(1,11),c(1,1),c(1,1)), c(0.175733342664327, 0.0150105250670325))
