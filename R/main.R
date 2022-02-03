@@ -12,8 +12,9 @@
 #' @import patchwork
 #' @importFrom extraDistr dgpois
 #' @useDynLib numbat
+NULL
 
-#' @description Run workflow to decompose tumor subclones
+#' Run workflow to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe of allele counts per cell, produced by preprocess_allele
@@ -614,7 +615,7 @@ run_group_hmms = function(
     return(bulks)
 }
 
-#' @description Extract consensus CNV segments
+#' Extract consensus CNV segments
 #' @param bulks pseudobulks dataframe
 #' @param min_LLR LLR threshold to filter CNVs 
 #' @param min_overlap minimum overlap fraction to determine count two events as as overlapping
@@ -673,7 +674,7 @@ get_segs_consensus = function(bulks, min_LLR = 20, min_overlap = 0.45) {
 
 }
 
-#' @description Fill neutral regions into consensus segments
+#' Fill neutral regions into consensus segments
 #' @param segs_consensus a dataframe containing info of all CNV segments from multiple samples
 #' @param segs_neu neutral segments
 #' @return collections of neutral and aberrant segments with no gaps
@@ -721,7 +722,7 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
     return(segs_consensus)
 }
 
-#' @description Map cells to the phylogeny (or genotypes) based on CNV posteriors
+#' Map cells to the phylogeny (or genotypes) based on CNV posteriors
 #' @param gtree a cell lineage tree as a tidygraph object
 #' @param exp_post expression posteriors
 #' @param allele_post allele posteriors
@@ -801,7 +802,9 @@ cell_to_clone = function(gtree, exp_post, allele_post) {
     
 }
 
+#' Get unique CNVs from set of segments
 #' @param segs_all a dataframe containing info of all CNV segments from multiple samples
+#' @param min_overlap minimum overlap fraction to determine count two events as as overlapping
 #' @return consensus CNV segments
 #' @export
 resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
@@ -861,7 +864,7 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
     return(segs_consensus)
 }
 
-#' @description get the single cell expression likelihoods
+#' get the single cell expression likelihoods
 #' @param exp_sc single-cell expression dataframe
 #' @keywords internal
 get_exp_likelihoods_lnpois = function(exp_sc, diploid_chroms = NULL, use_loh = FALSE, depth_obs = NULL, mu = NULL, sigma = NULL) {
@@ -913,7 +916,7 @@ get_exp_likelihoods_lnpois = function(exp_sc, diploid_chroms = NULL, use_loh = F
     return(res)
 }
 
-#' @description get the single cell expression dataframe
+#' get the single cell expression dataframe
 #' @param segs_consensus consensus segments
 #' @param count_mat gene expression count matrix
 #' @param gtf_transcript transcript dataframe
@@ -967,7 +970,7 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 }
 
 
-#' @description compute single-cell expression posteriors
+#' compute single-cell expression posteriors
 #' @param segs_consensus consensus segments
 #' @param count_mat gene expression count matrix
 #' @param gtf_transcript transcript dataframe
@@ -1056,7 +1059,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     return(list('exp_post' = exp_post, 'exp_sc' = exp_sc, 'best_refs' = best_refs))
 }
 
-#' @description do bayesian averaging to get posteriors
+#' do bayesian averaging to get posteriors
 #' @keywords internal
 compute_posterior = function(sc_post) {
     sc_post %>% 

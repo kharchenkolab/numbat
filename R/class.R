@@ -1,6 +1,6 @@
 
 #' @title numbat R6 class
-#' @description 
+#' @description used to summarize results
 #' @param out_dir the numbat run output directory
 #' @export
 numbat <- R6::R6Class("numbat", lock_objects=FALSE,

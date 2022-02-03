@@ -30,9 +30,10 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
 #' Utility function to make reference gene expression profiles
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param cell_annot dataframe with columns "cell" and "cell_type"
+#' @param verbose verbosity
 #' @return a matrix of reference gene expression profiles
 #' @export
-make_psbulk = function(count_mat, cell_annot, verbose = T) {
+aggregate_counts = function(count_mat, cell_annot, verbose = T) {
 
     cell_annot = cell_annot %>% mutate(cell_type = factor(cell_type))
 
@@ -505,7 +506,7 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
 
 ########################### Analysis ############################
 
-#' @description Call CNVs in a pseudobulk
+#' Call CNVs in a pseudobulk
 #' @param bulk pesudobulk dataframe
 #' @param gamma dispersion parameter for the Beta-Binomial allele model
 #' @param t transition probability
@@ -1246,7 +1247,7 @@ get_segs_neu = function(bulks) {
     return(segs_neu)
 }
 
-#' @description calculate joint likelihood of allele data
+#' calculate joint likelihood of allele data
 #' @param AD variant allele depth
 #' @param DP total allele depth
 #' @param alpha alpha parameter of Beta-Binomial distribution
@@ -1257,7 +1258,7 @@ l_bbinom = function(AD, DP, alpha, beta) {
     sum(dbbinom(AD, DP, alpha, beta, log = TRUE))
 }
 
-#' @description fit a Beta-Binomial model by maximum likelihood
+#' fit a Beta-Binomial model by maximum likelihood
 #' @param AD variant allele depth
 #' @param DP total allele depth
 #' @return MLE of alpha and beta 
@@ -1278,7 +1279,7 @@ fit_bbinom = function(AD, DP) {
     return(fit)
 }
 
-#' @description calculate joint likelihood of a gamma-poisson model
+#' calculate joint likelihood of a gamma-poisson model
 #' @param Y_obs gene expression counts
 #' @param lambda_ref reference expression levels
 #' @param d total library size
@@ -1290,7 +1291,7 @@ l_gpois = function(Y_obs, lambda_ref, d, alpha, beta, phi = 1) {
     sum(dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE))
 }
 
-#' @description fit a Gamma-Poisson model by maximum likelihood
+#' fit a Gamma-Poisson model by maximum likelihood
 #' @param Y_obs gene expression counts
 #' @param lambda_ref reference expression levels
 #' @param d total library size
@@ -1316,7 +1317,7 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
     return(fit)
 }
 
-#' @description ccalculate joint likelihood of a PLN model
+#' ccalculate joint likelihood of a PLN model
 #' @param Y_obs gene expression counts
 #' @param lambda_ref reference expression levels
 #' @param d total library size
@@ -1328,7 +1329,7 @@ l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
     sum(log(dpoilog(Y_obs, mu + log(phi * d * lambda_ref), sig)))
 }
 
-#' @description fit a PLN model by maximum likelihood
+#' fit a PLN model by maximum likelihood
 #' @param Y_obs gene expression counts
 #' @param lambda_ref reference expression levels
 #' @param d total library size
@@ -1352,7 +1353,7 @@ fit_lnpois = function(Y_obs, lambda_ref, d) {
     return(fit)
 }
 
-#' @description Calculate the MLE of expression fold change phi
+#' Calculate the MLE of expression fold change phi
 #' @keywords internal
 calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, upper = 10) {
     

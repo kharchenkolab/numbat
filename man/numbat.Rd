@@ -4,9 +4,7 @@
 \alias{numbat}
 \title{numbat R6 class}
 \description{
-numbat R6 class
-
-numbat R6 class
+used to summarize results
 }
 \section{Methods}{
 \subsection{Public methods}{
