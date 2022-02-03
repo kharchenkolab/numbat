@@ -58,7 +58,7 @@ We can also visualize these CNV events in pseudobulks where the data is more ric
 
 nb$bulk_clones %>% 
   plot_bulks(
-    LLR_min = 50, # Log-likelihood ratio cutoff
+    min_LLR = 50, # Log-likelihood ratio cutoff
     phi_mle = TRUE,
     legend = FALSE
   )
@@ -103,7 +103,7 @@ Numbat aggregates signals across subclone-specific CNVs to probabilistically ass
 ```{r}
 nb$clone_post %>% head() %>% select(cell, clone_opt, p_1, p_2, p_3, p_4)
 ```
-Here `clone_opt` denotes the maximum likelihood assignment of a cell to a specific clone. `p_{1..4}` are the detailed breakdown of the posterior probability that the cell belongs to each clone, respectively. Let's visualize the clonal decomposition in a tSNE embedding.
+Here `clone_opt` denotes the maximum likelihood assignment of a cell to a specific clone. `p_{1..4}` are the detailed breakdown of the posterior probability that the cell belongs to each clone, respectively. Let's visualize the clonal decomposition in a tSNE embedding. Note that clone 1 is always the normal cells.
 ```{r, fig.width = 3, fig.height=3, dpi=300}
 pagoda$plotEmbedding(
     alpha=0.8,
@@ -139,7 +139,7 @@ p_allele = pagoda$plotEmbedding(
         {setNames(.$p_cnv_x, .$cell)},
     plot.na = F,
     plot.theme = theme_bw(),
-    title = 'Expnbsion',
+    title = 'Expression',
 ) +
 scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, name = 'Posterior')
 

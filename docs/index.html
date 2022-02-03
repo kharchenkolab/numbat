@@ -171,7 +171,7 @@ nb<span class="op">$</span><span class="kw">plot_phylo_heatmap</span>(
 <p>We can also visualize these CNV events in pseudobulks where the data is more rich, aggregating cells by clone:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span>bulk_clones <span class="op">%&gt;%</span><span class="st"> </span>
 <span class="st">  </span><span class="kw">plot_bulks</span>(
-    <span class="dt">LLR_min =</span> <span class="dv">50</span>, <span class="co"># Log-likelihood ratio cutoff</span>
+    <span class="dt">min_LLR =</span> <span class="dv">50</span>, <span class="co"># Log-likelihood ratio cutoff</span>
     <span class="dt">phi_mle =</span> <span class="ot">TRUE</span>,
     <span class="dt">legend =</span> <span class="ot">FALSE</span>
   )</code></pre></div>
@@ -233,7 +233,7 @@ cnv_type =<span class="st"> </span>nb<span class="op">$</span>joint_post <span c
 ## 4: 3.820380e-01
 ## 5: 1.000000e+00
 ## 6: 9.979171e-24</code></pre>
-<p>Here <code>clone_opt</code> denotes the maximum likelihood assignment of a cell to a specific clone. <code>p_{1..4}</code> are the detailed breakdown of the posterior probability that the cell belongs to each clone, respectively. Let's visualize the clonal decomposition in a tSNE embedding.</p>
+<p>Here <code>clone_opt</code> denotes the maximum likelihood assignment of a cell to a specific clone. <code>p_{1..4}</code> are the detailed breakdown of the posterior probability that the cell belongs to each clone, respectively. Let's visualize the clonal decomposition in a tSNE embedding. Note that clone 1 is always the normal cells.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">pagoda<span class="op">$</span><span class="kw">plotEmbedding</span>(
     <span class="dt">alpha=</span><span class="fl">0.8</span>,
     <span class="dt">size=</span><span class="dv">1</span>, 
@@ -267,7 +267,7 @@ p_allele =<span class="st"> </span>pagoda<span class="op">$</span><span class="k
 <span class="st">        </span>{<span class="kw">setNames</span>(.<span class="op">$</span>p_cnv_x, .<span class="op">$</span>cell)},
     <span class="dt">plot.na =</span> F,
     <span class="dt">plot.theme =</span> <span class="kw">theme_bw</span>(),
-    <span class="dt">title =</span> <span class="st">&#39;Expnbsion&#39;</span>,
+    <span class="dt">title =</span> <span class="st">&#39;Expression&#39;</span>,
 ) <span class="op">+</span>
 <span class="kw">scale_color_gradient2</span>(<span class="dt">low =</span> <span class="st">&#39;royalblue&#39;</span>, <span class="dt">mid =</span> <span class="st">&#39;white&#39;</span>, <span class="dt">high =</span> <span class="st">&#39;red3&#39;</span>, <span class="dt">midpoint =</span> <span class="fl">0.5</span>, <span class="dt">name =</span> <span class="st">&#39;Posterior&#39;</span>)
 

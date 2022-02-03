@@ -499,18 +499,18 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 plot_psbulk = function(
     bulk, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_depth = 10, theta_roll = FALSE,
     fc_correct = TRUE, allele_only = FALSE, phi_mle = FALSE, use_pos = FALSE, legend = TRUE,
-    LLR_min = 0
+    min_LLR = 0
     ) {
 
     if (!'state_post' %in% colnames(bulk)) {
         bulk = bulk %>% mutate(state_post = state)
     }
 
-    if (LLR_min != 0) {
+    if (min_LLR != 0) {
         bulk = bulk %>% mutate(
             LLR = ifelse(is.na(LLR), 0, LLR),
-            cnv_state_post = ifelse(LLR < LLR_min, 'neu', cnv_state_post),
-            state_post = ifelse(LLR < LLR_min, 'neu', state_post)
+            cnv_state_post = ifelse(LLR < min_LLR, 'neu', cnv_state_post),
+            state_post = ifelse(LLR < min_LLR, 'neu', state_post)
         )
     }
 
@@ -645,7 +645,7 @@ plot_psbulk = function(
 plot_bulks = function(
     bulk_all, min_depth = 8, dot_alpha = 0.5, fc_correct = TRUE,
     phi_mle = FALSE, allele_only = FALSE, use_pos = FALSE, 
-    ncol = 1, legend = TRUE, title = TRUE, LLR_min = 0
+    ncol = 1, legend = TRUE, title = TRUE, min_LLR = 0
     ) {
 
     options(warn = -1)
@@ -663,7 +663,7 @@ plot_bulks = function(
                         min_depth = min_depth, fc_correct = fc_correct,
                         phi_mle = phi_mle, use_pos = use_pos, legend = legend,
                         allele_only = allele_only,
-                        LLR_min = LLR_min
+                        min_LLR = min_LLR
                     ) + 
                     theme(
                         title = element_text(size = 8),
