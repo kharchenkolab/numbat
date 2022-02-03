@@ -1,4 +1,4 @@
-Package: Numbat
+Package: numbat
 Title: Accurate reconstruction of copy number profiles in scRNAseq data using population haplotype phasing
 Version: 0.1.0
 Authors@R: c(person("Teng","Gao", email="tgao@g.harvard.edu", role=c("cre", "aut")), person("Hirak", "Sarkar", email="hirak_sarkar@hms.harvard.edu", role="aut"), person("Evan", "Biederstedt", email="evan.biederstedt@gmail.com", role="aut"), person("Peter", "Kharchenko", email = "peter_kharchenko@hms.harvard.edu", role = "aut"))

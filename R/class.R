@@ -1,20 +1,20 @@
 
-#' @title Numbat R6 class
+#' @title numbat R6 class
 #' @description 
-#' @param out_dir the Numbat run output directory
+#' @param out_dir the numbat run output directory
 #' @export
-Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
+numbat <- R6::R6Class("numbat", lock_objects=FALSE,
   public = list(
     #' @field label
     label = 'sample',
     gtf = NULL,
 
-    #' @description initialize Numbat class
+    #' @description initialize numbat class
     #' @param out_dir output directory
     #' @param i get results from which iteration
     #' @param gtf transcript gtf dataframe
     #' @param verbose verbosity
-    #' @return a new 'Numbat' object
+    #' @return a new 'numbat' object
     initialize = function(out_dir, i = 2, gtf = gtf_hg38, verbose=TRUE) {
 
         self$out_dir = out_dir
@@ -25,7 +25,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
 
     },
 
-    #' @description fetch results from the Numbat output directory
+    #' @description fetch results from the numbat output directory
     #' @param out_dir output directory
     #' @param i get results from which iteration
     #' @return NULL

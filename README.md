@@ -8,9 +8,9 @@
 
 <img src="logo.png" align="right" width="200">
 
-Numbat is a haplotype-enhanced CNV caller from single-cell transcriptomics data. It integrates signals from gene expression, allelic ratio, and population haplotype structures to accurately infer allele-specific CNVs in single cells and reconstruct their lineage relationship. 
+Numbat is a haplotype-enhanced CNV caller from single-cell transcriptomics data. It integrates signals from gene expression, allelic ratio, and population-derived haplotype information to accurately infer allele-specific CNVs in single cells and reconstruct their lineage relationship. 
 
-Numbat can be used to 1. detect allele-specific copy number variations from single-cells 2. differentiate tumor versus normal cells in the tumor microenvironment 3. infer the clonal architecture and evolutionary history of profiled tumors. 
+Numbat can be used to 1. detect allele-specific copy number variations from scRNA-seq 2. differentiate tumor versus normal cells in the tumor microenvironment 3. infer the clonal architecture and evolutionary history of profiled tumors. 
 
 Numbat does not require paired DNA or genotype data and operates solely on the donor scRNA-data data (for example, 10x Cell Ranger output).
 
@@ -18,9 +18,9 @@ Numbat does not require paired DNA or genotype data and operates solely on the d
 - [Installation](#installation)
 - [Usage](#usage)
 - [Output descriptions](#output-descriptions)
-
-A more detailed vignette for interpreting Numbat results is available:
-- [Walkthrough](http://pklab.med.harvard.edu/teng)
+  
+A detailed vignette on how to interpret and visualize Numbat results is available:  
+- [Understanding results](https://kharchenkolab.github.io/Numbat)
 
 # Prerequisites
 Numbat uses cellsnp-lite for generating SNP pileup data and eagle2 for phasing. Please follow their installation instructions and make sure their binary executables can be found in your $PATH.
@@ -103,24 +103,9 @@ out = run_numbat(
     out_dir = './test'
 )
 ```
-# Understanding results
-Numbat generates a number of files in the output folder. A comprehensive list can be found [here](#output-descriptions).
-
-The results can be summarized using a `Numbat` object:
-```
-numbat = Numbat$new(out_dir = './test', i = 2)
-```
-
-Now we can visualize the single-cell CNV profiles and lineage relationships:
-```
-numbat$plot_phylo_heatmap(
-    clone_bar = TRUE
-)
-```
-![image](https://user-images.githubusercontent.com/13375875/151874913-c75b760b-98f3-4d2f-a080-efb21a67529c.png)
 
 # Output descriptions
-The file names are post-fixed with the `i`th iteration of phylogeny optimization.
+Numbat generates a number of files in the output folder. The file names are post-fixed with the `i`th iteration of phylogeny optimization.
 - `gexp_roll_wide.tsv.gz`: window-smoothed normalized expression profiles of single cells
 - `hc.rds`: hierarchical clustering result based on smoothed expression
 - `bulk_subtrees_{i}.tsv.gz`: pseudobulk HMM profiles based on subtrees defined by current cell lineage tree

@@ -11,7 +11,7 @@
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
 #' @importFrom extraDistr dgpois
-#' @useDynLib Numbat
+#' @useDynLib numbat
 
 #' @description Run workflow to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
@@ -153,21 +153,22 @@ run_numbat = function(
     # resolve CNVs
     segs_consensus = get_segs_consensus(bulk_subtrees)
 
+    # clone bulk profiles
+    bulk_clones = bulk_subtrees %>% filter(sample %in% 1:init_k)
+
+    bulk_clones = retest_bulks(
+        bulk_clones,
+        segs_consensus,
+        use_loh = use_loh,
+        diploid_chroms = diploid_chroms)
+
+    fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
+
     if (multi_allelic) {
-        # only test the leaf nodes
-        out = test_multi_allelic(
-            bulk_subtrees %>% filter(sample %in% 1:init_k),
-            segs_consensus,
-            use_loh = use_loh,
-            diploid_chroms = diploid_chroms)
-
-        segs_consensus = out$segs_consensus
-
-        fwrite(out$bulks, glue('{out_dir}/bulk_clones_retest_{i}.tsv.gz'), sep = '\t')
-
+        segs_consensus = test_multi_allelic(bulk_clones, segs_consensus)
     }
 
-    fwrite(segs_consensus, glue('{out_dir}/segs_consensus_0.tsv'), sep = '\t')
+    fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
 
     if (plot) {
 
@@ -381,12 +382,19 @@ run_numbat = function(
                 t = t,
                 gamma = gamma,
                 alpha = alpha,
-                exp_model = exp_model,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
+                exp_model = exp_model,
+                ncores = ncores,
                 verbose = verbose,
-                ncores = ncores
+                retest = F
             )
+
+        bulk_clones = retest_bulks(
+            bulk_clones,
+            segs_consensus,
+            use_loh = use_loh,
+            diploid_chroms = diploid_chroms)
 
         fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
@@ -436,7 +444,7 @@ run_numbat = function(
 
             ggsave(glue('{out_dir}/bulk_subtrees_{i}.png'), p, width = 14, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200)
 
-            p = plot_bulks(bulk_clones)
+            p = plot_bulks(bulk_clones, min_LLR = min_LLR)
 
             ggsave(glue('{out_dir}/bulk_clones_{i}.png'), p, width = 14, height = 2*length(unique(bulk_clones$sample)), dpi = 200)
 
@@ -447,21 +455,12 @@ run_numbat = function(
         segs_consensus = get_segs_consensus(bulk_subtrees)
 
         if (multi_allelic) {
-
-            out = test_multi_allelic(
-                bulk_clones, 
-                segs_consensus,
-                use_loh = use_loh,
-                diploid_chroms = diploid_chroms)
-
-            segs_consensus = out$segs_consensus
-
-            fwrite(out$bulks, glue('{out_dir}/bulk_clones_retest_{i}.tsv.gz'), sep = '\t')
-
+            segs_consensus = test_multi_allelic(bulk_clones, segs_consensus)
         }
 
         fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
     }
+
     # reflect change
     return('Success')
 }
@@ -617,11 +616,11 @@ run_group_hmms = function(
 
 #' @description Extract consensus CNV segments
 #' @param bulks pseudobulks dataframe
-#' @param LLR_min LLR threshold to filter CNVs 
+#' @param min_LLR LLR threshold to filter CNVs 
 #' @param min_overlap minimum overlap fraction to determine count two events as as overlapping
 #' @return consensus segments dataframe
 #' @export
-get_segs_consensus = function(bulks, LLR_min = 20, min_overlap = 0.45) {
+get_segs_consensus = function(bulks, min_LLR = 20, min_overlap = 0.45) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -642,7 +641,7 @@ get_segs_consensus = function(bulks, LLR_min = 20, min_overlap = 0.45) {
 
     segs_filtered = segs_all %>% 
         filter(cnv_state != 'neu') %>%
-        filter(LLR_y > LLR_min | LLR_x > 100 | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% 
+        filter(LLR_y > min_LLR | LLR_x > 100 | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% 
         filter(n_genes >= 20)
     
     if(dim(segs_filtered)[[1]] == 0){
@@ -1233,11 +1232,14 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
     return(joint_post)
 }
 
-#' test for multi-allelic CNVs
-#' @keywords internal 
-test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 100, p_min = 0.995, diploid_chroms = NULL) {
-
-    log_info('Testing for multi-allelic CNVs ..')
+#' retest consensus segments on pseudobulks
+#' @param bulks pseudobulks dataframe
+#' @param segs_consensus consensus segments dataframe
+#' @param use_loh whether to use loh in the baseline
+#' @param diploid_chroms user-provided diploid chromosomes
+#' @return pseudobulks dataframe
+#' @export 
+retest_bulks = function(bulks, segs_consensus, use_loh = FALSE, diploid_chroms = NULL) {
 
     # default
     if (is.null(use_loh)) {
@@ -1264,15 +1266,27 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
         bulks = bulks %>% mutate(diploid = cnv_state %in% ref_states)
     }
     
+    # retest CNVs
     bulks = bulks %>% 
         run_group_hmms(run_hmm = F) %>%
-        mutate(state_post = ifelse(LLR < LLR_min | is.na(LLR), 'neu', state_post))
+        mutate(
+            LLR = ifelse(is.na(LLR), 0, LLR)
+        )
+
+    return(bulks)
+}
+
+#' test for multi-allelic CNVs
+#' @keywords internal 
+test_multi_allelic = function(bulks, segs_consensus, min_LLR = 100, p_min = 0.995) {
+
+    log_info('Testing for multi-allelic CNVs ..')
     
     segs_multi = bulks %>% 
         distinct(sample, CHROM, seg_cons, LLR, p_amp, p_del, p_loh, p_bamp, cnv_state_post) %>%
         rowwise() %>%
         mutate(p_max = max(c(p_amp, p_del, p_loh, p_bamp))) %>%
-        filter(LLR > LLR_min & p_max > p_min) %>%
+        filter(LLR > min_LLR & p_max > p_min) %>%
         group_by(seg_cons) %>%
         summarise(
             cnv_states = list(sort(unique(cnv_state_post))),
@@ -1311,7 +1325,7 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
             )
     }
     
-    return(list('segs_consensus' = segs_consensus, 'bulks' = bulks, 'segs_multi' = segs_multi))
+    return(segs_consensus)
 }
 
 #' expand multi-allelic CNVs into separate entries in the single-cell posterior dataframe
