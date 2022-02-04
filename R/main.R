@@ -427,7 +427,7 @@ run_numbat = function(
 
             log_info('Making plots..')
 
-            panel = plot_sc_joint(
+            panel = plot_phylo_heatmap(
                     gtree,
                     joint_post,
                     segs_consensus,

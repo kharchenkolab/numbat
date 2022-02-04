@@ -495,11 +495,23 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
     (p1 / p2) + plot_layout(guides = 'auto')
 }
 
+#' plot a pseudobulk HMM profile
+#' @param bulk pseudobulk dataframe
+#' @param use_pos use marker position instead of index as x coordinate
+#' @param allele_only only plot alleles
+#' @param min_LLR LLR threshold for event filtering
+#' @param min_depth minimum coverage depth for a SNP to be plotted
+#' @param exp_limit expression logFC axis limit
+#' @param phi_mle whether to plot estimates of segmental expression fold change 
+#' @param theta_roll whether to plot rolling estimates of allele imbalance
+#' @param dot_size size of marker dots
+#' @param dot_alpha transparency of the marker dots
+#' @param legend whether to show legend
+#' @retrun a ggplot object
 #' @export
 plot_psbulk = function(
-    bulk, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_depth = 10, theta_roll = FALSE,
-    fc_correct = TRUE, allele_only = FALSE, phi_mle = FALSE, use_pos = FALSE, legend = TRUE,
-    min_LLR = 10
+    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 10, min_depth = 8, exp_limit = 2, 
+    phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = TRUE
     ) {
 
     if (!'state_post' %in% colnames(bulk)) {
@@ -533,7 +545,7 @@ plot_psbulk = function(
         ))
 
     # correct for baseline bias
-    if (fc_correct & !allele_only) {
+    if (!allele_only) {
         bulk = bulk %>% mutate(logFC = logFC - mu)
     }
 
@@ -643,8 +655,8 @@ plot_psbulk = function(
 
 #' @export
 plot_bulks = function(
-    bulk_all, min_depth = 8, dot_alpha = 0.5, fc_correct = TRUE,
-    phi_mle = FALSE, allele_only = FALSE, use_pos = FALSE, 
+    bulk_all, min_depth = 8, dot_alpha = 0.5, 
+    phi_mle = TRUE, allele_only = FALSE, use_pos = FALSE, 
     ncol = 1, legend = TRUE, title = TRUE, min_LLR = 10
     ) {
 
@@ -660,8 +672,10 @@ plot_bulks = function(
                 p = plot_psbulk(
                         bulk, 
                         dot_alpha = dot_alpha,
-                        min_depth = min_depth, fc_correct = fc_correct,
-                        phi_mle = phi_mle, use_pos = use_pos, legend = legend,
+                        min_depth = min_depth, 
+                        phi_mle = phi_mle,
+                        use_pos = use_pos,
+                        legend = legend,
                         allele_only = allele_only,
                         min_LLR = min_LLR
                     ) + 
