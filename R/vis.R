@@ -1273,18 +1273,20 @@ plot_consensus = function(segs) {
 
 #' @export
 plot_phylo_heatmap = function(
-        gtree, joint_post, segs_consensus, 
-        cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
-        logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
-        pal_annot = NULL, multi_allelic = FALSE, tree_height = 1, annot_title = 'Annotation'
+        gtree, joint_post, segs_consensus,
+        annot = NULL, line_width = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
+        logBF_max = 5, geno_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
+        pal_annot = NULL, tree_height = 1, annot_title = 'Annotation'
     ) {
 
-    # if multi allelic module was not enabled
-    if (!'n_states' %in% colnames(segs_consensus)) {
-        segs_consensus = segs_consensus %>% mutate(
+    # if no multi allelic CNVs
+    if (!'n_states' %in% colnames(joint_post)) {
+        joint_post = joint_post %>% mutate(
             n_states = ifelse(cnv_state == 'neu', 1, 0), 
             cnv_states = cnv_state
         )
+    } else {
+        joint_post = joint_post %>% mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
     }
 
     gtree = mark_tumor_lineage(gtree)
@@ -1310,19 +1312,12 @@ plot_phylo_heatmap = function(
             ) +
             guides(color = F)
 
+    # order the cells
     cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
 
     joint_post = joint_post %>% 
-            inner_join(
-                segs_consensus %>% select(seg = seg_cons, CHROM, seg_start, seg_end, n_states, cnv_states),
-                by = c('seg', 'CHROM')
-            ) %>%
-            mutate(cell = factor(cell, cell_order)) %>%
-            mutate(cell_index = as.integer(droplevels(cell))) 
-
-    if (multi_allelic) {
-        joint_post = joint_post %>% mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
-    }
+        mutate(cell = factor(cell, cell_order)) %>%
+        mutate(cell_index = as.integer(droplevels(cell))) 
 
     # add clone lines
     if (clone_line) {
@@ -1376,7 +1371,7 @@ plot_phylo_heatmap = function(
         theme_classic() +
         geom_segment(
             aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state, alpha = p_cnv),
-            size = size
+            size = line_width
         ) +
         geom_segment(
             inherit.aes = F,
@@ -1434,7 +1429,7 @@ plot_phylo_heatmap = function(
         pal_clone = c('gray', getPalette(length(unique(clone_dict))))
     }
 
-    p_clone = data.frame(
+    p_geno = data.frame(
             cell = names(clone_dict),
             annot = unname(clone_dict)
         ) %>%
@@ -1443,23 +1438,23 @@ plot_phylo_heatmap = function(
         scale_fill_manual(values = pal_clone)
 
     # external annotation
-    if (!is.null(cell_dict)) {
+    if (!is.null(annot)) {
         
         p_annot = data.frame(
-                cell = names(cell_dict),
-                annot = unname(cell_dict)
+                cell = names(annot),
+                annot = unname(annot)
             ) %>%
             filter(cell %in% joint_post$cell) %>%
             mutate(cell = factor(cell, cell_order)) %>%
             annot_bar(transpose = T, pal_annot = pal_annot, legend_title = annot_title, size = size)
 
-        if (clone_bar) {
-            (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')
+        if (geno_bar) {
+            (p_tree | p_geno | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')
         } else {
             (p_tree | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 15), guides = 'collect')
         }
-    } else if (clone_bar) {
-        (p_tree | p_clone | p_segs) + plot_layout(widths = c(tree_height, 0.25, 15), guides = 'collect')
+    } else if (geno_bar) {
+        (p_tree | p_geno | p_segs) + plot_layout(widths = c(tree_height, 0.25, 15), guides = 'collect')
     } else {
         (p_tree | p_segs) + plot_layout(widths = c(tree_height, 15), guides = 'collect')
     }

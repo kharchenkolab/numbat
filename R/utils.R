@@ -31,7 +31,7 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param cell_annot dataframe with columns "cell" and "cell_type"
 #' @param verbose verbosity
-#' @return a matrix of reference gene expression profiles
+#' @return a matrix of reference gene expression levels
 #' @export
 aggregate_counts = function(count_mat, cell_annot, verbose = T) {
 

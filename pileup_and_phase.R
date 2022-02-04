@@ -77,7 +77,13 @@ script = glue('{outdir}/run_pileup.sh')
 list(cmds) %>% fwrite(script, sep = '\n')
 
 system(glue('chmod +x {script}'))
-system2(script, stdout = glue("{outdir}/pileup.log"))
+
+tryCatch({
+    system(glue('sh {script} &> {outdir}/phasing.log'), intern = TRUE)
+},
+warning = function(w){
+    stop('Pileup failed')
+})
 
 ## VCF creation
 cat('Creating VCFs\n')
@@ -106,24 +112,30 @@ script = glue('{outdir}/run_phasing.sh')
 
 list(cmds) %>% fwrite(script, sep = '\n')
 
-
-
 system(glue('chmod +x {script}'))
-system2(script, stdout = glue("{outdir}/phasing.log"))
+
+tryCatch({
+        system2(script, stdout = glue("{outdir}/phasing.log"))
+},
+warning = function(w){
+    stop('Phasing failed')
+})
 
 ## Generate allele count dataframe
 cat('Generating allele count dataframes\n')
-
-
 
 for (sample in samples) {
     
     # read in phased VCF
     vcf_phased = lapply(1:22, function(chr) {
-        fread(glue('{outdir}/phasing/{label}_chr{chr}.phased.vcf.gz')) %>%
-            rename(CHROM = `#CHROM`) %>%
-            mutate(CHROM = str_remove(CHROM, 'chr'))   
-        }) %>% Reduce(rbind, .) %>%
+            vcf_file = glue('{outdir}/phasing/{label}_chr{chr}.phased.vcf.gz')
+            if (file.exists(vcf_file)) {
+                fread(vcf_file) %>%
+                    rename(CHROM = `#CHROM`) %>%
+                    mutate(CHROM = str_remove(CHROM, 'chr'))   
+            }
+        }) %>%
+        Reduce(rbind, .) %>%
         mutate(CHROM = factor(CHROM, unique(CHROM)))
 
     pu_dir = glue('{outdir}/pileup/{sample}')

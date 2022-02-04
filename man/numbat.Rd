@@ -76,11 +76,11 @@ plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
   annot = NULL,
   geno_bar = FALSE,
   pal_clone = NULL,
-  multi_allelic = FALSE,
   p_min = 0.9,
   tip_length = 1,
   branch_width = 0.2,
-  line_width = 0.1
+  line_width = 0.1,
+  tree_height = 1
 )}\if{html}{\out{</div>}}
 }
 
@@ -93,8 +93,6 @@ plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
 
 \item{\code{pal_clone}}{clone color palette}
 
-\item{\code{multi_allelic}}{whether to show different allelic states for same CNV}
-
 \item{\code{p_min}}{minimum probability threshold to filter the calls}
 
 \item{\code{tip_length}}{tree tip length}
@@ -102,6 +100,8 @@ plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
 \item{\code{branch_width}}{tree branch width}
 
 \item{\code{line_width}}{heatmap line width}
+
+\item{\code{tree_height}}{plotting height of the tree}
 }
 \if{html}{\out{</div>}}
 }

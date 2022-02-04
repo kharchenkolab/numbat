@@ -56,21 +56,21 @@ numbat <- R6::R6Class("numbat", lock_objects=FALSE,
     #' @param tip_length tree tip length
     #' @param branch_width tree branch width
     #' @param line_width heatmap line width
-    #' @param multi_allelic whether to show different allelic states for same CNV
+    #' @param tree_height plotting height of the tree
     #' @return a ggplot object
-    plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, multi_allelic = FALSE, p_min = 0.9, tip_length = 1, branch_width = 0.2, line_width = 0.1) {
+    plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, p_min = 0.9, tip_length = 1, branch_width = 0.2, line_width = 0.1, tree_height = 1) {
         plot_phylo_heatmap(  
             self$gtree,
             self$joint_post,
             self$segs_consensus,
             tip_length = tip_length,
             branch_width = branch_width,
-            size = line_width,
+            line_width = line_width,
             p_min = p_min,
-            clone_bar = geno_bar,
-            multi_allelic = multi_allelic,
-            cell_dict = annot,
-            pal_clone = pal_clone
+            geno_bar = geno_bar,
+            annot = annot,
+            pal_clone = pal_clone,
+            tree_height = tree_height
         )
     },
 
