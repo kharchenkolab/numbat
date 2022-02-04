@@ -77,7 +77,7 @@ plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
   geno_bar = FALSE,
   pal_clone = NULL,
   multi_allelic = FALSE,
-  p_min = 0.5,
+  p_min = 0.9,
   tip_length = 1,
   branch_width = 0.2,
   line_width = 0.1

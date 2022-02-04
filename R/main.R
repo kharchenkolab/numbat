@@ -1286,7 +1286,7 @@ test_multi_allelic = function(bulks, segs_consensus, min_LLR = 100, p_min = 0.99
     log_info('Testing for multi-allelic CNVs ..')
     
     segs_multi = bulks %>% 
-        distinct(sample, CHROM, seg_cons, LLR, p_amp, p_del, p_loh, p_bamp, cnv_state_post) %>%
+        distinct(sample, CHROM, seg_cons, LLR, p_amp, p_del, p_bdel, p_loh, p_bamp, cnv_state_post) %>%
         rowwise() %>%
         mutate(p_max = max(c(p_amp, p_del + p_bdel, p_loh, p_bamp))) %>%
         filter(LLR > min_LLR & p_max > p_min) %>%
