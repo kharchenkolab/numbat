@@ -144,7 +144,7 @@ process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, 
 
     gexp.norm.long = gexp.norm %>% 
         reshape2::melt(
-            id.var = c('gene', 'gene_index', 'region', 'gene_start', 'gene_end', 'CHROM', 'gene_length'),
+            id.var = c('gene', 'gene_index', 'region', 'gene_start', 'gene_end', 'CHROM'),
             variable.name = 'cell',
             value.name = 'exp')    
 
