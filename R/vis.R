@@ -507,7 +507,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 #' @param dot_size size of marker dots
 #' @param dot_alpha transparency of the marker dots
 #' @param legend whether to show legend
-#' @retrun a ggplot object
+#' @return a ggplot object
 #' @export
 plot_psbulk = function(
     bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 10, min_depth = 8, exp_limit = 2, 
@@ -653,11 +653,27 @@ plot_psbulk = function(
     return(p)
 }
 
+
+#' plot a group of pseudobulks HMM profile
+#' @param bulks pseudobulks dataframe
+#' @param use_pos use marker position instead of index as x coordinate
+#' @param allele_only only plot alleles
+#' @param min_LLR LLR threshold for event filtering
+#' @param min_depth minimum coverage depth for a SNP to be plotted
+#' @param exp_limit expression logFC axis limit
+#' @param phi_mle whether to plot estimates of segmental expression fold change 
+#' @param theta_roll whether to plot rolling estimates of allele imbalance
+#' @param dot_size size of marker dots
+#' @param dot_alpha transparency of the marker dots
+#' @param ncol number of columns
+#' @param legend whether to show legend
+#' @param title whether to add titles to individual plots
+#' @return a ggplot object
 #' @export
 plot_bulks = function(
-    bulk_all, min_depth = 8, dot_alpha = 0.5, 
-    phi_mle = TRUE, allele_only = FALSE, use_pos = FALSE, 
-    ncol = 1, legend = TRUE, title = TRUE, min_LLR = 10
+    bulk_all, use_pos = FALSE, allele_only = FALSE, min_LLR = 10, min_depth = 8,
+    exp_limit = 2, phi_mle = TRUE, theta_roll = FALSE, 
+    dot_size = 0.8, dot_alpha = 0.5, ncol = 1, legend = TRUE, title = TRUE
     ) {
 
     options(warn = -1)
@@ -677,7 +693,10 @@ plot_bulks = function(
                         use_pos = use_pos,
                         legend = legend,
                         allele_only = allele_only,
-                        min_LLR = min_LLR
+                        min_LLR = min_LLR,
+                        exp_limit = exp_limit,
+                        theta_roll = theta_roll,
+                        dot_size = dot_size
                     ) + 
                     theme(
                         title = element_text(size = 8),
