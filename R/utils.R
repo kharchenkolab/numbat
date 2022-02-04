@@ -13,11 +13,11 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
         intersect(rownames(count_mat)) %>%
         intersect(rownames(lambdas_ref))
 
-    count_mat = count_mat[genes_annotated,,drop=F]
-    lambdas_ref = lambdas_ref[genes_annotated,,drop=F]
+    count_mat = count_mat[genes_annotated,,drop=FALSE]
+    lambdas_ref = lambdas_ref[genes_annotated,,drop=FALSE]
     
     # keep highly expressed genes in at least one of the references
-    count_mat = count_mat[rowSums(lambdas_ref * 1e6 > 2) > 0,,drop=F]
+    count_mat = count_mat[rowSums(lambdas_ref * 1e6 > 2) > 0,,drop=FALSE]
 
     exp_mat = scale(count_mat, center=FALSE, scale=colSums(count_mat))
     
@@ -81,7 +81,7 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
     }
 
     Y_obs = Y_obs[genes_common]
-    lambdas_ref = lambdas_ref[genes_common,,drop=F]
+    lambdas_ref = lambdas_ref[genes_common,,drop=FALSE]
 
     n_ref = ncol(lambdas_ref)
     
@@ -116,7 +116,7 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
 process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
 
     mut_expressed = filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = verbose)
-    count_mat = count_mat[mut_expressed,,drop=F]
+    count_mat = count_mat[mut_expressed,,drop=FALSE]
     lambdas_ref = lambdas_ref[mut_expressed]
         
     exp_mat = scale(count_mat, center=FALSE, scale=colSums(count_mat))
@@ -169,7 +169,7 @@ filter_genes = function(count_mat, lambdas_ref, gtf_transcript, verbose = T) {
 
     depth_obs = sum(count_mat)
 
-    count_mat = count_mat[genes_annotated,,drop=F]
+    count_mat = count_mat[genes_annotated,,drop=FALSE]
     lambdas_ref = lambdas_ref[genes_annotated]
 
     lambdas_obs = rowSums(count_mat)/depth_obs

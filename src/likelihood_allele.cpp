@@ -4,29 +4,35 @@
 using namespace Rcpp;
 
 
-Rcpp::List getjcpp(Rcpp::List x, int j) {
+// expensive for loops in likelihood_allele() and forward_back_allele)()
+// WIP
 
-    //
-    // Do in R if export:
-    // if (x == NULL){
-    //    return R_NilValue;
-    //}
-    //if (j <= 0) {  
-    //    Rcpp::stop("j cannot be <= 0");
-    //}
 
-    int n = x.size();
-    Rcpp::List copylist = clone(x);
-    for (int i = 0; i < n; i++) {
-        std::vector<int> elem = x[i];
-        if (j > elem.size()) {  
-            // j >= elem.size() + 1 due to 1-indexing in R
-            Rcpp::stop("j larger than elements in the list");
-        }
-        copylist[i] = elem[j-1]; 
+// [[Rcpp::export]]
+Rcpp::NumericMatrix likelihood_allele_compute(Rcpp::List obj) {
+
+    // calculate m, n
+    Rcpp::NumericVector x = obj["x"]; // x <- obj$x
+    Rcpp::List Pi = obj["Pi"];
+    Rcpp::NumericMatrix Pi1 = Pi[0];
+    int m = Pi1.nrow();  // m <- nrow(obj$Pi[[1]])
+    int n = x.length();
+
+
+    std::vector<double> objdelta =  Rcpp::as<std::vector<double>>(obj["delta"]);
+    // std::valarray doesn't work with Rcpp?
+    // std::for_each(objdelta.begin(), objdelta.end(), &std::log);
+    for (int i = 0; i < objdelta.size(); i++) {
+        objdelta[i] = std::log(objdelta[i]);
     }
+    Rcpp::NumericVector logphi = Rcpp::wrap(objdelta); //logphi <- log(as.double(obj$delta))
+    
+    // logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
+    const int nrow = n;
+    const int ncol = m;
+    Rcpp::NumericMatrix final(nrow, ncol); 
 
-    return copylist;
+    return final;
 }
 
 

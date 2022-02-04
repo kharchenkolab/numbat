@@ -842,7 +842,7 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
         ) %>%
         filter(!(frac_overlap_x < min_overlap & frac_overlap_y < min_overlap))
 
-    G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
+    G = igraph::graph_from_data_frame(d=E, vertices=V, directed=FALSE)
 
     segs_all = segs_all %>% mutate(component = igraph::components(G)$membership)
 
