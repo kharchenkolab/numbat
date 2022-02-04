@@ -671,7 +671,7 @@ plot_psbulk = function(
 plot_bulks = function(
     bulk_all, use_pos = FALSE, allele_only = FALSE, min_LLR = 10, min_depth = 8,
     exp_limit = 2, phi_mle = TRUE, theta_roll = FALSE, 
-    dot_size = 0.8, dot_alpha = 0.5, ncol = 1, legend = TRUE, title = TRUE
+    dot_size = 0.8, dot_alpha = 0.5, ncol = 1, legend = FALSE, title = TRUE
     ) {
 
     options(warn = -1)

@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 ```
 
 # Interpreting Numbat outputs
-In this tutorial, we will illustrate how to visualize and interpret Numbat output, using a triple-negative breast cancer dataset (TNBC1) from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2). We will use `pagoda2` for visualizing cells in low-dimensional expression space.
+In this tutorial, we will illustrate how to visualize and interpret Numbat output, using a triple-negative breast cancer dataset (TNBC1) from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2). We will use [pagoda2](https://github.com/kharchenkolab/pagoda2) for visualizing cells in low-dimensional expression space.
 
 ```{r}
 library(ggplot2)
@@ -28,20 +28,19 @@ library(patchwork)
 ```{r}
 # summarize output files into a Numbat object
 nb = numbat$new(out_dir = '~/paper_data/numbat_out/TNBC1_demo')
-# read saved pagoda2 object
+# load pre-saved pagoda2 object
 pagoda = readRDS('~/paper_data/conos_objects/TNBC1.rds')
 ```
 
 ## Copy number landscape and single-cell phylogeny
-As an overview, we can visualize the CNV calls in single-cells and their evolutionary relationships in an integrated view:
+As an overview, we can visualize the CNV calls in single-cells and their evolutionary relationships in an integrated plot panel:
 ```{r, fig.width = 8, fig.height=3.5, dpi=300}
 mypal = c('gray', "#377EB8", "#4DAF4A", "#984EA3")
   
 nb$plot_phylo_heatmap(
   geno_bar = TRUE, 
   p_min = 0.9,
-  pal_clone = mypal,
-  multi_allelic = TRUE
+  pal_clone = mypal
 )
 ```
 In this visualization, the single-cell phylogeny (left) is juxtaposed with a heatmap of single-cell CNV calls (right). The CNV calls are colored by the type of alterations (AMP, amplification, BAMP, balanced amplification, DEL, deletion, CNLoH, copy-neutral loss of heterozygosity). The colorbar in-between differentiates the distinct genetic populations (genotype). The dashed blue line separates the predicted tumor versus normal cells. This tells us that the dataset mainly consists of three cell populations, a normal population (gray) and two tumor subclones (green and yellow). 
@@ -54,12 +53,11 @@ nb$segs_consensus %>% plot_consensus()
 
 ## Bulk CNV profiles
 We can also visualize these CNV events in pseudobulks where the data is more rich, aggregating cells by clone:
-```{r, fig.width = 13, fig.height=6, dpi=300}
+```{r, fig.width = 12, fig.height=6, dpi=300}
 
 nb$bulk_clones %>% 
   plot_bulks(
-    min_LLR = 50, # Log-likelihood ratio cutoff
-    phi_mle = TRUE,
+    min_LLR = 50, # filtering CNVs by evidence
     legend = FALSE
   )
 ```
