@@ -456,7 +456,7 @@ run_numbat = function(
         segs_consensus = get_segs_consensus(bulk_subtrees)
 
         if (multi_allelic) {
-            segs_consensus = test_multi_allelic(bulk_clones, segs_consensus)
+            segs_consensus = test_multi_allelic(bulk_clones, segs_consensus, min_LLR = min_LLR)
         }
 
         fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')

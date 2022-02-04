@@ -414,9 +414,7 @@ plot_sc_roll = function(gexp_roll_wide, hc, k, gtf_transcript, lim = 0.8, n_samp
     }
 }
 
-
-
-#' @export
+#' @keywords internal
 show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 
     D = bulk %>% 
