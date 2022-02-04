@@ -58,8 +58,8 @@ numbat <- R6::R6Class("numbat", lock_objects=FALSE,
     #' @param line_width heatmap line width
     #' @param multi_allelic whether to show different allelic states for same CNV
     #' @return a ggplot object
-    plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, multi_allelic = FALSE, p_min = 0.5, tip_length = 1, branch_width = 0.2, line_width = 0.1) {
-        plot_sc_joint(  
+    plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, multi_allelic = FALSE, p_min = 0.9, tip_length = 1, branch_width = 0.2, line_width = 0.1) {
+        plot_phylo_heatmap(  
             self$gtree,
             self$joint_post,
             self$segs_consensus,

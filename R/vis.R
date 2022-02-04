@@ -499,7 +499,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 plot_psbulk = function(
     bulk, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_depth = 10, theta_roll = FALSE,
     fc_correct = TRUE, allele_only = FALSE, phi_mle = FALSE, use_pos = FALSE, legend = TRUE,
-    min_LLR = 0
+    min_LLR = 10
     ) {
 
     if (!'state_post' %in% colnames(bulk)) {
@@ -645,7 +645,7 @@ plot_psbulk = function(
 plot_bulks = function(
     bulk_all, min_depth = 8, dot_alpha = 0.5, fc_correct = TRUE,
     phi_mle = FALSE, allele_only = FALSE, use_pos = FALSE, 
-    ncol = 1, legend = TRUE, title = TRUE, min_LLR = 0
+    ncol = 1, legend = TRUE, title = TRUE, min_LLR = 10
     ) {
 
     options(warn = -1)
@@ -1240,10 +1240,8 @@ plot_consensus = function(segs) {
     )
 }
 
-
-
 #' @export
-plot_sc_joint = function(
+plot_phylo_heatmap = function(
         gtree, joint_post, segs_consensus, 
         cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
         logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,

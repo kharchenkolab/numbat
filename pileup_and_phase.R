@@ -145,7 +145,7 @@ for (sample in samples) {
         AD = AD,
         DP = DP,
         barcodes = cell_barcodes,
-        gtf_transcript = gtf_transcript
+        gtf_transcript = gtf_hg38
     )
     
     fwrite(df, glue('{outdir}/{sample}_allele_counts.tsv.gz'), sep = '\t')

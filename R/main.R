@@ -166,7 +166,7 @@ run_numbat = function(
     fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
     if (multi_allelic) {
-        segs_consensus = test_multi_allelic(bulk_clones, segs_consensus)
+        segs_consensus = test_multi_allelic(bulk_clones, segs_consensus, min_LLR = min_LLR)
     }
 
     fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
@@ -1288,7 +1288,7 @@ test_multi_allelic = function(bulks, segs_consensus, min_LLR = 100, p_min = 0.99
     segs_multi = bulks %>% 
         distinct(sample, CHROM, seg_cons, LLR, p_amp, p_del, p_loh, p_bamp, cnv_state_post) %>%
         rowwise() %>%
-        mutate(p_max = max(c(p_amp, p_del, p_loh, p_bamp))) %>%
+        mutate(p_max = max(c(p_amp, p_del + p_bdel, p_loh, p_bamp))) %>%
         filter(LLR > min_LLR & p_max > p_min) %>%
         group_by(seg_cons) %>%
         summarise(
