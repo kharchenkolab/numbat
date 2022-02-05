@@ -51,9 +51,9 @@ double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcp
     //}
     //Rcpp::NumericVector logphi = Rcpp::wrap(objdelta); //logphi <- log(as.double(obj$delta))
     
-    const int nrow = n;
-    const int ncol = m;
-    Rcpp::NumericMatrix final(nrow, ncol); // logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
+    //const int nrow = n;
+    //const int ncol = m;
+    // not used in function, Rcpp::NumericMatrix logalpha(nrow, ncol); // logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
 
     double LL = 0.0;
 
