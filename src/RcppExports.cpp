@@ -68,6 +68,33 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// logSumExp
+double logSumExp(const arma::vec& x);
+RcppExport SEXP _Numbat_logSumExp(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(logSumExp(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// likelihood_allele_compute
+double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m);
+RcppExport SEXP _Numbat_likelihood_allele_compute(SEXP objSEXP, SEXP logphiSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type obj(objSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type logphi(logphiSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type logprob(logprobSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type logPi(logPiSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(likelihood_allele_compute(obj, logphi, logprob, logPi, n, m));
+    return rcpp_result_gen;
+END_RCPP
+}
 // CgetQ
 NumericMatrix CgetQ(NumericMatrix logQ, List children_dict, IntegerVector node_order);
 RcppExport SEXP _Numbat_CgetQ(SEXP logQSEXP, SEXP children_dictSEXP, SEXP node_orderSEXP) {
@@ -87,6 +114,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_Numbat_cppdbbinom", (DL_FUNC) &_Numbat_cppdbbinom, 5},
     {"_Numbat_poilog2", (DL_FUNC) &_Numbat_poilog2, 8},
     {"_Numbat_poilog1", (DL_FUNC) &_Numbat_poilog1, 4},
+    {"_Numbat_logSumExp", (DL_FUNC) &_Numbat_logSumExp, 1},
+    {"_Numbat_likelihood_allele_compute", (DL_FUNC) &_Numbat_likelihood_allele_compute, 6},
     {"_Numbat_CgetQ", (DL_FUNC) &_Numbat_CgetQ, 3},
     {NULL, NULL, 0}
 };
