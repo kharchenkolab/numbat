@@ -76,7 +76,12 @@ make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE
                 hom_ref ~ '0/0'
             )
         ) %>%
-    distinct(snp_id, `.keep_all` = T)
+        distinct(snp_id, `.keep_all` = T)
+
+    if (nrow(chr_snps) == 0) {
+        message(glue('No SNPs left for chr{chr}!'))
+        return(NULL)
+    }
 
     if (het_only) {
         chr_snps = chr_snps %>% filter(het)

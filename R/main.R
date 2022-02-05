@@ -11,9 +11,10 @@
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
 #' @importFrom extraDistr dgpois
-#' @useDynLib Numbat
+#' @useDynLib numbat
+NULL
 
-#' @description Run workflow to decompose tumor subclones
+#' Run workflow to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe of allele counts per cell, produced by preprocess_allele
@@ -22,7 +23,6 @@
 #' @param out_dir output directory
 #' @param gamma dispersion parameter for the Beta-Binomial allele model
 #' @param t transition probability
-#' @param init_method initialization method, either "smooth" (clustering based on smoothed expression) or "bulk" (all cell pseudobulk)
 #' @param init_k number of clusters in the initial clustering
 #' @param sample_size subsampling size
 #' @param min_cells minimum number of cells to run HMM on
@@ -44,7 +44,7 @@
 run_numbat = function(
         count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, 
         out_dir = './', max_iter = 2, t = 1e-5, gamma = 20, min_LLR = 50, alpha = 1e-4, eps = 1e-5, max_entropy = 0.6, 
-        init_method = 'smooth', init_k = 3, sample_size = 1e5, min_cells = 10, max_cost = ncol(count_mat) * 0.3, 
+        init_k = 3, sample_size = 1e5, min_cells = 10, max_cost = ncol(count_mat) * 0.3, 
         min_depth = 0, common_diploid = TRUE, ncores = 30, exp_model = 'lnpois', 
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
         exclude_normal = FALSE, skip_nj = FALSE, multi_allelic = TRUE,
@@ -56,7 +56,7 @@ run_numbat = function(
     if (file.exists(logfile)) {file.remove(logfile)}
     log_appender(appender_file(logfile))
 
-    log_info(paste(
+    log_message(paste(
         'Running under parameters:',
         glue('t = {t}'), 
         glue('alpha = {alpha}'),
@@ -79,60 +79,80 @@ run_numbat = function(
         'Input metrics:',
         glue('{ncol(count_mat)} cells'),
         sep = "\n"
-    ))
+    ), verbose = verbose)
 
     ######## Initialization ########
-    i = 0
 
-    if (init_method == 'bulk') {
+    log_message('Approximating initial clusters using smoothed expression ..', verbose = verbose)
 
-        if (verbose) {log_info('Initializing using all-cell bulk ..')}   
-        bulk_subtrees = get_bulk(
-                count_mat = count_mat,
-                df_allele = df_allele,
-                lambdas_ref = lambdas_ref,
-                gtf_transcript = gtf_transcript,
-                genetic_map = genetic_map,
-                min_depth = min_depth
-            ) %>%
-            analyze_bulk(t = t, gamma = gamma) %>%
-            mutate(sample = 0)
+    clust = exp_hclust(
+        count_mat,
+        lambdas_ref = lambdas_ref,
+        gtf_transcript,
+        k = init_k,
+        ncores = ncores
+    )
 
-    } else if (init_method == 'smooth') {
+    fwrite(
+        as.data.frame(clust$gexp_roll_wide) %>% tibble::rownames_to_column('cell'),
+        glue('{out_dir}/gexp_roll_wide.tsv.gz'),
+        sep = '\t',
+        nThread = min(4, ncores)
+    )
+    saveRDS(clust$hc, glue('{out_dir}/hc.rds'))
+    saveRDS(clust$nodes, glue('{out_dir}/hc_nodes.rds'))
 
-        if (verbose) {log_info('Approximating initial clusters using smoothed expression ..')}
+    # extract cell groupings
+    subtrees = purrr::keep(clust$nodes, function(x) x$size > min_cells)
+    clones = purrr::keep(subtrees, function(x) x$sample %in% 1:3)
 
-        clust = exp_hclust(
-            count_mat,
-            lambdas_ref = lambdas_ref,
-            gtf_transcript,
-            k = init_k,
-            ncores = ncores
-        )
+    normal_cells = c()
 
-        fwrite(
-            as.data.frame(clust$gexp_roll_wide) %>% tibble::rownames_to_column('cell'),
-            glue('{out_dir}/gexp_roll_wide.tsv.gz'),
-            sep = '\t',
-            nThread = min(4, ncores)
-        )
-        saveRDS(clust$hc, glue('{out_dir}/hc.rds'))
-        saveRDS(clust$nodes, glue('{out_dir}/hc_nodes.rds'))
+    ######## Begin iterations ########
+    for (i in 1:max_iter) {
 
-        nodes = purrr::keep(clust$nodes, function(x) x$size > min_cells)
+        log_message(glue('Iteration {i}'), verbose = verbose)
+
+        ######## Run HMMs ########
 
         bulk_subtrees = make_group_bulks(
-                groups = nodes,
+                groups = subtrees,
                 count_mat = count_mat,
                 df_allele = df_allele, 
                 lambdas_ref = lambdas_ref,
                 gtf_transcript = gtf_transcript,
                 genetic_map = genetic_map,
                 min_depth = min_depth,
-                ncores = ncores
-            )
+                ncores = ncores)
 
-        bulk_subtrees = bulk_subtrees %>% 
+        bulk_subtrees = bulk_subtrees %>%
+            run_group_hmms(
+                t = t,
+                gamma = gamma,
+                alpha = alpha,
+                exp_model = exp_model,
+                common_diploid = common_diploid,
+                diploid_chroms = diploid_chroms,
+                verbose = verbose
+            )
+        
+        fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
+
+        # find consensus CNVs
+        segs_consensus = get_segs_consensus(bulk_subtrees)
+
+        # retest consensus CNVs on clones
+        bulk_clones = make_group_bulks(
+                groups = clones,
+                count_mat = count_mat,
+                df_allele = df_allele, 
+                lambdas_ref = lambdas_ref,
+                gtf_transcript = gtf_transcript,
+                genetic_map = genetic_map,
+                min_depth = min_depth,
+                ncores = ncores)
+
+        bulk_clones = bulk_clones %>% 
             run_group_hmms(
                 t = t,
                 gamma = gamma,
@@ -141,54 +161,42 @@ run_numbat = function(
                 diploid_chroms = diploid_chroms,
                 exp_model = exp_model,
                 ncores = ncores,
-                verbose = verbose
+                verbose = verbose,
+                retest = F
             )
 
-    } else {
-        stop('init_method can be raw, bulk, or smooth')
-    }
-
-    fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
-
-    # resolve CNVs
-    segs_consensus = get_segs_consensus(bulk_subtrees)
-
-    if (multi_allelic) {
-        # only test the leaf nodes
-        out = test_multi_allelic(
-            bulk_subtrees %>% filter(sample %in% 1:init_k),
+        bulk_clones = retest_bulks(
+            bulk_clones,
             segs_consensus,
             use_loh = use_loh,
             diploid_chroms = diploid_chroms)
 
-        segs_consensus = out$segs_consensus
+        fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
-        fwrite(out$bulks, glue('{out_dir}/bulk_clones_retest_{i}.tsv.gz'), sep = '\t')
+        # test for multi-allelic CNVs
+        if (multi_allelic) {
+            segs_consensus = test_multi_allelic(bulk_clones, segs_consensus, min_LLR = min_LLR)
+        }
 
-    }
+        fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
 
-    fwrite(segs_consensus, glue('{out_dir}/segs_consensus_0.tsv'), sep = '\t')
+        if (plot) {
 
-    if (plot) {
+            log_message('Making plots..', verbose = verbose)
 
-        log_info('Making initial visualization ..')
+            p = plot_bulks(bulk_subtrees)
 
-        p = plot_bulks(bulk_subtrees)
+            ggsave(glue('{out_dir}/bulk_subtrees_{i}.png'), p, width = 14, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200)
 
-        ggsave(glue('{out_dir}/bulk_subtrees_{i}.png'), p, width = 14, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200)
+            p = plot_bulks(bulk_clones, min_LLR = min_LLR)
+
+            ggsave(glue('{out_dir}/bulk_clones_{i}.png'), p, width = 14, height = 2*length(unique(bulk_clones$sample)), dpi = 200)
+            
+        }
         
-    }
-
-    normal_cells = c()
-
-    ######## Begin iterations ########
-    for (i in 1:max_iter) {
-        
-        log_info('Iteration {i}')
-
         ######## Evaluate CNV per cell ########
 
-        log_info('Evaluating CNV per cell ..')
+        log_message('Evaluating CNV per cell ..', verbose = verbose)
 
         exp_post_res = get_exp_post(
             segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
@@ -197,8 +205,6 @@ run_numbat = function(
             use_loh = use_loh,
             gtf_transcript = gtf_transcript,
             ncores = ncores)
-
-        log_info('Done with computing expression posterior ..')
 
         exp_post = exp_post_res$exp_post
         exp_sc = exp_post_res$exp_sc
@@ -211,14 +217,10 @@ run_numbat = function(
             df_allele
         )
 
-        log_info('Done with computing allele posterior ..')
-
         joint_post = get_joint_post(
             exp_post,
             allele_post,
             segs_consensus)
-
-        log_info('Done with computing joint posterior ..')
 
         joint_post = joint_post %>%
             group_by(seg) %>%
@@ -227,25 +229,21 @@ run_numbat = function(
             ) %>%
             ungroup()
 
+        if (multi_allelic) {
+            log_message('Expanding allelic states..', verbose = verbose)
+            # expand multi-allelic segments into multiple CNV states
+            exp_post = expand_states(exp_post, segs_consensus)
+            allele_post = expand_states(allele_post, segs_consensus)
+            joint_post = expand_states(joint_post, segs_consensus)
+        }
+
         fwrite(exp_post, glue('{out_dir}/exp_post_{i}.tsv'), sep = '\t')
         fwrite(allele_post, glue('{out_dir}/allele_post_{i}.tsv'), sep = '\t')
         fwrite(joint_post, glue('{out_dir}/joint_post_{i}.tsv'), sep = '\t')
 
-        if (multi_allelic) {
-            log_info('Expanding allelic states..')
-            # expand multi-allelic segments into multiple CNV states
-            joint_post = expand_states(joint_post, segs_consensus)
-            exp_post = expand_states(exp_post, segs_consensus)
-            allele_post = expand_states(allele_post, segs_consensus)
-
-            fwrite(exp_post, glue('{out_dir}/exp_post_expand_{i}.tsv'), sep = '\t')
-            fwrite(allele_post, glue('{out_dir}/allele_post_expand_{i}.tsv'), sep = '\t')
-            fwrite(joint_post, glue('{out_dir}/joint_post_expand_{i}.tsv'), sep = '\t')
-        }
-
         ######## Build phylogeny ########
 
-        log_info('Building phylogeny ..')
+        log_message('Building phylogeny ..', verbose = verbose)
 
         cell_sample = colnames(count_mat) %>% sample(min(sample_size, length(.)), replace = FALSE)
         
@@ -265,7 +263,7 @@ run_numbat = function(
             stop(msg)
         } else {
             n_cnv = length(unique(joint_post_filtered$seg))
-            log_info(glue('Using {n_cnv} CNVs to construct phylogeny'))
+            log_message(glue('Using {n_cnv} CNVs to construct phylogeny'), verbose = verbose)
         }
 
         # construct genotype probability matrix
@@ -292,6 +290,7 @@ run_numbat = function(
 
         UPGMA_score = score_tree(treeUPGMA, as.matrix(P))$l_tree
         tree_init = treeUPGMA
+
         # note that dist_mat gets modified by NJ
         if(!skip_nj){
             treeNJ = phangorn::NJ(dist_mat) %>%
@@ -301,15 +300,15 @@ run_numbat = function(
             NJ_score = score_tree(treeNJ, as.matrix(P))$l_tree
 
             if (UPGMA_score > NJ_score) {
-                log_info('Using UPGMA tree as seed..')
+                log_message('Using UPGMA tree as seed..', verbose = verbose)
             } else {
                 tree_init = treeNJ
-                log_info('Using NJ tree as seed..')
+                log_message('Using NJ tree as seed..', verbose = verbose)
             }
             saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
         } else{
-            log_info('Only computing UPGMA..')
-            log_info('Using UPGMA tree as seed..')
+            log_message('Only computing UPGMA..', verbose = verbose)
+            log_message('Using UPGMA tree as seed..', verbose = verbose)
         }
         
         # maximum likelihood tree search with NNI
@@ -340,15 +339,24 @@ run_numbat = function(
 
         normal_cells = clone_post %>% filter(GT_opt == '') %>% pull(cell)
 
-        log_info('Found {length(normal_cells)} normal cells..')
+        log_message(glue('Found {length(normal_cells)} normal cells..'), verbose = verbose)
 
-        # form cell groupings
-        clones = clone_post %>% split(.$clone_opt) %>%
-            purrr::map(function(c){list(sample = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
+        if (plot) {
 
-        saveRDS(clones, glue('{out_dir}/clones_{i}.rds'))
-        clones = purrr::keep(clones, function(x) x$size > min_cells)
+            panel = plot_phylo_heatmap(
+                gtree,
+                joint_post,
+                segs_consensus,
+                tip_length = 0.2,
+                branch_width = 0.2,
+                line_width = 0.1,
+                geno_bar = T
+            )
+        
+            ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 8, height = 3.5, dpi = 200)
+        }
 
+        # form cell groupings using the obtained phylogeny
         clone_to_node = setNames(V(G_m)$id, V(G_m)$clone)
 
         subtrees = lapply(1:vcount(G_m), function(c) {
@@ -364,106 +372,24 @@ run_numbat = function(
         saveRDS(subtrees, glue('{out_dir}/subtrees_{i}.rds'))
         subtrees = purrr::keep(subtrees, function(x) x$size > min_cells)
 
-        ######## Run HMMs ########
+        clones = clone_post %>% split(.$clone_opt) %>%
+            purrr::map(function(c){list(sample = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
 
-        bulk_clones = make_group_bulks(
-                groups = clones,
-                count_mat = count_mat,
-                df_allele = df_allele, 
-                lambdas_ref = lambdas_ref,
-                gtf_transcript = gtf_transcript,
-                genetic_map = genetic_map,
-                min_depth = min_depth,
-                ncores = ncores)
+        saveRDS(clones, glue('{out_dir}/clones_{i}.rds'))
+        clones = purrr::keep(clones, function(x) x$size > min_cells)
 
-        bulk_clones = bulk_clones %>% 
-            run_group_hmms(
-                t = t,
-                gamma = gamma,
-                alpha = alpha,
-                exp_model = exp_model,
-                common_diploid = common_diploid,
-                diploid_chroms = diploid_chroms,
-                verbose = verbose,
-                ncores = ncores
-            )
-
-        fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
-
-        bulk_subtrees = make_group_bulks(
-                groups = subtrees,
-                count_mat = count_mat,
-                df_allele = df_allele, 
-                lambdas_ref = lambdas_ref,
-                gtf_transcript = gtf_transcript,
-                genetic_map = genetic_map,
-                min_depth = min_depth,
-                ncores = ncores)
-
-        bulk_subtrees = bulk_subtrees %>%
-            run_group_hmms(
-                t = t,
-                gamma = gamma,
-                alpha = alpha,
-                exp_model = exp_model,
-                common_diploid = common_diploid,
-                diploid_chroms = diploid_chroms,
-                verbose = verbose
-            )
-        
-        fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
-
-        ######## plotting ########
-        if (plot) {
-
-            log_info('Making plots..')
-
-            panel = plot_sc_joint(
-                    gtree,
-                    joint_post,
-                    segs_consensus,
-                    tip_length = 0.2,
-                    branch_width = 0.2,
-                    size = 0.15,
-                    clone_bar = T,
-                    logBF_min = 2,
-                    logBF_max = 5
-                )
-            
-            ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 8, height = 3.5, dpi = 200)
-
-            p = plot_bulks(bulk_subtrees)
-
-            ggsave(glue('{out_dir}/bulk_subtrees_{i}.png'), p, width = 14, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200)
-
-            p = plot_bulks(bulk_clones)
-
-            ggsave(glue('{out_dir}/bulk_clones_{i}.png'), p, width = 14, height = 2*length(unique(bulk_clones$sample)), dpi = 200)
-
-        }
-
-        ######## Find consensus CNVs ########
-
-        segs_consensus = get_segs_consensus(bulk_subtrees)
-
-        if (multi_allelic) {
-
-            out = test_multi_allelic(
-                bulk_clones, 
-                segs_consensus,
-                use_loh = use_loh,
-                diploid_chroms = diploid_chroms)
-
-            segs_consensus = out$segs_consensus
-
-            fwrite(out$bulks, glue('{out_dir}/bulk_clones_retest_{i}.tsv.gz'), sep = '\t')
-
-        }
-
-        fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
     }
-    # reflect change
+
+    log_message('All done!', verbose = verbose)
+
     return('Success')
+}
+
+log_message = function(msg, verbose = FALSE) {
+    log_info(msg)
+    if (verbose) {
+        message(msg)
+    }
 }
 
 #' Run smoothed expression-based hclust
@@ -488,7 +414,7 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores 
 
     dist_mat = parallelDist::parDist(gexp_roll_wide, threads = ncores)
 
-    log_info('running hclust...')
+    log_message('running hclust...')
     hc = hclust(dist_mat, method = "ward.D2")
 
     cell_annot = data.frame(
@@ -565,7 +491,7 @@ run_group_hmms = function(
     n_groups = length(unique(bulks$sample))
 
     if (verbose) {
-        log_info('Running HMMs on {n_groups} cell groups..')
+        log_message(glue('Running HMMs on {n_groups} cell groups..'))
     }
 
     ncores = ifelse(is.null(ncores), n_groups, ncores)
@@ -615,13 +541,13 @@ run_group_hmms = function(
     return(bulks)
 }
 
-#' @description Extract consensus CNV segments
+#' Extract consensus CNV segments
 #' @param bulks pseudobulks dataframe
-#' @param LLR_min LLR threshold to filter CNVs 
+#' @param min_LLR LLR threshold to filter CNVs 
 #' @param min_overlap minimum overlap fraction to determine count two events as as overlapping
 #' @return consensus segments dataframe
 #' @export
-get_segs_consensus = function(bulks, LLR_min = 20, min_overlap = 0.45) {
+get_segs_consensus = function(bulks, min_LLR = 20, min_overlap = 0.45) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -642,7 +568,7 @@ get_segs_consensus = function(bulks, LLR_min = 20, min_overlap = 0.45) {
 
     segs_filtered = segs_all %>% 
         filter(cnv_state != 'neu') %>%
-        filter(LLR_y > LLR_min | LLR_x > 100 | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% 
+        filter(LLR_y > min_LLR | LLR_x > 100 | theta_mle > 0.1 | cnv_state %in% c('bamp', 'bdel')) %>% 
         filter(n_genes >= 20)
     
     if(dim(segs_filtered)[[1]] == 0){
@@ -674,7 +600,7 @@ get_segs_consensus = function(bulks, LLR_min = 20, min_overlap = 0.45) {
 
 }
 
-#' @description Fill neutral regions into consensus segments
+#' Fill neutral regions into consensus segments
 #' @param segs_consensus a dataframe containing info of all CNV segments from multiple samples
 #' @param segs_neu neutral segments
 #' @return collections of neutral and aberrant segments with no gaps
@@ -722,7 +648,7 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
     return(segs_consensus)
 }
 
-#' @description Map cells to the phylogeny (or genotypes) based on CNV posteriors
+#' Map cells to the phylogeny (or genotypes) based on CNV posteriors
 #' @param gtree a cell lineage tree as a tidygraph object
 #' @param exp_post expression posteriors
 #' @param allele_post allele posteriors
@@ -802,7 +728,9 @@ cell_to_clone = function(gtree, exp_post, allele_post) {
     
 }
 
+#' Get unique CNVs from set of segments
 #' @param segs_all a dataframe containing info of all CNV segments from multiple samples
+#' @param min_overlap minimum overlap fraction to determine count two events as as overlapping
 #' @return consensus CNV segments
 #' @export
 resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
@@ -862,7 +790,7 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
     return(segs_consensus)
 }
 
-#' @description get the single cell expression likelihoods
+#' get the single cell expression likelihoods
 #' @param exp_sc single-cell expression dataframe
 #' @keywords internal
 get_exp_likelihoods_lnpois = function(exp_sc, diploid_chroms = NULL, use_loh = FALSE, depth_obs = NULL, mu = NULL, sigma = NULL) {
@@ -914,7 +842,7 @@ get_exp_likelihoods_lnpois = function(exp_sc, diploid_chroms = NULL, use_loh = F
     return(res)
 }
 
-#' @description get the single cell expression dataframe
+#' get the single cell expression dataframe
 #' @param segs_consensus consensus segments
 #' @param count_mat gene expression count matrix
 #' @param gtf_transcript transcript dataframe
@@ -968,7 +896,7 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 }
 
 
-#' @description compute single-cell expression posteriors
+#' compute single-cell expression posteriors
 #' @param segs_consensus consensus segments
 #' @param count_mat gene expression count matrix
 #' @param gtf_transcript transcript dataframe
@@ -982,12 +910,12 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     if (is.null(use_loh)) {
         if (mean(exp_sc$cnv_state == 'neu') < 0.05) {
             use_loh = TRUE
-            log_info('less than 5% genes are in neutral region - including LOH in baseline')
+            log_message('less than 5% genes are in neutral region - including LOH in baseline')
         } else {
             use_loh = FALSE
         }
     } else if (use_loh) {
-        log_info('Including LOH in baseline as specified')
+        log_message('Including LOH in baseline as specified')
     }
     
     cells = colnames(count_mat)
@@ -1031,7 +959,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
         log_warn(results[bad][1])
         log_warn(cells[bad][1])
     } else {
-        log_info('All cells succeeded')
+        log_message('All cells succeeded')
     }
     
     exp_post = results[!bad] %>%
@@ -1040,7 +968,10 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
         rowwise() %>%
         left_join(
             segs_consensus %>% select(
-                CHROM, seg = seg_cons, 
+                CHROM, 
+                seg = seg_cons, 
+                seg_start,
+                seg_end,
                 prior_loh = p_loh, prior_amp = p_amp, prior_del = p_del, prior_bamp = p_bamp, prior_bdel = p_bdel
             ),
             by = 'seg'
@@ -1057,7 +988,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     return(list('exp_post' = exp_post, 'exp_sc' = exp_sc, 'best_refs' = best_refs))
 }
 
-#' @description do bayesian averaging to get posteriors
+#' do bayesian averaging to get posteriors
 #' @keywords internal
 compute_posterior = function(sc_post) {
     sc_post %>% 
@@ -1143,7 +1074,8 @@ get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
             .groups = 'drop'
         ) %>%
         left_join(
-            segs_consensus %>% select(seg = seg_cons, 
+            segs_consensus %>% select(
+                seg = seg_cons, seg_start, seg_end,
                 prior_loh = p_loh, prior_amp = p_amp, prior_del = p_del, prior_bamp = p_bamp, prior_bdel = p_bdel
             ),
             by = 'seg'
@@ -1200,6 +1132,8 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
         left_join(
             segs_consensus %>% select(
                 seg = seg_cons,
+                seg_start,
+                seg_end,
                 any_of(c('n_genes', 'n_snps', 'prior_loh' = 'p_loh', 'prior_amp' = 'p_amp', 'prior_del' = 'p_del', 'prior_bamp' = 'p_bamp', 'prior_bdel' = 'p_bdel', 'LLR', 'LLR_x', 'LLR_y'))
             ),
             by = 'seg'
@@ -1233,18 +1167,21 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
     return(joint_post)
 }
 
-#' test for multi-allelic CNVs
-#' @keywords internal 
-test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 100, p_min = 0.995, diploid_chroms = NULL) {
-
-    log_info('Testing for multi-allelic CNVs ..')
+#' retest consensus segments on pseudobulks
+#' @param bulks pseudobulks dataframe
+#' @param segs_consensus consensus segments dataframe
+#' @param use_loh whether to use loh in the baseline
+#' @param diploid_chroms user-provided diploid chromosomes
+#' @return pseudobulks dataframe
+#' @export 
+retest_bulks = function(bulks, segs_consensus, use_loh = FALSE, diploid_chroms = NULL) {
 
     # default
     if (is.null(use_loh)) {
         length_neu = segs_consensus %>% filter(cnv_state == 'neu') %>% pull(seg_length) %>% sum
         if (length_neu > 1.5e8) {
             use_loh = TRUE
-            log_info('less than 5% of genome is in neutral region - including LOH in baseline')
+            log_message('less than 5% of genome is in neutral region - including LOH in baseline')
         } else {
             use_loh = FALSE
         }
@@ -1264,15 +1201,27 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
         bulks = bulks %>% mutate(diploid = cnv_state %in% ref_states)
     }
     
+    # retest CNVs
     bulks = bulks %>% 
         run_group_hmms(run_hmm = F) %>%
-        mutate(state_post = ifelse(LLR < LLR_min | is.na(LLR), 'neu', state_post))
+        mutate(
+            LLR = ifelse(is.na(LLR), 0, LLR)
+        )
+
+    return(bulks)
+}
+
+#' test for multi-allelic CNVs
+#' @keywords internal 
+test_multi_allelic = function(bulks, segs_consensus, min_LLR = 100, p_min = 0.995) {
+
+    log_message('Testing for multi-allelic CNVs ..')
     
     segs_multi = bulks %>% 
-        distinct(sample, CHROM, seg_cons, LLR, p_amp, p_del, p_loh, p_bamp, cnv_state_post) %>%
+        distinct(sample, CHROM, seg_cons, LLR, p_amp, p_del, p_bdel, p_loh, p_bamp, cnv_state_post) %>%
         rowwise() %>%
-        mutate(p_max = max(c(p_amp, p_del, p_loh, p_bamp))) %>%
-        filter(LLR > LLR_min & p_max > p_min) %>%
+        mutate(p_max = max(c(p_amp, p_del + p_bdel, p_loh, p_bamp))) %>%
+        filter(LLR > min_LLR & p_max > p_min) %>%
         group_by(seg_cons) %>%
         summarise(
             cnv_states = list(sort(unique(cnv_state_post))),
@@ -1282,7 +1231,7 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
 
     segs = segs_multi$seg_cons
 
-    log_info(glue('{length(segs)} multi-allelic CNVs found: {paste(segs, collapse = ",")}'))
+    log_message(glue('{length(segs)} multi-allelic CNVs found: {paste(segs, collapse = ",")}'))
 
     if (length(segs) > 0) {
         segs_consensus = segs_consensus %>%
@@ -1311,7 +1260,7 @@ test_multi_allelic = function(bulks, segs_consensus, use_loh = FALSE, LLR_min = 
             )
     }
     
-    return(list('segs_consensus' = segs_consensus, 'bulks' = bulks, 'segs_multi' = segs_multi))
+    return(segs_consensus)
 }
 
 #' expand multi-allelic CNVs into separate entries in the single-cell posterior dataframe
@@ -1352,7 +1301,7 @@ expand_states = function(sc_post, segs_consensus) {
             ) %>%
             ungroup()
     } else {
-        log_info('No multi-allelic CNVs, skipping ..')
+        log_message('No multi-allelic CNVs, skipping ..')
     }
 
     return(sc_post)
