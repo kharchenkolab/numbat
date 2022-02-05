@@ -16,7 +16,7 @@ plot_bulks(
   dot_size = 0.8,
   dot_alpha = 0.5,
   ncol = 1,
-  legend = TRUE,
+  legend = FALSE,
   title = TRUE
 )
 }
