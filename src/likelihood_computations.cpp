@@ -32,25 +32,10 @@ double logSumExp(const arma::vec& x) {
 
 
 // expensive for loops in likelihood_allele() and forward_back_allele)()
-// WIP
 
 // [[Rcpp::export]]
 double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
 
-    // calculate m, n
-    // Rcpp::NumericVector x = obj["x"]; // x <- obj$x
-    //Rcpp::List Pi = obj["Pi"];
-    //Rcpp::NumericMatrix Pi1 = Pi[0];
-    //int m = Pi1.nrow();  // m <- nrow(obj$Pi[[1]])
-    //int n = x.length();
-
-    //std::vector<double> objdelta =  Rcpp::as<std::vector<double>>(obj["delta"]);
-
-    //for (int i = 0; i < objdelta.size(); i++) {
-    //    objdelta[i] = std::log(objdelta[i]);
-    //}
-    //Rcpp::NumericVector logphi = Rcpp::wrap(objdelta); //logphi <- log(as.double(obj$delta))
-    
     const int nrow = n;
     const int ncol = m;
     Rcpp::NumericMatrix final(nrow, ncol); // logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
@@ -81,7 +66,7 @@ double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcp
 
 
 // [[Rcpp::export]]
-Rcpp::NumericMatrix forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
+double forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
 
     const int nrow = n;
     const int ncol = m;
@@ -114,19 +99,18 @@ Rcpp::NumericMatrix forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector
     LL = lscale;
 
     Rcpp::NumericMatrix logbeta(nrow, ncol); // logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-    // logphi <- log(as.double(rep(1/m, m)))
-    Rcpp::NumericVector logphi2(m);
+    Rcpp::NumericVector logphi2(m);  // logphi <- log(as.double(rep(1/m, m)))
     for (int i = 0; i < m; i++){
         logphi2[i] = 1/m;
     }
     double lscale2 = std::log(m);
 
     for (int t = n-1; t<=0; t--) {
-        // logphi = sapply(1:m, function(i) matrixStats::logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
 
+        // logphi = sapply(1:m, function(i) matrixStats::logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
         for (int i = 0; i < m; i++) {  
             Rcpp::NumericVector subset_logPi = logPi[t];   
-            Rcpp::NumericVector logphi_logprob_logPi = logphi + logprob(t, _) + subset_logPi[j];
+            Rcpp::NumericVector logphi_logprob_logPi = logphi + logprob(t, _) + subset_logPi[i];
             logphi[i] = logSumExp(logphi_logprob_logPi);
         }
 
@@ -140,8 +124,9 @@ Rcpp::NumericMatrix forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector
     }
 
     // ??
-    //p_up = exp(logalpha + logbeta - LL)[,1]
+    //p_up = exp(logalpha + logbeta - LL)[,1]   // Rcpp::NumericVector
 
-    return logalpha;
+    // return p_up  // currently, Rcpp::NumericVector
+    return LL;
 }
 

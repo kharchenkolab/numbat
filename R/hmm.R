@@ -207,47 +207,10 @@ forward_back_allele = function (obj, ...) {
     })
         
     logphi <- log(as.double(obj$delta))
-    logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-    lscale <- as.double(0)
-    logPi <- lapply(obj$Pi, log)
     
-    for (t in 1:n) {
+    logPi <- lapply(obj$Pi, log)
         
-        if (t > 1) {
-            logphi <- sapply(1:m, function(j) matrixStats::logSumExp(logphi + logPi[[t]][,j]))
-        }
-                          
-        logphi <- logphi + logprob[t,]
-                          
-        logsumphi <- matrixStats::logSumExp(logphi)
-                          
-        logphi <- logphi - logsumphi
-                          
-        lscale <- lscale + logsumphi
-                          
-        logalpha[t,] <- logphi + lscale
-                          
-        LL <- lscale
-    }
-
-    logbeta <- matrix(as.double(rep(0, m * n)), nrow = n)
-    logphi <- log(as.double(rep(1/m, m)))
-    lscale <- as.double(log(m))
-
-    for (t in seq(n-1, 1, -1)){
-        
-        logphi = sapply(1:m, function(i) matrixStats::logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
-
-        logbeta[t,] <- logphi + lscale
-
-        logsumphi <- matrixStats::logSumExp(logphi)
-
-        logphi <- logphi - logsumphi
-
-        lscale <- lscale + logsumphi
-    }
-
-    p_up = exp(logalpha + logbeta - LL)[,1]
+    p_up = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
 
     return(p_up)
 }
