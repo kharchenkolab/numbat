@@ -30,6 +30,7 @@ cnv_colors = c("neu" = "gray",
         'major' = '#66C2A5', 'minor' = '#FC8D62'
     )
 
+#' @export
 cnv_labels = names(cnv_colors) %>%
     str_remove_all('_') %>% 
     str_to_upper() %>%
@@ -413,9 +414,7 @@ plot_sc_roll = function(gexp_roll_wide, hc, k, gtf_transcript, lim = 0.8, n_samp
     }
 }
 
-
-
-#' @export
+#' @keywords internal
 show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 
     D = bulk %>% 
@@ -494,11 +493,35 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
     (p1 / p2) + plot_layout(guides = 'auto')
 }
 
+#' plot a pseudobulk HMM profile
+#' @param bulk pseudobulk dataframe
+#' @param use_pos use marker position instead of index as x coordinate
+#' @param allele_only only plot alleles
+#' @param min_LLR LLR threshold for event filtering
+#' @param min_depth minimum coverage depth for a SNP to be plotted
+#' @param exp_limit expression logFC axis limit
+#' @param phi_mle whether to plot estimates of segmental expression fold change 
+#' @param theta_roll whether to plot rolling estimates of allele imbalance
+#' @param dot_size size of marker dots
+#' @param dot_alpha transparency of the marker dots
+#' @param legend whether to show legend
+#' @return a ggplot object
 #' @export
-plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_depth = 10, theta_roll = FALSE, fc_correct = TRUE, allele_only = FALSE, phi_mle = FALSE, use_pos = FALSE, legend = TRUE) {
+plot_psbulk = function(
+    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 10, min_depth = 8, exp_limit = 2, 
+    phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = TRUE
+    ) {
 
-    if (!'state_post' %in% colnames(Obs)) {
-        Obs = Obs %>% mutate(state_post = state)
+    if (!'state_post' %in% colnames(bulk)) {
+        bulk = bulk %>% mutate(state_post = state)
+    }
+
+    if (min_LLR != 0) {
+        bulk = bulk %>% mutate(
+            LLR = ifelse(is.na(LLR), 0, LLR),
+            cnv_state_post = ifelse(LLR < min_LLR, 'neu', cnv_state_post),
+            state_post = ifelse(LLR < min_LLR, 'neu', state_post)
+        )
     }
 
     if (use_pos) {
@@ -510,7 +533,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
     }
 
     # fix retest states 
-    Obs = Obs %>% 
+    bulk = bulk %>% 
         mutate(
             theta_level = ifelse(str_detect(state_post, '_2'), 2, 1),
             state_post = ifelse(
@@ -520,11 +543,11 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
         ))
 
     # correct for baseline bias
-    if (fc_correct & !allele_only) {
-        Obs = Obs %>% mutate(logFC = logFC - mu)
+    if (!allele_only) {
+        bulk = bulk %>% mutate(logFC = logFC - mu)
     }
 
-    D = Obs %>% 
+    D = bulk %>% 
         mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
         mutate(pBAF = ifelse(DP >= min_depth, pBAF, NA)) %>%
         mutate(pHF = pBAF) %>%
@@ -574,7 +597,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
     }
 
     if (phi_mle) {
-        segs = Obs %>% 
+        segs = bulk %>% 
             distinct(CHROM, seg, seg_start, seg_start_index, seg_end, seg_end_index, phi_mle) %>%
             mutate(variable = 'logFC') %>%
             filter(log2(phi_mle) < exp_limit)
@@ -598,7 +621,7 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
     } else if (!allele_only) {
         p = p + geom_line(
             inherit.aes = FALSE,
-            data = Obs %>% mutate(variable = 'logFC') %>% filter(log2(phi_mle_roll) < exp_limit),
+            data = bulk %>% mutate(variable = 'logFC') %>% filter(log2(phi_mle_roll) < exp_limit),
             aes(x = get(marker), y = log2(phi_mle_roll), group = '1'),
             color = 'darkred',
             size = 0.35
@@ -628,8 +651,28 @@ plot_psbulk = function(Obs, dot_size = 0.8, dot_alpha = 0.5, exp_limit = 2, min_
     return(p)
 }
 
+
+#' plot a group of pseudobulks HMM profile
+#' @param bulks pseudobulks dataframe
+#' @param use_pos use marker position instead of index as x coordinate
+#' @param allele_only only plot alleles
+#' @param min_LLR LLR threshold for event filtering
+#' @param min_depth minimum coverage depth for a SNP to be plotted
+#' @param exp_limit expression logFC axis limit
+#' @param phi_mle whether to plot estimates of segmental expression fold change 
+#' @param theta_roll whether to plot rolling estimates of allele imbalance
+#' @param dot_size size of marker dots
+#' @param dot_alpha transparency of the marker dots
+#' @param ncol number of columns
+#' @param legend whether to show legend
+#' @param title whether to add titles to individual plots
+#' @return a ggplot object
 #' @export
-plot_bulks = function(bulk_all, min_depth = 8, dot_alpha = 0.5, fc_correct = TRUE, phi_mle = FALSE, allele_only = FALSE, use_pos = FALSE, ncol = 1, legend = TRUE, title = TRUE) {
+plot_bulks = function(
+    bulk_all, use_pos = FALSE, allele_only = FALSE, min_LLR = 10, min_depth = 8,
+    exp_limit = 2, phi_mle = TRUE, theta_roll = FALSE, 
+    dot_size = 0.8, dot_alpha = 0.5, ncol = 1, legend = FALSE, title = TRUE
+    ) {
 
     options(warn = -1)
     plot_list = bulk_all %>%
@@ -643,9 +686,15 @@ plot_bulks = function(bulk_all, min_depth = 8, dot_alpha = 0.5, fc_correct = TRU
                 p = plot_psbulk(
                         bulk, 
                         dot_alpha = dot_alpha,
-                        min_depth = min_depth, fc_correct = fc_correct,
-                        phi_mle = phi_mle, use_pos = use_pos, legend = legend,
-                        allele_only = allele_only
+                        min_depth = min_depth, 
+                        phi_mle = phi_mle,
+                        use_pos = use_pos,
+                        legend = legend,
+                        allele_only = allele_only,
+                        min_LLR = min_LLR,
+                        exp_limit = exp_limit,
+                        theta_roll = theta_roll,
+                        dot_size = dot_size
                     ) + 
                     theme(
                         title = element_text(size = 8),
@@ -974,6 +1023,70 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
 }
 
 #' @export
+plot_sc_tree = function(gtree, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, pal_clone = NULL,tip_length = 0.5) {
+
+    mut_nodes = gtree %>% activate(nodes) %>%
+      filter(!is.na(site)) %>% data.frame() %>%
+      select(name, site)
+    
+    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
+    
+    clone_dict = gtree %>%
+        activate(nodes) %>%
+        data.frame %>%
+        mutate(
+            GT = ifelse(compartment == 'normal', '', GT),
+            GT = factor(GT),
+            clone = as.factor(clone)
+        ) %>%
+      {setNames(.$clone, .$name)}
+    
+    OTU_dict = lapply(levels(clone_dict), function(x) names(clone_dict[clone_dict == x])) %>% setNames(levels(clone_dict))
+
+    p_tree = gtree %>% 
+        to_phylo() %>%
+        groupOTU(
+            OTU_dict,
+            'clone'
+        ) %>%
+        ggtree(ladderize = T, size = branch_width) %<+%
+        mut_nodes +
+        layout_dendrogram() +
+        geom_rootedge(size = branch_width) +
+        theme(
+            plot.margin = margin(0,0,0,0),
+            axis.title.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.text.x = element_blank(),
+            axis.line.y = element_line(size = 0.2),
+            axis.ticks.y = element_line(size = 0.2),
+            axis.text.y = element_text(size = 8)
+        ) +
+        geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
+        geom_text2(
+            aes(x = branch, label = str_trunc(site, 20, side = 'center')),
+            size = label_size, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
+        ) +
+        guides(color = F) +
+        xlab('Number of mutations')
+
+    if (tip) {
+
+        if (is.null(pal_clone)) {
+            getPalette = colorRampPalette(pal)
+            pal_clone = getPalette(nrow(mut_nodes) + 1)
+        }
+
+        p_tree = p_tree + 
+            geom_tippoint(aes(color = as.factor(clone)), size=1, stroke = 0.2) +
+            scale_color_manual(values = pal_clone, limits = force)
+    }
+    
+    return(p_tree)
+    
+}
+
+#' @export
 tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NULL, cnv_order = NULL, label_mut = TRUE, cnv_type = TRUE, branch_width = 0.2, tip = T, tip_length = 0.5, pal_annot = NULL, pal_clone = NULL, layout = 'rect', tvn = FALSE, legend = T) {
     
     if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
@@ -1110,19 +1223,70 @@ tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NUL
 }
 
 #' @export
-plot_sc_joint = function(
-        gtree, joint_post, segs_consensus, 
-        cell_dict = NULL, size = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
-        logBF_max = 5, clone_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
-        pal_annot = NULL, multi_allelic = FALSE, tree_height = 1, annot_title = 'Annotation'
+plot_consensus = function(segs) {
+  
+    chrom_labeller <- function(chr){
+        chr[chr %in% c(19, 21, 22)] = ''
+        return(chr)
+    }
+    
+    ggplot(
+        segs
+    ) +
+    geom_rect(
+        aes(xmin = seg_start, xmax = seg_end, ymin = -0.5, ymax = 0.5, fill = cnv_state_post)
+    ) +
+    theme_void() +
+    theme(
+        panel.spacing = unit(1, 'mm'),
+        strip.background = element_blank(),
+        strip.text.y = element_text(angle = 0),
+        plot.margin = margin(0, 0, 0, 0),
+        legend.position = 'top'
+    ) +
+    facet_grid(~CHROM, space = 'free_x', scale = 'free', labeller = labeller(CHROM = chrom_labeller)) +
+    scale_fill_manual(
+      values = cnv_colors,
+      labels = cnv_labels,
+      name = 'CN states'
+    ) +
+    ggrepel::geom_text_repel(
+        aes(x = (seg_start+seg_end)/2, y = -0.5,
+            label = str_remove(seg_cons, '\\d+')),
+        min.segment.length = 0,
+        vjust = 1, 
+        hjust = 0,
+        direction = 'x',
+        segment.curvature = -0.2,
+        segment.ncp = 3,
+        segment.angle = 30,
+        segment.inflect = TRUE,
+        max.overlaps = 3
+    ) +
+    scale_y_continuous(
+        expand = expansion(add = c(0.5, 0))
+    ) +
+    scale_x_continuous(
+        expand = expansion(mult = 0.05)
+    )
+}
+
+#' @export
+plot_phylo_heatmap = function(
+        gtree, joint_post, segs_consensus,
+        annot = NULL, line_width = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
+        logBF_max = 5, geno_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
+        pal_annot = NULL, tree_height = 1, annot_title = 'Annotation'
     ) {
 
-    # if multi allelic module was not enabled
-    if (!'n_states' %in% colnames(segs_consensus)) {
-        segs_consensus = segs_consensus %>% mutate(
+    # if no multi allelic CNVs
+    if (!'n_states' %in% colnames(joint_post)) {
+        joint_post = joint_post %>% mutate(
             n_states = ifelse(cnv_state == 'neu', 1, 0), 
             cnv_states = cnv_state
         )
+    } else {
+        joint_post = joint_post %>% mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
     }
 
     gtree = mark_tumor_lineage(gtree)
@@ -1148,19 +1312,12 @@ plot_sc_joint = function(
             ) +
             guides(color = F)
 
+    # order the cells
     cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
 
     joint_post = joint_post %>% 
-            inner_join(
-                segs_consensus %>% select(seg = seg_cons, CHROM, seg_start, seg_end, n_states, cnv_states),
-                by = c('seg', 'CHROM')
-            ) %>%
-            mutate(cell = factor(cell, cell_order)) %>%
-            mutate(cell_index = as.integer(droplevels(cell))) 
-
-    if (multi_allelic) {
-        joint_post = joint_post %>% mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
-    }
+        mutate(cell = factor(cell, cell_order)) %>%
+        mutate(cell_index = as.integer(droplevels(cell))) 
 
     # add clone lines
     if (clone_line) {
@@ -1214,7 +1371,7 @@ plot_sc_joint = function(
         theme_classic() +
         geom_segment(
             aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state, alpha = p_cnv),
-            size = size
+            size = line_width
         ) +
         geom_segment(
             inherit.aes = F,
@@ -1272,7 +1429,7 @@ plot_sc_joint = function(
         pal_clone = c('gray', getPalette(length(unique(clone_dict))))
     }
 
-    p_clone = data.frame(
+    p_geno = data.frame(
             cell = names(clone_dict),
             annot = unname(clone_dict)
         ) %>%
@@ -1281,23 +1438,23 @@ plot_sc_joint = function(
         scale_fill_manual(values = pal_clone)
 
     # external annotation
-    if (!is.null(cell_dict)) {
+    if (!is.null(annot)) {
         
         p_annot = data.frame(
-                cell = names(cell_dict),
-                annot = unname(cell_dict)
+                cell = names(annot),
+                annot = unname(annot)
             ) %>%
             filter(cell %in% joint_post$cell) %>%
             mutate(cell = factor(cell, cell_order)) %>%
             annot_bar(transpose = T, pal_annot = pal_annot, legend_title = annot_title, size = size)
 
-        if (clone_bar) {
-            (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')
+        if (geno_bar) {
+            (p_tree | p_geno | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')
         } else {
             (p_tree | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 15), guides = 'collect')
         }
-    } else if (clone_bar) {
-        (p_tree | p_clone | p_segs) + plot_layout(widths = c(tree_height, 0.25, 15), guides = 'collect')
+    } else if (geno_bar) {
+        (p_tree | p_geno | p_segs) + plot_layout(widths = c(tree_height, 0.25, 15), guides = 'collect')
     } else {
         (p_tree | p_segs) + plot_layout(widths = c(tree_height, 15), guides = 'collect')
     }

@@ -1,20 +1,20 @@
 
-#' @title Numbat R6 class
-#' @description 
-#' @param out_dir the Numbat run output directory
+#' @title numbat R6 class
+#' @description used to summarize results
+#' @param out_dir the numbat run output directory
 #' @export
-Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
+numbat <- R6::R6Class("numbat", lock_objects=FALSE,
   public = list(
     #' @field label
     label = 'sample',
     gtf = NULL,
 
-    #' @description initialize Numbat class
+    #' @description initialize numbat class
     #' @param out_dir output directory
     #' @param i get results from which iteration
     #' @param gtf transcript gtf dataframe
     #' @param verbose verbosity
-    #' @return a new 'Numbat' object
+    #' @return a new 'numbat' object
     initialize = function(out_dir, i = 2, gtf = gtf_hg38, verbose=TRUE) {
 
         self$out_dir = out_dir
@@ -25,7 +25,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
 
     },
 
-    #' @description fetch results from the Numbat output directory
+    #' @description fetch results from the numbat output directory
     #' @param out_dir output directory
     #' @param i get results from which iteration
     #' @return NULL
@@ -34,11 +34,9 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
         self$joint_post = fread(glue('{out_dir}/joint_post_{i}.tsv'))
         self$exp_post = fread(glue('{out_dir}/exp_post_{i}.tsv'))
         self$allele_post = fread(glue('{out_dir}/allele_post_{i}.tsv'))
-        self$bulk_init = fread(glue('{out_dir}/bulk_subtrees_0.tsv.gz'))
         self$bulk_subtrees = fread(glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'))
-        self$segs_consensus = fread(glue('{out_dir}/segs_consensus_{i-1}.tsv'))
         self$bulk_clones = fread(glue('{out_dir}/bulk_clones_{i}.tsv.gz'))
-        self$geno = fread(glue('{out_dir}/geno_{i}.tsv')) %>% tibble::column_to_rownames('V1')
+        self$segs_consensus = fread(glue('{out_dir}/segs_consensus_{i}.tsv'))
         self$tree_post = readRDS(glue('{out_dir}/tree_post_{i}.rds'))
         self$mut_graph = readRDS(glue('{out_dir}/mut_graph_{i}.rds'))
         self$gtree = readRDS(glue('{out_dir}/tree_final_{i}.rds'))
@@ -56,21 +54,21 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @param tip_length tree tip length
     #' @param branch_width tree branch width
     #' @param line_width heatmap line width
-    #' @param multi_allelic whether to show different allelic states for same CNV
+    #' @param tree_height plotting height of the tree
     #' @return a ggplot object
-    plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, multi_allelic = FALSE, p_min = 0.5, tip_length = 1, branch_width = 0.2, line_width = 0.1) {
-        plot_sc_joint(  
+    plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, p_min = 0.9, tip_length = 1, branch_width = 0.2, line_width = 0.1, tree_height = 1) {
+        plot_phylo_heatmap(  
             self$gtree,
             self$joint_post,
             self$segs_consensus,
             tip_length = tip_length,
             branch_width = branch_width,
-            size = line_width,
+            line_width = line_width,
             p_min = p_min,
-            clone_bar = geno_bar,
-            multi_allelic = multi_allelic,
-            cell_dict = annot,
-            pal_clone = pal_clone
+            geno_bar = geno_bar,
+            annot = annot,
+            pal_clone = pal_clone,
+            tree_height = tree_height
         )
     },
 

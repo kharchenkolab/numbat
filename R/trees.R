@@ -20,9 +20,10 @@ phangorn_allChildren <- function(x) {
   }
 }
 
-#' @description score a tree based on maximum likelihood
+#' score a tree based on maximum likelihood
 #' @param tree phylo object
 #' @param P genotype probability matrix
+#' @param get_l_matrix whether to compute the whole likelihood matrix
 #' @export
 score_tree = function(tree, P, get_l_matrix = FALSE) {
     
@@ -57,11 +58,16 @@ score_tree = function(tree, P, get_l_matrix = FALSE) {
     
 }
 
-#' @description maximum likelihood tree search via NNI
+#' maximum likelihood tree search via NNI
 #' @param tree_init iintial tree as phylo object
 #' @param P genotype probability matrix
+#' @param max_iter maximum number of iterations
+#' @param eps tolerance threshold in likelihood difference for stopping
+#' @param verbose verbosity
+#' @param ncores number of cores to use
+#' @return a list of trees corresponding to the rearrangement steps
 #' @export
-perform_nni = function(tree_init, P, max_iter = 100, ncores = 20, eps = 0.01, verbose = TRUE) {
+perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 20, verbose = TRUE) {
 
     P = as.matrix(P)
     
@@ -112,6 +118,9 @@ perform_nni = function(tree_init, P, max_iter = 100, ncores = 20, eps = 0.01, ve
     return(tree_list)
 }
 
+#' mark the tumor lineage of a phylogeny
+#' @param gtree a tidygraph tree
+#' @return a tidygraph tree
 #' @export
 mark_tumor_lineage = function(gtree) {
     
@@ -243,6 +252,8 @@ l_s_v = function(node, site, gtree, geno) {
     sum
 }
 
+#' annotate optimal mutation assignment on tree
+#' 
 #' @export
 get_tree_post = function(tree, P) {
     

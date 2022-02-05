@@ -13,8 +13,8 @@ find_common_diploid(
   fc_min = 1.25,
   alpha = 1e-04,
   ncores = 5,
-  debug = F,
-  verbose = T
+  debug = FALSE,
+  verbose = TRUE
 )
 }
 \arguments{
