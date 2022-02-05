@@ -11,7 +11,8 @@
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
 #' @importFrom extraDistr dgpois
-#' @useDynLib Numbat
+#' @useDynLib numbat
+NULL
 
 #' @description Run workflow to decompose tumor subclones
 #' @param count_mat raw count matrices where rownames are genes and column names are cells

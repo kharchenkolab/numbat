@@ -1,4 +1,4 @@
-#'@useDynLib Numbat
+#'@useDynLib numbat
 #'@import Rcpp
 NULL
 
