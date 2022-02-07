@@ -101,6 +101,16 @@ dbipoilog <- function(n1,n2,mu1,mu2,sig1,sig2,rho){
     sig1=as.double(sig1^2), sig2=as.double(sig2^2), ro=as.double(rho), nrN=as.integer(length(n1)))
 }
 
+
+
+
+#' Returns the density for the Poisson lognormal distribution with parameters mu and sig
+#' 
+#' @param x vector of integers, the observations
+#' @param mu mean of lognormal distribution
+#' @param sig standard deviation of lognormal distribution
+#' @param log boolean Return the log density if TRUE (default=FALSE)
+#' @return NULL
 #' @export
 dpoilog <- function(x, mu, sig, log=FALSE){
   if (!(length(x) == length(mu) & length(x) == length(sig))) stop('All parameters must be same length') 
