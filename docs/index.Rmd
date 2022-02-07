@@ -27,7 +27,7 @@ library(patchwork)
 
 ```{r}
 # summarize output files into a Numbat object
-nb = numbat$new(out_dir = '~/paper_data/numbat_out/TNBC1_demo')
+nb = Numbat$new(out_dir = '~/paper_data/numbat_out/TNBC1_demo')
 # load pre-saved pagoda2 object
 pagoda = readRDS('~/paper_data/conos_objects/TNBC1.rds')
 ```

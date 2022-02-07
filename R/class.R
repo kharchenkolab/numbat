@@ -3,7 +3,7 @@
 #' @description used to summarize results
 #' @param out_dir the numbat run output directory
 #' @export
-numbat <- R6::R6Class("numbat", lock_objects=FALSE,
+Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
   public = list(
     #' @field label
     label = 'sample',
