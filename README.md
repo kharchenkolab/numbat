@@ -52,7 +52,7 @@ BiocManager::install("GenomicRanges")
 BiocManager::install("Rsamtools")
 BiocManager::install("ggtree")
 ```
-Install the Numbat R package via:
+Then install the Numbat R package via:
 ```
 devtools::install_github("https://github.com/kharchenkolab/Numbat")
 ```
