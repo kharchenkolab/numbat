@@ -171,7 +171,7 @@ plot_sc_tree(
 ```
 The mutational history can also be represented on the clone level, where cells with the same genotype are aggregated into one node.
 ```{r, fig.width = 6, fig.height=3, dpi=300}
-nb$plot_mut_history(pal_clone = mypal)
+nb$mut_graph %>% plot_mut_history(pal_clone = mypal)
 ```
 
 
