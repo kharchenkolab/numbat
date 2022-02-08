@@ -46,8 +46,8 @@ double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcp
 
         if (i > 1) {
             for (int j = 0; j < m; j++) {
-                Rcpp::NumericVector subset_logPi = logPi[i];    
-                Rcpp::NumericVector logphi_logPi = logphi + subset_logPi[j];
+                Rcpp::NumericMatrix subset_logPi = logPi[i];    
+                Rcpp::NumericVector logphi_logPi = logphi + subset_logPi(_, j);
                 logphi[j] = logSumExp(logphi_logPi);
             }
         }
@@ -79,8 +79,8 @@ double forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp
 
         if (t > 1) {
             for (int j = 0; j < m; j++) {
-                Rcpp::NumericVector subset_logPi = logPi[t];    
-                Rcpp::NumericVector logphi_logPi = logphi + subset_logPi[j];
+                Rcpp::NumericMatrix subset_logPi = logPi[t];    
+                Rcpp::NumericVector logphi_logPi = logphi + subset_logPi(_, j);
                 logphi[j] = logSumExp(logphi_logPi);
             }
         }
@@ -109,8 +109,8 @@ double forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp
 
         // logphi = sapply(1:m, function(i) matrixStats::logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
         for (int i = 0; i < m; i++) {  
-            Rcpp::NumericVector subset_logPi = logPi[t];   
-            Rcpp::NumericVector logphi_logprob_logPi = logphi + logprob(t, _) + subset_logPi[i];
+            Rcpp::NumericMatrix subset_logPi = logPi[t];   
+            Rcpp::NumericVector logphi_logprob_logPi = logphi + logprob(t, _) + subset_logPi(i, _) ;
             logphi[i] = logSumExp(logphi_logprob_logPi);
         }
 
