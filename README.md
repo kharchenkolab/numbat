@@ -1,4 +1,4 @@
-# Numbat
+# numbat
 
 <!-- badges: start -->
 
