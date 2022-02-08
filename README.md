@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 
-[![<kharchenkolab>](https://circleci.com/gh/kharchenkolab/Numbat.svg?style=svg)](https://app.circleci.com/pipelines/github/kharchenkolab/Numbat)
+[![<kharchenkolab>](https://circleci.com/gh/kharchenkolab/numbat.svg?style=svg)](https://app.circleci.com/pipelines/github/kharchenkolab/numbat)
   
 <!-- badges: end -->
 
@@ -28,7 +28,7 @@ Numbat uses cellsnp-lite for generating SNP pileup data and eagle2 for phasing. 
 1. [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
 2. [eagle2](https://alkesgroup.broadinstitute.org/Eagle/)
 
-Additionally, Numbat needs a common SNP VCF and phasing reference panel. You can use the 1000 Genome reference below:
+Additionally, numbat needs a common SNP VCF and phasing reference panel. You can use the 1000 Genome reference below:
 
 3. 1000G SNP reference file 
 ```
@@ -53,9 +53,9 @@ BiocManager::install("Rsamtools")
 BiocManager::install("ggtree")
 ```
 and make sure that `samtools` is already installed.
-Then install the Numbat R package via:
+Then install the numbat R package via:
 ```
-devtools::install_github("https://github.com/kharchenkolab/Numbat")
+devtools::install_github("https://github.com/kharchenkolab/numbat")
 ```
 
 # Preparing data
@@ -95,7 +95,7 @@ This will produce a file named `{sample}_allele_counts.tsv.gz` under the specifi
 ref_internal = aggregate_counts(count_mat, cell_annot)$exp_mat
 ```
   
-# Running Numbat
+# Running numbat
   
 In this example (ATC2 from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2)), the gene expression count matrix and allele dataframe are already prepared for you.
 ```
@@ -129,8 +129,8 @@ There are a few parameters you can consider tuning to a specific dataset.
 - `skip_nj`: if the number of cells is extremely large (>100k), the initial NJ tree construction may take a long time. You can set skip_nj to be TRUE to only use the faster UPGMA as seed for maximum likelihood tree search.
   
 # Understanding results
-A detailed vignette on how to interpret and visualize Numbat results is available:  
-- [Interpreting Numbat results](https://kharchenkolab.github.io/Numbat)
+A detailed vignette on how to interpret and visualize numbat results is available:  
+- [Interpreting numbat results](https://kharchenkolab.github.io/Numbat)
   
 Numbat generates a number of files in the output folder. The file names are post-fixed with the `i`th iteration of phylogeny optimization. Here is a detailed list:
 - `gexp_roll_wide.tsv.gz`: window-smoothed normalized expression profiles of single cells
