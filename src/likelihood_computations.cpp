@@ -77,7 +77,7 @@ double forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp
 
     for (int t = 0; t < n; t++) {
 
-        if (t > 1) {
+        if (t > 0) {
             for (int j = 0; j < m; j++) {
                 Rcpp::NumericMatrix subset_logPi = logPi[t];    
                 Rcpp::NumericVector logphi_logPi = logphi + subset_logPi(_, j);
