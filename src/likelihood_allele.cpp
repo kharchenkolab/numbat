@@ -37,32 +37,14 @@ double logSumExp(const arma::vec& x) {
 // [[Rcpp::export]]
 double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
 
-    // calculate m, n
-    // Rcpp::NumericVector x = obj["x"]; // x <- obj$x
-    //Rcpp::List Pi = obj["Pi"];
-    //Rcpp::NumericMatrix Pi1 = Pi[0];
-    //int m = Pi1.nrow();  // m <- nrow(obj$Pi[[1]])
-    //int n = x.length();
-
-    //std::vector<double> objdelta =  Rcpp::as<std::vector<double>>(obj["delta"]);
-
-    //for (int i = 0; i < objdelta.size(); i++) {
-    //    objdelta[i] = std::log(objdelta[i]);
-    //}
-    //Rcpp::NumericVector logphi = Rcpp::wrap(objdelta); //logphi <- log(as.double(obj$delta))
-    
-    //const int nrow = n;
-    //const int ncol = m;
-    // not used in function, Rcpp::NumericMatrix logalpha(nrow, ncol); // logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-
     double LL = 0.0;
 
     for (int i = 0; i < n; i++) {
 
         if (i > 1) {
             for (int j = 0; j < m; j++) {
-                Rcpp::NumericVector subset_logPi = logPi[i];    
-                Rcpp::NumericVector logphi_logPi = logphi + subset_logPi[j];
+                Rcpp::NumericMatrix subset_logPi = logPi[i];    
+                Rcpp::NumericVector logphi_logPi = logphi + subset_logPi(_, j);
                 logphi[j] = logSumExp(logphi_logPi);
             }
         }
