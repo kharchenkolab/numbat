@@ -170,7 +170,7 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
     D = as.matrix(count_mat[,markers$gene]) %>%
         scale %>%
         reshape2::melt() %>%
-        set_colnames(c('cell', 'gene', 'exp')) %>%
+        magrittr::set_colnames(c('cell', 'gene', 'exp')) %>%
         inner_join(
             cell_annot, by = 'cell'
         ) %>%

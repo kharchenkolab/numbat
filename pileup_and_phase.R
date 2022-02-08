@@ -148,7 +148,7 @@ for (sample in samples) {
     DP = readMM(glue('{pu_dir}/cellSNP.tag.DP.mtx'))
 
     cell_barcodes = fread(glue('{pu_dir}/cellSNP.samples.tsv'), header = F) %>% pull(V1)
-    cell_barcodes = paste0(sample, '_', cell_barcodes)
+    # cell_barcodes = paste0(sample, '_', cell_barcodes)
 
     df = preprocess_allele(
         sample = label,
