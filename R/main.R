@@ -15,6 +15,7 @@
 NULL
 
 #' Run workflow to decompose tumor subclones
+#'
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe of allele counts per cell, produced by preprocess_allele
