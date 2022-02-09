@@ -31,11 +31,11 @@ test_that("HMM works", {
 test_that("Check that likelihood_allele() works as expected", {
 
   x <- pre_likelihood_hmm$x
-  p_x <- makedensity(pre_likelihood_hmm$distn)
+  p_x <- numbat:::makedensity(pre_likelihood_hmm$distn)
   m <- nrow(pre_likelihood_hmm$Pi[[1]])
   n <- length(x)
   logprob = sapply(1:m, function(k) {
-      l_x = p_x(x = x,  getj(pre_likelihood_hmm$pm, k), pre_likelihood_hmm$pn, log = TRUE)
+      l_x = p_x(x = x,  numbat:::getj(pre_likelihood_hmm$pm, k), pre_likelihood_hmm$pn, log = TRUE)
       l_x[is.na(l_x)] = 0
       return(l_x)
   })
@@ -44,8 +44,8 @@ test_that("Check that likelihood_allele() works as expected", {
   LL <- as.double(0)
   logPi <- lapply(pre_likelihood_hmm$Pi, log)
 
-  LL <- numbat:::likelihood_allele_compute(obj, logphi, logprob, logPi, n, m)
-  expect_equal(as.integer(LL) -736)
+  LL <- numbat:::likelihood_allele_compute(pre_likelihood_hmm, logphi, logprob, logPi, n, m)
+  expect_equal(as.integer(LL), -736)
 
 })
 
