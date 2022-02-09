@@ -42,11 +42,13 @@ double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcp
     for (int i = 0; i < n; i++) {
 
         if (i > 0) {
+            Rcpp::NumericVector logphi_new; 
             for (int j = 0; j < m; j++) {
                 Rcpp::NumericMatrix subset_logPi = logPi[i];    
                 Rcpp::NumericVector logphi_logPi = logphi + subset_logPi(_, j);
-                logphi[j] = logSumExp(logphi_logPi);
+                logphi_new.push_back(logSumExp(logphi_logPi));
             }
+            logphi = logphi_new;
         }
 
         logphi = logphi + logprob(i, _);  // Note: logprob(i, _) is Rcpp::NumericVector
