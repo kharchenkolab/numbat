@@ -136,13 +136,21 @@ make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE
 #' @keywords internal 
 vcfR_file_fix <- function(file) {
 
-    out <- R.utils::gunzip(file)
-    out2 <- Rsamtools::bgzip(out, dest=sprintf("%s.gz", sub("\\.gz$", "", out)),
-                    overwrite = TRUE)
+    out <- R.utils::gunzip(file, overwrite = TRUE)
+    out2 <- Rsamtools::bgzip(out, dest=sprintf("%s.gz", sub("\\.gz$", "", out)), overwrite = TRUE)
     file.remove(out)
 
 }
 
+#' preprocess allele data
+#' @param sample sample label
+#' @param vcf_pu pileup VCF from cell-snp-lite
+#' @param vcf_phased phased VCF from eagle2
+#' @param AD alt allele depth matrix from pileup
+#' @param DP total allele depth matrix from pileup
+#' @param barcodes list of barcodes from pileup
+#' @param gtf_transcript transcript dataframe
+#' @return a long dataframe with allele counts by cell
 #' @export
 preprocess_allele = function(
     sample,

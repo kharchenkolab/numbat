@@ -3,7 +3,7 @@
 #' @description used to summarize results
 #' @param out_dir the numbat run output directory
 #' @export
-numbat <- R6::R6Class("numbat", lock_objects=FALSE,
+Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
   public = list(
     #' @field label
     label = 'sample',
@@ -85,44 +85,6 @@ numbat <- R6::R6Class("numbat", lock_objects=FALSE,
             self$gtf,
             k = k,
             n_sample = n_sample
-        )
-    },
-    
-    #' @description plot the mutation history of the tumor
-    #' @param horizontal horizontal layout or vertical
-    #' @param label whether to label the mutations on edges
-    #' @param pal_clone clone color palette
-    #' @return a ggplot object
-    plot_mut_history = function(horizontal = TRUE, label = TRUE, pal_clone = NULL) {
-        p = plot_mut_history(self$mut_graph, horizontal = horizontal, label = label, pal_clone)
-        return(p)
-    },
-
-    #' @description plot the bulk CNV profiles
-    #' @param what whether to visualize clones or subtrees
-    #' @param min_depth minimum allele coverage to filter SNPs
-    #' @param ncol number of columns in the plot panel
-    #' @param legend whether to display CNV state legend
-    #' @param phi_mle whether to plot expression fold change estimates
-    #' @return a ggplot object
-    plot_bulks = function(what = 'clones', min_depth = 8, phi_mle = TRUE, ncol = 1, legend = FALSE) {
-
-        if (!what %in% c('clones', 'subtrees')) {
-            stop("The parameter 'what' must match one of these values: 'clones' or 'subtrees'")
-        }
-
-        if (what == 'clones') {
-            bulks = self$bulk_clones
-        } else {
-            bulks = self$bulk_subtrees
-        }
-
-        plot_bulks(
-            bulks,
-            min_depth = min_depth,
-            ncol = ncol,
-            phi_mle = phi_mle,
-            legend = legend
         )
     }
   )

@@ -51,6 +51,18 @@ run_numbat = function(
         exclude_normal = FALSE, skip_nj = FALSE, multi_allelic = TRUE,
         plot = TRUE
     ) {
+
+    ######### Basic checks #########
+
+    if (is(count_mat, 'Matrix')) {
+        count_mat = as.matrix(count_mat)
+    } else if (!is.matrix(count_mat)) {
+        stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
+    }
+
+    if (length(intersect(colnames(count_mat), df_allele$cell)) == 0){
+        stop('No matching cell names between count_mat and df_allele')
+    }
     
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
@@ -105,7 +117,7 @@ run_numbat = function(
 
     # extract cell groupings
     subtrees = purrr::keep(clust$nodes, function(x) x$size > min_cells)
-    clones = purrr::keep(subtrees, function(x) x$sample %in% 1:3)
+    clones = purrr::keep(subtrees, function(x) x$sample %in% 1:init_k)
 
     normal_cells = c()
 
@@ -134,8 +146,7 @@ run_numbat = function(
                 exp_model = exp_model,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
-                verbose = verbose
-            )
+                verbose = verbose)
         
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
 
@@ -163,8 +174,7 @@ run_numbat = function(
                 exp_model = exp_model,
                 ncores = ncores,
                 verbose = verbose,
-                retest = F
-            )
+                retest = FALSE)
 
         bulk_clones = retest_bulks(
             bulk_clones,
@@ -922,7 +932,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     cells = colnames(count_mat)
 
     if ((!is.matrix(lambdas_ref))) {
-        lambdas_ref = as.matrix(lambdas_ref) %>% set_colnames('ref')
+        lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
         best_refs = setNames(rep('ref', length(cells)), cells)
     } else {
         best_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
