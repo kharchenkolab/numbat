@@ -44,12 +44,14 @@ double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcp
 
     for (int i = 0; i < n; i++) {
 
-        if (i > 1) {
+        if (i > 0) {
+            Rcpp::NumericVector logphi_new; 
             for (int j = 0; j < m; j++) {
                 Rcpp::NumericMatrix subset_logPi = logPi[i];    
                 Rcpp::NumericVector logphi_logPi = logphi + subset_logPi(_, j);
-                logphi[j] = logSumExp(logphi_logPi);
+                logphi_new.push_back(logSumExp(logphi_logPi));
             }
+            logphi = logphi_new;
         }
 
         logphi = logphi + logprob(i, _);  // Note: logprob(i, _) is Rcpp::NumericVector
@@ -78,11 +80,13 @@ double forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp
     for (int t = 0; t < n; t++) {
 
         if (t > 0) {
+            Rcpp::NumericVector logphi_new; 
             for (int j = 0; j < m; j++) {
                 Rcpp::NumericMatrix subset_logPi = logPi[t];    
                 Rcpp::NumericVector logphi_logPi = logphi + subset_logPi(_, j);
-                logphi[j] = logSumExp(logphi_logPi);
+                logphi_new.push_back(logSumExp(logphi_logPi));
             }
+            logphi = logphi_new;
         }
 
         logphi = logphi + logprob(t, _);  // Note: logprob(i, _) is Rcpp::NumericVector
@@ -99,20 +103,25 @@ double forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp
     LL = lscale;
 
     Rcpp::NumericMatrix logbeta(nrow, ncol); // logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-    Rcpp::NumericVector logphi2(m);  // logphi <- log(as.double(rep(1/m, m)))
+    //Rcpp::NumericVector logphi2(m);  // logphi <- log(as.double(rep(1/m, m)))
+    // need to clear the variable above?
+    Rcpp::NumericVector logphi(m);  // logphi <- log(as.double(rep(1/m, m)))
     for (int i = 0; i < m; i++){
-        logphi2[i] = 1/m;
+        logphi[i] = 1/m;
     }
     double lscale2 = std::log(m);
 
     for (int t = n-1; t<=0; t--) {
 
         // logphi = sapply(1:m, function(i) matrixStats::logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
+        Rcpp::NumericVector logphi_new;
         for (int i = 0; i < m; i++) {  
             Rcpp::NumericMatrix subset_logPi = logPi[t];   
             Rcpp::NumericVector logphi_logprob_logPi = logphi + logprob(t, _) + subset_logPi(i, _) ;
             logphi[i] = logSumExp(logphi_logprob_logPi);
+            logphi_new.push_back(logphi_logprob_logPi);
         }
+        logphi = logphi_new;
 
         logbeta(t, _) = logphi + lscale;
 
