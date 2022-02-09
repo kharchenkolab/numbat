@@ -13,11 +13,11 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
         intersect(rownames(count_mat)) %>%
         intersect(rownames(lambdas_ref))
 
-    count_mat = count_mat[genes_annotated,,drop=F]
-    lambdas_ref = lambdas_ref[genes_annotated,,drop=F]
+    count_mat = count_mat[genes_annotated,,drop=FALSE]
+    lambdas_ref = lambdas_ref[genes_annotated,,drop=FALSE]
     
     # keep highly expressed genes in at least one of the references
-    count_mat = count_mat[rowSums(lambdas_ref * 1e6 > 2) > 0,,drop=F]
+    count_mat = count_mat[rowSums(lambdas_ref * 1e6 > 2) > 0,,drop=FALSE]
 
     exp_mat = scale(count_mat, center=FALSE, scale=colSums(count_mat))
     
@@ -82,7 +82,7 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
     }
 
     Y_obs = Y_obs[genes_common]
-    lambdas_ref = lambdas_ref[genes_common,,drop=F]
+    lambdas_ref = lambdas_ref[genes_common,,drop=FALSE]
 
     n_ref = ncol(lambdas_ref)
     
@@ -117,7 +117,7 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
 process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
 
     mut_expressed = filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = verbose)
-    count_mat = count_mat[mut_expressed,,drop=F]
+    count_mat = count_mat[mut_expressed,,drop=FALSE]
     lambdas_ref = lambdas_ref[mut_expressed]
         
     exp_mat = scale(count_mat, center=FALSE, scale=colSums(count_mat))
@@ -170,7 +170,7 @@ filter_genes = function(count_mat, lambdas_ref, gtf_transcript, verbose = T) {
 
     depth_obs = sum(count_mat)
 
-    count_mat = count_mat[genes_annotated,,drop=F]
+    count_mat = count_mat[genes_annotated,,drop=FALSE]
     lambdas_ref = lambdas_ref[genes_annotated]
 
     lambdas_obs = rowSums(count_mat)/depth_obs
@@ -1101,17 +1101,9 @@ find_common_diploid = function(
         log_warn(msg)
         diploid_segs = bulks %>% pull(seg) %>% unique
         bamp = TRUE
-        tests = data.frame()
-        FC = data.frame()
-        G = NULL
-        test_dat = data.frame()
     } else if (length(segs_bal) == 1) {
         diploid_segs = segs_bal
         bamp = FALSE
-        tests = data.frame()
-        FC = data.frame()
-        G = NULL
-        test_dat = data.frame()
     } else {
         test_dat = bulks_bal %>%
             select(gene, seg, lnFC, sample) %>%
@@ -1224,7 +1216,17 @@ find_common_diploid = function(
     
     bulks = bulks %>% mutate(diploid = seg %in% diploid_segs)
     
-    return(list('bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'test_dat' = test_dat, 'FC' = FC, 'cliques' = cliques))
+    if (debug) {
+        res = list(
+            'bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs,
+            'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests,
+            'test_dat' = test_dat, 'FC' = FC, 'cliques' = cliques
+        )
+    } else {
+        res = list('bamp' = bamp, 'bulks' = bulks)
+    }
+
+    return(res)
 }
 
 #' get neutral segments from multiple pseudobulks
