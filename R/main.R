@@ -116,7 +116,7 @@ run_numbat = function(
 
     # extract cell groupings
     subtrees = purrr::keep(clust$nodes, function(x) x$size > min_cells)
-    clones = purrr::keep(subtrees, function(x) x$sample %in% 1:3)
+    clones = purrr::keep(subtrees, function(x) x$sample %in% 1:init_k)
 
     normal_cells = c()
 
