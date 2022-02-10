@@ -170,7 +170,7 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
     D = as.matrix(count_mat[,markers$gene]) %>%
         scale %>%
         reshape2::melt() %>%
-        set_colnames(c('cell', 'gene', 'exp')) %>%
+        magrittr::set_colnames(c('cell', 'gene', 'exp')) %>%
         inner_join(
             cell_annot, by = 'cell'
         ) %>%
@@ -917,7 +917,7 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio 
 }
 
 #' @export
-plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clone = NULL) {
+plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, node_id = TRUE, pal_clone = NULL) {
 
     G_m = label_genotype(G_m)
 
@@ -942,11 +942,14 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, pal_clone = NU
             start_cap = circle(4, 'mm')
         ) + 
         geom_node_point(aes(color = clone), size = 10) +
-        geom_node_text(aes(label = clone), size = 6) +
         theme_void() +
         scale_x_continuous(expand = expansion(0.2)) +
         scale_color_manual(values = pal_clone, limits = force) +
         guides(color = 'none')
+
+    if (node_id) {
+        p = p + geom_node_text(aes(label = clone), size = 6)
+    }
 
     if (horizontal) {
         p = p + coord_flip() + scale_y_reverse(expand = expansion(0.2))
@@ -1274,7 +1277,7 @@ plot_consensus = function(segs) {
 #' @export
 plot_phylo_heatmap = function(
         gtree, joint_post, segs_consensus,
-        annot = NULL, line_width = 0.02, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
+        annot = NULL, line_width = 0.1, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
         logBF_max = 5, geno_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
         pal_annot = NULL, tree_height = 1, annot_title = 'Annotation'
     ) {
@@ -1286,7 +1289,13 @@ plot_phylo_heatmap = function(
             cnv_states = cnv_state
         )
     } else {
-        joint_post = joint_post %>% mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
+        # only keep one record per CNV and color by most likely state
+        joint_post = joint_post %>% 
+            group_by(cell, CHROM, seg_end, seg_start) %>%
+            mutate(p_cnv = sum(p_cnv)) %>%
+            ungroup() %>%
+            distinct(cell, CHROM, seg_end, seg_start, .keep_all = T) %>%
+            mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
     }
 
     gtree = mark_tumor_lineage(gtree)

@@ -271,30 +271,13 @@ likelihood_allele = function (obj, ...) {
         return(l_x)
         
     })
-        
-    logphi <- log(as.double(obj$delta))
 
-    logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-    
-    LL <- as.double(0)
+    logphi <- log(as.double(obj$delta))
     
     logPi <- lapply(obj$Pi, log)
         
-    for (i in 1:n) {
-        
-        if (i > 1) {
-            logphi <- sapply(1:m, function(j) logSumExp(logphi + logPi[[i]][,j]))
-        }
-                             
-        logphi <- logphi + logprob[i,]
-                          
-        logSumPhi <- logSumExp(logphi)
-                          
-        logphi <- logphi - logSumPhi
-                                                                              
-        LL <- LL + logSumPhi
-                             
-    }
+    LL <- likelihood_allele_compute(obj, logphi, logprob, logPi, n, m)
+
     
     return(LL)
 }
