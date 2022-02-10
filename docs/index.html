@@ -144,7 +144,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <span class="kw">library</span>(tidygraph)
 <span class="kw">library</span>(patchwork)</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># summarize output files into a Numbat object</span>
-nb =<span class="st"> </span>numbat<span class="op">$</span><span class="kw">new</span>(<span class="dt">out_dir =</span> <span class="st">&#39;~/paper_data/numbat_out/TNBC1_demo&#39;</span>)
+nb =<span class="st"> </span>Numbat<span class="op">$</span><span class="kw">new</span>(<span class="dt">out_dir =</span> <span class="st">&#39;~/paper_data/numbat_out/TNBC1_demo&#39;</span>)
 <span class="co"># load pre-saved pagoda2 object</span>
 pagoda =<span class="st"> </span><span class="kw">readRDS</span>(<span class="st">&#39;~/paper_data/conos_objects/TNBC1.rds&#39;</span>)</code></pre></div>
 <div id="copy-number-landscape-and-single-cell-phylogeny" class="section level2">
@@ -302,7 +302,7 @@ p_expr =<span class="st"> </span>pagoda<span class="op">$</span><span class="kw"
   <span class="dt">tip =</span> <span class="ot">TRUE</span>
 )</code></pre></div>
 <p><img src="index_files/figure-html/unnamed-chunk-12-1.png" width="1800" /> The mutational history can also be represented on the clone level, where cells with the same genotype are aggregated into one node.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span><span class="kw">plot_mut_history</span>(<span class="dt">pal_clone =</span> mypal)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nb<span class="op">$</span>mut_graph <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">plot_mut_history</span>(<span class="dt">pal_clone =</span> mypal)</code></pre></div>
 <p><img src="index_files/figure-html/unnamed-chunk-13-1.png" width="1800" /></p>
 </div>
 </div>
