@@ -701,9 +701,9 @@ cell_to_clone = function(gtree, exp_post, allele_post) {
             Z_clone = log(prior_clone) + l_clone_x + l_clone_y,
             Z_clone_x = log(prior_clone) + l_clone_x,
             Z_clone_y = log(prior_clone) + l_clone_y,
-            p = exp(Z_clone - matrixStats::logSumExp(Z_clone)),
-            p_x = exp(Z_clone_x - matrixStats::logSumExp(Z_clone_x)),
-            p_y = exp(Z_clone_y - matrixStats::logSumExp(Z_clone_y))
+            p = exp(Z_clone - logSumExp(Z_clone)),
+            p_x = exp(Z_clone_x - logSumExp(Z_clone_x)),
+            p_y = exp(Z_clone_y - logSumExp(Z_clone_y))
         ) %>%
         mutate(
             clone_opt = clone[which.max(p)],
@@ -994,16 +994,16 @@ compute_posterior = function(sc_post) {
     sc_post %>% 
     rowwise() %>%
     mutate(
-        Z_amp = matrixStats::logSumExp(c(l21 + log(prior_amp/4), l31 + log(prior_amp/4))),
+        Z_amp = logSumExp(c(l21 + log(prior_amp/4), l31 + log(prior_amp/4))),
         Z_loh = l20 + log(prior_loh/2),
         Z_del = l10 + log(prior_del/2),
         Z_bamp = l22 + log(prior_bamp/2),
         Z_bdel = l00 + log(prior_bdel/2),
         Z_n = l11 + log(1/2),
-        Z = matrixStats::logSumExp(
+        Z = logSumExp(
             c(Z_n, Z_loh, Z_del, Z_amp, Z_bamp, Z_bdel)
         ),
-        Z_cnv = matrixStats::logSumExp(
+        Z_cnv = logSumExp(
             c(Z_loh, Z_del, Z_amp, Z_bamp, Z_bdel)
         ),
         p_amp = exp(Z_amp - Z),
