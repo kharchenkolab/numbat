@@ -15,6 +15,7 @@
 NULL
 
 #' Run workflow to decompose tumor subclones
+#'
 #' @param count_mat raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe of allele counts per cell, produced by preprocess_allele
@@ -780,7 +781,7 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
         ) %>%
         filter(!(frac_overlap_x < min_overlap & frac_overlap_y < min_overlap))
 
-    G = igraph::graph_from_data_frame(d=E, vertices=V, directed=F)
+    G = igraph::graph_from_data_frame(d=E, vertices=V, directed=FALSE)
 
     segs_all = segs_all %>% mutate(component = igraph::components(G)$membership)
 
