@@ -135,7 +135,7 @@ There are a few parameters you can consider tuning to a specific dataset.
   
 # Understanding results
 A detailed vignette on how to interpret and visualize numbat results is available:  
-- [Interpreting numbat results](https://kharchenkolab.github.io/Numbat)
+- [Interpreting numbat results](https://kharchenkolab.github.io/numbat)
   
 Numbat generates a number of files in the output folder. The file names are post-fixed with the `i`th iteration of phylogeny optimization. Here is a detailed list:
 - `gexp_roll_wide.tsv.gz`: window-smoothed normalized expression profiles of single cells
