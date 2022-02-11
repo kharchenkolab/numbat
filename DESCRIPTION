@@ -31,7 +31,6 @@ Imports:
     parallel,
     parallelDist,
     patchwork,
-    phangorn,
     purrr,
     R.utils,
     Rcpp,

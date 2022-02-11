@@ -122,7 +122,7 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 20, ve
     return(tree_list)
 }
 
-# from Phangorn
+# from phangorn
 nnin <- function(tree, n) {
   attr(tree, "order") <- NULL
   tree1 <- tree
@@ -159,6 +159,7 @@ nnin <- function(tree, n) {
   result
 }
 
+# from phangorn
 nni <- function(tree, ncores = 1) {
   tip.label <- tree$tip.label
   attr(tree, "order") <- NULL
@@ -179,6 +180,17 @@ nni <- function(tree, ncores = 1) {
   class(result) <- "multiPhylo"
 
   return(result)
+}
+
+#' from phangorn
+#' @rdname upgma
+#' @export
+"upgma" <- function(D, method = "average", ...) {
+  DD <- as.dist(D)
+  hc <- hclust(DD, method = method, ...)
+  result <- ape::as.phylo(hc)
+  result <- reorder(result, "postorder")
+  result
 }
 
 #' mark the tumor lineage of a phylogeny
