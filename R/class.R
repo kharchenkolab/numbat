@@ -157,21 +157,101 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
         #  param: i get results from which iteration
         #  return: NULL
         # 
+
         fetch_results = function(out_dir, i = 2) {
-
-            self$joint_post = fread(glue('{out_dir}/joint_post_{i}.tsv'))
-            self$exp_post = fread(glue('{out_dir}/exp_post_{i}.tsv'))
-            self$allele_post = fread(glue('{out_dir}/allele_post_{i}.tsv'))
-            self$bulk_subtrees = fread(glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'))
-            self$bulk_clones = fread(glue('{out_dir}/bulk_clones_{i}.tsv.gz'))
-            self$segs_consensus = fread(glue('{out_dir}/segs_consensus_{i}.tsv'))
-            self$tree_post = readRDS(glue('{out_dir}/tree_post_{i}.rds'))
-            self$mut_graph = readRDS(glue('{out_dir}/mut_graph_{i}.rds'))
-            self$gtree = readRDS(glue('{out_dir}/tree_final_{i}.rds'))
-            self$clone_post = fread(glue('{out_dir}/clone_post_{i}.tsv'))
-            self$gexp_roll_wide = fread(glue('{out_dir}/gexp_roll_wide.tsv.gz'))
-            self$hc = readRDS(glue('{out_dir}/hc.rds'))
-
+            joint_post_colnames = c("cell", "CHROM",  "seg",  "cnv_state")
+            self$joint_post = read_file(inputfile=glue('{out_dir}/joint_post_{i}.tsv'), expected_colnames=joint_post_colnames, filetype="tsv")
+            exp_post_colnames = c("seg", "cnv_state", "n", "phi_mle")
+            self$exp_post = read_file(inputfile=glue('{out_dir}/exp_post_{i}.tsv'), expected_colnames=exp_post_colnames, filetype="tsv")
+            allele_post_colnames = c("cell", "CHROM", "seg", "cnv_state", "major", "minor", "total", "MAF", "seg_start", "seg_end", "prior_loh", "prior_amp", "prior_del", "prior_bamp", "prior_bdel")
+            self$allele_post = read_file(inputfile=glue('{out_dir}/allele_post_{i}.tsv'), expected_colnames=allele_post_colnames, filetype="tsv")
+            bulk_subtrees_colnames = c("cnv_state_post", "state_post", "p_up", "haplo_post", "haplo_naive", "theta_hat_roll", "phi_mle_roll", "lambda", "gamma")
+            self$bulk_subtrees = read_file(inputfile=glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), expected_colnames=bulk_subtrees_colnames, filetype="tsv")
+            bulk_clones_colnames = c("n_genes", "n_snps", "seg_start", "seg_end", "theta_hat", "theta_mle", "theta_sigma")
+            self$bulk_clones = read_file(inputfile=glue('{out_dir}/bulk_clones_{i}.tsv.gz'), expected_colnames=bulk_clones_colnames, filetype="tsv")
+            segs_consensus_colnames = c("sample", "CHROM", "seg", "cnv_state", "cnv_state_post", "seg_start", "seg_end", "seg_start_index", 
+                                            "seg_end_index", "theta_mle", "theta_sigma", "phi_mle", "phi_sigma", "p_loh", "p_del", "p_amp",           
+                                            "p_bamp", "p_bdel", "LLR", "LLR_y", "LLR_x", "n_genes", "n_snps", "component","LLR_sample", "seg_length", "seg_cons", "n_states", "cnv_states")
+            self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i}.tsv'), expected_colnames=segs_consensus_colnames, filetype="tsv")
+            tree_post_colnames =  c("mut_nodes", "gtree", "l_matrix")
+            self$tree_post = read_file(inputfile=glue('{out_dir}/tree_post_{i}.rds'), expected_colnames=NULL, filetype="rds")
+            self$mut_graph = read_file(inputfile=glue('{out_dir}/mut_graph_{i}.rds'), expected_colnames=NULL, filetype="rds")
+            self$gtree = read_file(inputfile=glue('{out_dir}/tree_final_{i}.rds'), expected_colnames=tree_final_colnames, filetype="rds")
+            clone_post_colnames = c("cell", "clone_opt", "GT_opt", "p_opt")
+            self$clone_post = read_file(inputfile=glue('{out_dir}/clone_post_{i}.tsv'), expected_colnames=clone_post_colnames, filetype="tsv")
+            ## gene names are the column names
+            self$gexp_roll_wide = read_file(inputfile=glue('{out_dir}/gexp_roll_wide.tsv.gz'), expected_colnames=NULL, filetype="tsv")
+            hc_colnames = c("merge", "height", "order", "labels", "method", "call", "dist.method")
+            self$hc = read_file(inputfile=glue('{out_dir}/hc.rds'), expected_colnames=hc_colnames, filetype="rds")
         }
     )
 )
+
+
+
+#' @keywords internal
+check_fread_works = function(input) {
+    tryCatch({
+            return(data.table::fread(input))
+        },
+        error = function(e){
+            stop(paste0("Could not read the input file ", input, " with data.table::fread(). Please check that the file is valid."))
+    })
+}
+
+#' @keywords internal
+check_rds_works = function(input) {
+    tryCatch({
+            return(readRDS(input))
+        },
+        error = function(e){
+            stop(paste0("Could not read the input file ", input, " with readRDS(). Please check that the file is valid."))
+    })
+}
+
+
+
+#' @keywords internal
+return_missing_columns = function(file, expected_colnames) {
+    if (!is.vector(expected_colnames) || !is.character(expected_colnames)) {
+        stop("The parameter 'expected_colnames' needs to be a character vector")
+    }
+    ## if user sets expected_colnames = NULL, return NULL
+    if (is.null(expected_colnames)) {
+        return(NULL)
+    }
+    if (any(expected_colnames %ni% colnames(file))) {
+        missing_columns = expected_colnames[!(expected_colnames %in% colnames(file))]
+        if (length(missing_columns) == 0) {
+            stop("Some mismatch exists between the expected columns and the columns in the file. This error shouldn't happen. Check and fix.")
+        }
+        return(missing_columns)
+    } else {
+        return(NULL)
+    }
+}
+
+
+#' @keywords internal
+read_file = function(inputfile, expected_colnames, filetype="tsv") {
+    if (filetype == "tsv") {
+        file = check_fread_works(inputfile)
+    } else if (filetype == "rds") {
+        file = check_rds_works(inputfile)
+        ## all *rds files here should be lists
+        if (!is.list(inputfile)) {
+            stop(paste0("The file: ", inputfile, " is malformed. Please fix."))
+        }        
+    } else {
+        stop("The parameter 'filetype' must be either 'tsv' or 'rds'. Please fix.")
+    }
+    potential_missing_columns = return_missing_columns(file, expected_colnames)
+    if (!is.null(potential_missing_columns)) {
+        stop(paste0("The file ", inputfile, " appears to be malformed; expected column names: ", potential_missing_columns, ". Please fix."))
+    } else {
+        return(file)
+    }
+}
+
+
+
