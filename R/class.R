@@ -220,6 +220,7 @@ return_missing_columns = function(file, expected_colnames) {
     if (is.null(expected_colnames)) {
         return(NULL)
     }
+    '%ni%' <- Negate('%in%')
     if (any(expected_colnames %ni% colnames(file))) {
         missing_columns = expected_colnames[!(expected_colnames %in% colnames(file))]
         if (length(missing_columns) == 0) {
@@ -239,7 +240,7 @@ read_file = function(inputfile, expected_colnames, filetype="tsv") {
     } else if (filetype == "rds") {
         file = check_rds_works(inputfile)
         ## all *rds files here should be lists
-        if (!is.list(inputfile)) {
+        if (!is.list(file)) {
             stop(paste0("The file: ", inputfile, " is malformed. Please fix."))
         }        
     } else {
