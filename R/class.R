@@ -176,13 +176,12 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             tree_post_colnames =  c("mut_nodes", "gtree", "l_matrix")
             self$tree_post = read_file(inputfile=glue('{out_dir}/tree_post_{i}.rds'), expected_colnames=NULL, filetype="rds")
             self$mut_graph = read_file(inputfile=glue('{out_dir}/mut_graph_{i}.rds'), expected_colnames=NULL, filetype="rds")
-            self$gtree = read_file(inputfile=glue('{out_dir}/tree_final_{i}.rds'), expected_colnames=tree_final_colnames, filetype="rds")
+            self$gtree = read_file(inputfile=glue('{out_dir}/tree_final_{i}.rds'), expected_colnames=NULL, filetype="rds")
             clone_post_colnames = c("cell", "clone_opt", "GT_opt", "p_opt")
             self$clone_post = read_file(inputfile=glue('{out_dir}/clone_post_{i}.tsv'), expected_colnames=clone_post_colnames, filetype="tsv")
             ## gene names are the column names
             self$gexp_roll_wide = read_file(inputfile=glue('{out_dir}/gexp_roll_wide.tsv.gz'), expected_colnames=NULL, filetype="tsv")
-            hc_colnames = c("merge", "height", "order", "labels", "method", "call", "dist.method")
-            self$hc = read_file(inputfile=glue('{out_dir}/hc.rds'), expected_colnames=hc_colnames, filetype="rds")
+            self$hc = read_hc_rds(inputfile=glue('{out_dir}/hc.rds'))
         }
     )
 )
@@ -192,20 +191,20 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
 #' @keywords internal
 check_fread_works = function(input) {
     tryCatch({
-            return(data.table::fread(input))
-        },
-        error = function(e){
-            stop(paste0("Could not read the input file ", input, " with data.table::fread(). Please check that the file is valid."))
+        return(data.table::fread(input))
+    },
+    error = function(e){
+        stop(paste0("Could not read the input file ", input, " with data.table::fread(). Please check that the file is valid."))
     })
 }
 
 #' @keywords internal
 check_rds_works = function(input) {
     tryCatch({
-            return(readRDS(input))
-        },
-        error = function(e){
-            stop(paste0("Could not read the input file ", input, " with readRDS(). Please check that the file is valid."))
+        return(readRDS(input))
+    },
+    error = function(e){
+        stop(paste0("Could not read the input file ", input, " with readRDS(). Please check that the file is valid."))
     })
 }
 
@@ -213,12 +212,12 @@ check_rds_works = function(input) {
 
 #' @keywords internal
 return_missing_columns = function(file, expected_colnames) {
-    if (!is.vector(expected_colnames) || !is.character(expected_colnames)) {
-        stop("The parameter 'expected_colnames' needs to be a character vector")
-    }
     ## if user sets expected_colnames = NULL, return NULL
     if (is.null(expected_colnames)) {
         return(NULL)
+    }
+    if (!is.vector(expected_colnames) || !is.character(expected_colnames)) {
+        stop("The parameter 'expected_colnames' needs to be a character vector")
     }
     '%ni%' <- Negate('%in%')
     if (any(expected_colnames %ni% colnames(file))) {
@@ -241,7 +240,7 @@ read_file = function(inputfile, expected_colnames, filetype="tsv") {
         file = check_rds_works(inputfile)
         ## all *rds files here should be lists
         if (!is.list(file)) {
-            stop(paste0("The file: ", inputfile, " is malformed. Please fix."))
+            stop(paste0("The file: ", inputfile, " is malformed; should be a list. Please fix."))
         }        
     } else {
         stop("The parameter 'filetype' must be either 'tsv' or 'rds'. Please fix.")
@@ -254,5 +253,22 @@ read_file = function(inputfile, expected_colnames, filetype="tsv") {
     }
 }
 
+#' @keywords internal
+read_hc_rds = function(inputfile) {
+    file = check_rds_works(inputfile)
+    if (!is.list(file)) {
+        stop(paste0("The file: ", inputfile, " is malformed; should be a list. Please fix."))
+    }        
+    hc_colnames = c("merge", "height", "order", "labels", "method", "call", "dist.method")
+    '%ni%' <- Negate('%in%')
+    if (any(hc_colnames %ni% names(file))) {
+        missing_columns = expected_colnames[!(expected_colnames %in% names(file))]
+        stop(paste0("The file ", inputfile, " appears to be malformed; expected column names: ", potential_missing_columns, ". Please fix."))
+    } else {
+        return(file)
+    }
+}
 
+
+            
 
