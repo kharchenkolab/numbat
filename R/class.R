@@ -1,5 +1,5 @@
 
-#' @title numbat R6 class
+#' @title Numbat R6 class
 #' @description used to summarize results
 #' @param out_dir the numbat run output directory
 #' @export

@@ -64,7 +64,7 @@ double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcp
 
 
 // [[Rcpp::export]]
-double forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
+Rcpp::NumericVector forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
 
     const int nrow = n;
     const int ncol = m;
@@ -101,37 +101,50 @@ double forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp
     Rcpp::NumericMatrix logbeta(nrow, ncol); // logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
     //Rcpp::NumericVector logphi2(m);  // logphi <- log(as.double(rep(1/m, m)))
     // need to clear the variable above?
-    Rcpp::NumericVector logphi(m);  // logphi <- log(as.double(rep(1/m, m)))
+    Rcpp::NumericVector logphi_(m);  // logphi <- log(as.double(rep(1/m, m)))
     for (int i = 0; i < m; i++){
-        logphi[i] = 1/m;
+        logphi_[i] = 1/m;
     }
-    double lscale2 = std::log(m);
+    double lscale_ = std::log(m);
+    /////
 
-    for (int t = n-1; t<=0; t--) {
+    for (int t = n-2; t>=0; t--) {
 
         // logphi = sapply(1:m, function(i) matrixStats::logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
-        Rcpp::NumericVector logphi_new;
+
+        Rcpp::NumericVector logphinew;
         for (int i = 0; i < m; i++) {  
-            Rcpp::NumericMatrix subset_logPi = logPi[t];   
-            Rcpp::NumericVector logphi_logprob_logPi = logphi + logprob(t, _) + subset_logPi(i, _) ;
-            logphi[i] = logSumExp(logphi_logprob_logPi);
-            logphi_new.push_back(logphi_logprob_logPi);
+            Rcpp::NumericMatrix subset_logPi = logPi[t+1];   
+            Rcpp::NumericVector logphi_logprob_logPi = logphi_ + logprob(t+1, _) + subset_logPi(i, _);
+            logphinew.push_back(logSumExp(logphi_logprob_logPi));
         }
-        logphi = logphi_new;
+        logphi_ = logphinew;
 
-        logbeta(t, _) = logphi + lscale;
 
-        double logSumPhi = logSumExp(logphi);
+        logbeta(t, _) = logphi_ + lscale;
+        
+        double logSumPhi = logSumExp(logphi_);
 
-        logphi = logphi - logSumPhi;
+        logphi_ = logphi_ - logSumPhi;
 
-        lscale = lscale + logSumPhi;
+        lscale_ = lscale_ + logSumPhi;
+        
+    }
+    
+    // p_up = exp(logalpha + logbeta - LL)[,1]
+
+    // matrix addition
+    Rcpp::NumericMatrix expoutput(nrow, ncol);
+    for (int i = 0; i < nrow; i++) {
+        for (int j = 0; j < ncol; j++) {
+            double sum = logalpha(i, j) + logbeta(i, j) - LL;
+            expoutput(i, j) = std::exp(sum);  // Rcpp::exp() works with vectors
+        }
     }
 
-    // ??
-    //p_up = exp(logalpha + logbeta - LL)[,1]   // Rcpp::NumericVector
+    // p_major/p_minor allele
+    Rcpp::NumericVector p_major = expoutput(_, 1);
 
-    // return p_up  // currently, Rcpp::NumericVector
-    return LL;
+    return p_major;
 }
 
