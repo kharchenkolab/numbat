@@ -36,10 +36,6 @@ double logSumExp(const arma::vec& x) {
 // [[Rcpp::export]]
 double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
 
-    const int nrow = n;
-    const int ncol = m;
-    Rcpp::NumericMatrix final(nrow, ncol); // logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-
     double LL = 0.0;
 
     for (int i = 0; i < n; i++) {

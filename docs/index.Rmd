@@ -27,7 +27,7 @@ library(patchwork)
 
 ```{r}
 # summarize output files into a Numbat object
-nb = numbat$new(out_dir = '~/paper_data/numbat_out/TNBC1_demo')
+nb = Numbat$new(out_dir = '~/paper_data/numbat_out/TNBC1_demo')
 # load pre-saved pagoda2 object
 pagoda = readRDS('~/paper_data/conos_objects/TNBC1.rds')
 ```
@@ -171,7 +171,7 @@ plot_sc_tree(
 ```
 The mutational history can also be represented on the clone level, where cells with the same genotype are aggregated into one node.
 ```{r, fig.width = 6, fig.height=3, dpi=300}
-nb$plot_mut_history(pal_clone = mypal)
+nb$mut_graph %>% plot_mut_history(pal_clone = mypal)
 ```
 
 

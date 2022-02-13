@@ -1101,17 +1101,9 @@ find_common_diploid = function(
         log_warn(msg)
         diploid_segs = bulks %>% pull(seg) %>% unique
         bamp = TRUE
-        tests = data.frame()
-        FC = data.frame()
-        G = NULL
-        test_dat = data.frame()
     } else if (length(segs_bal) == 1) {
         diploid_segs = segs_bal
         bamp = FALSE
-        tests = data.frame()
-        FC = data.frame()
-        G = NULL
-        test_dat = data.frame()
     } else {
         test_dat = bulks_bal %>%
             select(gene, seg, lnFC, sample) %>%
@@ -1224,7 +1216,17 @@ find_common_diploid = function(
     
     bulks = bulks %>% mutate(diploid = seg %in% diploid_segs)
     
-    return(list('bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs, 'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests, 'test_dat' = test_dat, 'FC' = FC, 'cliques' = cliques))
+    if (debug) {
+        res = list(
+            'bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs,
+            'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests,
+            'test_dat' = test_dat, 'FC' = FC, 'cliques' = cliques
+        )
+    } else {
+        res = list('bamp' = bamp, 'bulks' = bulks)
+    }
+
+    return(res)
 }
 
 #' get neutral segments from multiple pseudobulks

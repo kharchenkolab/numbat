@@ -115,7 +115,7 @@ list(cmds) %>% fwrite(script, sep = '\n')
 system(glue('chmod +x {script}'))
 
 tryCatch({
-        system2(script, stdout = glue("{outdir}/phasing.log"))
+    system2(script, stdout = glue("{outdir}/phasing.log"))
 },
 warning = function(w){
     stop('Phasing failed')
@@ -148,7 +148,7 @@ for (sample in samples) {
     DP = readMM(glue('{pu_dir}/cellSNP.tag.DP.mtx'))
 
     cell_barcodes = fread(glue('{pu_dir}/cellSNP.samples.tsv'), header = F) %>% pull(V1)
-    cell_barcodes = paste0(sample, '_', cell_barcodes)
+    # cell_barcodes = paste0(sample, '_', cell_barcodes)
 
     df = preprocess_allele(
         sample = label,
