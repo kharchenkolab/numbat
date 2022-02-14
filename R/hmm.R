@@ -214,12 +214,12 @@ forward_back_allele = function (obj, ...) {
     for (t in 1:n) {
         
         if (t > 1) {
-            logphi <- sapply(1:m, function(j) matrixStats::logSumExp(logphi + logPi[[t]][,j]))
+            logphi <- sapply(1:m, function(j) logSumExp(logphi + logPi[[t]][,j]))
         }
                           
         logphi <- logphi + logprob[t,]
                           
-        logsumphi <- matrixStats::logSumExp(logphi)
+        logsumphi <- logSumExp(logphi)
                           
         logphi <- logphi - logsumphi
                           
@@ -236,11 +236,11 @@ forward_back_allele = function (obj, ...) {
 
     for (t in seq(n-1, 1, -1)){
         
-        logphi = sapply(1:m, function(i) matrixStats::logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
+        logphi = sapply(1:m, function(i) logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
 
         logbeta[t,] <- logphi + lscale
 
-        logsumphi <- matrixStats::logSumExp(logphi)
+        logsumphi <- logSumExp(logphi)
 
         logphi <- logphi - logsumphi
 
@@ -277,6 +277,7 @@ likelihood_allele = function (obj, ...) {
     logPi <- lapply(obj$Pi, log)
         
     LL <- likelihood_allele_compute(obj, logphi, logprob, logPi, n, m)
+
     
     return(LL)
 }
@@ -509,12 +510,12 @@ forward.mv.inhom = function (obj, ...) {
     for (i in 1:n) {
         
         if (i > 1) {
-            logphi <- sapply(1:m, function(j) matrixStats::logSumExp(logphi + logPi[[i]][,j]))
+            logphi <- sapply(1:m, function(j) logSumExp(logphi + logPi[[i]][,j]))
         }
                           
         logphi <- logphi + logprob[i,]
                           
-        logSumPhi <- matrixStats::logSumExp(logphi)
+        logSumPhi <- logSumExp(logphi)
                           
         logphi <- logphi - logSumPhi
                           
