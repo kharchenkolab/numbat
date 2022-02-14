@@ -2,7 +2,7 @@
 % Please edit documentation in R/class.R
 \name{Numbat}
 \alias{Numbat}
-\title{numbat R6 class}
+\title{Numbat R6 class}
 \description{
 used to summarize results
 }
