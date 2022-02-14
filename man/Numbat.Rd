@@ -4,15 +4,49 @@
 \alias{Numbat}
 \title{Numbat R6 class}
 \description{
-used to summarize results
+Used to allow users to plot results
+}
+\section{Public fields}{
+\if{html}{\out{<div class="r6-fields">}}
+\describe{
+\item{\code{label}}{something something}
+
+\item{\code{gtf}}{something something}
+
+\item{\code{joint_post}}{something something}
+
+\item{\code{exp_post}}{something something}
+
+\item{\code{allele_post}}{something something}
+
+\item{\code{bulk_subtrees}}{something something}
+
+\item{\code{bulk_clones}}{something something}
+
+\item{\code{segs_consensus}}{something something}
+
+\item{\code{tree_post}}{something something}
+
+\item{\code{mut_graph}}{something something}
+
+\item{\code{gtree}}{something something}
+
+\item{\code{clone_post}}{something something}
+
+\item{\code{gexp_roll_wide}}{something something}
+
+\item{\code{hc}}{something something}
+}
+\if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-new}{\code{Numbat$new()}}
-\item \href{#method-fetch_results}{\code{Numbat$fetch_results()}}
 \item \href{#method-plot_phylo_heatmap}{\code{Numbat$plot_phylo_heatmap()}}
 \item \href{#method-plot_exp_roll}{\code{Numbat$plot_exp_roll()}}
+\item \href{#method-plot_mut_history}{\code{Numbat$plot_mut_history()}}
+\item \href{#method-plot_bulks}{\code{Numbat$plot_bulks()}}
 \item \href{#method-clone}{\code{Numbat$clone()}}
 }
 }
@@ -20,7 +54,7 @@ used to summarize results
 \if{html}{\out{<a id="method-new"></a>}}
 \if{latex}{\out{\hypertarget{method-new}{}}}
 \subsection{Method \code{new()}}{
-initialize numbat class
+initialize Numbat class
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Numbat$new(out_dir, i = 2, gtf = gtf_hg38, verbose = TRUE)}\if{html}{\out{</div>}}
 }
@@ -28,13 +62,13 @@ initialize numbat class
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{out_dir}}{output directory}
+\item{\code{out_dir}}{character string Output directory}
 
-\item{\code{i}}{get results from which iteration}
+\item{\code{i}}{integer Get results from which iteration (either 1 or 2) (default=2)}
 
-\item{\code{gtf}}{transcript gtf dataframe}
+\item{\code{gtf}}{transcript gtf dataframe (default=gtf_hg38)}
 
-\item{\code{verbose}}{verbosity}
+\item{\code{verbose}}{boolean Whether to output verbose results (default=TRUE)}
 }
 \if{html}{\out{</div>}}
 }
@@ -43,32 +77,10 @@ a new 'numbat' object
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-fetch_results"></a>}}
-\if{latex}{\out{\hypertarget{method-fetch_results}{}}}
-\subsection{Method \code{fetch_results()}}{
-fetch results from the numbat output directory
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Numbat$fetch_results(out_dir, i = 2)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{out_dir}}{output directory}
-
-\item{\code{i}}{get results from which iteration}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-NULL
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-plot_phylo_heatmap"></a>}}
 \if{latex}{\out{\hypertarget{method-plot_phylo_heatmap}{}}}
 \subsection{Method \code{plot_phylo_heatmap()}}{
-plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
+Plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_phylo_heatmap(
   annot = NULL,
@@ -85,21 +97,21 @@ plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{annot}}{named list of cell annotation}
+\item{\code{annot}}{named list of cell annotation (default=NULL)}
 
-\item{\code{geno_bar}}{where to show genotype annotation}
+\item{\code{geno_bar}}{where to show genotype annotation (default=NULL)}
 
-\item{\code{pal_clone}}{clone color palette}
+\item{\code{pal_clone}}{clone color palette (default=NULL)}
 
-\item{\code{p_min}}{minimum probability threshold to filter the calls}
+\item{\code{p_min}}{minimum probability threshold to filter the calls (default=0.9)}
 
-\item{\code{tip_length}}{tree tip length}
+\item{\code{tip_length}}{tree tip length (default=1)}
 
-\item{\code{branch_width}}{tree branch width}
+\item{\code{branch_width}}{tree branch width (default=0.2)}
 
-\item{\code{line_width}}{heatmap line width}
+\item{\code{line_width}}{heatmap line width (default=0.1)}
 
-\item{\code{tree_height}}{plotting height of the tree}
+\item{\code{tree_height}}{plotting height of the tree (default=1)}
 }
 \if{html}{\out{</div>}}
 }
@@ -111,7 +123,7 @@ a ggplot object
 \if{html}{\out{<a id="method-plot_exp_roll"></a>}}
 \if{latex}{\out{\hypertarget{method-plot_exp_roll}{}}}
 \subsection{Method \code{plot_exp_roll()}}{
-plot window-smoothed expression profiles
+Plot window-smoothed expression profiles
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_exp_roll(k = 3, n_sample = 300)}\if{html}{\out{</div>}}
 }
@@ -119,11 +131,67 @@ plot window-smoothed expression profiles
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{k}}{number of clusters}
+\item{\code{k}}{integer Number of clusters (default=3)}
 
-\item{\code{n_sample}}{number of cells to subsample}
+\item{\code{n_sample}}{integer Number of cells to subsample (default=300)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+a ggplot object
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plot_mut_history"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_mut_history}{}}}
+\subsection{Method \code{plot_mut_history()}}{
+Plot the mutation history of the tumor
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_mut_history(horizontal = TRUE, label = TRUE, pal_clone = NULL)}\if{html}{\out{</div>}}
+}
 
-\item{\code{hc}}{where to show clone annotation}
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{horizontal}}{horizontal layout or vertical}
+
+\item{\code{label}}{whether to label the mutations on edges}
+
+\item{\code{pal_clone}}{clone color palette}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+a ggplot object
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plot_bulks"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_bulks}{}}}
+\subsection{Method \code{plot_bulks()}}{
+Plot the bulk CNV profiles
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_bulks(
+  what = "clones",
+  min_depth = 8,
+  phi_mle = TRUE,
+  ncol = 1,
+  legend = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{what}}{whether to visualize clones or subtrees}
+
+\item{\code{min_depth}}{minimum allele coverage to filter SNPs}
+
+\item{\code{phi_mle}}{whether to plot expression fold change estimates}
+
+\item{\code{ncol}}{number of columns in the plot panel}
+
+\item{\code{legend}}{whether to display CNV state legend}
 }
 \if{html}{\out{</div>}}
 }
