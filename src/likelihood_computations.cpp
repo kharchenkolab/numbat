@@ -99,14 +99,13 @@ Rcpp::NumericVector forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector
     LL = lscale;
 
     Rcpp::NumericMatrix logbeta(nrow, ncol); // logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-    //Rcpp::NumericVector logphi2(m);  // logphi <- log(as.double(rep(1/m, m)))
-    // need to clear the variable above?
     Rcpp::NumericVector logphi_(m);  // logphi <- log(as.double(rep(1/m, m)))
     for (int i = 0; i < m; i++){
-        logphi_[i] = 1/m;
+        double mval =  static_cast<double>(m);
+        logphi_[i] = std::log(1/mval);
     }
+
     double lscale_ = std::log(m);
-    /////
 
     for (int t = n-2; t>=0; t--) {
 
@@ -120,8 +119,7 @@ Rcpp::NumericVector forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector
         }
         logphi_ = logphinew;
 
-
-        logbeta(t, _) = logphi_ + lscale;
+        logbeta(t, _) = logphi_ + lscale_;
         
         double logSumPhi = logSumExp(logphi_);
 
@@ -130,7 +128,7 @@ Rcpp::NumericVector forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector
         lscale_ = lscale_ + logSumPhi;
         
     }
-    
+
     // p_up = exp(logalpha + logbeta - LL)[,1]
 
     // matrix addition
