@@ -5,46 +5,46 @@
 Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
   public = list(
 
-    #' @field label something something
+    #' @field label sample name
     label = 'sample',
     
-    #' @field gtf something something
+    #' @field gtf transcript annotation
     gtf = NULL,
 
-    #' @field joint_post something something
+    #' @field joint_post joint posterior
     joint_post = NULL,
 
-    #' @field exp_post something something
+    #' @field exp_post expression posterior
     exp_post = NULL,
 
-    #' @field allele_post something something
+    #' @field allele_post allele posetrior
     allele_post = NULL,
 
-    #' @field bulk_subtrees something something
+    #' @field bulk_subtrees bulk profiles of lineage subtrees
     bulk_subtrees = NULL,
 
-    #' @field bulk_clones something something
+    #' @field bulk_clones bulk profiles of clones
     bulk_clones = NULL,
 
-    #' @field segs_consensus something something
+    #' @field segs_consensus consensus segments
     segs_consensus = NULL,
 
-    #' @field tree_post something something
+    #' @field tree_post tree posterior
     tree_post = NULL,
 
-    #' @field mut_graph something something
+    #' @field mut_graph mutation history graph
     mut_graph = NULL,
 
-    #' @field gtree something something
+    #' @field gtree single-cell phylogeny
     gtree = NULL,
 
-    #' @field clone_post something something
+    #' @field clone_post clone posteriors
     clone_post = NULL,
 
-    #' @field gexp_roll_wide something something
+    #' @field gexp_roll_wide smoothed expression of single cells
     gexp_roll_wide = NULL,
 
-    #' @field hc something something
+    #' @field hc hclust object for initial clustering
     hc = NULL,   
 
     #' @description initialize Numbat class
@@ -156,31 +156,30 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
         #  param: out_dir output directory
         #  param: i get results from which iteration
         #  return: NULL
-        # 
 
         fetch_results = function(out_dir, i = 2) {
-            joint_post_colnames = c("cell", "CHROM",  "seg",  "cnv_state")
-            self$joint_post = read_file(inputfile=glue('{out_dir}/joint_post_{i}.tsv'), expected_colnames=joint_post_colnames, filetype="tsv")
-            exp_post_colnames = c("seg", "cnv_state", "n", "phi_mle")
-            self$exp_post = read_file(inputfile=glue('{out_dir}/exp_post_{i}.tsv'), expected_colnames=exp_post_colnames, filetype="tsv")
-            allele_post_colnames = c("cell", "CHROM", "seg", "cnv_state", "major", "minor", "total", "MAF", "seg_start", "seg_end", "prior_loh", "prior_amp", "prior_del", "prior_bamp", "prior_bdel")
-            self$allele_post = read_file(inputfile=glue('{out_dir}/allele_post_{i}.tsv'), expected_colnames=allele_post_colnames, filetype="tsv")
-            bulk_subtrees_colnames = c("cnv_state_post", "state_post", "p_up", "haplo_post", "haplo_naive", "theta_hat_roll", "phi_mle_roll", "lambda", "gamma")
-            self$bulk_subtrees = read_file(inputfile=glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), expected_colnames=bulk_subtrees_colnames, filetype="tsv")
-            bulk_clones_colnames = c("n_genes", "n_snps", "seg_start", "seg_end", "theta_hat", "theta_mle", "theta_sigma")
-            self$bulk_clones = read_file(inputfile=glue('{out_dir}/bulk_clones_{i}.tsv.gz'), expected_colnames=bulk_clones_colnames, filetype="tsv")
-            segs_consensus_colnames = c("sample", "CHROM", "seg", "cnv_state", "cnv_state_post", "seg_start", "seg_end", "seg_start_index", 
-                                            "seg_end_index", "theta_mle", "theta_sigma", "phi_mle", "phi_sigma", "p_loh", "p_del", "p_amp",           
-                                            "p_bamp", "p_bdel", "LLR", "LLR_y", "LLR_x", "n_genes", "n_snps", "component","LLR_sample", "seg_length", "seg_cons", "n_states", "cnv_states")
-            self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i}.tsv'), expected_colnames=segs_consensus_colnames, filetype="tsv")
-            tree_post_colnames =  c("mut_nodes", "gtree", "l_matrix")
-            self$tree_post = read_file(inputfile=glue('{out_dir}/tree_post_{i}.rds'), expected_colnames=NULL, filetype="rds")
-            self$mut_graph = read_file(inputfile=glue('{out_dir}/mut_graph_{i}.rds'), expected_colnames=NULL, filetype="rds")
-            self$gtree = read_file(inputfile=glue('{out_dir}/tree_final_{i}.rds'), expected_colnames=NULL, filetype="rds")
-            clone_post_colnames = c("cell", "clone_opt", "GT_opt", "p_opt")
-            self$clone_post = read_file(inputfile=glue('{out_dir}/clone_post_{i}.tsv'), expected_colnames=clone_post_colnames, filetype="tsv")
+            # joint_post_colnames = c("cell", "CHROM",  "seg",  "cnv_state")
+            self$joint_post = read_file(inputfile=glue('{out_dir}/joint_post_{i}.tsv'), filetype="tsv")
+            # exp_post_colnames = c("seg", "cnv_state", "n", "phi_mle")
+            self$exp_post = read_file(inputfile=glue('{out_dir}/exp_post_{i}.tsv'), filetype="tsv")
+            # allele_post_colnames = c("cell", "CHROM", "seg", "cnv_state", "major", "minor", "total", "MAF", "seg_start", "seg_end", "prior_loh", "prior_amp", "prior_del", "prior_bamp", "prior_bdel")
+            self$allele_post = read_file(inputfile=glue('{out_dir}/allele_post_{i}.tsv'), filetype="tsv")
+            # bulk_subtrees_colnames = c("cnv_state_post", "state_post", "p_up", "haplo_post", "haplo_naive", "theta_hat_roll", "phi_mle_roll", "lambda", "gamma")
+            self$bulk_subtrees = read_file(inputfile=glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), filetype="tsv")
+            # bulk_clones_colnames = c("n_genes", "n_snps", "seg_start", "seg_end", "theta_hat", "theta_mle", "theta_sigma")
+            self$bulk_clones = read_file(inputfile=glue('{out_dir}/bulk_clones_{i}.tsv.gz'), filetype="tsv")
+            # segs_consensus_colnames = c("sample", "CHROM", "seg", "cnv_state", "cnv_state_post", "seg_start", "seg_end", "seg_start_index", 
+            #                                 "seg_end_index", "theta_mle", "theta_sigma", "phi_mle", "phi_sigma", "p_loh", "p_del", "p_amp",           
+            #                                 "p_bamp", "p_bdel", "LLR", "LLR_y", "LLR_x", "n_genes", "n_snps", "component","LLR_sample", "seg_length", "seg_cons", "n_states", "cnv_states")
+            self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i}.tsv'), filetype="tsv")
+            # tree_post_colnames =  c("mut_nodes", "gtree", "l_matrix")
+            self$tree_post = read_file(inputfile=glue('{out_dir}/tree_post_{i}.rds'), filetype="rds")
+            self$mut_graph = read_file(inputfile=glue('{out_dir}/mut_graph_{i}.rds'), filetype="rds")
+            self$gtree = read_file(inputfile=glue('{out_dir}/tree_final_{i}.rds'), filetype="rds")
+            # clone_post_colnames = c("cell", "clone_opt", "GT_opt", "p_opt")
+            self$clone_post = read_file(inputfile=glue('{out_dir}/clone_post_{i}.tsv'), filetype="tsv")
             ## gene names are the column names
-            self$gexp_roll_wide = read_file(inputfile=glue('{out_dir}/gexp_roll_wide.tsv.gz'), expected_colnames=NULL, filetype="tsv")
+            self$gexp_roll_wide = read_file(inputfile=glue('{out_dir}/gexp_roll_wide.tsv.gz'), filetype="tsv")
             self$hc = read_hc_rds(inputfile=glue('{out_dir}/hc.rds'))
         }
     )
@@ -211,7 +210,7 @@ check_rds_works = function(input) {
 
 
 #' @keywords internal
-return_missing_columns = function(file, expected_colnames) {
+return_missing_columns = function(file, expected_colnames = NULL) {
     ## if user sets expected_colnames = NULL, return NULL
     if (is.null(expected_colnames)) {
         return(NULL)
