@@ -90,7 +90,8 @@ optional arguments:
                        seq
   --smartseq           running with smart-seq mode
 ```
-If running with `--smartseq` mode, you may provide a file containing a list of bams (each as its own line) to `--bams` and a file containing a list of cell names (each as its own line) to `--barcodes`.
+Note: If running with `--smartseq` mode, you may provide a file containing a list of bams (each as its own line) to `--bams` and a file containing a list of cell names (each as its own line) to `--barcodes`.
+
 This will produce a file named `{sample}_allele_counts.tsv.gz` under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under `phasing/` folder and raw pileup counts under `pileup/`.
 
 2. Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.
