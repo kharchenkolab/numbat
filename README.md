@@ -77,7 +77,7 @@ optional arguments:
   --label LABEL        Individual label
   --samples SAMPLES    Sample names, comma delimited
   --bams BAMS          BAM files, one per sample, comma delimited
-  --barcodes BARCODES  Cell barcodes, one per sample, comma delimited
+  --barcodes BARCODES  Cell barcode files, one per sample, comma delimited
   --gmap GMAP          Path to genetic map provided by Eagle2
   --snpvcf SNPVCF      SNP VCF for pileup
   --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
