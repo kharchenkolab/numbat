@@ -117,7 +117,7 @@ out = run_numbat(
     max_iter = 2,
     min_LLR = 50,
     init_k = 3,
-    ncores = 20,
+    ncores = 10,
     plot = TRUE,
     out_dir = './test'
 )
