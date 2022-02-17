@@ -65,9 +65,10 @@ devtools::install_github("https://github.com/kharchenkolab/numbat")
 1. Prepare the allele data. Run the preprocessing script (`pileup_and_phase.R`) to count alleles and phase SNPs
 ```
 usage: pileup_and_phase.R [-h] --label LABEL --samples SAMPLES --bams BAMS
-                          --barcodes BARCODES --gmap GMAP --snpvcf SNPVCF
-                          --paneldir PANELDIR --outdir OUTDIR --ncores NCORES
-                          [--UMItag UMITAG] [--cellTAG CELLTAG]
+                          --barcodes BARCODES --gmap GMAP [--eagle EAGLE]
+                          --snpvcf SNPVCF --paneldir PANELDIR --outdir OUTDIR
+                          --ncores NCORES [--UMItag UMITAG]
+                          [--cellTAG CELLTAG] [--smartseq]
 
 Run SNP pileup and phasing with 1000G
 
@@ -76,8 +77,9 @@ optional arguments:
   --label LABEL        Individual label
   --samples SAMPLES    Sample names, comma delimited
   --bams BAMS          BAM files, one per sample, comma delimited
-  --barcodes BARCODES  Cell barcodes, one per sample, comma delimited
+  --barcodes BARCODES  Cell barcode files, one per sample, comma delimited
   --gmap GMAP          Path to genetic map provided by Eagle2
+  --eagle EAGLE        Path to Eagle2 binary file
   --snpvcf SNPVCF      SNP VCF for pileup
   --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
   --outdir OUTDIR      Output directory
@@ -86,7 +88,9 @@ optional arguments:
                        Slide-seq
   --cellTAG CELLTAG    Cell tag in bam. Should be CB for 10x and XC for Slide-
                        seq
+  --smartseq           running with smart-seq mode
 ```
+If running with `--smartseq` mode, you may provide a file containing a list of bams (each as its own line) to `--bams` and a file containing a list of cell names (each as its own line) to `--barcodes`.
 This will produce a file named `{sample}_allele_counts.tsv.gz` under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under `phasing/` folder and raw pileup counts under `pileup/`.
 
 2. Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.
