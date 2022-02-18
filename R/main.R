@@ -1128,12 +1128,12 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
                 ),
             allele_post %>% 
                 select(
-                    cell, seg, 
+                    cell, CHROM, seg, 
                     l11_y = l11, l20_y = l20, l10_y = l10, l21_y = l21, l31_y = l31, l22_y = l22, l00_y = l00,
                     Z_y = Z, Z_cnv_y = Z_cnv, Z_n_y = Z_n, logBF_y = logBF,
                     n_snp = total, MAF, major, total
             ),
-            c("cell", "seg")
+            c("cell", "CHROM", "seg")
         ) %>%
         mutate(cnv_state = tidyr::replace_na(cnv_state, 'loh')) %>%
         mutate_at(

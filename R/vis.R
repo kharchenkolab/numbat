@@ -1281,6 +1281,10 @@ plot_phylo_heatmap = function(
         logBF_max = 5, geno_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
         pal_annot = NULL, tree_height = 1, annot_title = 'Annotation'
     ) {
+    
+    # make sure chromosomes are in order
+    joint_post = joint_post %>% mutate(CHROM = as.integer(as.character(CHROM)))
+    segs_consensus = segs_consensus %>% mutate(CHROM = as.integer(as.character(CHROM)))
 
     # if no multi allelic CNVs
     if (!'n_states' %in% colnames(joint_post)) {

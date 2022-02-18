@@ -111,9 +111,10 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @param horizontal horizontal layout or vertical
     #' @param label whether to label the mutations on edges
     #' @param pal_clone clone color palette
+    #' @param node_id whether to label nodes with clone id
     #' @return a ggplot object
-    plot_mut_history = function(horizontal = TRUE, label = TRUE, pal_clone = NULL) {
-        p = plot_mut_history(self$mut_graph, horizontal = horizontal, label = label, pal_clone)
+    plot_mut_history = function(horizontal = TRUE, label = TRUE, pal_clone = NULL, node_id = TRUE) {
+        p = plot_mut_history(self$mut_graph, horizontal = horizontal, label = label, pal_clone = pal_clone, node_id = node_id)
         return(p)
     },
 
@@ -193,7 +194,8 @@ check_fread_works = function(input) {
         return(data.table::fread(input))
     },
     error = function(e){
-        stop(paste0("Could not read the input file ", input, " with data.table::fread(). Please check that the file is valid."))
+        message(paste0("Could not read the input file ", input, " with data.table::fread(). Please check that the file is valid."))
+        return(NULL)
     })
 }
 
@@ -203,7 +205,8 @@ check_rds_works = function(input) {
         return(readRDS(input))
     },
     error = function(e){
-        stop(paste0("Could not read the input file ", input, " with readRDS(). Please check that the file is valid."))
+        message(paste0("Could not read the input file ", input, " with readRDS(). Please check that the file is valid."))
+        return(NULL)
     })
 }
 
@@ -232,15 +235,11 @@ return_missing_columns = function(file, expected_colnames = NULL) {
 
 
 #' @keywords internal
-read_file = function(inputfile, expected_colnames, filetype="tsv") {
+read_file = function(inputfile, expected_colnames = NULL, filetype="tsv") {
     if (filetype == "tsv") {
         file = check_fread_works(inputfile)
     } else if (filetype == "rds") {
-        file = check_rds_works(inputfile)
-        ## all *rds files here should be lists
-        if (!is.list(file)) {
-            stop(paste0("The file: ", inputfile, " is malformed; should be a list. Please fix."))
-        }        
+        file = check_rds_works(inputfile)       
     } else {
         stop("The parameter 'filetype' must be either 'tsv' or 'rds'. Please fix.")
     }

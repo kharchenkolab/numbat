@@ -1272,12 +1272,30 @@ fit_bbinom = function(AD, DP) {
             -l_bbinom(AD, DP, alpha, beta)
         },
         start = c(5, 5),
-        lower = c(0, 0)
+        lower = c(0.0001, 0.0001)
     )
 
     alpha = fit@coef[1]
     beta = fit@coef[2]
     
+    return(fit)
+}
+
+#' fit gamma maximum likelihood
+#' @param AD variant allele depth
+#' @param DP total allele depth
+#' @return a fit
+#' @keywords internal
+fit_gamma = function(AD, DP) {
+
+    fit = stats4::mle(
+        minuslogl = function(gamma) {
+            -l_bbinom(AD, DP, gamma/2, gamma/2)
+        },
+        start = 1000,
+        lower = 0.0001
+    )
+
     return(fit)
 }
 
