@@ -48,6 +48,7 @@ wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
 # hg19
 wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
 ```
+**Note**: currently Numbat only supports human hg19 and hg38 reference.
 
 # Installation
 Please first install the below dependencies via `BiocManager`:
