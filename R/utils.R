@@ -332,6 +332,12 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
         stop('empty allele dataframe - check cell names')
     }
 
+    if (is(count_mat, 'Matrix')) {
+        count_mat = as.matrix(count_mat)
+    } else if (!is.matrix(count_mat)) {
+        stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
+    }
+
     Y_obs = rowSums(count_mat)
 
     fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
