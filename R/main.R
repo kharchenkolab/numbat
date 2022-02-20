@@ -52,24 +52,6 @@ run_numbat = function(
         plot = TRUE
     ) {
 
-    ######### Basic checks #########
-
-    if (is(count_mat, 'Matrix')) {
-        count_mat = as.matrix(count_mat)
-    } else if (!is.matrix(count_mat)) {
-        stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
-    }
-
-    zero_cov = colSums(count_mat) == 0
-    if (any(zero_cov)) {
-        log_warn(glue('Filtering out {sum(zero_cov)} cells with 0 coverage'))
-    }
-    count_mat = count_mat[,!zero_cov]
-
-    if (length(intersect(colnames(count_mat), df_allele$cell)) == 0){
-        stop('No matching cell names between count_mat and df_allele')
-    }
-
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
     if (file.exists(logfile)) {file.remove(logfile)}
@@ -99,6 +81,33 @@ run_numbat = function(
         glue('{ncol(count_mat)} cells'),
         sep = "\n"
     ), verbose = verbose)
+
+    ######### Basic checks #########
+
+    if (is(count_mat, 'Matrix')) {
+        count_mat = as.matrix(count_mat)
+    } else if (!is.matrix(count_mat)) {
+        stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
+    }
+
+    # filter for annotated genes
+    genes_annotated = unique(gtf_transcript$gene) %>% 
+        intersect(rownames(count_mat)) %>%
+        intersect(rownames(lambdas_ref))
+
+    count_mat = count_mat[genes_annotated,,drop=FALSE]
+    lambdas_ref = lambdas_ref[genes_annotated,,drop=FALSE]
+
+    zero_cov = names(which(colSums(count_mat) == 0))
+    if (length(zero_cov) > 0) {
+        log_message(glue('Filtering out {length(zero_cov)} cells with 0 coverage'))
+        count_mat = count_mat[,!colnames(count_mat) %in% zero_cov]
+        df_allele = df_allele %>% filter(!cell %in% zero_cov)
+    }
+
+    if (length(intersect(colnames(count_mat), unique(df_allele$cell))) == 0){
+        stop('No matching cell names between count_mat and df_allele')
+    }
 
     ######## Initialization ########
 
@@ -402,7 +411,7 @@ run_numbat = function(
     return('Success')
 }
 
-log_message = function(msg, verbose = FALSE) {
+log_message = function(msg, verbose = TRUE) {
     log_info(msg)
     if (verbose) {
         message(msg)

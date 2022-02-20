@@ -13,7 +13,7 @@ parser$add_argument('--label', type = "character", required = TRUE, help = "Indi
 parser$add_argument('--samples', type = "character", required = TRUE, help = "Sample names, comma delimited")
 parser$add_argument('--bams', type = "character", required = TRUE, help = "BAM files, one per sample, comma delimited")
 parser$add_argument('--barcodes', type = "character", required = TRUE, help = "Cell barcode files, one per sample, comma delimited")
-parser$add_argument('--gmap', type = "character", required = TRUE, help = "Path to genetic map provided by Eagle2")
+parser$add_argument('--gmap', type = "character", required = TRUE, help = "Path to genetic map provided by Eagle2 (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)")
 parser$add_argument('--eagle', type = "character", required = FALSE, default = 'eagle', help = "Path to Eagle2 binary file")
 parser$add_argument('--snpvcf', type = "character", required = TRUE, help = "SNP VCF for pileup")
 parser$add_argument('--paneldir', type = "character", required = TRUE, help = "Directory to phasing reference panel (BCF files)")
@@ -40,6 +40,8 @@ paneldir = args$paneldir
 UMItag = args$UMItag
 cellTAG = args$cellTAG
 smartseq = args$smartseq
+genome = ifelse(str_detect(args$gmap, 'hg19'), 'hg19', 'hg38')
+message(paste0('Using genome version: ', genome))
 
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
@@ -180,7 +182,7 @@ for (sample in samples) {
         AD = AD,
         DP = DP,
         barcodes = cell_barcodes,
-        gtf_transcript = gtf_hg38
+        gtf_transcript = ifelse(genome == 'hg19', gtf_hg19, gtf_hg38)
     )
     
     fwrite(df, glue('{outdir}/{sample}_allele_counts.tsv.gz'), sep = '\t')
