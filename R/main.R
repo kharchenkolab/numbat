@@ -60,10 +60,16 @@ run_numbat = function(
         stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
     }
 
+    zero_cov = colSums(count_mat) == 0
+    if (any(zero_cov)) {
+        log_warn(glue('Filtering out {sum(zero_cov)} cells with 0 coverage'))
+    }
+    count_mat = count_mat[,!zero_cov]
+
     if (length(intersect(colnames(count_mat), df_allele$cell)) == 0){
         stop('No matching cell names between count_mat and df_allele')
     }
-    
+
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
     if (file.exists(logfile)) {file.remove(logfile)}
@@ -405,14 +411,14 @@ log_message = function(msg, verbose = FALSE) {
 
 #' Run smoothed expression-based hclust
 #' @keywords internal 
-exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores = 10, verbose = T) {
+exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, k = 3, ncores = 1, verbose = T) {
 
-    Y_obs = rowSums(count_mat_obs)
+    Y_obs = rowSums(count_mat)
 
     fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
 
     gexp_norm_long = process_exp_sc(
-        count_mat_obs,
+        count_mat,
         fit$lambdas_bar,
         gtf_transcript,
         verbose = verbose
@@ -425,18 +431,17 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores 
 
     dist_mat = parallelDist::parDist(gexp_roll_wide, threads = ncores)
 
+    if (sum(is.na(dist_mat)) > 0) {
+        log_warn('NAs in distance matrix, filling with 0s. Consider filtering out cells with low coverage.')
+        dist_mat[is.na(dist_mat)] = 0
+    }
+
     log_message('running hclust...')
     hc = hclust(dist_mat, method = "ward.D2")
 
-    cell_annot = data.frame(
-        cell = colnames(count_mat_obs)
-        ) %>%
-        mutate(cluster = cutree(hc, k = k)[cell]) %>%
-        mutate(group = 'obs')
-
     nodes = get_nodes_celltree(hc, cutree(hc, k = k))
 
-    return(list('cell_annot' = cell_annot, 'nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc, 'fit' = fit))
+    return(list('nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc, 'fit' = fit, 'dist_mat' = dist_mat))
 }
 
 #' Make a group of pseudobulks
@@ -651,7 +656,7 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
         mutate(cnv_state = tidyr::replace_na(cnv_state, 'neu')) %>%
         arrange(CHROM, seg_start) %>%
         group_by(CHROM) %>%
-        mutate(seg_cons = paste0(CHROM, letters[1:n()])) %>%
+        mutate(seg_cons = paste0(CHROM, letters_all[1:n()])) %>%
         ungroup() %>%
         mutate(CHROM = factor(CHROM, 1:22)) %>%
         arrange(CHROM)

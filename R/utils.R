@@ -916,6 +916,9 @@ phi_hat_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
     )
 }
 
+#' @export
+letters_all = c(letters, paste0(letters, letters), paste0(letters, letters, letters))
+
 #' Annotate copy number segments after HMM decoding 
 #' @param bulk a pseudobulk dataframe
 #' @return a pseudobulk dataframe
@@ -927,7 +930,7 @@ annot_segs = function(bulk) {
             arrange(CHROM, snp_index) %>%
             mutate(boundary = c(0, cnv_state[2:length(cnv_state)] != cnv_state[1:(length(cnv_state)-1)])) %>%
             group_by(CHROM) %>%
-            mutate(seg = paste0(CHROM, letters[cumsum(boundary)+1])) %>%
+            mutate(seg = paste0(CHROM, letters_all[cumsum(boundary)+1])) %>%
             arrange(CHROM) %>%
             mutate(seg = factor(seg, unique(seg))) %>%
             ungroup() %>%
