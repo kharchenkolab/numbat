@@ -79,7 +79,7 @@ optional arguments:
   --samples SAMPLES    Sample names, comma delimited
   --bams BAMS          BAM files, one per sample, comma delimited
   --barcodes BARCODES  Cell barcode files, one per sample, comma delimited
-  --gmap GMAP          Path to genetic map provided by Eagle2
+  --gmap GMAP          Path to genetic map provided by Eagle2 (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)
   --snpvcf SNPVCF      SNP VCF for pileup
   --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
   --outdir OUTDIR      Output directory
