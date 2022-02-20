@@ -12,8 +12,8 @@ parser <- ArgumentParser(description='Run SNP pileup and phasing with 1000G')
 parser$add_argument('--label', type = "character", required = TRUE, help = "Individual label")
 parser$add_argument('--samples', type = "character", required = TRUE, help = "Sample names, comma delimited")
 parser$add_argument('--bams', type = "character", required = TRUE, help = "BAM files, one per sample, comma delimited")
-parser$add_argument('--barcodes', type = "character", required = TRUE, help = "Cell barcodes, one per sample, comma delimited")
-parser$add_argument('--gmap', type = "character", required = TRUE, help = "Path to genetic map provided by Eagle2")
+parser$add_argument('--barcodes', type = "character", required = TRUE, help = "Cell barcode files, one per sample, comma delimited")
+parser$add_argument('--gmap', type = "character", required = TRUE, help = "Path to genetic map provided by Eagle2 (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)")
 parser$add_argument('--eagle', type = "character", required = FALSE, default = 'eagle', help = "Path to Eagle2 binary file")
 parser$add_argument('--snpvcf', type = "character", required = TRUE, help = "SNP VCF for pileup")
 parser$add_argument('--paneldir', type = "character", required = TRUE, help = "Directory to phasing reference panel (BCF files)")
@@ -21,6 +21,7 @@ parser$add_argument('--outdir', type = "character", required = TRUE, help = "Out
 parser$add_argument('--ncores', type = "integer", required = TRUE, help = "Number of cores")
 parser$add_argument('--UMItag', default = "Auto", required = FALSE, type = "character", help = "UMI tag in bam. Should be Auto for 10x and XM for Slide-seq")
 parser$add_argument('--cellTAG', default = "CB", required = FALSE, type = "character", help = "Cell tag in bam. Should be CB for 10x and XC for Slide-seq")
+parser$add_argument('--smartseq', action = 'store_true', help = "running with smart-seq mode")
 
 args <- parser$parse_args()
 
@@ -38,6 +39,9 @@ snpvcf = args$snpvcf
 paneldir = args$paneldir
 UMItag = args$UMItag
 cellTAG = args$cellTAG
+smartseq = args$smartseq
+genome = ifelse(str_detect(args$gmap, 'hg19'), 'hg19', 'hg38')
+message(paste0('Using genome version: ', genome))
 
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
@@ -51,22 +55,43 @@ for (sample in samples) {
 
 cmds = c()
 
-for (i in 1:n_samples) {
-    
-    cmd = glue(
-        'cellsnp-lite', 
-        '-s {bams[i]}',
-        '-b {barcodes[i]}',
-        '-O {outdir}/pileup/{samples[i]}',
-        '-R {snpvcf}', 
-        '-p {ncores}',
-        '--minMAF 0',
-        '--minCOUNT 2',
-        '--UMItag {UMItag}',
-        '--cellTAG {cellTAG}',
-        .sep = ' ')
+if (smartseq) {
 
-    cmds = c(cmds, cmd)
+    cmd = glue(
+            'cellsnp-lite', 
+            '-S {bams}',
+            '-i {barcodes}',
+            '-O {outdir}/pileup/{samples}',
+            '-R {snpvcf}', 
+            '-p {ncores}',
+            '--minMAF 0',
+            '--minCOUNT 2',
+            '--UMItag None',
+            '--cellTAG None',
+            .sep = ' ')
+
+    cmds = c(cmd)
+
+} else {
+    
+    for (i in 1:n_samples) {
+        
+        cmd = glue(
+            'cellsnp-lite', 
+            '-s {bams[i]}',
+            '-b {barcodes[i]}',
+            '-O {outdir}/pileup/{samples[i]}',
+            '-R {snpvcf}', 
+            '-p {ncores}',
+            '--minMAF 0',
+            '--minCOUNT 2',
+            '--UMItag {UMItag}',
+            '--cellTAG {cellTAG}',
+            .sep = ' ')
+
+        cmds = c(cmds, cmd)
+
+    }
 
 }
 
@@ -79,7 +104,7 @@ list(cmds) %>% fwrite(script, sep = '\n')
 system(glue('chmod +x {script}'))
 
 tryCatch({
-    system(glue('sh {script} &> {outdir}/phasing.log'), intern = TRUE)
+    system(glue('sh {script} &> {outdir}/pileup.log'), intern = TRUE)
 },
 warning = function(w){
     stop('Pileup failed')
@@ -157,7 +182,7 @@ for (sample in samples) {
         AD = AD,
         DP = DP,
         barcodes = cell_barcodes,
-        gtf_transcript = gtf_hg38
+        gtf_transcript = ifelse(genome == 'hg19', gtf_hg19, gtf_hg38)
     )
     
     fwrite(df, glue('{outdir}/{sample}_allele_counts.tsv.gz'), sep = '\t')

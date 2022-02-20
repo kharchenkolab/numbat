@@ -52,18 +52,6 @@ run_numbat = function(
         plot = TRUE
     ) {
 
-    ######### Basic checks #########
-
-    if (is(count_mat, 'Matrix')) {
-        count_mat = as.matrix(count_mat)
-    } else if (!is.matrix(count_mat)) {
-        stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
-    }
-
-    if (length(intersect(colnames(count_mat), df_allele$cell)) == 0){
-        stop('No matching cell names between count_mat and df_allele')
-    }
-    
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
     if (file.exists(logfile)) {file.remove(logfile)}
@@ -93,6 +81,33 @@ run_numbat = function(
         glue('{ncol(count_mat)} cells'),
         sep = "\n"
     ), verbose = verbose)
+
+    ######### Basic checks #########
+
+    if (is(count_mat, 'Matrix')) {
+        count_mat = as.matrix(count_mat)
+    } else if (!is.matrix(count_mat)) {
+        stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
+    }
+
+    # filter for annotated genes
+    genes_annotated = unique(gtf_transcript$gene) %>% 
+        intersect(rownames(count_mat)) %>%
+        intersect(rownames(lambdas_ref))
+
+    count_mat = count_mat[genes_annotated,,drop=FALSE]
+    lambdas_ref = lambdas_ref[genes_annotated,,drop=FALSE]
+
+    zero_cov = names(which(colSums(count_mat) == 0))
+    if (length(zero_cov) > 0) {
+        log_message(glue('Filtering out {length(zero_cov)} cells with 0 coverage'))
+        count_mat = count_mat[,!colnames(count_mat) %in% zero_cov]
+        df_allele = df_allele %>% filter(!cell %in% zero_cov)
+    }
+
+    if (length(intersect(colnames(count_mat), unique(df_allele$cell))) == 0){
+        stop('No matching cell names between count_mat and df_allele')
+    }
 
     ######## Initialization ########
 
@@ -396,7 +411,7 @@ run_numbat = function(
     return('Success')
 }
 
-log_message = function(msg, verbose = FALSE) {
+log_message = function(msg, verbose = TRUE) {
     log_info(msg)
     if (verbose) {
         message(msg)
@@ -405,14 +420,14 @@ log_message = function(msg, verbose = FALSE) {
 
 #' Run smoothed expression-based hclust
 #' @keywords internal 
-exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores = 10, verbose = T) {
+exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, k = 3, ncores = 1, verbose = T) {
 
-    Y_obs = rowSums(count_mat_obs)
+    Y_obs = rowSums(count_mat)
 
     fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
 
     gexp_norm_long = process_exp_sc(
-        count_mat_obs,
+        count_mat,
         fit$lambdas_bar,
         gtf_transcript,
         verbose = verbose
@@ -425,18 +440,17 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores 
 
     dist_mat = parallelDist::parDist(gexp_roll_wide, threads = ncores)
 
+    if (sum(is.na(dist_mat)) > 0) {
+        log_warn('NAs in distance matrix, filling with 0s. Consider filtering out cells with low coverage.')
+        dist_mat[is.na(dist_mat)] = 0
+    }
+
     log_message('running hclust...')
     hc = hclust(dist_mat, method = "ward.D2")
 
-    cell_annot = data.frame(
-        cell = colnames(count_mat_obs)
-        ) %>%
-        mutate(cluster = cutree(hc, k = k)[cell]) %>%
-        mutate(group = 'obs')
-
     nodes = get_nodes_celltree(hc, cutree(hc, k = k))
 
-    return(list('cell_annot' = cell_annot, 'nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc, 'fit' = fit))
+    return(list('nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc, 'fit' = fit, 'dist_mat' = dist_mat))
 }
 
 #' Make a group of pseudobulks
@@ -651,7 +665,7 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
         mutate(cnv_state = tidyr::replace_na(cnv_state, 'neu')) %>%
         arrange(CHROM, seg_start) %>%
         group_by(CHROM) %>%
-        mutate(seg_cons = paste0(CHROM, letters[1:n()])) %>%
+        mutate(seg_cons = paste0(CHROM, letters_all[1:n()])) %>%
         ungroup() %>%
         mutate(CHROM = factor(CHROM, 1:22)) %>%
         arrange(CHROM)
@@ -1128,12 +1142,12 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
                 ),
             allele_post %>% 
                 select(
-                    cell, seg, 
+                    cell, CHROM, seg, 
                     l11_y = l11, l20_y = l20, l10_y = l10, l21_y = l21, l31_y = l31, l22_y = l22, l00_y = l00,
                     Z_y = Z, Z_cnv_y = Z_cnv, Z_n_y = Z_n, logBF_y = logBF,
                     n_snp = total, MAF, major, total
             ),
-            c("cell", "seg")
+            c("cell", "CHROM", "seg")
         ) %>%
         mutate(cnv_state = tidyr::replace_na(cnv_state, 'loh')) %>%
         mutate_at(

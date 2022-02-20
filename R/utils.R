@@ -332,6 +332,12 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
         stop('empty allele dataframe - check cell names')
     }
 
+    if (is(count_mat, 'Matrix')) {
+        count_mat = as.matrix(count_mat)
+    } else if (!is.matrix(count_mat)) {
+        stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
+    }
+
     Y_obs = rowSums(count_mat)
 
     fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
@@ -910,6 +916,9 @@ phi_hat_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
     )
 }
 
+#' @export
+letters_all = c(letters, paste0(letters, letters), paste0(letters, letters, letters))
+
 #' Annotate copy number segments after HMM decoding 
 #' @param bulk a pseudobulk dataframe
 #' @return a pseudobulk dataframe
@@ -921,7 +930,7 @@ annot_segs = function(bulk) {
             arrange(CHROM, snp_index) %>%
             mutate(boundary = c(0, cnv_state[2:length(cnv_state)] != cnv_state[1:(length(cnv_state)-1)])) %>%
             group_by(CHROM) %>%
-            mutate(seg = paste0(CHROM, letters[cumsum(boundary)+1])) %>%
+            mutate(seg = paste0(CHROM, letters_all[cumsum(boundary)+1])) %>%
             arrange(CHROM) %>%
             mutate(seg = factor(seg, unique(seg))) %>%
             ungroup() %>%
@@ -1272,12 +1281,30 @@ fit_bbinom = function(AD, DP) {
             -l_bbinom(AD, DP, alpha, beta)
         },
         start = c(5, 5),
-        lower = c(0, 0)
+        lower = c(0.0001, 0.0001)
     )
 
     alpha = fit@coef[1]
     beta = fit@coef[2]
     
+    return(fit)
+}
+
+#' fit gamma maximum likelihood
+#' @param AD variant allele depth
+#' @param DP total allele depth
+#' @return a fit
+#' @keywords internal
+fit_gamma = function(AD, DP) {
+
+    fit = stats4::mle(
+        minuslogl = function(gamma) {
+            -l_bbinom(AD, DP, gamma/2, gamma/2)
+        },
+        start = 1000,
+        lower = 0.0001
+    )
+
     return(fit)
 }
 

@@ -111,7 +111,7 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 20, ve
         runtime = proc.time() - ptm
         
         if (verbose) {
-            msg = glue('Iter {i} {max_current} {signif(unname(runtime[3]),2)}')
+            msg = glue('Iter {i} {max_current} {signif(unname(runtime[3]),2)}s')
             message(msg)
             log_info(msg)
         }
