@@ -137,3 +137,33 @@ colnames(ref_hca) = unname(sapply(colnames(ref_hca), function(x){rename_dict[x]}
 
 ref_hca_counts = ref$count_mat[,names(rename_dict)]
 colnames(ref_hca_counts) = unname(sapply(colnames(ref_hca_counts), function(x){rename_dict[x]}))
+
+
+## Data used for unit tests
+
+### pre_likelihood_hmm
+### Input to likelihood_allele() for unit tests
+
+### Created by running the example with the following line changed
+### in the function calc_allele_lik():
+###
+### calc_allele_lik = function (pAD, DP, p_s, theta, gamma = 20) {
+###     hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma)
+###     saveRDS(hmm, "pre_likelihood_hmm.rds")
+###     LL = likelihood_allele(hmm)
+###     return(LL)
+### }
+
+### The example run to create this RDS file was the following:
+### """
+### library(numbat)
+### 
+### bulk = get_bulk(
+###      count_mat = count_mat_ATC2,
+###      df_allele = df_allele_ATC2,
+###      lambdas_ref = ref_hca,
+###      gtf_transcript = gtf_hg38,
+###      genetic_map = genetic_map_hg38)
+### 
+### bulk = analyze_bulk(bulk, t = 1e-5)
+### """
