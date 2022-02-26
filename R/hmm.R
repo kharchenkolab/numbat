@@ -207,49 +207,13 @@ forward_back_allele = function (obj, ...) {
     })
         
     logphi <- log(as.double(obj$delta))
-    logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-    lscale <- as.double(0)
-    logPi <- lapply(obj$Pi, log)
     
-    for (t in 1:n) {
+
+    logPi <- lapply(obj$Pi, log)
         
-        if (t > 1) {
-            logphi <- sapply(1:m, function(j) logSumExp(logphi + logPi[[t]][,j]))
-        }
-                          
-        logphi <- logphi + logprob[t,]
-                          
-        logsumphi <- logSumExp(logphi)
-                          
-        logphi <- logphi - logsumphi
-                          
-        lscale <- lscale + logsumphi
-                          
-        logalpha[t,] <- logphi + lscale
-                          
-        LL <- lscale
-    }
+    p_major = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
 
-    logbeta <- matrix(as.double(rep(0, m * n)), nrow = n)
-    logphi <- log(as.double(rep(1/m, m)))
-    lscale <- as.double(log(m))
-
-    for (t in seq(n-1, 1, -1)){
-        
-        logphi = sapply(1:m, function(i) logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
-
-        logbeta[t,] <- logphi + lscale
-
-        logsumphi <- logSumExp(logphi)
-
-        logphi <- logphi - logsumphi
-
-        lscale <- lscale + logsumphi
-    }
-
-    p_up = exp(logalpha + logbeta - LL)[,1]
-
-    return(p_up)
+    return(p_major)
 }
 
 # only compute total log likelihood
