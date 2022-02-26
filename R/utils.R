@@ -161,6 +161,7 @@ process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, 
     return(gexp.norm.long)
 }
 
+
 #' filter for mutually expressed genes
 #' @param count_mat observed gene count matrices
 #' @param lambdas_ref expression values in reference profile
