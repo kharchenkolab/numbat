@@ -435,7 +435,6 @@ exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, k 
 
     Y_obs = rowSums(count_mat)
 
-    # fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
     if (is.null(sc_refs)) {
         sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
     }

@@ -325,10 +325,17 @@ combine_bulk = function(allele_bulk, exp_bulk) {
 
 #' Get average reference expressio profile based on single-cell ref choices
 #' @keywords internal
-get_lambdas_bar = function(lambdas_ref, sc_refs) {
+get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
+
     w = sapply(colnames(lambdas_ref), function(ref){sum(sc_refs == ref)})
     w = w/sum(w)
     lambdas_bar = lambdas_ref %*% w %>% {setNames(as.vector(.), rownames(.))}
+    
+    if (verbose) {
+        log_message('Fitted reference proportions:')
+        log_message(paste0(paste0(names(w), ':', signif(w, 2)), collapse = ','))
+    }
+
     return(lambdas_bar)
 }
 
@@ -354,17 +361,10 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
         stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
     }
 
-    # Y_obs = rowSums(count_mat)
-    # fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
-    # if (verbose) {
-    #     message('Fitted reference proportions:')
-    #     message(paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
-    # }
-
     if (is.null(sc_refs)) {
         sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
     }
-    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs)
+    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs[colnames(count_mat)], verbose = verbose)
     
     exp_bulk = get_exp_bulk(
             count_mat,
