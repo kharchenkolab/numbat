@@ -7,6 +7,11 @@
 #' @return best references for each cell
 #' @export
 choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
+
+    if (ncol(lambdas_ref) == 1) {
+        best_refs = setNames(rep('ref', length(cells)), cells)
+        return(best_refs)
+    }
     
     genes_annotated = gtf_transcript %>% 
         pull(gene) %>% 
@@ -48,7 +53,7 @@ aggregate_counts = function(count_mat, cell_annot, verbose = T) {
     cell_dict = cell_dict[cells]
 
     if (verbose) {
-        message(table(cell_dict))
+        print(table(cell_dict))
     }
    
     M = model.matrix(~ 0 + cell_dict) %>% magrittr::set_colnames(levels(cell_dict))
@@ -155,6 +160,7 @@ process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, 
     
     return(gexp.norm.long)
 }
+
 
 #' filter for mutually expressed genes
 #' @param count_mat observed gene count matrices
@@ -318,15 +324,33 @@ combine_bulk = function(allele_bulk, exp_bulk) {
     
 }
 
+#' Get average reference expressio profile based on single-cell ref choices
+#' @keywords internal
+get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
+
+    w = sapply(colnames(lambdas_ref), function(ref){sum(sc_refs == ref)})
+    w = w/sum(w)
+    lambdas_bar = lambdas_ref %*% w %>% {setNames(as.vector(.), rownames(.))}
+    
+    if (verbose) {
+        log_message('Fitted reference proportions:')
+        log_message(paste0(paste0(names(w), ':', signif(w, 2)), collapse = ','))
+    }
+
+    return(lambdas_bar)
+}
+
 #' Aggregate into combined bulk expression and allele profile
 #'
 #' @param count_mat observed gene count matrices
 #' @param lambdas_ref expression values in reference profile
 #' @param df_allele allele dataframe
 #' @param gtf_transcript transcript dataframe
+#' @param genetic_map genetic map
+#' @param sc_refs single cell reference choices
 #' @return a dataframe of bulk gene expression and allele profile
 #' @export
-get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, min_depth = 0, lambda = 2, verbose = TRUE) {
+get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, sc_refs = NULL, min_depth = 0, lambda = 1, verbose = TRUE) {
 
     if (nrow(df_allele) == 0) {
         stop('empty allele dataframe - check cell names')
@@ -338,23 +362,18 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
         stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
     }
 
-    Y_obs = rowSums(count_mat)
-
-    fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
-
-    if (verbose) {
-        message('Fitted reference proportions:')
-        message(paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
+    if (is.null(sc_refs)) {
+        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
     }
+    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs[colnames(count_mat)], verbose = verbose)
     
     exp_bulk = get_exp_bulk(
             count_mat,
-            fit$lambdas_bar,
+            lambdas_bar,
             gtf_transcript,
             verbose = verbose
         ) %>%
-        filter((logFC < 5 & logFC > -5) | Y_obs == 0) %>%
-        mutate(w = paste0(paste0(names(fit$w), ':', signif(fit$w, 2)), collapse = ','))
+        filter((logFC < 5 & logFC > -5) | Y_obs == 0)
 
     allele_bulk = get_allele_bulk(
         df_allele,
@@ -535,6 +554,10 @@ analyze_bulk = function(
     
     if (!is.numeric(t)) {
         stop('transition probability is not numeric')
+    }
+
+    if ('gamma' %in% colnames(bulk)) {
+        bulk = bulk %>% select(-gamma)
     }
 
     # update transition probablity

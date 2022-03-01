@@ -674,6 +674,10 @@ plot_bulks = function(
     dot_size = 0.8, dot_alpha = 0.5, ncol = 1, legend = FALSE, title = TRUE
     ) {
 
+    if (!'sample' %in% colnames(bulk_all)) {
+        bulk_all$sample = 1
+    }
+
     options(warn = -1)
     plot_list = bulk_all %>%
         split(.$sample) %>%

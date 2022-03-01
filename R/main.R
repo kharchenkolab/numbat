@@ -46,9 +46,9 @@ run_numbat = function(
         count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, 
         out_dir = './', max_iter = 2, t = 1e-5, gamma = 20, min_LLR = 50, alpha = 1e-4, eps = 1e-5, max_entropy = 0.6, 
         init_k = 3, sample_size = 1e5, min_cells = 10, max_cost = ncol(count_mat) * 0.3, 
-        min_depth = 0, common_diploid = TRUE, ncores = 30, exp_model = 'lnpois', 
+        min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, ncores = 30, exp_model = 'lnpois', 
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        exclude_normal = FALSE, skip_nj = FALSE, multi_allelic = TRUE,
+        exclude_normal = FALSE, skip_nj = FALSE, multi_allelic = FALSE, multi_p_min = 0.995,
         plot = TRUE
     ) {
 
@@ -71,6 +71,7 @@ run_numbat = function(
         glue('use_loh = {ifelse(is.null(use_loh), "auto", use_loh)}'),
         glue('multi_allelic = {multi_allelic}'),
         glue('min_LLR = {min_LLR}'),
+        glue('min_overlap = {min_overlap}'),
         glue('max_entropy = {max_entropy}'),
         glue('skip_nj = {skip_nj}'),
         glue('exclude_normal = {exclude_normal}'),
@@ -109,15 +110,23 @@ run_numbat = function(
         stop('No matching cell names between count_mat and df_allele')
     }
 
+    if ((!is.matrix(lambdas_ref))) {
+        lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
+    }
+
     ######## Initialization ########
+
+    sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+    saveRDS(sc_refs, glue('{out_dir}/sc_refs.rds'))
 
     log_message('Approximating initial clusters using smoothed expression ..', verbose = verbose)
 
     clust = exp_hclust(
-        count_mat,
+        count_mat = count_mat,
         lambdas_ref = lambdas_ref,
-        gtf_transcript,
+        gtf_transcript = gtf_transcript,
         k = init_k,
+        sc_refs = sc_refs,
         ncores = ncores
     )
 
@@ -151,6 +160,7 @@ run_numbat = function(
                 gtf_transcript = gtf_transcript,
                 genetic_map = genetic_map,
                 min_depth = min_depth,
+                sc_refs = sc_refs,
                 ncores = ncores)
 
         bulk_subtrees = bulk_subtrees %>%
@@ -166,7 +176,7 @@ run_numbat = function(
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
 
         # find consensus CNVs
-        segs_consensus = get_segs_consensus(bulk_subtrees)
+        segs_consensus = get_segs_consensus(bulk_subtrees, min_overlap = min_overlap)
 
         # retest consensus CNVs on clones
         bulk_clones = make_group_bulks(
@@ -177,6 +187,7 @@ run_numbat = function(
                 gtf_transcript = gtf_transcript,
                 genetic_map = genetic_map,
                 min_depth = min_depth,
+                sc_refs = sc_refs,
                 ncores = ncores)
 
         bulk_clones = bulk_clones %>% 
@@ -201,7 +212,7 @@ run_numbat = function(
 
         # test for multi-allelic CNVs
         if (multi_allelic) {
-            segs_consensus = test_multi_allelic(bulk_clones, segs_consensus, min_LLR = min_LLR)
+            segs_consensus = test_multi_allelic(bulk_clones, segs_consensus, min_LLR = min_LLR, p_min = multi_p_min)
         }
 
         fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
@@ -420,15 +431,18 @@ log_message = function(msg, verbose = TRUE) {
 
 #' Run smoothed expression-based hclust
 #' @keywords internal 
-exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, k = 3, ncores = 1, verbose = T) {
+exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, k = 3, ncores = 1, verbose = T) {
 
     Y_obs = rowSums(count_mat)
 
-    fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
+    if (is.null(sc_refs)) {
+        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+    }
+    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs)
 
     gexp_norm_long = process_exp_sc(
         count_mat,
-        fit$lambdas_bar,
+        lambdas_bar,
         gtf_transcript,
         verbose = verbose
     )
@@ -450,18 +464,22 @@ exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, k = 3, ncores = 1,
 
     nodes = get_nodes_celltree(hc, cutree(hc, k = k))
 
-    return(list('nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc, 'fit' = fit, 'dist_mat' = dist_mat))
+    return(list('nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc, 'dist_mat' = dist_mat))
 }
 
 #' Make a group of pseudobulks
 #' @keywords internal 
-make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_transcript, genetic_map, min_depth = 0, ncores = NULL) {
+make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_transcript, genetic_map, min_depth = 0, sc_refs = NULL, ncores = NULL) {
     
     if (length(groups) == 0) {
         return(data.frame())
     }
 
     ncores = ifelse(is.null(ncores), length(groups), ncores)
+
+    if (is.null(sc_refs)) {
+        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+    }
 
     results = mclapply(
             groups,
@@ -473,7 +491,8 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_trans
                     lambdas_ref = lambdas_ref,
                     gtf_transcript = gtf_transcript,
                     genetic_map = genetic_map,
-                    min_depth = min_depth
+                    min_depth = min_depth,
+                    sc_refs = sc_refs
                 ) %>%
                 mutate(
                     n_cells = g$size,
@@ -928,7 +947,7 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 #' @param lambdas_ref reference expression matrix
 #' @return expression posterior datatframe
 #' @keywords internal
-get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref = NULL, diploid_chroms = NULL, use_loh = NULL, ncores = 30, verbose = TRUE, debug = F) {
+get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref, sc_refs = NULL, diploid_chroms = NULL, use_loh = NULL, ncores = 30, verbose = TRUE, debug = F) {
 
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf_transcript) 
 
@@ -945,11 +964,8 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
     
     cells = colnames(count_mat)
 
-    if ((!is.matrix(lambdas_ref))) {
-        lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
-        best_refs = setNames(rep('ref', length(cells)), cells)
-    } else {
-        best_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+    if (is.null(sc_refs)) {
+        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
     }
 
     results = mclapply(
@@ -957,7 +973,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
         mc.cores = ncores,
         function(cell) {
    
-            ref = best_refs[cell]
+            ref = sc_refs[cell]
 
             exp_sc = exp_sc[,c('gene', 'seg', 'CHROM', 'cnv_state', 'seg_start', 'seg_end', cell)] %>%
                 rename(Y_obs = ncol(.))
@@ -1010,7 +1026,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref =
         mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
         mutate(seg_label = factor(seg_label, unique(seg_label)))
     
-    return(list('exp_post' = exp_post, 'exp_sc' = exp_sc, 'best_refs' = best_refs))
+    return(list('exp_post' = exp_post, 'exp_sc' = exp_sc))
 }
 
 #' do bayesian averaging to get posteriors
