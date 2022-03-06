@@ -48,7 +48,7 @@ run_numbat = function(
         init_k = 3, sample_size = 1e5, min_cells = 10, max_cost = ncol(count_mat) * 0.3, 
         min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, ncores = 30, exp_model = 'lnpois', 
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        exclude_normal = FALSE, skip_nj = FALSE, multi_allelic = FALSE, multi_p_min = 0.995,
+        exclude_normal = FALSE, skip_nj = FALSE, multi_allelic = FALSE, p_multi = 0.995,
         plot = TRUE
     ) {
 
@@ -212,7 +212,7 @@ run_numbat = function(
 
         # test for multi-allelic CNVs
         if (multi_allelic) {
-            segs_consensus = test_multi_allelic(bulk_clones, segs_consensus, min_LLR = min_LLR, p_min = multi_p_min)
+            segs_consensus = test_multi_allelic(bulk_clones, segs_consensus, min_LLR = min_LLR, p_min = p_multi)
         }
 
         fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')

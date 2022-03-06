@@ -149,6 +149,12 @@ warning = function(w){
 ## Generate allele count dataframe
 cat('Generating allele count dataframes\n')
 
+if (genome == 'hg19') {
+    gtf_transcript = gtf_hg19
+} else {
+    gtf_transcript = gtf_hg38
+}
+
 for (sample in samples) {
     
     # read in phased VCF
@@ -173,7 +179,6 @@ for (sample in samples) {
     DP = readMM(glue('{pu_dir}/cellSNP.tag.DP.mtx'))
 
     cell_barcodes = fread(glue('{pu_dir}/cellSNP.samples.tsv'), header = F) %>% pull(V1)
-    # cell_barcodes = paste0(sample, '_', cell_barcodes)
 
     df = preprocess_allele(
         sample = label,
@@ -182,7 +187,7 @@ for (sample in samples) {
         AD = AD,
         DP = DP,
         barcodes = cell_barcodes,
-        gtf_transcript = ifelse(genome == 'hg19', gtf_hg19, gtf_hg38)
+        gtf_transcript = gtf_transcript
     )
     
     fwrite(df, glue('{outdir}/{sample}_allele_counts.tsv.gz'), sep = '\t')
