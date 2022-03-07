@@ -96,7 +96,7 @@ This will produce a file named `{sample}_allele_counts.tsv.gz` under the specifi
 3. Prepare the expression reference, which is a gene by cell type matrix of normalized expression values (not raw counts!). For a quick start, you may use a our HCA collection (`ref_hca`) that ships with the package. If you have matched normal cells (ideally, of various cell type) from the same patient or dataset and would like to make your own references, you may use this utility function:
 ```
 # count_mat is a gene x cell raw count matrices
-# cell_annot is a dataframe with columns "gene" and "cell_type"
+# cell_annot is a dataframe with columns "cell" and "cell_type"
 ref_internal = aggregate_counts(count_mat, cell_annot)$exp_mat
 ```
   
