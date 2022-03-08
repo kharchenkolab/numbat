@@ -60,7 +60,10 @@ Then install the numbat R package via:
 ```
 devtools::install_github("https://github.com/kharchenkolab/numbat")
 ```
-
+To get the most recent updates, you can install the development version:
+```
+devtools::install_github("https://github.com/kharchenkolab/Numbat/tree/devel")
+```
 # Preparing data
 1. Prepare the allele data. Run the preprocessing script (`pileup_and_phase.R`) to count alleles and phase SNPs
 ```
