@@ -433,8 +433,6 @@ log_message = function(msg, verbose = TRUE) {
 #' @keywords internal 
 exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, k = 3, ncores = 1, verbose = T) {
 
-    Y_obs = rowSums(count_mat)
-
     if (is.null(sc_refs)) {
         sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
     }

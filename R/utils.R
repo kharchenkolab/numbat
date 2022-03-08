@@ -9,7 +9,9 @@
 choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
 
     if (ncol(lambdas_ref) == 1) {
-        best_refs = setNames(rep('ref', length(cells)), cells)
+        ref_name = colnames(lambdas_ref)
+        cells = colnames(count_mat)
+        best_refs = setNames(rep(ref_name, length(cells)), cells)
         return(best_refs)
     }
     
