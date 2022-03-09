@@ -12,6 +12,7 @@ make_group_bulks(
   gtf_transcript,
   genetic_map,
   min_depth = 0,
+  sc_refs = NULL,
   ncores = NULL
 )
 }

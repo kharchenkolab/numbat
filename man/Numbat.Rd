@@ -9,33 +9,33 @@ Used to allow users to plot results
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{label}}{something something}
+\item{\code{label}}{sample name}
 
-\item{\code{gtf}}{something something}
+\item{\code{gtf}}{transcript annotation}
 
-\item{\code{joint_post}}{something something}
+\item{\code{joint_post}}{joint posterior}
 
-\item{\code{exp_post}}{something something}
+\item{\code{exp_post}}{expression posterior}
 
-\item{\code{allele_post}}{something something}
+\item{\code{allele_post}}{allele posetrior}
 
-\item{\code{bulk_subtrees}}{something something}
+\item{\code{bulk_subtrees}}{bulk profiles of lineage subtrees}
 
-\item{\code{bulk_clones}}{something something}
+\item{\code{bulk_clones}}{bulk profiles of clones}
 
-\item{\code{segs_consensus}}{something something}
+\item{\code{segs_consensus}}{consensus segments}
 
-\item{\code{tree_post}}{something something}
+\item{\code{tree_post}}{tree posterior}
 
-\item{\code{mut_graph}}{something something}
+\item{\code{mut_graph}}{mutation history graph}
 
-\item{\code{gtree}}{something something}
+\item{\code{gtree}}{single-cell phylogeny}
 
-\item{\code{clone_post}}{something something}
+\item{\code{clone_post}}{clone posteriors}
 
-\item{\code{gexp_roll_wide}}{something something}
+\item{\code{gexp_roll_wide}}{smoothed expression of single cells}
 
-\item{\code{hc}}{something something}
+\item{\code{hc}}{hclust object for initial clustering}
 }
 \if{html}{\out{</div>}}
 }
@@ -147,7 +147,12 @@ a ggplot object
 \subsection{Method \code{plot_mut_history()}}{
 Plot the mutation history of the tumor
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_mut_history(horizontal = TRUE, label = TRUE, pal_clone = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_mut_history(
+  horizontal = TRUE,
+  label = TRUE,
+  pal_clone = NULL,
+  node_id = TRUE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -158,6 +163,8 @@ Plot the mutation history of the tumor
 \item{\code{label}}{whether to label the mutations on edges}
 
 \item{\code{pal_clone}}{clone color palette}
+
+\item{\code{node_id}}{whether to label nodes with clone id}
 }
 \if{html}{\out{</div>}}
 }

@@ -24,6 +24,7 @@ run_numbat(
   max_cost = ncol(count_mat) * 0.3,
   min_depth = 0,
   common_diploid = TRUE,
+  min_overlap = 0.45,
   ncores = 30,
   exp_model = "lnpois",
   verbose = TRUE,
@@ -31,7 +32,8 @@ run_numbat(
   use_loh = NULL,
   exclude_normal = FALSE,
   skip_nj = FALSE,
-  multi_allelic = TRUE,
+  multi_allelic = FALSE,
+  p_multi = 0.995,
   plot = TRUE
 )
 }

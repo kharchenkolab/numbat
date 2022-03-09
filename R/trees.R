@@ -67,7 +67,7 @@ score_tree = function(tree, P, get_l_matrix = FALSE) {
 #' @param ncores number of cores to use
 #' @return a list of trees corresponding to the rearrangement steps
 #' @export
-perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 20, verbose = TRUE) {
+perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, verbose = TRUE) {
 
     P = as.matrix(P)
     

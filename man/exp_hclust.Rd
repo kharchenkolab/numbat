@@ -5,11 +5,12 @@
 \title{Run smoothed expression-based hclust}
 \usage{
 exp_hclust(
-  count_mat_obs,
+  count_mat,
   lambdas_ref,
   gtf_transcript,
-  k = 5,
-  ncores = 10,
+  sc_refs = NULL,
+  k = 3,
+  ncores = 1,
   verbose = T
 )
 }

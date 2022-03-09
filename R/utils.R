@@ -523,7 +523,7 @@ fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
     if (file.exists(f)) {
         res[['clone_post']] = fread(f)
     } else {
-        res[['clone_post']] = cell_to_clone(res$gtree, res$exp_post, res$allele_post)
+        res[['clone_post']] = get_clone_post(res$gtree, res$exp_post, res$allele_post)
     }
 
     return(res)
@@ -618,13 +618,9 @@ analyze_bulk = function(
                 )
             ) %>% 
             mutate(cnv_state = str_remove(state, '_down|_up')) %>%
-            annot_segs %>%
-            smooth_segs %>%
-            annot_segs %>%
-            ungroup() %>%
-            group_by(CHROM) %>%
-            mutate(seg_start = min(POS), seg_end = max(POS)) %>%
-            ungroup()
+            annot_segs() %>%
+            smooth_segs() %>%
+            annot_segs()
     }
 
     # rolling theta estimates
@@ -640,8 +636,10 @@ analyze_bulk = function(
         segs_post = retest_cnv(bulk, gamma = gamma, exp_model = 'lnpois', allele_only = allele_only)
         
         bulk = bulk %>% 
-            select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM')])) %>%
-            left_join(segs_post, by = c('seg', 'CHROM')) %>%
+            select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM', 'seg_start', 'seg_end')])) %>%
+            left_join(
+                segs_post, by = c('seg', 'CHROM', 'seg_start', 'seg_end')
+            ) %>%
             mutate(
                 cnv_state_post = tidyr::replace_na(cnv_state_post, 'neu'),
                 cnv_state = tidyr::replace_na(cnv_state, 'neu')

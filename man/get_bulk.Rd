@@ -10,8 +10,9 @@ get_bulk(
   df_allele,
   gtf_transcript,
   genetic_map,
+  sc_refs = NULL,
   min_depth = 0,
-  lambda = 2,
+  lambda = 1,
   verbose = TRUE
 )
 }
@@ -23,6 +24,10 @@ get_bulk(
 \item{df_allele}{allele dataframe}
 
 \item{gtf_transcript}{transcript dataframe}
+
+\item{genetic_map}{genetic map}
+
+\item{sc_refs}{single cell reference choices}
 }
 \value{
 a dataframe of bulk gene expression and allele profile

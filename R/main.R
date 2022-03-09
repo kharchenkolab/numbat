@@ -46,7 +46,7 @@ run_numbat = function(
         count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, 
         out_dir = './', max_iter = 2, t = 1e-5, gamma = 20, min_LLR = 50, alpha = 1e-4, eps = 1e-5, max_entropy = 0.6, 
         init_k = 3, sample_size = 1e5, min_cells = 10, max_cost = ncol(count_mat) * 0.3, 
-        min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, ncores = 30, exp_model = 'lnpois', 
+        min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, ncores = 1, ncores_nni = 1, exp_model = 'lnpois', 
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
         exclude_normal = FALSE, skip_nj = FALSE, multi_allelic = FALSE, p_multi = 0.995,
         plot = TRUE
@@ -349,7 +349,7 @@ run_numbat = function(
         }
         
         # maximum likelihood tree search with NNI
-        tree_list = perform_nni(tree_init, P, ncores = ncores, eps = eps)
+        tree_list = perform_nni(tree_init, P, ncores = ncores_nni, eps = eps)
         saveRDS(tree_list, glue('{out_dir}/tree_list_{i}.rds'))
 
         tree_post = get_tree_post(tree_list[[length(tree_list)]], P)
@@ -370,7 +370,7 @@ run_numbat = function(
         saveRDS(gtree, glue('{out_dir}/tree_final_{i}.rds'))
         saveRDS(G_m, glue('{out_dir}/mut_graph_{i}.rds'))
 
-        clone_post = cell_to_clone(gtree, exp_post, allele_post)
+        clone_post = get_clone_post(gtree, exp_post, allele_post)
 
         fwrite(clone_post, glue('{out_dir}/clone_post_{i}.tsv'), sep = '\t')
 
@@ -696,7 +696,7 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
 #' @param allele_post allele posteriors
 #' @return clone posteriors
 #' @export
-cell_to_clone = function(gtree, exp_post, allele_post) {
+get_clone_post = function(gtree, exp_post, allele_post) {
 
     clones = gtree %>%
         activate(nodes) %>%
@@ -707,6 +707,12 @@ cell_to_clone = function(gtree, exp_post, allele_post) {
             clone_size = sum(leaf),
             .groups = 'drop'
         )
+    
+    # add the normal genotype if not in the tree
+    if (min(clones$clone) > 1) {
+        clones = clones %>% 
+            add_row(.before = 1, GT = '', clone = 1, compartment = 'normal', clone_size = 0)
+    }
 
     clone_segs = clones %>%
         mutate(
@@ -1218,7 +1224,7 @@ retest_bulks = function(bulks, segs_consensus, use_loh = FALSE, diploid_chroms =
     # default
     if (is.null(use_loh)) {
         length_neu = segs_consensus %>% filter(cnv_state == 'neu') %>% pull(seg_length) %>% sum
-        if (length_neu > 1.5e8) {
+        if (length_neu < 1.5e8) {
             use_loh = TRUE
             log_message('less than 5% of genome is in neutral region - including LOH in baseline')
         } else {
