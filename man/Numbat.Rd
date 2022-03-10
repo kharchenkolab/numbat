@@ -56,7 +56,7 @@ Used to allow users to plot results
 \subsection{Method \code{new()}}{
 initialize Numbat class
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Numbat$new(out_dir, i = 2, gtf = gtf_hg38, verbose = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$new(out_dir, i = 2, gtf = gtf_hg38, verbose = TRUE, old_index = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

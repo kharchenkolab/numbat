@@ -431,7 +431,7 @@ log_message = function(msg, verbose = TRUE) {
 
 #' Run smoothed expression-based hclust
 #' @keywords internal 
-exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, k = 3, ncores = 1, verbose = T) {
+exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, window = 101, k = 3, ncores = 1, verbose = T) {
 
     if (is.null(sc_refs)) {
         sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
@@ -442,6 +442,7 @@ exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, k 
         count_mat,
         lambdas_bar,
         gtf_transcript,
+        window = window,
         verbose = verbose
     )
     
@@ -1162,14 +1163,13 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
                 ),
             allele_post %>% 
                 select(
-                    cell, CHROM, seg, 
+                    cell, CHROM, seg, cnv_state,
                     l11_y = l11, l20_y = l20, l10_y = l10, l21_y = l21, l31_y = l31, l22_y = l22, l00_y = l00,
                     Z_y = Z, Z_cnv_y = Z_cnv, Z_n_y = Z_n, logBF_y = logBF,
                     n_snp = total, MAF, major, total
             ),
-            c("cell", "CHROM", "seg")
+            c("cell", "CHROM", "seg", "cnv_state")
         ) %>%
-        mutate(cnv_state = tidyr::replace_na(cnv_state, 'loh')) %>%
         mutate_at(
             vars(matches("_x|_y")),
             function(x) tidyr::replace_na(x, 0)

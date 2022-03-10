@@ -57,10 +57,15 @@ aggregate_counts = function(count_mat, cell_annot, verbose = T) {
     if (verbose) {
         print(table(cell_dict))
     }
-   
-    M = model.matrix(~ 0 + cell_dict) %>% magrittr::set_colnames(levels(cell_dict))
-    count_mat_clust = count_mat %*% M
-    exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% magrittr::set_colnames(colnames(count_mat_clust))
+    
+    if (length(levels(cell_dict)) == 1) {
+        count_mat_clust = count_mat %>% rowSums() %>% as.matrix %>% magrittr::set_colnames(levels(cell_dict))
+        exp_mat_clust = count_mat_clust/sum(count_mat_clust)
+    } else {
+        M = model.matrix(~ 0 + cell_dict) %>% magrittr::set_colnames(levels(cell_dict))
+        count_mat_clust = count_mat %*% M
+        exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% magrittr::set_colnames(colnames(count_mat_clust))
+    }    
     
     return(list('exp_mat' = as.matrix(exp_mat_clust), 'count_mat' = as.matrix(count_mat_clust)))
 }
@@ -142,7 +147,10 @@ process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, 
     
     gexp.norm = exp_mat_norm %>% as.data.frame() %>%
         tibble::rownames_to_column('gene') %>%
-        inner_join(gtf_transcript, by = "gene") %>%
+        inner_join(
+            gtf_transcript %>% select(gene, CHROM, gene_start, gene_end),
+            by = "gene"
+        ) %>%
         filter(!(CHROM == 6 & gene_start < 33480577 & gene_end > 28510120)) %>%
         mutate(gene = droplevels(factor(gene, gtf_transcript$gene))) %>%
         mutate(gene_index = as.integer(gene)) %>% 
@@ -151,7 +159,7 @@ process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, 
 
     gexp.norm.long = gexp.norm %>% 
         reshape2::melt(
-            id.var = c('gene', 'gene_index', 'region', 'gene_start', 'gene_end', 'CHROM', 'gene_length'),
+            id.var = c('CHROM', 'gene', 'gene_index', 'gene_start', 'gene_end'),
             variable.name = 'cell',
             value.name = 'exp')    
 
@@ -741,12 +749,10 @@ retest_cnv = function(bulk, exp_model = 'lnpois', gamma = 20, allele_only = FALS
     } else {
         segs_post = bulk %>% 
             filter(cnv_state != 'neu') %>%
-            group_by(CHROM, seg, cnv_state) %>%
+            group_by(CHROM, seg, seg_start, seg_end, cnv_state) %>%
             summarise(
                 n_genes = length(na.omit(unique(gene))),
                 n_snps = sum(!is.na(pAD)),
-                seg_start = min(POS),
-                seg_end = max(POS),
                 theta_hat = theta_hat_seg(major_count[!is.na(major_count)], minor_count[!is.na(minor_count)]),
                 approx_theta_post(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = theta_hat),
                 L_y_n = pnorm.range(0, theta_min, theta_mle, theta_sigma),

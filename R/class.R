@@ -53,11 +53,11 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @param gtf transcript gtf dataframe (default=gtf_hg38)
     #' @param verbose boolean Whether to output verbose results (default=TRUE)
     #' @return a new 'numbat' object
-    initialize = function(out_dir, i = 2, gtf = gtf_hg38, verbose=TRUE) {
+    initialize = function(out_dir, i = 2, gtf = gtf_hg38, verbose=TRUE, old_index = FALSE) {
 
         self$out_dir = out_dir
 
-        private$fetch_results(out_dir, i = i)
+        private$fetch_results(out_dir, i = i, old_index = old_index)
 
         self$gtf = gtf
 
@@ -158,7 +158,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
         #  param: i get results from which iteration
         #  return: NULL
 
-        fetch_results = function(out_dir, i = 2) {
+        fetch_results = function(out_dir, i = 2, old_index = FALSE) {
             # joint_post_colnames = c("cell", "CHROM",  "seg",  "cnv_state")
             self$joint_post = read_file(inputfile=glue('{out_dir}/joint_post_{i}.tsv'), filetype="tsv")
             # exp_post_colnames = c("seg", "cnv_state", "n", "phi_mle")
@@ -172,7 +172,12 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             # segs_consensus_colnames = c("sample", "CHROM", "seg", "cnv_state", "cnv_state_post", "seg_start", "seg_end", "seg_start_index", 
             #                                 "seg_end_index", "theta_mle", "theta_sigma", "phi_mle", "phi_sigma", "p_loh", "p_del", "p_amp",           
             #                                 "p_bamp", "p_bdel", "LLR", "LLR_y", "LLR_x", "n_genes", "n_snps", "component","LLR_sample", "seg_length", "seg_cons", "n_states", "cnv_states")
-            self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i}.tsv'), filetype="tsv")
+            if (old_index) {
+                self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i-1}.tsv'), filetype="tsv")
+            } else {
+                self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i}.tsv'), filetype="tsv")
+            }
+            
             # tree_post_colnames =  c("mut_nodes", "gtree", "l_matrix")
             self$tree_post = read_file(inputfile=glue('{out_dir}/tree_post_{i}.rds'), filetype="rds")
             self$mut_graph = read_file(inputfile=glue('{out_dir}/mut_graph_{i}.rds'), filetype="rds")
