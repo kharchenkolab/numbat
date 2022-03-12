@@ -27,6 +27,7 @@ Imports:
     IRanges,
     logger,
     magrittr,
+    Matrix,
     parallel,
     parallelDist,
     patchwork,
