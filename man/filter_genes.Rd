@@ -9,7 +9,7 @@ filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = T)
 \arguments{
 \item{count_mat}{dgCMatrix Gene expression counts}
 
-\item{lambdas_ref}{matrix Reference expression profiles}
+\item{lambdas_ref}{named numeric vector A reference expression profile}
 
 \item{gtf_transcript}{dataframe Transcript gtf}
 }
