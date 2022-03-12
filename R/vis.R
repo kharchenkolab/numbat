@@ -445,18 +445,18 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 }
 
 #' plot a pseudobulk HMM profile
-#' @param bulk pseudobulk dataframe
-#' @param use_pos use marker position instead of index as x coordinate
-#' @param allele_only only plot alleles
-#' @param min_LLR LLR threshold for event filtering
-#' @param min_depth minimum coverage depth for a SNP to be plotted
-#' @param exp_limit expression logFC axis limit
-#' @param phi_mle whether to plot estimates of segmental expression fold change 
-#' @param theta_roll whether to plot rolling estimates of allele imbalance
-#' @param dot_size size of marker dots
-#' @param dot_alpha transparency of the marker dots
-#' @param legend whether to show legend
-#' @return a ggplot object
+#' @param bulk dataframe Pseudobulk profile
+#' @param use_pos logical Use marker position instead of index as x coordinate
+#' @param allele_only logical Only plot alleles
+#' @param min_LLR numeric LLR threshold for event filtering
+#' @param min_depth numeric Minimum coverage depth for a SNP to be plotted
+#' @param exp_limit numeric Expression logFC axis limit
+#' @param phi_mle logical Whether to plot estimates of segmental expression fold change 
+#' @param theta_roll logical Whether to plot rolling estimates of allele imbalance
+#' @param dot_size numeric Size of marker dots
+#' @param dot_alpha numeric Transparency of the marker dots
+#' @param legend logical Whether to show legend
+#' @return ggplot Plot of pseudobulk HMM profile
 #' @export
 plot_psbulk = function(
     bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 10, min_depth = 8, exp_limit = 2, 
@@ -602,21 +602,20 @@ plot_psbulk = function(
     return(p)
 }
 
-
 #' plot a group of pseudobulks HMM profile
 #' @param bulks pseudobulks dataframe
-#' @param use_pos use marker position instead of index as x coordinate
-#' @param allele_only only plot alleles
-#' @param min_LLR LLR threshold for event filtering
-#' @param min_depth minimum coverage depth for a SNP to be plotted
-#' @param exp_limit expression logFC axis limit
-#' @param phi_mle whether to plot estimates of segmental expression fold change 
-#' @param theta_roll whether to plot rolling estimates of allele imbalance
-#' @param dot_size size of marker dots
-#' @param dot_alpha transparency of the marker dots
-#' @param ncol number of columns
-#' @param legend whether to show legend
-#' @param title whether to add titles to individual plots
+#' @param use_pos logical Use marker position instead of index as x coordinate
+#' @param allele_only logical Only plot alleles
+#' @param min_LLR numeric LLR threshold for event filtering
+#' @param min_depth numeric Minimum coverage depth for a SNP to be plotted
+#' @param exp_limit numeric Expression logFC axis limit
+#' @param phi_mle logical Whether to plot estimates of segmental expression fold change 
+#' @param theta_roll logical Whether to plot rolling estimates of allele imbalance
+#' @param dot_size numeric Size of marker dots
+#' @param dot_alpha numeric Transparency of the marker dots
+#' @param legend logical Whether to show legend
+#' @param ncol integer Number of columns
+#' @param title logical Whether to add titles to individual plots
 #' @return a ggplot object
 #' @export
 plot_bulks = function(

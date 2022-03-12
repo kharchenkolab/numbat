@@ -6,20 +6,6 @@
 \usage{
 phi_hat_seg(Y_obs, lambda_ref, d, mu, sig)
 }
-\arguments{
-\item{Y_obs}{vector of expression counts}
-
-\item{lambda_ref}{vector of reference expression levels}
-
-\item{d}{total library size}
-
-\item{mu}{mean of the PLN expression model}
-
-\item{sig}{dispersion of the PLN expression model}
-}
-\value{
-estimate of phi
-}
 \description{
 Estimate of expression fold change phi in a segment
 }

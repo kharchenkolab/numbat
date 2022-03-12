@@ -17,24 +17,24 @@ calc_exp_LLR(
 )
 }
 \arguments{
-\item{Y_obs}{vector of gene expression counts}
+\item{Y_obs}{numeric vector Gene expression counts}
 
-\item{lambda_ref}{vector of reference expression levels}
+\item{lambda_ref}{numeric vector Reference expression levels}
 
-\item{d}{vector of library sizes}
+\item{d}{numeric vector Total library size}
 
-\item{phi_mle}{MLE of expression fold change phi (alternative hypothesis)}
+\item{phi_mle}{numeric MLE of expression fold change phi (alternative hypothesis)}
 
-\item{mu}{mean parameter for the PLN expression model}
+\item{mu}{numeric Mean parameter for the PLN expression model}
 
-\item{sig}{dispersion parameter for the PLN expression model}
+\item{sig}{numeric Dispersion parameter for the PLN expression model}
 
-\item{alpha}{hyperparameter for the gamma poisson model (not used)}
+\item{alpha}{numeric Hyperparameter for the gamma poisson model (not used)}
 
-\item{beta}{hyperparameter for the gamma poisson model (not used)}
+\item{beta}{numeric Hyperparameter for the gamma poisson model (not used)}
 }
 \value{
-a log-likelihood ratio
+numeric Log-likelihood ratio
 }
 \description{
 Calculate LLR for an expression HMM

@@ -7,14 +7,14 @@
 filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = T)
 }
 \arguments{
-\item{count_mat}{observed gene count matrices}
+\item{count_mat}{dgCMatrix Gene expression counts}
 
-\item{lambdas_ref}{expression values in reference profile}
+\item{lambdas_ref}{matrix Reference expression profiles}
 
-\item{gtf_transcript}{transcript dataframe}
+\item{gtf_transcript}{dataframe Transcript gtf}
 }
 \value{
-list of genes that are kept after filtering
+vector Genes that are kept after filtering
 }
 \description{
 filter for mutually expressed genes

@@ -7,14 +7,14 @@
 aggregate_counts(count_mat, cell_annot, verbose = T)
 }
 \arguments{
-\item{count_mat}{raw count matrices where rownames are genes and column names are cells}
+\item{count_mat}{dgCMatrix Gene expression counts}
 
-\item{cell_annot}{dataframe with columns "cell" and "cell_type"}
+\item{cell_annot}{dataframe Cell type annotation with columns "cell" and "cell_type"}
 
-\item{verbose}{verbosity}
+\item{verbose}{logical Verbosity}
 }
 \value{
-a matrix of reference gene expression levels
+matrix Reference gene expression levels
 }
 \description{
 Utility function to make reference gene expression profiles

@@ -1,10 +1,10 @@
 ########################### Data processing ############################
 
 #' choose beest reference for each cell based on correlation
-#' @param count_mat gene expression count matrix
-#' @param lambdas_ref reference expression matrix
-#' @param gtf_transcript transcript info dataframe
-#' @return best references for each cell
+#' @param count_mat dgCMatrix Gene expression counts
+#' @param lambdas_ref matrix Reference expression profiles
+#' @param gtf_transcript dataframe Transcript gtf
+#' @return named vector Best references for each cell
 #' @export
 choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
 
@@ -25,7 +25,7 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
     
     # keep highly expressed genes in at least one of the references
     count_mat = count_mat[rowSums(lambdas_ref * 1e6 > 2) > 0,,drop=FALSE]
-
+    
     exp_mat = scale(count_mat, center=FALSE, scale=colSums(count_mat))
     
     cors = cor(log(exp_mat * 1e6 + 1), log(lambdas_ref * 1e6 + 1)[rownames(exp_mat),])
@@ -35,10 +35,10 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
 }
 
 #' Utility function to make reference gene expression profiles
-#' @param count_mat raw count matrices where rownames are genes and column names are cells
-#' @param cell_annot dataframe with columns "cell" and "cell_type"
-#' @param verbose verbosity
-#' @return a matrix of reference gene expression levels
+#' @param count_mat dgCMatrix Gene expression counts
+#' @param cell_annot dataframe Cell type annotation with columns "cell" and "cell_type"
+#' @param verbose logical Verbosity
+#' @return matrix Reference gene expression levels
 #' @export
 aggregate_counts = function(count_mat, cell_annot, verbose = T) {
 
@@ -71,12 +71,12 @@ aggregate_counts = function(count_mat, cell_annot, verbose = T) {
 }
 
 #' fit reference weights for a pseudobulk expression profile
-#' @param Y_obs gene expression count vector
-#' @param lambdas_ref reference expression matrix
-#' @param d total library size
-#' @param gtf_transcript transcript info dataframe
-#' @param min_lambda expression level threshold to filter genes
-#' @return fitted reference weights and expression model parameters
+#' @param Y_obs numeric vector Gene expression counts
+#' @param lambdas_ref matrix Reference expression profiles
+#' @param d numeric Total library size
+#' @param gtf_transcript dataframe Transcript gtf
+#' @param min_lambda numeric Expression level threshold to filter genes
+#' @return list Fitted reference weights and expression model parameters
 #' @keywords internal
 fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-6, verbose = FALSE) {
 
@@ -121,10 +121,10 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
 }
 
 #' process single-cell gene expression data
-#' @param count_mat observed gene count matrices
-#' @param lambdas_ref expression values in reference profile
-#' @param gtf_transcript transcript dataframe
-#' @return logx+1 transformed normalized expression values for single cells in a long dataframe
+#' @param count_mat dgCMatrix Gene expression counts
+#' @param lambdas_ref matrix Reference expression profiles
+#' @param gtf_transcript dataframe Transcript gtf
+#' @return dataframe Logx+1 transformed normalized expression values for single cells
 #' @keywords internal
 process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
 
@@ -173,10 +173,10 @@ process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, 
 
 
 #' filter for mutually expressed genes
-#' @param count_mat observed gene count matrices
-#' @param lambdas_ref expression values in reference profile
-#' @param gtf_transcript transcript dataframe
-#' @return list of genes that are kept after filtering
+#' @param count_mat dgCMatrix Gene expression counts
+#' @param lambdas_ref matrix Reference expression profiles
+#' @param gtf_transcript dataframe Transcript gtf
+#' @return vector Genes that are kept after filtering
 #' @keywords internal
 filter_genes = function(count_mat, lambdas_ref, gtf_transcript, verbose = T) {
 
@@ -208,10 +208,10 @@ filter_genes = function(count_mat, lambdas_ref, gtf_transcript, verbose = T) {
 }
 
 #' Aggregate into bulk expression profile
-#' @param count_mat observed gene count matrices
-#' @param lambdas_ref expression values in reference profile
-#' @param gtf_transcript transcript dataframe
-#' @return a dataframe of bulk gene expression profile
+#' @param count_mat dgCMatrix Gene expression counts
+#' @param lambdas_ref matrix Reference expression profiles
+#' @param gtf_transcript dataframe Transcript gtf
+#' @return dataframe Pseudobulk gene expression profile
 #' @keywords internal
 get_exp_bulk = function(count_mat, lambdas_ref, gtf_transcript, verbose = TRUE) {
 
@@ -249,11 +249,11 @@ get_exp_bulk = function(count_mat, lambdas_ref, gtf_transcript, verbose = TRUE) 
 
 
 #' Aggregate into pseudobulk alelle profile
-#' @param df_allele single cell allele dataframe
-#' @param genetic_map a genetic map dataframe
-#' @param lambda phase switch rate
-#' @param min_depth minimum coverage to filter SNPs by
-#' @return a dataframe of bulk allele profile
+#' @param df_allele dataframe Single-cell allele counts
+#' @param genetic_map dataframe Genetic map
+#' @param lambda numeric Phase switch rate
+#' @param min_depth integer Minimum coverage to filter SNPs
+#' @return dataframe Pseudobulk allele profile
 #' @keywords internal
 get_allele_bulk = function(df_allele, genetic_map, lambda = 1, min_depth = 0) {
     pseudobulk = df_allele %>%
@@ -285,9 +285,9 @@ get_allele_bulk = function(df_allele, genetic_map, lambda = 1, min_depth = 0) {
 
 
 #' Combine allele and expression pseudobulks
-#' @param allele_bulk bulk allele profile
-#' @param genetic_map a genetic map dataframe
-#' @return a dataframe of bulk allele and bulk profile
+#' @param allele_bulk dataframe Bulk allele profile
+#' @param genetic_map dataframe Genetic map
+#' @return dataframe Pseudobulk allele and expression profile
 #' @keywords internal
 combine_bulk = function(allele_bulk, exp_bulk) {
     
@@ -352,13 +352,13 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 
 #' Aggregate into combined bulk expression and allele profile
 #'
-#' @param count_mat observed gene count matrices
-#' @param lambdas_ref expression values in reference profile
-#' @param df_allele allele dataframe
-#' @param gtf_transcript transcript dataframe
-#' @param genetic_map genetic map
-#' @param sc_refs single cell reference choices
-#' @return a dataframe of bulk gene expression and allele profile
+#' @param count_mat dgCMatrix Gene expression counts
+#' @param lambdas_ref matrix Reference expression profiles
+#' @param df_allele dataframe Single-cell allele counts
+#' @param gtf_transcript dataframe Transcript gtf
+#' @param genetic_map dataframe Genetic map
+#' @param sc_refs named vector Single cell reference matches
+#' @return dataframe Pseudobulk gene expression and allele profile
 #' @export
 get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, sc_refs = NULL, min_depth = 0, lambda = 1, verbose = TRUE) {
 
@@ -366,10 +366,11 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
         stop('empty allele dataframe - check cell names')
     }
 
-    if (is(count_mat, 'Matrix')) {
-        count_mat = as.matrix(count_mat)
-    } else if (!is.matrix(count_mat)) {
-        stop('count_mat needs to be a raw count matrices where rownames are genes and column names are cells')
+    if ('matrix' %in% class(count_mat)) {
+        count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
+    }
+    if (!('dgCMatrix' %in% class(count_mat))) {
+        stop("count_mat is not of class dgCMatrix or matrix")
     }
 
     if (is.null(sc_refs)) {
@@ -409,9 +410,9 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
 }
 
 #' Annotate genetic distance between markers
-#' @param bulk pseudobulk dataframe
-#' @param genetic_map a genetic map dataframe
-#' @return a pseudobulk dataframe
+#' @param bulk dataframe Pseudobulk profile
+#' @param genetic_map dataframe Genetic map
+#' @return dataframe Annotated pseudobulk profile
 #' @keywords internal
 annot_cm = function(bulk, genetic_map) {
 
@@ -452,10 +453,10 @@ annot_cm = function(bulk, genetic_map) {
 }
 
 #' predict phase switch probablity as a function of genetic distance
-#' @param d genetic distance in cM
-#' @param lambda rate of phase switch
-#' @param min_p minimum phase switch probability 
-#' @return phase switch probability
+#' @param d numeric vector Genetic distance in cM
+#' @param lambda numeric Phase switch rate
+#' @param min_p numeric Minimum phase switch probability 
+#' @return numeric vector Phase switch probability
 #' @keywords internal
 switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
     p = (1-exp(-2*lambda*d))/2
@@ -464,89 +465,14 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
     return(p)
 }
 
-#' @export
-fetch_results = function(out_dir, i = 2, max_cost = 150, verbose = F) {
-
-    res = list()
-
-    res[['mut_tree_file']] = glue('{out_dir}/mut_tree_{i}.gml')
-    res[['joint_post']] = fread(glue('{out_dir}/joint_post_{i}.tsv'))
-    res[['exp_post']] = fread(glue('{out_dir}/exp_post_{i}.tsv'))
-    res[['allele_post']] = fread(glue('{out_dir}/allele_post_{i}.tsv'))
-    # bulk0 = fread(glue('{out_dir}/bulk_subtrees_0.tsv'))
-    res[['geno']] = fread(glue('{out_dir}/geno_{i}.tsv')) %>% tibble::column_to_rownames('V1')
-
-
-    res[['tree_post']] = readRDS(glue('{out_dir}/tree_post_{i}.rds'))
-
-    f = glue('{out_dir}/scistree_out_{i}.rds')
-
-    if (file.exists(f)) {
-        res[['scistree_out']] = readRDS(f)
-    }
-    
-    f = glue('{out_dir}/segs_consensus_{i-1}.tsv')
-    if (file.exists(f)) {
-        segs_consensus = fread(f)
-    } else {
-        f = glue('{out_dir}/segs_consensus_{i}.tsv')
-        segs_consensus = fread(f)
-    }
-
-    if ('cnv_states' %in% colnames(segs_consensus)) {
-        segs_consensus = segs_consensus  %>% 
-            mutate(cnv_states = str_split(cnv_states, '\\|'))
-    }
-
-    res[['segs_consensus']] = segs_consensus
-
-    f = glue('{out_dir}/bulk_subtrees_{i}.tsv.gz')
-    if (file.exists(f)) {
-        res[['bulk_subtrees']] = fread(f)
-    }
-
-    res[['bulk_initial']] = fread(glue('{out_dir}/bulk_subtrees_0.tsv.gz'))
-        # mutate(CHROM = factor(CHROM, unique(CHROM)))
-
-    f = glue('{out_dir}/bulk_clones_{i}.tsv.gz')
-    if (file.exists(f)) {
-        res[['bulk_clones']] = fread(f)
-    }
-
-    f = glue('{out_dir}/mut_graph_{i}.rds')
-    if (file.exists(f)) {
-        res$G_m = readRDS(f)
-    }
-
-    # update tree
-    f = glue('{out_dir}/tree_final_{i}.rds')
-    if (file.exists(f)) {
-        res$gtree = readRDS(f)
-    }
-    # } else {
-        # res$gtree = mut_to_tree(res$tree_post$gtree, mut_nodes)
-    # }
-
-    f = glue('{out_dir}/clone_post_{i}.tsv')
-    if (file.exists(f)) {
-        res[['clone_post']] = fread(f)
-    } else {
-        res[['clone_post']] = get_clone_post(res$gtree, res$exp_post, res$allele_post)
-    }
-
-    return(res)
-
-}
-
-
 ########################### Analysis ############################
 
 #' Call CNVs in a pseudobulk
-#' @param bulk pesudobulk dataframe
-#' @param gamma dispersion parameter for the Beta-Binomial allele model
-#' @param t transition probability
-#' @param theta_min minimum imbalance threshold
-#' @param lambda phase switch rate
+#' @param bulk dataframe Pesudobulk profile
+#' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
+#' @param t numeric Transition probability
+#' @param theta_min numeric Minimum imbalance threshold
+#' @param lambda numeric Phase switch rate
 #' @param exp_only whether to run expression-only HMM
 #' @param allele_only whether to run allele-only HMM
 #' @param retest whether to retest CNVs after Viterbi decoding
@@ -713,7 +639,7 @@ analyze_bulk = function(
 #' retest CNVs in a pseudobulk
 #' @param bulk pesudobulk dataframe
 #' @param exp_model model for gene expression - Poisson-Lognormal or Gamma-Poisson
-#' @param gamma dispersion parameter for the Beta-Binomial allele model
+#' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param allele_only whether to retest only using allele data
 #' @return a dataframe of segments with CNV posterior information
 #' @export
@@ -907,12 +833,6 @@ theta_hat_roll = function(major_count, minor_count, h) {
 }
 
 #' Estimate of expression fold change phi in a segment
-#' @param Y_obs vector of expression counts
-#' @param lambda_ref vector of reference expression levels
-#' @param d total library size
-#' @param mu mean of the PLN expression model 
-#' @param sig dispersion of the PLN expression model 
-#' @return estimate of phi
 #' @keywords internal
 phi_hat_seg = function(Y_obs, lambda_ref, d, mu, sig) {
     logFC = log((Y_obs/d)/lambda_ref)
@@ -920,13 +840,6 @@ phi_hat_seg = function(Y_obs, lambda_ref, d, mu, sig) {
 }
 
 #' Rolling estimate of expression fold change phi
-#' @param Y_obs vector of expression counts
-#' @param lambda_ref vector of reference expression levels
-#' @param d total library size
-#' @param mu mean of the PLN expression model 
-#' @param sig dispersion of the PLN expression model 
-#' @param h window size
-#' @return rolling estimate of phi
 #' @keywords internal
 phi_hat_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
     n = length(Y_obs)
@@ -949,7 +862,7 @@ phi_hat_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
 letters_all = c(letters, paste0(letters, letters), paste0(letters, letters, letters))
 
 #' Annotate copy number segments after HMM decoding 
-#' @param bulk a pseudobulk dataframe
+#' @param bulk dataframe Pseudobulk profile
 #' @return a pseudobulk dataframe
 #' @keywords internal
 annot_segs = function(bulk) {
@@ -978,8 +891,6 @@ annot_segs = function(bulk) {
 }
 
 #' Annotate haplotype segments after HMM decoding 
-#' @param bulk a pseudobulk dataframe
-#' @return a pseudobulk dataframe
 #' @keywords internal
 annot_haplo_segs = function(bulk) {
 
@@ -1005,9 +916,9 @@ annot_haplo_segs = function(bulk) {
 }
 
 #' Smooth the segments after HMM decoding 
-#' @param bulk a pseudobulk dataframe
-#' @param min_genes minimum number of genes to call a segment
-#' @return a pseudobulk dataframe
+#' @param bulk dataframe Pseudobulk profile
+#' @param min_genes integer Minimum number of genes to call a segment
+#' @return dataframe Pseudobulk profile
 #' @keywords internal
 smooth_segs = function(bulk, min_genes = 10) {
     bulk %>% group_by(seg) %>%
@@ -1022,9 +933,9 @@ smooth_segs = function(bulk, min_genes = 10) {
 }
 
 #' Annotate a consensus segments on a pseudobulk dataframe
-#' @param bulk a pseudobulk dataframe
-#' @param segs_consensus a consensus segment dataframe
-#' @return a pseudobulk dataframe
+#' @param bulk dataframe Pseudobulk profile
+#' @param segs_consensus datatframe Consensus segment dataframe
+#' @return dataframe Pseudobulk profile
 #' @export
 annot_consensus = function(bulk, segs_consensus) {
 
@@ -1066,19 +977,19 @@ annot_consensus = function(bulk, segs_consensus) {
 }
 
 #' Find the common diploid region in a group of pseudobulks
-#' @param bulks combined dataframe from mutiple pseudobulks (differentiated by "sample" column)
-#' @param grouping whether to use cliques or components in the graph to find dipoid cluster
-#' @param gamma dispersion parameter for beta-binomial allele model
-#' @param theta_min minimum imbalance threshold
-#' @param t transition probability for the allele HMM
-#' @param fc_min minimum fold change to call quadruploid cluster
-#' @param alpha FDR cut-off for q values to determine edges
-#' @param ncores number of cores to use  
-#' @return a list of info 
+#' @param bulks dataframe Pseudobulk profiles (differentiated by "sample" column)
+#' @param grouping logical Whether to use cliques or components in the graph to find dipoid cluster
+#' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
+#' @param theta_min numeric Minimum imbalance threshold
+#' @param t numeric Transition probability
+#' @param fc_min numeric Minimum fold change to call quadruploid cluster
+#' @param alpha numeric FDR cut-off for q values to determine edges
+#' @param ncores integer Number of cores to use  
+#' @return list Ploidy information
 #' @export
 find_common_diploid = function(
     bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, alpha = 1e-4, 
-    ncores = 5, debug = FALSE, verbose = TRUE) {
+    ncores = 1, debug = FALSE, verbose = TRUE) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -1268,8 +1179,6 @@ find_common_diploid = function(
 }
 
 #' get neutral segments from multiple pseudobulks
-#' @param bulks combined dataframe from mutiple pseudobulks (differentiated by "sample" column)
-#' @return dataframe of neutral segments
 #' @keywords internal
 get_segs_neu = function(bulks) {
     segs_neu = bulks %>% filter(cnv_state == "neu") %>%
@@ -1288,19 +1197,19 @@ get_segs_neu = function(bulks) {
 }
 
 #' calculate joint likelihood of allele data
-#' @param AD variant allele depth
-#' @param DP total allele depth
-#' @param alpha alpha parameter of Beta-Binomial distribution
-#' @param beta beta parameter of Beta-Binomial distribution
-#' @return joint log likelihood
+#' @param AD numeric vector Variant allele depth
+#' @param DP numeric vector Total allele depth
+#' @param alpha numeric Alpha parameter of Beta-Binomial distribution
+#' @param beta numeric Beta parameter of Beta-Binomial distribution
+#' @return numeric Joint log likelihood
 #' @keywords internal
 l_bbinom = function(AD, DP, alpha, beta) {
     sum(dbbinom(AD, DP, alpha, beta, log = TRUE))
 }
 
 #' fit a Beta-Binomial model by maximum likelihood
-#' @param AD variant allele depth
-#' @param DP total allele depth
+#' @param AD numeric vector Variant allele depth
+#' @param DP numeric vector Total allele depth
 #' @return MLE of alpha and beta 
 #' @keywords internal
 fit_bbinom = function(AD, DP) {
@@ -1320,8 +1229,8 @@ fit_bbinom = function(AD, DP) {
 }
 
 #' fit gamma maximum likelihood
-#' @param AD variant allele depth
-#' @param DP total allele depth
+#' @param AD numeric vector Variant allele depth
+#' @param DP numeric vector Total allele depth
 #' @return a fit
 #' @keywords internal
 fit_gamma = function(AD, DP) {
@@ -1338,22 +1247,22 @@ fit_gamma = function(AD, DP) {
 }
 
 #' calculate joint likelihood of a gamma-poisson model
-#' @param Y_obs gene expression counts
-#' @param lambda_ref reference expression levels
-#' @param d total library size
-#' @param alpha alpha parameter of Gamma-Poisson distribution
-#' @param beta beta parameter of Gamma-Poisson distribution
-#' @return joint log likelihood
+#' @param Y_obs numeric vector Gene expression counts
+#' @param lambda_ref numeric vector Reference expression levels
+#' @param d numeric Total library size
+#' @param alpha numeric Alpha parameter of Gamma-Poisson distribution
+#' @param beta numeric Beta parameter of Gamma-Poisson distribution
+#' @return numeric Joint log likelihood
 #' @keywords internal
 l_gpois = function(Y_obs, lambda_ref, d, alpha, beta, phi = 1) {
     sum(dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE))
 }
 
 #' fit a Gamma-Poisson model by maximum likelihood
-#' @param Y_obs gene expression counts
-#' @param lambda_ref reference expression levels
-#' @param d total library size
-#' @return MLE of alpha and beta
+#' @param Y_obs numeric vector Gene expression counts
+#' @param lambda_ref numeric vector Reference expression levels
+#' @param d numeric Total library size
+#' @return numeric MLE of alpha and beta
 #' @keywords internal
 fit_gpois = function(Y_obs, lambda_ref, d) {
 
@@ -1376,10 +1285,10 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
 }
 
 #' ccalculate joint likelihood of a PLN model
-#' @param Y_obs gene expression counts
-#' @param lambda_ref reference expression levels
-#' @param d total library size
-#' @return joint log likelihood
+#' @param Y_obs numeric vector Gene expression counts
+#' @param lambda_ref numeric vector Reference expression levels
+#' @param d numeric Total library size
+#' @return numeric Joint log likelihood
 #' @keywords internal
 l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
     if (any(sig <= 0)) {stop(glue('negative sigma. value: {sig}'))}
@@ -1388,10 +1297,10 @@ l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
 }
 
 #' fit a PLN model by maximum likelihood
-#' @param Y_obs gene expression counts
-#' @param lambda_ref reference expression levels
-#' @param d total library size
-#' @return MLE of mu and sig
+#' @param Y_obs numeric vector Gene expression counts
+#' @param lambda_ref numeric vector Reference expression levels
+#' @param d numeric Total library size
+#' @return numeric MLE of mu and sig
 #' @keywords internal
 fit_lnpois = function(Y_obs, lambda_ref, d) {
 
@@ -1527,9 +1436,9 @@ get_internal_nodes = function(den, node, labels) {
 }
 
 #' Get the internal nodes of a dendrogram and the leafs in each subtree 
-#' @param hc hclust object
-#' @param clusters cutree output specifying the terminal clusters
-#' @return a list of interal node subtrees with leaf memberships
+#' @param hc hclust Clustering results
+#' @param clusters named vector Cutree output specifying the terminal clusters
+#' @return list Interal node subtrees with leaf memberships
 #' @keywords internal
 get_nodes_celltree = function(hc, clusters) {
         
@@ -1556,7 +1465,7 @@ get_nodes_celltree = function(hc, clusters) {
 }
 
 #' Calculate expression distance matrix between cell populatoins
-#' @param count_mat expression count matrix
+#' @param count_mat dgCMatrix Gene expression counts
 #' @param cell_annot dataframe specifying the cell ID and cluster memberships
 #' @return a distance matrix
 #' @keywords internal
@@ -1588,13 +1497,13 @@ calc_cluster_dist = function(count_mat, cell_annot) {
 }
 
 #' Calculate LLR for an allele HMM
-#' @param pAD vector of phased allele depth
-#' @param DP vector of total allele depth
-#' @param p_s vector of phase switch probabilities
-#' @param theta_mle MLE of imbalance level theta (alternative hypothesis)
-#' @param theta_0 imbalance level in the null hypothesis 
-#' @param gamma dispersion parameter for the Beta-Binomial allele model
-#' @return a log-likelihood ratio
+#' @param pAD numeric vector Phased allele depth
+#' @param DP numeric vector Total allele depth
+#' @param p_s numeric vector Phase switch probabilities
+#' @param theta_mle numeric MLE of imbalance level theta (alternative hypothesis)
+#' @param theta_0 numeric Imbalance level in the null hypothesis 
+#' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
+#' @return numeric Log-likelihood ratio
 #' @keywords internal
 calc_allele_LLR = function(pAD, DP, p_s, theta_mle, theta_0 = 0, gamma = 20) {
     if (length(pAD) <= 1) {
@@ -1606,15 +1515,15 @@ calc_allele_LLR = function(pAD, DP, p_s, theta_mle, theta_0 = 0, gamma = 20) {
 }
 
 #' Calculate LLR for an expression HMM
-#' @param Y_obs vector of gene expression counts
-#' @param lambda_ref vector of reference expression levels 
-#' @param d vector of library sizes
-#' @param phi_mle MLE of expression fold change phi (alternative hypothesis)
-#' @param mu mean parameter for the PLN expression model
-#' @param sig dispersion parameter for the PLN expression model
-#' @param alpha hyperparameter for the gamma poisson model (not used)
-#' @param beta hyperparameter for the gamma poisson model (not used)
-#' @return a log-likelihood ratio
+#' @param Y_obs numeric vector Gene expression counts
+#' @param lambda_ref numeric vector Reference expression levels 
+#' @param d numeric vector Total library size
+#' @param phi_mle numeric MLE of expression fold change phi (alternative hypothesis)
+#' @param mu numeric Mean parameter for the PLN expression model
+#' @param sig numeric Dispersion parameter for the PLN expression model
+#' @param alpha numeric Hyperparameter for the gamma poisson model (not used)
+#' @param beta numeric Hyperparameter for the gamma poisson model (not used)
+#' @return numeric Log-likelihood ratio
 #' @keywords internal
 calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, alpha = NULL, beta = NULL, model = 'lnpois') {
     if (length(Y_obs) == 0) {

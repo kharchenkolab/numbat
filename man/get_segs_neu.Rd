@@ -6,12 +6,6 @@
 \usage{
 get_segs_neu(bulks)
 }
-\arguments{
-\item{bulks}{combined dataframe from mutiple pseudobulks (differentiated by "sample" column)}
-}
-\value{
-dataframe of neutral segments
-}
 \description{
 get neutral segments from multiple pseudobulks
 }

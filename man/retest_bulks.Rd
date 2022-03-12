@@ -7,16 +7,16 @@
 retest_bulks(bulks, segs_consensus, use_loh = FALSE, diploid_chroms = NULL)
 }
 \arguments{
-\item{bulks}{pseudobulks dataframe}
+\item{bulks}{dataframe Pseudobulk profiles}
 
-\item{segs_consensus}{consensus segments dataframe}
+\item{segs_consensus}{dataframe Consensus segments}
 
-\item{use_loh}{whether to use loh in the baseline}
+\item{use_loh}{logical Whether to use loh in the baseline}
 
-\item{diploid_chroms}{user-provided diploid chromosomes}
+\item{diploid_chroms}{vector User-provided diploid chromosomes}
 }
 \value{
-pseudobulks dataframe
+dataframe Retested pseudobulks
 }
 \description{
 retest consensus segments on pseudobulks

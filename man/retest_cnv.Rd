@@ -11,7 +11,7 @@ retest_cnv(bulk, exp_model = "lnpois", gamma = 20, allele_only = FALSE)
 
 \item{exp_model}{model for gene expression - Poisson-Lognormal or Gamma-Poisson}
 
-\item{gamma}{dispersion parameter for the Beta-Binomial allele model}
+\item{gamma}{numeric Dispersion parameter for the Beta-Binomial allele model}
 
 \item{allele_only}{whether to retest only using allele data}
 }

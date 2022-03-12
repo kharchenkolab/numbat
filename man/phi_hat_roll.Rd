@@ -6,22 +6,6 @@
 \usage{
 phi_hat_roll(Y_obs, lambda_ref, d_obs, mu, sig, h)
 }
-\arguments{
-\item{Y_obs}{vector of expression counts}
-
-\item{lambda_ref}{vector of reference expression levels}
-
-\item{mu}{mean of the PLN expression model}
-
-\item{sig}{dispersion of the PLN expression model}
-
-\item{h}{window size}
-
-\item{d}{total library size}
-}
-\value{
-rolling estimate of phi
-}
 \description{
 Rolling estimate of expression fold change phi
 }

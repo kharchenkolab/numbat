@@ -17,20 +17,20 @@ get_bulk(
 )
 }
 \arguments{
-\item{count_mat}{observed gene count matrices}
+\item{count_mat}{dgCMatrix Gene expression counts}
 
-\item{lambdas_ref}{expression values in reference profile}
+\item{lambdas_ref}{matrix Reference expression profiles}
 
-\item{df_allele}{allele dataframe}
+\item{df_allele}{dataframe Single-cell allele counts}
 
-\item{gtf_transcript}{transcript dataframe}
+\item{gtf_transcript}{dataframe Transcript gtf}
 
-\item{genetic_map}{genetic map}
+\item{genetic_map}{dataframe Genetic map}
 
-\item{sc_refs}{single cell reference choices}
+\item{sc_refs}{named vector Single cell reference matches}
 }
 \value{
-a dataframe of bulk gene expression and allele profile
+dataframe Pseudobulk gene expression and allele profile
 }
 \description{
 Aggregate into combined bulk expression and allele profile

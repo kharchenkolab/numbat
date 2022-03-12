@@ -7,12 +7,12 @@
 smooth_segs(bulk, min_genes = 10)
 }
 \arguments{
-\item{bulk}{a pseudobulk dataframe}
+\item{bulk}{dataframe Pseudobulk profile}
 
-\item{min_genes}{minimum number of genes to call a segment}
+\item{min_genes}{integer Minimum number of genes to call a segment}
 }
 \value{
-a pseudobulk dataframe
+dataframe Pseudobulk profile
 }
 \description{
 Smooth the segments after HMM decoding

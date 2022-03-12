@@ -14,7 +14,7 @@ get_exp_likelihoods_lnpois(
 )
 }
 \arguments{
-\item{exp_sc}{single-cell expression dataframe}
+\item{exp_sc}{dataframe Single-cell expression counts}
 }
 \description{
 get the single cell expression likelihoods

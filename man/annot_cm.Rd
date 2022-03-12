@@ -7,12 +7,12 @@
 annot_cm(bulk, genetic_map)
 }
 \arguments{
-\item{bulk}{pseudobulk dataframe}
+\item{bulk}{dataframe Pseudobulk profile}
 
-\item{genetic_map}{a genetic map dataframe}
+\item{genetic_map}{dataframe Genetic map}
 }
 \value{
-a pseudobulk dataframe
+dataframe Annotated pseudobulk profile
 }
 \description{
 Annotate genetic distance between markers

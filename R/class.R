@@ -50,9 +50,9 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @description initialize Numbat class
     #' @param out_dir character string Output directory
     #' @param i integer Get results from which iteration (either 1 or 2) (default=2)
-    #' @param gtf transcript gtf dataframe (default=gtf_hg38)
-    #' @param verbose boolean Whether to output verbose results (default=TRUE)
-    #' @return a new 'numbat' object
+    #' @param gtf dataframe Transcript gtf (default=gtf_hg38)
+    #' @param verbose logical Whether to output verbose results (default=TRUE)
+    #' @return a new 'Numbat' object
     initialize = function(out_dir, i = 2, gtf = gtf_hg38, verbose=TRUE, old_index = FALSE) {
 
         self$out_dir = out_dir
@@ -64,15 +64,15 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     },
 
     #' @description Plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
-    #' @param annot named list of cell annotation (default=NULL)
-    #' @param geno_bar where to show genotype annotation (default=NULL)
-    #' @param pal_clone clone color palette (default=NULL)
-    #' @param p_min minimum probability threshold to filter the calls (default=0.9)
-    #' @param tip_length tree tip length (default=1)
-    #' @param branch_width tree branch width (default=0.2)
-    #' @param line_width heatmap line width (default=0.1)
-    #' @param tree_height plotting height of the tree (default=1)
-    #' @return a ggplot object
+    #' @param annot named list Cell annotations (default=NULL)
+    #' @param geno_bar logical Whether to show genotype annotation (default=FALSE)
+    #' @param pal_clone named vector Clone color palette (default=NULL)
+    #' @param p_min numeric Minimum probability threshold to filter the calls (default=0.9)
+    #' @param tip_length numeric Tree tip length (default=1)
+    #' @param branch_width numeric Tree branch width (default=0.2)
+    #' @param line_width numeric Heatmap line width (default=0.1)
+    #' @param tree_height numeric Plotting height of the tree (default=1)
+    #' @return ggplot Plot
     plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, p_min = 0.9, tip_length = 1, branch_width = 0.2, line_width = 0.1, tree_height = 1) {
 
         p = plot_phylo_heatmap(  
@@ -94,7 +94,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @description Plot window-smoothed expression profiles
     #' @param k integer Number of clusters (default=3)
     #' @param n_sample integer Number of cells to subsample (default=300)
-    #' @return a ggplot object
+    #' @return ggplot Plot
     plot_exp_roll = function(k = 3, n_sample = 300) {
         
         p = plot_sc_roll(
@@ -108,44 +108,15 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     },
     
     #' @description Plot the mutation history of the tumor
-    #' @param horizontal horizontal layout or vertical
-    #' @param label whether to label the mutations on edges
-    #' @param pal_clone clone color palette
-    #' @param node_id whether to label nodes with clone id
-    #' @return a ggplot object
+    #' @param horizontal logical Horizontal layout or vertical
+    #' @param label logical Whether to label the mutations on edges
+    #' @param pal_clone named vector Clone color palette
+    #' @param node_id logical Whether to label nodes with clone id
+    #' @return ggplot Plot
     plot_mut_history = function(horizontal = TRUE, label = TRUE, pal_clone = NULL, node_id = TRUE) {
         p = plot_mut_history(self$mut_graph, horizontal = horizontal, label = label, pal_clone = pal_clone, node_id = node_id)
         return(p)
-    },
-
-    #' @description Plot the bulk CNV profiles
-    #' @param what whether to visualize clones or subtrees
-    #' @param min_depth minimum allele coverage to filter SNPs
-    #' @param ncol number of columns in the plot panel
-    #' @param legend whether to display CNV state legend
-    #' @param phi_mle whether to plot expression fold change estimates
-    #' @return a ggplot object
-    plot_bulks = function(what = 'clones', min_depth = 8, phi_mle = TRUE, ncol = 1, legend = FALSE) {
-
-        if (!what %in% c('clones', 'subtrees')) {
-            stop("The parameter 'what' must match one of these values: 'clones' or 'subtrees'")
-        }
-
-        if (what == 'clones') {
-            bulks = self$bulk_clones
-        } else {
-            bulks = self$bulk_subtrees
-        }
-
-        plot_bulks(
-            bulks,
-            min_depth = min_depth,
-            ncol = ncol,
-            phi_mle = phi_mle,
-            legend = legend
-        )
-    }
-  ), 
+    }),
 
     ## Private functions
     private = list(
@@ -186,12 +157,10 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             self$clone_post = read_file(inputfile=glue('{out_dir}/clone_post_{i}.tsv'), filetype="tsv")
             ## gene names are the column names
             self$gexp_roll_wide = read_file(inputfile=glue('{out_dir}/gexp_roll_wide.tsv.gz'), filetype="tsv")
-            self$hc = read_hc_rds(inputfile=glue('{out_dir}/hc.rds'))
-        }
-    )
+            self$hc = read_hc_rds(inputfile=glue('{out_dir}/hc.rds')
+        )
+    })
 )
-
-
 
 #' @keywords internal
 check_fread_works = function(input) {

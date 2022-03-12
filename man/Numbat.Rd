@@ -46,7 +46,6 @@ Used to allow users to plot results
 \item \href{#method-plot_phylo_heatmap}{\code{Numbat$plot_phylo_heatmap()}}
 \item \href{#method-plot_exp_roll}{\code{Numbat$plot_exp_roll()}}
 \item \href{#method-plot_mut_history}{\code{Numbat$plot_mut_history()}}
-\item \href{#method-plot_bulks}{\code{Numbat$plot_bulks()}}
 \item \href{#method-clone}{\code{Numbat$clone()}}
 }
 }
@@ -66,14 +65,14 @@ initialize Numbat class
 
 \item{\code{i}}{integer Get results from which iteration (either 1 or 2) (default=2)}
 
-\item{\code{gtf}}{transcript gtf dataframe (default=gtf_hg38)}
+\item{\code{gtf}}{dataframe Transcript gtf (default=gtf_hg38)}
 
-\item{\code{verbose}}{boolean Whether to output verbose results (default=TRUE)}
+\item{\code{verbose}}{logical Whether to output verbose results (default=TRUE)}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-a new 'numbat' object
+a new 'Numbat' object
 }
 }
 \if{html}{\out{<hr>}}
@@ -97,26 +96,26 @@ Plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{annot}}{named list of cell annotation (default=NULL)}
+\item{\code{annot}}{named list Cell annotations (default=NULL)}
 
-\item{\code{geno_bar}}{where to show genotype annotation (default=NULL)}
+\item{\code{geno_bar}}{logical Whether to show genotype annotation (default=FALSE)}
 
-\item{\code{pal_clone}}{clone color palette (default=NULL)}
+\item{\code{pal_clone}}{named vector Clone color palette (default=NULL)}
 
-\item{\code{p_min}}{minimum probability threshold to filter the calls (default=0.9)}
+\item{\code{p_min}}{numeric Minimum probability threshold to filter the calls (default=0.9)}
 
-\item{\code{tip_length}}{tree tip length (default=1)}
+\item{\code{tip_length}}{numeric Tree tip length (default=1)}
 
-\item{\code{branch_width}}{tree branch width (default=0.2)}
+\item{\code{branch_width}}{numeric Tree branch width (default=0.2)}
 
-\item{\code{line_width}}{heatmap line width (default=0.1)}
+\item{\code{line_width}}{numeric Heatmap line width (default=0.1)}
 
-\item{\code{tree_height}}{plotting height of the tree (default=1)}
+\item{\code{tree_height}}{numeric Plotting height of the tree (default=1)}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-a ggplot object
+ggplot Plot
 }
 }
 \if{html}{\out{<hr>}}
@@ -138,7 +137,7 @@ Plot window-smoothed expression profiles
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-a ggplot object
+ggplot Plot
 }
 }
 \if{html}{\out{<hr>}}
@@ -158,52 +157,18 @@ Plot the mutation history of the tumor
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{horizontal}}{horizontal layout or vertical}
+\item{\code{horizontal}}{logical Horizontal layout or vertical}
 
-\item{\code{label}}{whether to label the mutations on edges}
+\item{\code{label}}{logical Whether to label the mutations on edges}
 
-\item{\code{pal_clone}}{clone color palette}
+\item{\code{pal_clone}}{named vector Clone color palette}
 
-\item{\code{node_id}}{whether to label nodes with clone id}
+\item{\code{node_id}}{logical Whether to label nodes with clone id}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-a ggplot object
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-plot_bulks"></a>}}
-\if{latex}{\out{\hypertarget{method-plot_bulks}{}}}
-\subsection{Method \code{plot_bulks()}}{
-Plot the bulk CNV profiles
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_bulks(
-  what = "clones",
-  min_depth = 8,
-  phi_mle = TRUE,
-  ncol = 1,
-  legend = FALSE
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{what}}{whether to visualize clones or subtrees}
-
-\item{\code{min_depth}}{minimum allele coverage to filter SNPs}
-
-\item{\code{phi_mle}}{whether to plot expression fold change estimates}
-
-\item{\code{ncol}}{number of columns in the plot panel}
-
-\item{\code{legend}}{whether to display CNV state legend}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-a ggplot object
+ggplot Plot
 }
 }
 \if{html}{\out{<hr>}}

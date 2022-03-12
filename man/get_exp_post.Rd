@@ -18,16 +18,16 @@ get_exp_post(
 )
 }
 \arguments{
-\item{segs_consensus}{consensus segments}
+\item{segs_consensus}{dataframe Consensus segments}
 
-\item{count_mat}{gene expression count matrix}
+\item{count_mat}{dgCMatrix gene expression count matrix}
 
-\item{gtf_transcript}{transcript dataframe}
+\item{gtf_transcript}{dataframe transcript gtf}
 
-\item{lambdas_ref}{reference expression matrix}
+\item{lambdas_ref}{matrix Reference expression profiles}
 }
 \value{
-expression posterior datatframe
+dataframe Expression posteriors
 }
 \description{
 compute single-cell expression posteriors

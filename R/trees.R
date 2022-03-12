@@ -1,25 +1,5 @@
 ##### R implementation of ScisTree perfect phylogeny #####
 
-
-#' @keywords internal
-phangorn_allChildren <- function(x) {
-  ## https://github.com/KlausVigo/phangorn/blob/master/R/treeManipulation.R#L687
-  l <- length(x$tip.label)
-  if (l < 20) {
-    parent <- x$edge[, 1]
-    children <- x$edge[, 2]
-    res <- vector("list", max(x$edge))
-    for (i in seq_along(parent)){
-        res[[parent[i]]] <- c(res[[parent[i]]],children[i])
-    }
-    
-    return(res)
-  }
-  else {
-    allChildrenCPP(x$edge)
-  }
-}
-
 #' score a tree based on maximum likelihood
 #' @param tree phylo object
 #' @param P genotype probability matrix
@@ -42,7 +22,7 @@ score_tree = function(tree, P, get_l_matrix = FALSE) {
     
     logQ[1:n,] = logP_1 - logP_0
 
-    children_dict = phangorn_allChildren(tree)
+    children_dict = allChildrenCPP(tree$edge)
 
     logQ = CgetQ(logQ, children_dict, node_order)
 
@@ -103,10 +83,6 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, ver
         } else {
             converge = TRUE
         }
-
-        # free memory
-        rm(neighbours)
-        gc()
         
         runtime = proc.time() - ptm
         

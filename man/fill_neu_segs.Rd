@@ -7,12 +7,12 @@
 fill_neu_segs(segs_consensus, segs_neu)
 }
 \arguments{
-\item{segs_consensus}{a dataframe containing info of all CNV segments from multiple samples}
+\item{segs_consensus}{dataframe CNV segments from multiple samples}
 
-\item{segs_neu}{neutral segments}
+\item{segs_neu}{dataframe Neutral segments}
 }
 \value{
-collections of neutral and aberrant segments with no gaps
+dataframe Collections of neutral and aberrant segments with no gaps
 }
 \description{
 Fill neutral regions into consensus segments

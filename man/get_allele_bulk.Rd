@@ -7,16 +7,16 @@
 get_allele_bulk(df_allele, genetic_map, lambda = 1, min_depth = 0)
 }
 \arguments{
-\item{df_allele}{single cell allele dataframe}
+\item{df_allele}{dataframe Single-cell allele counts}
 
-\item{genetic_map}{a genetic map dataframe}
+\item{genetic_map}{dataframe Genetic map}
 
-\item{lambda}{phase switch rate}
+\item{lambda}{numeric Phase switch rate}
 
-\item{min_depth}{minimum coverage to filter SNPs by}
+\item{min_depth}{integer Minimum coverage to filter SNPs}
 }
 \value{
-a dataframe of bulk allele profile
+dataframe Pseudobulk allele profile
 }
 \description{
 Aggregate into pseudobulk alelle profile

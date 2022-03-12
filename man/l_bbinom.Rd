@@ -7,16 +7,16 @@
 l_bbinom(AD, DP, alpha, beta)
 }
 \arguments{
-\item{AD}{variant allele depth}
+\item{AD}{numeric vector Variant allele depth}
 
-\item{DP}{total allele depth}
+\item{DP}{numeric vector Total allele depth}
 
-\item{alpha}{alpha parameter of Beta-Binomial distribution}
+\item{alpha}{numeric Alpha parameter of Beta-Binomial distribution}
 
-\item{beta}{beta parameter of Beta-Binomial distribution}
+\item{beta}{numeric Beta parameter of Beta-Binomial distribution}
 }
 \value{
-joint log likelihood
+numeric Joint log likelihood
 }
 \description{
 calculate joint likelihood of allele data

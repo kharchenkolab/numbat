@@ -7,14 +7,14 @@
 fit_lnpois(Y_obs, lambda_ref, d)
 }
 \arguments{
-\item{Y_obs}{gene expression counts}
+\item{Y_obs}{numeric vector Gene expression counts}
 
-\item{lambda_ref}{reference expression levels}
+\item{lambda_ref}{numeric vector Reference expression levels}
 
-\item{d}{total library size}
+\item{d}{numeric Total library size}
 }
 \value{
-MLE of mu and sig
+numeric MLE of mu and sig
 }
 \description{
 fit a PLN model by maximum likelihood

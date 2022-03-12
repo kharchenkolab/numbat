@@ -13,14 +13,14 @@ process_exp_sc(
 )
 }
 \arguments{
-\item{count_mat}{observed gene count matrices}
+\item{count_mat}{dgCMatrix Gene expression counts}
 
-\item{lambdas_ref}{expression values in reference profile}
+\item{lambdas_ref}{matrix Reference expression profiles}
 
-\item{gtf_transcript}{transcript dataframe}
+\item{gtf_transcript}{dataframe Transcript gtf}
 }
 \value{
-logx+1 transformed normalized expression values for single cells in a long dataframe
+dataframe Logx+1 transformed normalized expression values for single cells
 }
 \description{
 process single-cell gene expression data

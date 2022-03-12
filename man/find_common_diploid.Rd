@@ -12,30 +12,30 @@ find_common_diploid(
   t = 1e-05,
   fc_min = 1.25,
   alpha = 1e-04,
-  ncores = 5,
+  ncores = 1,
   debug = FALSE,
   verbose = TRUE
 )
 }
 \arguments{
-\item{bulks}{combined dataframe from mutiple pseudobulks (differentiated by "sample" column)}
+\item{bulks}{dataframe Pseudobulk profiles (differentiated by "sample" column)}
 
-\item{grouping}{whether to use cliques or components in the graph to find dipoid cluster}
+\item{grouping}{logical Whether to use cliques or components in the graph to find dipoid cluster}
 
-\item{gamma}{dispersion parameter for beta-binomial allele model}
+\item{gamma}{numeric Dispersion parameter for the Beta-Binomial allele model}
 
-\item{theta_min}{minimum imbalance threshold}
+\item{theta_min}{numeric Minimum imbalance threshold}
 
-\item{t}{transition probability for the allele HMM}
+\item{t}{numeric Transition probability}
 
-\item{fc_min}{minimum fold change to call quadruploid cluster}
+\item{fc_min}{numeric Minimum fold change to call quadruploid cluster}
 
-\item{alpha}{FDR cut-off for q values to determine edges}
+\item{alpha}{numeric FDR cut-off for q values to determine edges}
 
-\item{ncores}{number of cores to use}
+\item{ncores}{integer Number of cores to use}
 }
 \value{
-a list of info
+list Ploidy information
 }
 \description{
 Find the common diploid region in a group of pseudobulks
