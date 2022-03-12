@@ -23,15 +23,19 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
     count_mat = count_mat[genes_annotated,,drop=FALSE]
     lambdas_ref = lambdas_ref[genes_annotated,,drop=FALSE]
     
+    exp_mat = scale_counts(count_mat)
     # keep highly expressed genes in at least one of the references
-    count_mat = count_mat[rowSums(lambdas_ref * 1e6 > 2) > 0,,drop=FALSE]
+    exp_mat = exp_mat[rowSums(lambdas_ref * 1e6 > 2) > 0,,drop=FALSE]
     
-    exp_mat = scale(count_mat, center=FALSE, scale=colSums(count_mat))
-    
-    cors = cor(log(exp_mat * 1e6 + 1), log(lambdas_ref * 1e6 + 1)[rownames(exp_mat),])
+    cors = cor(as.matrix(log(exp_mat * 1e6 + 1)), log(lambdas_ref * 1e6 + 1)[rownames(exp_mat),])
     best_refs = apply(cors, 1, function(x) {colnames(cors)[which.max(x)]})
     
     return(best_refs)
+}
+
+scale_counts = function(count_mat) {
+    count_mat@x <- count_mat@x/rep.int(colSums(count_mat), diff(count_mat@p))
+    return(count_mat)
 }
 
 #' Utility function to make reference gene expression profiles
@@ -120,19 +124,19 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
     return(list('alpha' = alpha, 'beta' = beta, 'w' = w, 'lambdas_bar' = lambdas_bar))
 }
 
-#' process single-cell gene expression data
+#' filtering, normalization and capping
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf_transcript dataframe Transcript gtf
 #' @return dataframe Logx+1 transformed normalized expression values for single cells
 #' @keywords internal
-process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
+smooth_expression = function(count_mat, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
 
     mut_expressed = filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = verbose)
     count_mat = count_mat[mut_expressed,,drop=FALSE]
     lambdas_ref = lambdas_ref[mut_expressed]
-        
-    exp_mat = scale(count_mat, center=FALSE, scale=colSums(count_mat))
+
+    exp_mat = scale_counts(count_mat)
 
     exp_mat_norm = log2(exp_mat * 1e6 + 1) - log2(lambdas_ref * 1e6 + 1)
 
@@ -142,54 +146,39 @@ process_exp_sc = function(count_mat, lambdas_ref, gtf_transcript, window = 101, 
     exp_mat_norm[exp_mat_norm < -cap] = -cap
 
     # centering by cell
-    row_mean = apply(exp_mat_norm, 2, function(x) { mean(x, na.rm=TRUE) } )
+    row_mean = apply(exp_mat_norm, 2, function(x) { mean(x, na.rm=TRUE) })
     exp_mat_norm = t(apply(exp_mat_norm, 1, "-", row_mean))
-    
-    gexp.norm = exp_mat_norm %>% as.data.frame() %>%
-        tibble::rownames_to_column('gene') %>%
-        inner_join(
-            gtf_transcript %>% select(gene, CHROM, gene_start, gene_end),
-            by = "gene"
-        ) %>%
-        filter(!(CHROM == 6 & gene_start < 33480577 & gene_end > 28510120)) %>%
-        mutate(gene = droplevels(factor(gene, gtf_transcript$gene))) %>%
-        mutate(gene_index = as.integer(gene)) %>% 
-        mutate(CHROM = as.integer(CHROM)) %>%
-        arrange(CHROM, gene)
 
-    gexp.norm.long = gexp.norm %>% 
-        reshape2::melt(
-            id.var = c('CHROM', 'gene', 'gene_index', 'gene_start', 'gene_end'),
-            variable.name = 'cell',
-            value.name = 'exp')    
-
-    gexp.norm.long = gexp.norm.long %>% 
-        group_by(cell, CHROM) %>%
-        mutate(exp_rollmean = caTools::runmean(exp, k = window, align = "center")) %>%
-        ungroup()
+    # smoothing
+    exp_mat_smooth = caTools::runmean(exp_mat_norm, k = window, align = "center")
+    rownames(exp_mat_smooth) = rownames(exp_mat_norm)
+    colnames(exp_mat_smooth) = colnames(exp_mat_norm)
     
-    return(gexp.norm.long)
+    return(exp_mat_smooth)
 }
 
 
 #' filter for mutually expressed genes
 #' @param count_mat dgCMatrix Gene expression counts
-#' @param lambdas_ref matrix Reference expression profiles
+#' @param lambdas_ref named numeric vector A reference expression profile
 #' @param gtf_transcript dataframe Transcript gtf
 #' @return vector Genes that are kept after filtering
 #' @keywords internal
 filter_genes = function(count_mat, lambdas_ref, gtf_transcript, verbose = T) {
 
-    genes_annotated = gtf_transcript$gene %>% 
+    genes_keep = gtf_transcript$gene %>% 
         intersect(rownames(count_mat)) %>%
         intersect(names(lambdas_ref))
 
-    depth_obs = sum(count_mat)
+    genes_exclude = gtf_transcript %>%
+        filter(CHROM == 6 & gene_start < 33480577 & gene_end > 28510120) %>%
+        pull(gene)
 
-    count_mat = count_mat[genes_annotated,,drop=FALSE]
-    lambdas_ref = lambdas_ref[genes_annotated]
+    genes_keep = genes_keep[!genes_keep %in% genes_exclude]
 
-    lambdas_obs = rowSums(count_mat)/depth_obs
+    count_mat = count_mat[genes_keep,,drop=FALSE]
+    lambdas_ref = lambdas_ref[genes_keep]
+    lambdas_obs = rowSums(count_mat)/sum(count_mat)
 
     min_both = 2
 
@@ -366,12 +355,7 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
         stop('empty allele dataframe - check cell names')
     }
 
-    if ('matrix' %in% class(count_mat)) {
-        count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
-    }
-    if (!('dgCMatrix' %in% class(count_mat))) {
-        stop("count_mat is not of class dgCMatrix or matrix")
-    }
+    count_mat = check_matrix(count_mat)
 
     if (is.null(sc_refs)) {
         sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
@@ -1648,4 +1632,14 @@ read_if_exist = function(f) {
             return(NULL)
         }
     }
+}
+
+check_matrix = function(count_mat) {
+    if ('matrix' %in% class(count_mat)) {
+        count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
+    }
+    if (!('dgCMatrix' %in% class(count_mat))) {
+        stop("count_mat is not of class dgCMatrix or matrix")
+    }
+    return(count_mat)
 }

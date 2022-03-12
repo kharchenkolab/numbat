@@ -86,12 +86,7 @@ run_numbat = function(
 
     ######### Basic checks #########
 
-    if ('matrix' %in% class(count_mat)) {
-        count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
-    }
-    if (!('dgCMatrix' %in% class(count_mat))) {
-        stop("count_mat is not of class dgCMatrix or matrix")
-    }
+    count_mat = check_matrix(count_mat)
 
     # filter for annotated genes
     genes_annotated = unique(gtf_transcript$gene) %>% 
@@ -133,9 +128,10 @@ run_numbat = function(
     )
 
     fwrite(
-        as.data.frame(clust$gexp_roll_wide) %>% tibble::rownames_to_column('cell'),
+        as.data.frame(clust$gexp_roll_wide),
         glue('{out_dir}/gexp_roll_wide.tsv.gz'),
         sep = '\t',
+        row.names = TRUE,
         nThread = min(4, ncores)
     )
     saveRDS(clust$hc, glue('{out_dir}/hc.rds'))
@@ -435,23 +431,20 @@ log_message = function(msg, verbose = TRUE) {
 #' @keywords internal 
 exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, window = 101, k = 3, ncores = 1, verbose = T) {
 
+    count_mat = check_matrix(count_mat)
+
     if (is.null(sc_refs)) {
         sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
     }
     lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs)
 
-    gexp_norm_long = process_exp_sc(
+    gexp_roll_wide = smooth_expression(
         count_mat,
         lambdas_bar,
         gtf_transcript,
         window = window,
         verbose = verbose
-    )
-    
-    gexp_roll_wide = gexp_norm_long %>%
-        reshape2::dcast(cell ~ gene, value.var = 'exp_rollmean') %>%
-        tibble::column_to_rownames('cell') %>%
-        as.matrix
+    ) %>% t
 
     dist_mat = parallelDist::parDist(gexp_roll_wide, threads = ncores)
 
@@ -465,7 +458,7 @@ exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, wi
 
     nodes = get_nodes_celltree(hc, cutree(hc, k = k))
 
-    return(list('nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc, 'dist_mat' = dist_mat))
+    return(list('nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc))
 }
 
 #' Make a group of pseudobulks

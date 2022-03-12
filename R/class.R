@@ -157,6 +157,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             self$clone_post = read_file(inputfile=glue('{out_dir}/clone_post_{i}.tsv'), filetype="tsv")
             ## gene names are the column names
             self$gexp_roll_wide = read_file(inputfile=glue('{out_dir}/gexp_roll_wide.tsv.gz'), filetype="tsv")
+            self$gexp_roll_wide = self$gexp_roll_wide %>% tibble::column_to_rownames('V1')
             self$hc = read_hc_rds(inputfile=glue('{out_dir}/hc.rds')
         )
     })
