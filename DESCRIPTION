@@ -32,6 +32,7 @@ Imports:
     parallelDist,
     patchwork,
     purrr,
+    pryr,
     R.utils,
     Rcpp,
     reshape2,

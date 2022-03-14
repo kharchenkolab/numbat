@@ -10,9 +10,8 @@ exp_hclust(
   gtf_transcript,
   sc_refs = NULL,
   window = 101,
-  k = 3,
   ncores = 1,
-  verbose = T
+  verbose = TRUE
 )
 }
 \description{
