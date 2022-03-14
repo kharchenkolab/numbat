@@ -86,6 +86,8 @@ run_numbat = function(
 
     ######### Basic checks #########
 
+    Sys.setenv('OMP_NUM_THREADS' = 1)
+
     count_mat = check_matrix(count_mat)
 
     # filter for annotated genes
