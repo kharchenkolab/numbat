@@ -107,7 +107,7 @@ run_numbat = function(
         stop('No matching cell names between count_mat and df_allele')
     }
 
-    if ((!is.matrix(lambdas_ref))) {
+    if (!is.matrix(lambdas_ref)) {
         lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
     }
 
@@ -117,15 +117,17 @@ run_numbat = function(
     saveRDS(sc_refs, glue('{out_dir}/sc_refs.rds'))
 
     log_message('Approximating initial clusters using smoothed expression ..', verbose = verbose)
+    log_mem()
 
     clust = exp_hclust(
         count_mat = count_mat,
         lambdas_ref = lambdas_ref,
         gtf_transcript = gtf_transcript,
-        k = init_k,
         sc_refs = sc_refs,
         ncores = ncores
     )
+
+    hc = clust$hc
 
     fwrite(
         as.data.frame(clust$gexp_roll_wide),
@@ -134,15 +136,16 @@ run_numbat = function(
         row.names = TRUE,
         nThread = min(4, ncores)
     )
-    saveRDS(clust$hc, glue('{out_dir}/hc.rds'))
-    saveRDS(clust$nodes, glue('{out_dir}/hc_nodes.rds'))
+    saveRDS(hc, glue('{out_dir}/hc.rds'))
 
     # extract cell groupings
-    subtrees = purrr::keep(clust$nodes, function(x) x$size > min_cells)
+    nodes = get_nodes_celltree(hc, cutree(hc, k = init_k))
+    subtrees = purrr::keep(nodes, function(x) x$size > min_cells)
     clones = purrr::keep(subtrees, function(x) x$sample %in% 1:init_k)
 
     normal_cells = c()
     
+    rm(clust)
     ######## Begin iterations ########
     for (i in 1:max_iter) {
 
@@ -232,6 +235,7 @@ run_numbat = function(
         
         ######## Evaluate CNV per cell ########
         log_message('Evaluating CNV per cell ..', verbose = verbose)
+        log_mem()
 
         exp_post_res = get_exp_post(
             segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
@@ -245,8 +249,6 @@ run_numbat = function(
         exp_sc = exp_post_res$exp_sc
 
         fwrite(exp_sc, glue('{out_dir}/exp_sc_{i}.tsv.gz'), sep = '\t')
-        # exp_post = fread(glue('{out_dir}/exp_post_{i}.tsv')) %>%
-        #     mutate(CHROM = factor(CHROM, 1:22))
         
         allele_post = get_allele_post(
             bulk_subtrees,
@@ -280,6 +282,7 @@ run_numbat = function(
 
         ######## Build phylogeny ########
         log_message('Building phylogeny ..', verbose = verbose)
+        log_mem()
 
         # filter CNVs
         joint_post_filtered = joint_post %>%
@@ -339,6 +342,7 @@ run_numbat = function(
             log_message('Only computing UPGMA..', verbose = verbose)
             log_message('Using UPGMA tree as seed..', verbose = verbose)
         }
+        log_mem()
         
         # maximum likelihood tree search with NNI
         tree_list = perform_nni(tree_init, P, ncores = ncores_nni, eps = eps, max_iter = max_nni)
@@ -415,9 +419,9 @@ run_numbat = function(
 }
 
 log_mem = function() {
-    msg = paste0('Mem used: ', signif(sum(gc()[,6]/1024), 3), 'Gb')
-    message(msg)
-    log_info(msg)
+    m = pryr::mem_used()
+    msg = paste0('Mem used: ', signif(m/1e9, 3), 'Gb')
+    log_message(msg)
 }
 
 log_message = function(msg, verbose = TRUE) {
@@ -429,14 +433,14 @@ log_message = function(msg, verbose = TRUE) {
 
 #' Run smoothed expression-based hclust
 #' @keywords internal 
-exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, window = 101, k = 3, ncores = 1, verbose = T) {
+exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, window = 101, ncores = 1, verbose = TRUE) {
 
     count_mat = check_matrix(count_mat)
 
     if (is.null(sc_refs)) {
         sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
     }
-    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs)
+    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs, verbose = FALSE)
 
     gexp_roll_wide = smooth_expression(
         count_mat,
@@ -456,9 +460,7 @@ exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, wi
     log_message('running hclust...')
     hc = hclust(dist_mat, method = "ward.D2")
 
-    nodes = get_nodes_celltree(hc, cutree(hc, k = k))
-
-    return(list('nodes' = nodes, 'gexp_roll_wide' = gexp_roll_wide, 'hc' = hc))
+    return(list('gexp_roll_wide' = gexp_roll_wide, 'hc' = hc))
 }
 
 #' Make a group of pseudobulks
@@ -717,7 +719,11 @@ get_clone_post = function(gtree, exp_post, allele_post) {
         mutate(seg = GT) %>%
         tidyr::separate_rows(seg, sep = ',') %>%
         mutate(I = 1) %>%
-        tidyr::complete(seg, tidyr::nesting(GT, clone, compartment, prior_clone, clone_size), fill = list('I' = 0))
+        tidyr::complete(
+            seg,
+            tidyr::nesting(GT, clone, compartment, prior_clone, clone_size),
+            fill = list('I' = 0)
+        )
 
     clone_post = inner_join(
             exp_post %>%

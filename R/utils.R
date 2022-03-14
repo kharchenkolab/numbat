@@ -360,7 +360,7 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
     if (is.null(sc_refs)) {
         sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
     }
-    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs[colnames(count_mat)], verbose = verbose)
+    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs[colnames(count_mat)], verbose = FALSE)
     
     exp_bulk = get_exp_bulk(
             count_mat,
@@ -1217,17 +1217,19 @@ fit_bbinom = function(AD, DP) {
 #' @param DP numeric vector Total allele depth
 #' @return a fit
 #' @keywords internal
-fit_gamma = function(AD, DP) {
+fit_gamma = function(AD, DP, start = 20) {
 
     fit = stats4::mle(
         minuslogl = function(gamma) {
             -l_bbinom(AD, DP, gamma/2, gamma/2)
         },
-        start = 1000,
+        start = start,
         lower = 0.0001
     )
 
-    return(fit)
+    gamma = fit@coef[1]
+
+    return(gamma)
 }
 
 #' calculate joint likelihood of a gamma-poisson model
@@ -1325,6 +1327,12 @@ calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, uppe
 #' Laplace approximation of the posterior of allelic imbalance theta
 #' @keywords internal
 approx_theta_post = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 0.25, gamma = 20) {
+
+    gamma = unique(gamma)
+
+    if (length(gamma) > 1) {
+        stop('gamma has to be a single value')
+    }
     
     if (length(pAD) <= 10) {
         return(tibble('theta_mle' = 0, 'theta_sigma' = 0))
@@ -1442,7 +1450,14 @@ get_nodes_celltree = function(hc, clusters) {
     # convert to list
     nodes = nodes %>%
         split(.$node) %>%
-        purrr::map(function(node){list(sample = unique(node$node), members = unique(node$cluster), cells = node$cell, size = length(node$cell))})
+        purrr::map(function(node){
+            list(
+                sample = unique(node$node),
+                members = unique(node$cluster),
+                cells = node$cell,
+                size = length(node$cell)
+            )
+        })
     
     return(nodes)
     

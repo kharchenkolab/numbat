@@ -1098,7 +1098,7 @@ plot_consensus = function(segs) {
 plot_phylo_heatmap = function(
         gtree, joint_post, segs_consensus,
         annot = NULL, line_width = 0.1, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
-        logBF_max = 5, geno_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
+        logBF_max = 5, geno_bar = FALSE, superclone = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
         pal_annot = NULL, tree_height = 1, annot_title = 'Annotation', annot_scale = NULL
     ) {
     
@@ -1120,6 +1120,16 @@ plot_phylo_heatmap = function(
             ungroup() %>%
             distinct(cell, CHROM, seg_end, seg_start, .keep_all = T) %>%
             mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
+    }
+
+    if (!'clone' %in% colnames(data.frame(activate(gtree, 'nodes')))) {
+        gtree = gtree %>%
+            activate(nodes) %>%
+            mutate(clone = as.integer(factor(GT)))
+    }
+
+    if (superclone) {
+        gtree = gtree %>% activate(nodes) %>% mutate(clone = superclone)
     }
 
     gtree = mark_tumor_lineage(gtree)

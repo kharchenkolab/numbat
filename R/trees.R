@@ -368,7 +368,7 @@ mut_to_tree = function(gtree, mut_nodes) {
     # transfer mutation to tree
     gtree = gtree %>%
         activate(nodes) %>%
-        select(-any_of(c('n_mut', 'l', 'site'))) %>%
+        select(-any_of(c('n_mut', 'l', 'site', 'clone'))) %>%
         left_join(
             mut_nodes %>%
                 mutate(n_mut = unlist(purrr::map(str_split(site, ','), length))) %>%
@@ -615,6 +615,88 @@ get_move_opt = function(G, l_matrix) {
         head(1)
 
     return(move_opt)
+}
+
+#' Annotate superclones on a tree
+#' @export
+annot_superclones = function(gtree, geno, p_min = 0.95, precision_cutoff = 0.9) {
+    
+    anchors = score_mut(gtree, geno, p_min = p_min) %>%
+        filter(precision > precision_cutoff) %>% 
+        pull(site)
+    
+    mut_nodes = gtree %>%
+        activate(nodes) %>%
+        filter(!is.na(site)) %>%
+        as.data.frame() %>%
+        select(name, site) %>%
+        tidyr::separate_rows(site, sep = ',') %>%
+        filter(site %in% anchors) %>%
+        group_by(name) %>%
+        summarise(
+            site = paste0(site, collapse = ','),
+            .groups = 'drop'
+        )
+    
+    superclone_dict = gtree %>% 
+        mut_to_tree(mut_nodes) %>%
+        activate(nodes) %>%
+        as.data.frame() %>%
+        mutate(clone = as.integer(as.factor(GT))) %>%
+        {setNames(.$clone, .$name)}
+    
+    gtree = gtree %>% 
+        activate(nodes) %>%
+        mutate(superclone = superclone_dict[name])
+    
+    return(gtree)
+}
+
+#' Score mutations on goodness of fit on the tree
+#' @keywords internal
+score_mut = function(gtree, geno, p_min = 0.95) {
+
+    mut_scores = gtree %>%
+        activate(nodes) %>%
+        filter(!is.na(site)) %>%
+        as.data.frame() %>%
+        distinct(site, id, name) %>%
+        rename(node = id) %>%
+        tidyr::separate_rows(site, sep = ',') %>%
+        group_by(site, node, name) %>%
+        summarise(
+            score_mut_helper(gtree, geno, site, node, p_min),
+            .groups = 'drop'
+        ) %>%
+        arrange(-precision)
+    
+    return(mut_scores)
+    
+}
+
+#' Helper for mutation scoring
+#' @keywords internal
+score_mut_helper = function(gtree, geno, s, v, p_min = 0.95) {
+    gtree %>%
+        activate(nodes) %>%
+        mutate(seq = bfs_rank(root = v)) %>%
+        data.frame %>%
+        filter(leaf) %>%
+        mutate(
+            p_0 = unlist(geno[name, s]),
+            p_1 = 1 - p_0
+        ) %>%
+        mutate(
+            is_desc = !is.na(seq),
+            p = ifelse(is_desc, p_1, p_0)
+        ) %>%
+        summarise(
+            p = mean(p),
+            TP = sum(is_desc & p_1 > p_min),
+            FP = sum((!is_desc) & p_1 > p_min),
+            precision = TP/(TP + FP)
+        ) %>%
+        tibble()
 }
 
 #' @export
