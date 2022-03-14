@@ -126,7 +126,8 @@ out = run_numbat(
     out_dir = './test'
 )
 ```
-**Note**: the current implementation requires significant memory (hundreds of Gb) for large number of cells (>5000). We are currently working to reduce memory usage. 
+**Note**: To avoid memory issues associated with OpenMP, **please set `export OMP_NUM_THREADS=1` in your bash shell before starting R/Rscript**. We're currently looking for a solution to control the behavior of OpenMP within R.
+
 ## Run parameters
 There are a few parameters you can consider tuning to a specific dataset. 
 - `t`: the transition probability used in the HMM. A lower `t` is more appropriate for tumors with more complex copy number landscapes (from which you can expect more breakpoints) and is sometimes better for detecting subclonal events. A higher `t` is more effective for controlling false-positive rates of CNV calls.
