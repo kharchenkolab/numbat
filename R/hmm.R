@@ -534,11 +534,10 @@ calc_trans_mat = function(t, p_s, w, states_cn, states_phase) {
 }
 
 ########## HMM wrappers ###########
-#' one theta level
 #' @keywords internal
 run_hmm_mv_inhom = function(
     pAD, DP, p_s, Y_obs = 0, lambda_ref = 0, d_total = 0, theta_min = 0.08, theta_neu = 0,
-    bal_cnv = TRUE, phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), 
+    bal_cnv = TRUE, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = phi_amp, phi_bdel = phi_del, 
     alpha = 1, beta = 1, 
     mu = 0, sig = 1,
     exp_model = 'gpois',
@@ -618,7 +617,7 @@ run_hmm_mv_inhom = function(
     # parameters for each state
     alpha_states = gamma * c(theta_u_neu, rep(c(theta_u_1, theta_d_1, theta_u_2, theta_d_2), 3), theta_u_neu, theta_u_neu)
     beta_states = gamma * c(theta_d_neu, rep(c(theta_d_1, theta_u_1, theta_d_2, theta_u_2), 3), theta_d_neu, theta_d_neu)
-    phi_states = c(phi_neu, rep(phi_del, 2), rep(0.5, 2), rep(phi_neu, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
+    phi_states = c(1, rep(phi_del, 2), rep(0.5, 2), rep(1, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
     
     # subset for relevant states
     prior = prior[states_index]
@@ -675,156 +674,6 @@ run_hmm_mv_inhom = function(
         
     return(states[as.character(MPC$y)])
 }
-
-#' two theta level
-#' @keywords internal
-run_hmm_mv_inhom2 = function(
-    pAD, DP, p_s, Y_obs, lambda_ref, d_total, 
-    theta_min = 0.08, theta_neu = 0.065, bal_cnv = TRUE, 
-    phi_neu = 1, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = 2^(0.25), phi_bdel = 2^(-0.25), 
-    alpha = 1, beta = 1, 
-    mu = 0, sig = 1,
-    exp_model = 'lnpois',
-    t = 1e-5, gamma = 20, prior = NULL, exp_only = FALSE, allele_only = FALSE, 
-    classify_allele = FALSE, phasing = TRUE,  debug = FALSE
-) {
-
-    # states
-    states = c(
-        "1" = "neu_up", "2" = "neu_down",
-        "3" = "del_1_up", "4" = "del_1_down", "5" = "del_2_up", "6" = "del_2_down",
-        "7" = "loh_1_up", "8" = "loh_1_down", "9" = "loh_2_up", "10" = "loh_2_down", 
-        "11" = "amp_1_up", "12" = "amp_1_down", "13" = "amp_2_up", "14" = "amp_2_down", 
-        "15" = "bamp_up", "16" = "bamp_down",
-        "17" = "bdel_up", "18" = "bdel_down"
-    )
-
-    states_cn = str_remove(states, '_up|_down')
-    states_phase = str_extract(states, 'up|down')
-
-    # relative abundance of states
-    w = c('neu' = 1, 'del_1' = 1, 'del_2' = 1e-10, 'loh_1' = 1, 'loh_2' = 1e-10, 'amp_1' = 1, 'amp_2' = 1e-10, 'bamp' = 1e-4, 'bdel' = 1e-10)
-        
-    # intitial probabilities
-    if (is.null(prior)) {
-        # encourage CNV from telomeres
-        prior = sapply(1:length(states), function(to){
-                get_trans_probs(
-                    cn_from = 'neu', phase_from = 'up',
-                    cn_to = states_cn[to], phase_to = states_phase[to],
-                    t = min(t * 100, 0.5), p_s = 0.5, w)
-            })
-    }
-        
-    # to do: renormalize the probabilities after deleting states
-    states_index = 1:length(states)
-
-    if (!bal_cnv) {
-        states_index = 1:14
-    }
-        
-    if (exp_only) {
-        pAD = rep(NA, length(pAD))
-        p_s = rep(0, length(p_s))
-    }
-    
-    if (allele_only) {
-        states_index = c(1:2, 7:10)
-
-        Y_obs = rep(NA, length(Y_obs))
-    }
-
-    # need to modify
-    if (!phasing) {
-        states_index = c(1, 6)
-        
-        p_s = ifelse(is.na(pAD), p_s, 0)
-        pAD = ifelse(pAD > (DP - pAD), pAD, DP - pAD)
-        theta_neu = 0.1
-        theta_min = 0.45
-    }
-
-    if (classify_allele) {
-        states_index = c(7,8)
-    }
-        
-    # transition matrices
-    As = calc_trans_mat(t, p_s, w, states_cn, states_phase)
-
-    theta_u_1 = 0.5 + theta_min
-    theta_d_1 = 0.5 - theta_min
-
-    theta_u_2 = 0.9
-    theta_d_2 = 0.1
-
-    theta_u_neu = 0.5 + theta_neu
-    theta_d_neu = 0.5 - theta_neu
-
-    # parameters for each state
-    alpha_states = gamma * c(theta_u_neu, theta_d_neu, rep(c(theta_u_1, theta_d_1, theta_u_2, theta_d_2), 3), rep(c(theta_u_neu, theta_d_neu), 2))
-    beta_states = gamma * c(theta_d_neu, theta_u_neu, rep(c(theta_d_1, theta_u_1, theta_d_2, theta_u_2), 3), rep(c(theta_d_neu, theta_u_neu), 2))
-    phi_states = c(rep(phi_neu, 2), rep(phi_del, 2), rep(0.5, 2), rep(phi_neu, 4), rep(phi_amp, 2), rep(2.5, 2), rep(phi_bamp, 2), rep(phi_bdel,2))
-
-    # subset for relevant states
-    prior = prior[states_index]
-    As = As[states_index, states_index,]
-    alpha_states = alpha_states[states_index]
-    beta_states = beta_states[states_index]
-    phi_states = phi_states[states_index]
-    states = states[states_index] %>% setNames(1:length(.))
-
-    hmm = HiddenMarkov::dthmm(
-        x = pAD, 
-        Pi = As, 
-        delta = prior, 
-        distn = "bbinom",
-        pm = list(
-            alpha = alpha_states,
-            beta = beta_states
-        ),
-        pn = list(size = DP),
-        discrete = TRUE
-    )
-
-    hmm$x2 = Y_obs
-    hmm$phi = phi_states
-    hmm$lambda_star = lambda_ref
-    hmm$d = d_total
-    
-    if (exp_model == 'gpois') {
-
-        # print('running gpois model')
-
-        hmm$distn2 = 'gpois'
-        hmm$alpha = alpha
-        hmm$beta = beta
-        
-        class(hmm) = 'dthmm.mv.inhom.gpois'
-
-    } else {
-
-        if (length(mu) == 1 & length(sig) == 1) {
-            mu = rep(mu, length(Y_obs))
-            sig = rep(sig, length(Y_obs))
-        }
-
-        hmm$distn2 = 'poilog'
-        hmm$mu = mu
-        hmm$sig = sig
-        
-        class(hmm) = 'dthmm.mv.inhom.lnpois'
-
-    }
-    
-    if (debug) {
-        return(hmm)
-    }
-
-    MPC = HiddenMarkov::Viterbi(hmm)
-        
-    return(states[as.character(MPC$y)])
-}
-
 
 
 

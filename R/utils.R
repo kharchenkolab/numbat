@@ -357,14 +357,16 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
 
     count_mat = check_matrix(count_mat)
 
-    if (is.null(sc_refs)) {
-        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
-    }
-    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs[colnames(count_mat)], verbose = FALSE)
+    # if (is.null(sc_refs)) {
+    #     sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+    # }
+    # lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs[colnames(count_mat)], verbose = FALSE)
     
+    fit = fit_multi_ref(rowSums(count_mat), lambdas_ref, sum(count_mat), gtf_transcript)
+
     exp_bulk = get_exp_bulk(
             count_mat,
-            lambdas_bar,
+            fit$lambdas_bar,
             gtf_transcript,
             verbose = verbose
         ) %>%
@@ -466,6 +468,7 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
 #' @export
 analyze_bulk = function(
     bulk, t = 1e-5, gamma = 20, theta_min = 0.08, lambda = 1, 
+    phi_del = 2^(-0.25), phi_amp = 2^(0.25),
     exp_only = FALSE, allele_only = FALSE, retest = TRUE, 
     find_diploid = TRUE, diploid_chroms = NULL,
     classify_allele = FALSE, run_hmm = TRUE, bal_cnv = TRUE, prior = NULL, 
@@ -516,11 +519,8 @@ analyze_bulk = function(
                     Y_obs = Y_obs, 
                     lambda_ref = lambda_ref, 
                     d_total = na.omit(unique(d_obs)),
-                    phi_neu = 1,
-                    phi_amp = 2^(0.25),
-                    phi_del = 2^(-0.25),
-                    phi_bamp = 2^(0.25),
-                    phi_bdel = 2^(-0.25),
+                    phi_amp = phi_amp,
+                    phi_del = phi_del,
                     mu = mu,
                     sig = sig,
                     t = t,
