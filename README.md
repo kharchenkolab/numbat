@@ -62,7 +62,10 @@ Then install the Numbat R package via:
 ```
 devtools::install_github("https://github.com/kharchenkolab/numbat")
 ```
-
+To get the most recent updates, you can install the development version:
+```
+devtools::install_github("https://github.com/kharchenkolab/Numbat/tree/devel")
+```
 # Preparing data
 1. Prepare the allele data. Run the preprocessing script (`pileup_and_phase.R`) to count alleles and phase SNPs
 ```
@@ -79,7 +82,7 @@ optional arguments:
   --samples SAMPLES    Sample names, comma delimited
   --bams BAMS          BAM files, one per sample, comma delimited
   --barcodes BARCODES  Cell barcode files, one per sample, comma delimited
-  --gmap GMAP          Path to genetic map provided by Eagle2
+  --gmap GMAP          Path to genetic map provided by Eagle2 (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)
   --snpvcf SNPVCF      SNP VCF for pileup
   --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
   --outdir OUTDIR      Output directory
@@ -96,7 +99,7 @@ This will produce a file named `{sample}_allele_counts.tsv.gz` under the specifi
 3. Prepare the expression reference, which is a gene by cell type matrix of normalized expression values (not raw counts!). For a quick start, you may use a our HCA collection (`ref_hca`) that ships with the package. If you have matched normal cells (ideally, of various cell type) from the same patient or dataset and would like to make your own references, you may use this utility function:
 ```
 # count_mat is a gene x cell raw count matrices
-# cell_annot is a dataframe with columns "gene" and "cell_type"
+# cell_annot is a dataframe with columns "cell" and "cell_type"
 ref_internal = aggregate_counts(count_mat, cell_annot)$exp_mat
 ```
   
@@ -123,6 +126,8 @@ out = run_numbat(
     out_dir = './test'
 )
 ```
+**Note**: To avoid a known memory issue (see [#23](https://github.com/kharchenkolab/numbat/issues/23)), **please set `export OMP_NUM_THREADS=1` in your bash shell before starting R/Rscript**. We're currently looking for a solution to control the behavior of OpenMP within R.
+
 ## Run parameters
 There are a few parameters you can consider tuning to a specific dataset. 
 - `t`: the transition probability used in the HMM. A lower `t` is more appropriate for tumors with more complex copy number landscapes (from which you can expect more breakpoints) and is sometimes better for detecting subclonal events. A higher `t` is more effective for controlling false-positive rates of CNV calls.
