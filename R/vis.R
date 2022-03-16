@@ -4,6 +4,7 @@ pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 
 #' @export
 cnv_colors = c("neu" = "gray", 
+        "neu_up" = "darkgray", "neu_down" = "gray",
         "del_up" = "royalblue", "del_down" = "darkblue", 
         "loh_up" = "darkgreen", "loh_down" = "olivedrab4",
         "amp_up" = "red", "amp_down" = "tomato3",
@@ -461,12 +462,16 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 #' @return ggplot Plot of pseudobulk HMM profile
 #' @export
 plot_psbulk = function(
-    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 10, min_depth = 8, exp_limit = 2, 
+    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 0, min_depth = 8, exp_limit = 2, 
     phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = TRUE
     ) {
 
-    if (!'state_post' %in% colnames(bulk)) {
-        bulk = bulk %>% mutate(state_post = state)
+    if (!all(c('state_post', 'cnv_state_post') %in% colnames(bulk))) {
+        bulk = bulk %>%
+            mutate(
+                state_post = state,
+                cnv_state_post = cnv_state
+            )
     }
 
     if (min_LLR != 0) {
@@ -583,20 +588,21 @@ plot_psbulk = function(
     }
 
     if (theta_roll) {
-        p = p + geom_line(
-            inherit.aes = FALSE,
-            data = D %>% mutate(variable = 'pHF'),
-            aes(x = snp_index, y = 0.5 - theta_hat_roll, color = paste0(cnv_state_post, '_down')),
-            # color = 'black',
-            size = 0.35
-        ) +
-        geom_line(
-            inherit.aes = FALSE,
-            data = D %>% mutate(variable = 'pHF'),
-            aes(x = snp_index, y = 0.5 + theta_hat_roll, color = paste0(cnv_state_post, '_up')),
-            # color = 'gray',
-            size = 0.35
-        )
+        p = p + 
+            geom_line(
+                inherit.aes = FALSE,
+                data = D %>% mutate(variable = 'pHF'),
+                aes(x = snp_index, y = 0.5 - theta_hat_roll, color = paste0(cnv_state_post, '_down')),
+                # color = 'black',
+                size = 0.35
+            ) +
+            geom_line(
+                inherit.aes = FALSE,
+                data = D %>% mutate(variable = 'pHF'),
+                aes(x = snp_index, y = 0.5 + theta_hat_roll, color = paste0(cnv_state_post, '_up')),
+                # color = 'gray',
+                size = 0.35
+            )
     } 
 
     p = p + xlab(marker_label)

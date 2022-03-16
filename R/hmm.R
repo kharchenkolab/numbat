@@ -66,66 +66,9 @@ Viterbi.dthmm.inhom <- function (obj, ...){
     return(list(y = y, LL = LL))
 }
 
-# one theta level
+# allele-only HMM
 #' @keywords internal
 run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
-
-    gamma = unique(gamma)
-
-    if (length(gamma) > 1) {
-        stop('More than one gamma parameter')
-    }
-    
-    # states
-    states = c("theta_up", "neu", "theta_down")
-    
-    # transition matrices
-    calc_trans_mat = function(p_s, t, n_states) {
-        matrix(
-            c((1-t) * (1-p_s), t, (1-t) * p_s, 
-             t/2, (1-t), t/2,
-             (1-t) * p_s, t, (1-t) * (1-p_s)),
-            ncol = n_states,
-            byrow = TRUE
-        )
-    }
-    
-    As = lapply(
-        p_s,
-        function(p_s) {calc_trans_mat(p_s, t, n_states = length(states))}
-    )
-    
-    # intitial probabilities
-    if (is.null(prior)) {
-        prior = rep(1/length(states), length(states))
-    }
-
-    alpha_up = (0.5 + theta_min) * gamma
-    beta_up = (0.5 - theta_min) * gamma
-    alpha_down = beta_up
-    beta_down = alpha_up
-    alpha_neu = gamma/2
-    beta_neu = gamma/2
-        
-    hmm = HiddenMarkov::dthmm(
-        x = pAD, 
-        Pi = As, 
-        delta = prior, 
-        distn = "bbinom",
-        pm = list(alpha=c(alpha_up,alpha_neu,alpha_down), beta=c(beta_up,beta_neu,beta_down)),
-        pn = list(size = DP),
-        discrete = TRUE)
-
-    class(hmm) = 'dthmm.inhom'
-        
-    solution = states[HiddenMarkov::Viterbi(hmm)]
-    
-    return(solution)
-}
-
-# two theta levels
-#' @keywords internal
-run_hmm_inhom2 = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
 
     gamma = unique(gamma)
 
@@ -137,26 +80,26 @@ run_hmm_inhom2 = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, 
     states = c("neu", "theta_1_up", "theta_1_down", "theta_2_up", "theta_2_down")
     
     # transition matrices
-    calc_trans_mat = function(p_s, t, n_states) {
+    calc_trans_mat = function(p_s, t) {
         matrix(
             c(1-t, t/4, t/4, t/4, t/4, 
-             t/4, (1-t)*(1-p_s), (1-t)*p_s, t/4, t/4,
-             t/4, (1-t)*p_s, (1-t)*(1-p_s), t/4, t/4,
-             t/4, t/4, t/4, (1-t)*(1-p_s), (1-t)*p_s,
-             t/4, t/4, t/4, (1-t)*p_s, (1-t)*(1-p_s)),
-            ncol = n_states,
+             t/2, (1-t)*(1-p_s), (1-t)*p_s, t/4, t/4,
+             t/2, (1-t)*p_s, (1-t)*(1-p_s), t/4, t/4,
+             t/2, t/4, t/4, (1-t)*(1-p_s), (1-t)*p_s,
+             t/2, t/4, t/4, (1-t)*p_s, (1-t)*(1-p_s)),
+            ncol = 5,
             byrow = TRUE
         )
     }
     
     As = lapply(
         p_s,
-        function(p_s) {calc_trans_mat(p_s, t, n_states = length(states))}
+        function(p_s) {calc_trans_mat(p_s, t)}
     )
     
     # intitial probabilities
     if (is.null(prior)) {
-        prior = rep(1/length(states), length(states))
+        prior = rep(1/5, 5)
     }
 
     theta_1 = theta_min

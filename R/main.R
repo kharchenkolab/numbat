@@ -43,9 +43,10 @@ NULL
 #' @export
 run_numbat = function(
         count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, 
-        out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 50, alpha = 1e-4, eps = 1e-5, max_entropy = 0.6, 
-        init_k = 3, min_cells = 10, max_cost = ncol(count_mat) * 0.3, 
-        min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, ncores = 1, ncores_nni = ncores, exp_model = 'lnpois', 
+        out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 50,
+        alpha = 1e-4, eps = 1e-5, max_entropy = 0.6, init_k = 3, min_cells = 10,
+        max_cost = ncol(count_mat) * 0.3, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
+        ncores = 1, ncores_nni = ncores, exp_model = 'lnpois', random_init = FALSE,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
         skip_nj = FALSE, multi_allelic = FALSE, p_multi = 0.995,
         plot = TRUE
@@ -116,26 +117,38 @@ run_numbat = function(
     sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
     saveRDS(sc_refs, glue('{out_dir}/sc_refs.rds'))
 
-    log_message('Approximating initial clusters using smoothed expression ..', verbose = verbose)
-    log_mem()
+    if (random_init) {
 
-    clust = exp_hclust(
-        count_mat = count_mat,
-        lambdas_ref = lambdas_ref,
-        gtf_transcript = gtf_transcript,
-        sc_refs = sc_refs,
-        ncores = ncores
-    )
+        log_message('Initializing with random tree...')
+        n_cells = ncol(count_mat)
+        dist_mat = matrix(rnorm(n_cells^2),nrow=n_cells)
+        colnames(dist_mat) = colnames(count_mat)
+        hc = hclust(as.dist(dist_mat), method = "ward.D2")
 
-    hc = clust$hc
+    } else {
 
-    fwrite(
-        as.data.frame(clust$gexp_roll_wide),
-        glue('{out_dir}/gexp_roll_wide.tsv.gz'),
-        sep = '\t',
-        row.names = TRUE,
-        nThread = min(4, ncores)
-    )
+        log_message('Approximating initial clusters using smoothed expression ..', verbose = verbose)
+        log_mem()
+
+        clust = exp_hclust(
+            count_mat = count_mat,
+            lambdas_ref = lambdas_ref,
+            gtf_transcript = gtf_transcript,
+            sc_refs = sc_refs,
+            ncores = ncores
+        )
+
+        hc = clust$hc
+
+        fwrite(
+            as.data.frame(clust$gexp_roll_wide),
+            glue('{out_dir}/gexp_roll_wide.tsv.gz'),
+            sep = '\t',
+            row.names = TRUE,
+            nThread = min(4, ncores)
+        )
+    }
+
     saveRDS(hc, glue('{out_dir}/hc.rds'))
 
     # extract cell groupings
@@ -145,7 +158,6 @@ run_numbat = function(
 
     normal_cells = c()
     
-    rm(clust)
     ######## Begin iterations ########
     for (i in 1:max_iter) {
 

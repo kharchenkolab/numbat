@@ -492,7 +492,7 @@ analyze_bulk = function(
         log_info(glue('Using diploid chromosomes given: {paste0(diploid_chroms, collapse = ",")}'))
         bulk = bulk %>% mutate(diploid = CHROM %in% diploid_chroms)
     } else if (find_diploid) {
-        out = find_common_diploid(bulk, gamma = gamma, t = t)
+        out = find_common_diploid(bulk, gamma = gamma, t = t, theta_min = 0.15)
         bulk = out$bulks
         bal_cnv = out$bamp
     } else if (!'diploid' %in% colnames(bulk)) {
@@ -976,7 +976,7 @@ find_common_diploid = function(
     ncores = 1, debug = FALSE, verbose = TRUE) {
 
     if (!'sample' %in% colnames(bulks)) {
-        bulks$sample = 1
+        bulks$sample = '1'
     }
     
     # define balanced regions in each sample
@@ -988,7 +988,7 @@ find_common_diploid = function(
             bulk %>% 
                 group_by(CHROM) %>%
                 mutate(state = 
-                    run_hmm_inhom2(
+                    run_hmm_inhom(
                         pAD = pAD,
                         DP = DP, 
                         p_s = p_s,
@@ -1153,7 +1153,7 @@ find_common_diploid = function(
         res = list(
             'bamp' = bamp, 'bulks' = bulks, 'diploid_segs' = diploid_segs,
             'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests,
-            'test_dat' = test_dat, 'FC' = FC, 'cliques' = cliques
+            'test_dat' = test_dat, 'FC' = FC, 'cliques' = cliques, 'segs_bal' = segs_bal
         )
     } else {
         res = list('bamp' = bamp, 'bulks' = bulks)
