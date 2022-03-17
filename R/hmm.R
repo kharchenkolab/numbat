@@ -167,6 +167,8 @@ forward_back_allele = function (obj, ...) {
         
     marginals = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
 
+    colnames(marginals) = obj$states
+
     return(marginals)
 }
 
@@ -220,6 +222,8 @@ get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
         distn = "bbinom", pm = list(alpha = c(alpha_up, alpha_down), 
             beta = c(beta_up, beta_down)), pn = list(size = DP), 
         discrete = TRUE)
+
+    hmm$states = states
 
     class(hmm) = "dthmm.inhom"
 
