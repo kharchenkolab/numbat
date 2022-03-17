@@ -70,6 +70,19 @@ Viterbi.dthmm.inhom <- function (obj, ...){
 #' @keywords internal
 run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
 
+    states = c("neu", "theta_1_up", "theta_1_down", "theta_2_up", "theta_2_down")
+
+    hmm = get_full_allele_hmm(pAD, DP, p_s, t = t, theta_min = theta_min, gamma = gamma, prior = prior)
+        
+    solution = states[HiddenMarkov::Viterbi(hmm)$y]
+    
+    return(solution)
+}
+
+#' Include neutral state
+#' @keywords internal
+get_full_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
+
     gamma = unique(gamma)
 
     if (length(gamma) > 1) {
@@ -119,10 +132,8 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
     )
 
     class(hmm) = 'dthmm.inhom'
-        
-    solution = states[HiddenMarkov::Viterbi(hmm)$y]
-    
-    return(solution)
+
+    return(hmm)
 }
 
 #' @keywords internal
