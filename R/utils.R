@@ -731,7 +731,7 @@ classify_alleles = function(bulk) {
         group_by(CHROM, seg) %>%
         filter(n() > 1) %>%
         mutate(
-            p_up = forward_back_allele(get_allele_hmm(pAD, DP, p_s, theta = unique(theta_mle), gamma = 20)),
+            p_up = forward_back_allele(get_allele_hmm(pAD, DP, p_s, theta = unique(theta_mle), gamma = 20))[,1],
             haplo_post = case_when(
                 p_up >= 0.5 & GT == '1|0' ~ 'major',
                 p_up >= 0.5 & GT == '0|1' ~ 'minor',

@@ -167,9 +167,7 @@ forward_back_allele = function (obj, ...) {
         
     marginals = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
 
-    p_major = marginals[,1]
-
-    return(p_major)
+    return(marginals)
 }
 
 # only compute total log likelihood
