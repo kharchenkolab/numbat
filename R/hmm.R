@@ -154,7 +154,9 @@ forward_back_allele = function (obj, ...) {
 
     logPi <- lapply(obj$Pi, log)
         
-    p_major = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
+    marginals = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
+
+    p_major = marginals[,1]
 
     return(p_major)
 }

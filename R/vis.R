@@ -311,13 +311,13 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', siz
 }
 
 #' @export
-plot_sc_roll = function(gexp_roll_wide, hc, k, gtf_transcript, lim = 0.8, n_sample = 50, reverse = TRUE, plot_tree = TRUE) {
+plot_sc_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 50, reverse = TRUE, plot_tree = TRUE) {
 
     gexp_norm_long = gexp_roll_wide %>% 
         as.data.frame() %>%
         tibble::rownames_to_column('cell') %>%
         reshape2::melt(id.var = 'cell', variable.name = 'gene', value.name = 'exp_rollmean') %>%
-        left_join(gtf_transcript, by = 'gene') %>%
+        left_join(gtf, by = 'gene') %>%
         mutate(gene_index = as.integer(factor(gene, unique(gene))))
 
     cells = unique(gexp_norm_long$cell)

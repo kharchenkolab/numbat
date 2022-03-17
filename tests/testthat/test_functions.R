@@ -13,7 +13,7 @@ test_that("HMM works", {
       count_mat = count_mat_ATC2,
       df_allele = df_allele_ATC2,
       lambdas_ref = ref_hca,
-      gtf_transcript = gtf_hg38,
+      gtf = gtf_hg38,
       genetic_map = genetic_map_hg38
   )
 
@@ -46,21 +46,7 @@ test_that("logSumExp() works", {
 
 test_that("Check that likelihood_allele() works as expected", {
 
-  x <- pre_likelihood_hmm$x
-  p_x <- numbat:::makedensity(pre_likelihood_hmm$distn)
-  m <- nrow(pre_likelihood_hmm$Pi[[1]])
-  n <- length(x)
-  logprob = sapply(1:m, function(k) {
-      l_x = p_x(x = x,  numbat:::getj(pre_likelihood_hmm$pm, k), pre_likelihood_hmm$pn, log = TRUE)
-      l_x[is.na(l_x)] = 0
-      return(l_x)
-  })
-  logphi <- log(as.double(pre_likelihood_hmm$delta))
-  logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-  LL <- as.double(0)
-  logPi <- lapply(pre_likelihood_hmm$Pi, log)
-
-  LL <- numbat:::likelihood_allele_compute(pre_likelihood_hmm, logphi, logprob, logPi, n, m)
+  LL = likelihood_allele(pre_likelihood_hmm)
   expect_equal(as.integer(LL), -736)
 
 })
@@ -69,27 +55,13 @@ test_that("Check that likelihood_allele() works as expected", {
 
 test_that("Check that forward_backward() works as expected", {
 
-  x <- pre_likelihood_hmm$x
-  p_x <- numbat:::makedensity(pre_likelihood_hmm$distn)
-  m <- nrow(pre_likelihood_hmm$Pi[[1]])
-  n <- length(x)
-  logprob = sapply(1:m, function(k) {
-      l_x = p_x(x = x,  numbat:::getj(pre_likelihood_hmm$pm, k), pre_likelihood_hmm$pn, log = TRUE)
-      l_x[is.na(l_x)] = 0
-      return(l_x)
-  })
-  logphi <- log(as.double(pre_likelihood_hmm$delta))
-  logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-  lscale <- as.double(0)
-  logPi <- lapply(pre_likelihood_hmm$Pi, log)
-
-  ##LL <- numbat:::likelihood_allele_compute(pre_likelihood_hmm, logphi, logprob, logPi, n, m)
-  p_major <- numbat:::forward_backward_compute(pre_likelihood_hmm, logphi, logprob, logPi, n, m)
+  p_major = forward_back_allele(pre_likelihood_hmm)
   expect_equal(is.vector(p_major), TRUE)
   expect_equal(length(p_major), 1042)
   expect_equal(round(p_major[1], 3), 0.963)
   expect_equal(round(p_major[2], 3), 0)
   expect_equal(round(p_major[3], 3), 0)
   expect_equal(round(p_major[10], 3), 0.745)
+
 })
 

@@ -3,10 +3,10 @@
 #' choose beest reference for each cell based on correlation
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
-#' @param gtf_transcript dataframe Transcript gtf
+#' @param gtf dataframe Transcript gtf
 #' @return named vector Best references for each cell
 #' @export
-choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
+choose_ref_cor = function(count_mat, lambdas_ref, gtf) {
 
     if (ncol(lambdas_ref) == 1) {
         ref_name = colnames(lambdas_ref)
@@ -15,7 +15,7 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf_transcript) {
         return(best_refs)
     }
     
-    genes_annotated = gtf_transcript %>% 
+    genes_annotated = gtf %>% 
         pull(gene) %>% 
         intersect(rownames(count_mat)) %>%
         intersect(rownames(lambdas_ref))
@@ -78,18 +78,18 @@ aggregate_counts = function(count_mat, cell_annot, verbose = T) {
 #' @param Y_obs numeric vector Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param d numeric Total library size
-#' @param gtf_transcript dataframe Transcript gtf
+#' @param gtf dataframe Transcript gtf
 #' @param min_lambda numeric Expression level threshold to filter genes
 #' @return list Fitted reference weights and expression model parameters
 #' @keywords internal
-fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-6, verbose = FALSE) {
+fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf, min_lambda = 2e-6, verbose = FALSE) {
 
     if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
         return(list('w' = 1, 'lambdas_bar' = lambdas_ref))
     }
 
     # take the union of expressed genes across cell type
-    genes_common = gtf_transcript$gene %>% 
+    genes_common = gtf$gene %>% 
         intersect(names(Y_obs)) %>%
         intersect(rownames(lambdas_ref)[rowMeans(lambdas_ref) > min_lambda])
 
@@ -127,12 +127,12 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf_transcript, min_lambda = 2e-
 #' filtering, normalization and capping
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
-#' @param gtf_transcript dataframe Transcript gtf
+#' @param gtf dataframe Transcript gtf
 #' @return dataframe Logx+1 transformed normalized expression values for single cells
 #' @keywords internal
-smooth_expression = function(count_mat, lambdas_ref, gtf_transcript, window = 101, verbose = T) {
+smooth_expression = function(count_mat, lambdas_ref, gtf, window = 101, verbose = T) {
 
-    mut_expressed = filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = verbose)
+    mut_expressed = filter_genes(count_mat, lambdas_ref, gtf, verbose = verbose)
     count_mat = count_mat[mut_expressed,,drop=FALSE]
     lambdas_ref = lambdas_ref[mut_expressed]
 
@@ -161,16 +161,16 @@ smooth_expression = function(count_mat, lambdas_ref, gtf_transcript, window = 10
 #' filter for mutually expressed genes
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref named numeric vector A reference expression profile
-#' @param gtf_transcript dataframe Transcript gtf
+#' @param gtf dataframe Transcript gtf
 #' @return vector Genes that are kept after filtering
 #' @keywords internal
-filter_genes = function(count_mat, lambdas_ref, gtf_transcript, verbose = T) {
+filter_genes = function(count_mat, lambdas_ref, gtf, verbose = T) {
 
-    genes_keep = gtf_transcript$gene %>% 
+    genes_keep = gtf$gene %>% 
         intersect(rownames(count_mat)) %>%
         intersect(names(lambdas_ref))
 
-    genes_exclude = gtf_transcript %>%
+    genes_exclude = gtf %>%
         filter(CHROM == 6 & gene_start < 33480577 & gene_end > 28510120) %>%
         pull(gene)
 
@@ -199,14 +199,14 @@ filter_genes = function(count_mat, lambdas_ref, gtf_transcript, verbose = T) {
 #' Aggregate into bulk expression profile
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
-#' @param gtf_transcript dataframe Transcript gtf
+#' @param gtf dataframe Transcript gtf
 #' @return dataframe Pseudobulk gene expression profile
 #' @keywords internal
-get_exp_bulk = function(count_mat, lambdas_ref, gtf_transcript, verbose = TRUE) {
+get_exp_bulk = function(count_mat, lambdas_ref, gtf, verbose = TRUE) {
 
     depth_obs = sum(count_mat)
     
-    mut_expressed = filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = verbose)
+    mut_expressed = filter_genes(count_mat, lambdas_ref, gtf, verbose = verbose)
     count_mat = count_mat[mut_expressed,,drop=FALSE]
     lambdas_ref = lambdas_ref[mut_expressed]
 
@@ -218,11 +218,11 @@ get_exp_bulk = function(count_mat, lambdas_ref, gtf_transcript, verbose = TRUE) 
         mutate(lambda_obs = (Y_obs/depth_obs)) %>%
         mutate(lambda_ref = lambdas_ref[gene]) %>%
         mutate(d_obs = depth_obs) %>%
-        left_join(gtf_transcript, by = "gene") 
+        left_join(gtf, by = "gene") 
     
     # annotate using GTF
     bulk_obs = bulk_obs %>%
-        mutate(gene = droplevels(factor(gene, gtf_transcript$gene))) %>%
+        mutate(gene = droplevels(factor(gene, gtf$gene))) %>%
         mutate(gene_index = as.integer(gene)) %>%
         arrange(gene) %>%
         mutate(CHROM = factor(CHROM)) %>%
@@ -344,12 +344,12 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param df_allele dataframe Single-cell allele counts
-#' @param gtf_transcript dataframe Transcript gtf
+#' @param gtf dataframe Transcript gtf
 #' @param genetic_map dataframe Genetic map
 #' @param sc_refs named vector Single cell reference matches
 #' @return dataframe Pseudobulk gene expression and allele profile
 #' @export
-get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, sc_refs = NULL, min_depth = 0, lambda = 1, verbose = TRUE) {
+get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, sc_refs = NULL, min_depth = 0, lambda = 1, verbose = TRUE) {
 
     if (nrow(df_allele) == 0) {
         stop('empty allele dataframe - check cell names')
@@ -358,16 +358,16 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_m
     count_mat = check_matrix(count_mat)
 
     # if (is.null(sc_refs)) {
-    #     sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+    #     sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
     # }
     # lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs[colnames(count_mat)], verbose = FALSE)
     
-    fit = fit_multi_ref(rowSums(count_mat), lambdas_ref, sum(count_mat), gtf_transcript)
+    fit = fit_multi_ref(rowSums(count_mat), lambdas_ref, sum(count_mat), gtf)
 
     exp_bulk = get_exp_bulk(
             count_mat,
             fit$lambdas_bar,
-            gtf_transcript,
+            gtf,
             verbose = verbose
         ) %>%
         filter((logFC < 5 & logFC > -5) | Y_obs == 0)
@@ -492,7 +492,7 @@ analyze_bulk = function(
         log_info(glue('Using diploid chromosomes given: {paste0(diploid_chroms, collapse = ",")}'))
         bulk = bulk %>% mutate(diploid = CHROM %in% diploid_chroms)
     } else if (find_diploid) {
-        out = find_common_diploid(bulk, gamma = gamma, t = t, theta_min = 0.15)
+        out = find_common_diploid(bulk, gamma = gamma, t = t, theta_min = theta_min)
         bulk = out$bulks
         bal_cnv = out$bamp
     } else if (!'diploid' %in% colnames(bulk)) {

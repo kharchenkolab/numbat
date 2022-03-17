@@ -140,10 +140,7 @@ Rcpp::NumericVector forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector
             expoutput(i, j) = std::exp(sum);  // Rcpp::exp() works with vectors
         }
     }
-
-    // p_major/p_minor allele
-    Rcpp::NumericVector p_major = expoutput(_, 0);
     
-    return p_major;
+    return expoutput;
 }
 

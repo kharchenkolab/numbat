@@ -20,7 +20,7 @@ NULL
 #' @param count_mat dgCMatrix Raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref matrix Either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe Allele counts per cell, produced by preprocess_allele
-#' @param gtf_transcript dataframe GTF of transcripts 
+#' @param gtf dataframe GTF of transcripts 
 #' @param genetic_map dataframe A genetic map dataframe
 #' @param out_dir string Output directory
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
@@ -42,7 +42,7 @@ NULL
 #' @return a status code
 #' @export
 run_numbat = function(
-        count_mat, lambdas_ref, df_allele, gtf_transcript, genetic_map, 
+        count_mat, lambdas_ref, df_allele, gtf, genetic_map, 
         out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 50,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.6, init_k = 3, min_cells = 10,
         max_cost = ncol(count_mat) * 0.3, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
@@ -90,7 +90,7 @@ run_numbat = function(
     count_mat = check_matrix(count_mat)
 
     # filter for annotated genes
-    genes_annotated = unique(gtf_transcript$gene) %>% 
+    genes_annotated = unique(gtf$gene) %>% 
         intersect(rownames(count_mat)) %>%
         intersect(rownames(lambdas_ref))
 
@@ -114,7 +114,7 @@ run_numbat = function(
 
     ######## Initialization ########
 
-    sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+    sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
     saveRDS(sc_refs, glue('{out_dir}/sc_refs.rds'))
 
     if (random_init) {
@@ -133,7 +133,7 @@ run_numbat = function(
         clust = exp_hclust(
             count_mat = count_mat,
             lambdas_ref = lambdas_ref,
-            gtf_transcript = gtf_transcript,
+            gtf = gtf,
             sc_refs = sc_refs,
             ncores = ncores
         )
@@ -171,7 +171,7 @@ run_numbat = function(
                 count_mat = count_mat,
                 df_allele = df_allele, 
                 lambdas_ref = lambdas_ref,
-                gtf_transcript = gtf_transcript,
+                gtf = gtf,
                 genetic_map = genetic_map,
                 min_depth = min_depth,
                 sc_refs = sc_refs,
@@ -198,7 +198,7 @@ run_numbat = function(
                 count_mat = count_mat,
                 df_allele = df_allele, 
                 lambdas_ref = lambdas_ref,
-                gtf_transcript = gtf_transcript,
+                gtf = gtf,
                 genetic_map = genetic_map,
                 min_depth = min_depth,
                 sc_refs = sc_refs,
@@ -254,7 +254,7 @@ run_numbat = function(
             count_mat,
             lambdas_ref,
             use_loh = use_loh,
-            gtf_transcript = gtf_transcript,
+            gtf = gtf,
             ncores = ncores)
 
         exp_post = exp_post_res$exp_post
@@ -445,19 +445,19 @@ log_message = function(msg, verbose = TRUE) {
 
 #' Run smoothed expression-based hclust
 #' @keywords internal 
-exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, window = 101, ncores = 1, verbose = TRUE) {
+exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101, ncores = 1, verbose = TRUE) {
 
     count_mat = check_matrix(count_mat)
 
     if (is.null(sc_refs)) {
-        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
     }
     lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs, verbose = FALSE)
 
     gexp_roll_wide = smooth_expression(
         count_mat,
         lambdas_bar,
-        gtf_transcript,
+        gtf,
         window = window,
         verbose = verbose
     ) %>% t
@@ -477,7 +477,7 @@ exp_hclust = function(count_mat, lambdas_ref, gtf_transcript, sc_refs = NULL, wi
 
 #' Make a group of pseudobulks
 #' @keywords internal 
-make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_transcript, genetic_map, min_depth = 0, sc_refs = NULL, ncores = NULL) {
+make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, genetic_map, min_depth = 0, sc_refs = NULL, ncores = NULL) {
     
     if (length(groups) == 0) {
         return(data.frame())
@@ -486,7 +486,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_trans
     ncores = ifelse(is.null(ncores), length(groups), ncores)
 
     if (is.null(sc_refs)) {
-        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
     }
 
     results = mclapply(
@@ -497,7 +497,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_trans
                     count_mat = count_mat[,g$cells],
                     df_allele = df_allele %>% filter(cell %in% g$cells),
                     lambdas_ref = lambdas_ref,
-                    gtf_transcript = gtf_transcript,
+                    gtf = gtf,
                     genetic_map = genetic_map,
                     min_depth = min_depth,
                     sc_refs = sc_refs
@@ -907,13 +907,13 @@ get_exp_likelihoods_lnpois = function(exp_sc, diploid_chroms = NULL, use_loh = F
 #' get the single cell expression dataframe
 #' @param segs_consensus dataframe Consensus segments
 #' @param count_mat dgCMatrix gene expression count matrix
-#' @param gtf_transcript dataframe Transcript gtf
+#' @param gtf dataframe Transcript gtf
 #' @return dataframe single cell expression counts annotated with segments
 #' @keywords internal
-get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
+get_exp_sc = function(segs_consensus, count_mat, gtf) {
 
     gene_seg = GenomicRanges::findOverlaps(
-            gtf_transcript %>% {GenomicRanges::GRanges(
+            gtf %>% {GenomicRanges::GRanges(
                 seqnames = .$CHROM,
                 IRanges::IRanges(start = .$gene_start,
                        end = .$gene_end)
@@ -927,7 +927,7 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
         as.data.frame() %>%
         setNames(c('gene_index', 'seg_index')) %>%
         left_join(
-            gtf_transcript %>% mutate(gene_index = 1:n()),
+            gtf %>% mutate(gene_index = 1:n()),
             by = c('gene_index')
         ) %>%
         mutate(CHROM = as.factor(CHROM)) %>%
@@ -962,13 +962,13 @@ get_exp_sc = function(segs_consensus, count_mat, gtf_transcript) {
 #' compute single-cell expression posteriors
 #' @param segs_consensus dataframe Consensus segments
 #' @param count_mat dgCMatrix gene expression count matrix
-#' @param gtf_transcript dataframe transcript gtf
+#' @param gtf dataframe transcript gtf
 #' @param lambdas_ref matrix Reference expression profiles
 #' @return dataframe Expression posteriors
 #' @keywords internal
-get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref, sc_refs = NULL, diploid_chroms = NULL, use_loh = NULL, ncores = 30, verbose = TRUE, debug = F) {
+get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = NULL, diploid_chroms = NULL, use_loh = NULL, ncores = 30, verbose = TRUE, debug = F) {
 
-    exp_sc = get_exp_sc(segs_consensus, count_mat, gtf_transcript) 
+    exp_sc = get_exp_sc(segs_consensus, count_mat, gtf) 
 
     if (is.null(use_loh)) {
         if (mean(exp_sc$cnv_state == 'neu') < 0.05) {
@@ -984,7 +984,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf_transcript, lambdas_ref, 
     cells = colnames(count_mat)
 
     if (is.null(sc_refs)) {
-        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
     }
 
     results = mclapply(
