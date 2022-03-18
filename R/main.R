@@ -51,6 +51,8 @@ run_numbat = function(
         plot = TRUE
     ) {
 
+    RhpcBLASctl::blas_set_num_threads(1)
+    RhpcBLASctl::omp_set_num_threads(1)
     ######### Basic checks #########
 
     if (is(count_mat, 'Matrix')) {
