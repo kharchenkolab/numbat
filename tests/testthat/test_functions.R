@@ -55,7 +55,7 @@ test_that("Check that likelihood_allele() works as expected", {
 
 test_that("Check that forward_backward() works as expected", {
 
-  p_major = forward_back_allele(pre_likelihood_hmm)
+  p_major = forward_back_allele(pre_likelihood_hmm)[,1]
   expect_equal(is.vector(p_major), TRUE)
   expect_equal(length(p_major), 1042)
   expect_equal(round(p_major[1], 3), 0.963)

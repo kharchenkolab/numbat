@@ -85,6 +85,8 @@ run_numbat = function(
 
     log_mem()
 
+    RhpcBLASctl::blas_set_num_threads(1)
+    RhpcBLASctl::omp_set_num_threads(1)
     ######### Basic checks #########
 
     count_mat = check_matrix(count_mat)
