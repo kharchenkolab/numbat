@@ -31,7 +31,7 @@ getj <- function(x, j){
 ############ time inhomogenous univariate HMM ############
 
 #' @keywords internal
-Viterbi.dthmm.inhom <- function (obj, ...){
+viterbi_allele <- function (obj, ...){
 #     print('Solving univariate nonhomogenous markov chain')
     x <- obj$x
     dfunc <- makedensity(obj$distn)
@@ -70,16 +70,14 @@ Viterbi.dthmm.inhom <- function (obj, ...){
 #' @keywords internal
 run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
 
-    states = c("neu", "theta_1_up", "theta_1_down", "theta_2_up", "theta_2_down")
-
     hmm = get_full_allele_hmm(pAD, DP, p_s, t = t, theta_min = theta_min, gamma = gamma, prior = prior)
         
-    solution = states[HiddenMarkov::Viterbi(hmm)$y]
+    solution = hmm$states[viterbi_allele(hmm)$y]
     
     return(solution)
 }
 
-#' Include neutral state
+#' Allele HMM with two theta states
 #' @keywords internal
 get_full_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
 
@@ -131,10 +129,227 @@ get_full_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma =
         discrete = TRUE
     )
 
+    hmm$states = states
+
     class(hmm) = 'dthmm.inhom'
 
     return(hmm)
 }
+
+#' Allele HMM with one theta state
+#' @keywords internal
+get_single_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
+
+    gamma = unique(gamma)
+
+    if (length(gamma) > 1) {
+        stop('More than one gamma parameter')
+    }
+    
+    # states
+    states = c("theta_up", "neu", "theta_down")
+    
+    # transition matrices
+    calc_trans_mat = function(p_s, t, n_states) {
+        matrix(
+            c(
+                (1-t) * (1-p_s), t, (1-t) * p_s, 
+                t/2, (1-t), t/2,
+                (1-t) * p_s, t, (1-t) * (1-p_s)
+            ),
+            ncol = n_states,
+            byrow = TRUE
+        )
+    }
+    
+    As = lapply(
+        p_s,
+        function(p_s) {calc_trans_mat(p_s, t, n_states = length(states))}
+    )
+    
+    # intitial probabilities
+    if (is.null(prior)) {
+        prior = rep(1/length(states), length(states))
+    }
+
+    alpha_up = (0.5 + theta_min) * gamma
+    beta_up = (0.5 - theta_min) * gamma
+    alpha_down = beta_up
+    beta_down = alpha_up
+    alpha_neu = gamma/2
+    beta_neu = gamma/2
+        
+    hmm = HiddenMarkov::dthmm(
+        x = pAD, 
+        Pi = As, 
+        delta = prior, 
+        distn = "bbinom",
+        pm = list(alpha=c(alpha_up,alpha_neu,alpha_down), beta=c(beta_up,beta_neu,beta_down)),
+        pn = list(size = DP),
+        discrete = TRUE)
+
+    hmm$states = states
+
+    class(hmm) = 'dthmm.inhom'
+
+    return(hmm)
+}
+
+#' Allele treeHMM with one theta state
+#' @param z_pa parent states
+#' @param z_ch children states
+#' @param z_t current states
+#' @keywords internal
+get_allele_treehmm = function(pAD, DP, p_s, z_t, z_pa, z_ch, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
+
+    gamma = unique(gamma)
+
+    if (length(gamma) > 1) {
+        stop('More than one gamma parameter')
+    }
+    
+    # states
+    states = c("theta_up", "neu", "theta_down")
+    
+    
+    calc_trans_mat = function(p_s, t, pa) {
+        if (pa == 0) {
+            matrix(
+                c(
+                    (1-t) * (1-p_s), t, (1-t) * p_s, 
+                    t/2, (1-t), t/2,
+                    (1-t) * p_s, t, (1-t) * (1-p_s)
+                ),
+                ncol = 3,
+                byrow = TRUE
+            )
+        } else if (pa == 1) {
+            matrix(
+                c(
+                    (1-t) * (1-p_s), t, (1-t) * p_s, 
+                    (1-t)/2, t, (1-t)/2,
+                    (1-t) * p_s, t, (1-t) * (1-p_s)
+                ),
+                ncol = 3,
+                byrow = TRUE
+            )
+        } else {
+            stop('Parent state invalid')
+        }
+    }
+    
+    As_pa = mapply(function(p_s, pa) {calc_trans_mat(p_s, t, pa)}, p_s, pa, SIMPLIFY = FALSE)
+    As_ch = mapply(function(p_s, pa) {calc_trans_mat(p_s, t, pa)}, p_s, pa, SIMPLIFY = FALSE)
+    
+    # intitial probabilities
+    if (is.null(prior)) {
+        prior = rep(1/3, 3)
+    }
+
+    alpha_up = (0.5 + theta_min) * gamma
+    beta_up = (0.5 - theta_min) * gamma
+    alpha_down = beta_up
+    beta_down = alpha_up
+    alpha_neu = gamma/2
+    beta_neu = gamma/2
+        
+    hmm = HiddenMarkov::dthmm(
+        x = pAD, 
+        Pi = As, 
+        delta = prior, 
+        distn = "bbinom",
+        pm = list(alpha=c(alpha_up,alpha_neu,alpha_down), beta=c(beta_up,beta_neu,beta_down)),
+        pn = list(size = DP),
+        discrete = TRUE)
+
+    hmm$states = states
+
+    class(hmm) = 'dthmm.inhom'
+
+    return(hmm)
+}
+
+adjust_trans = function(t, p_s, z_t_pa, z_t_ch) {
+    
+    bigT = length(p_s)
+    
+    # calculate state conditionals
+    get_z_conditional = function(t, p_s, z_from, z_to, z_pa) {
+
+        case_when(
+            z_pa == 1 & z_from == 1 & z_to == 1 ~ (1-t), 
+            z_pa == 1 & z_from == 1 & z_to == 2 ~ t/2, 
+            z_pa == 1 & z_from == 1 & z_to == 3 ~ t/2,
+            z_pa == 1 & z_from == 2 & z_to == 1 ~ t,
+            z_pa == 1 & z_from == 2 & z_to == 2 ~ (1-t)*(1-p_s),
+            z_pa == 1 & z_from == 2 & z_to == 3 ~ (1-t)*p_s,
+            z_pa == 1 & z_from == 3 & z_to == 1 ~ t, 
+            z_pa == 1 & z_from == 3 & z_to == 2 ~ (1-t)*p_s, 
+            z_pa == 1 & z_from == 3 & z_to == 3 ~ (1-t)*(1-p_s),
+            z_pa != 1 & z_from == 1 & z_to == 1 ~ t, 
+            z_pa != 1 & z_from == 1 & z_to == 2 ~ (1-t)/2, 
+            z_pa != 1 & z_from == 1 & z_to == 3 ~ (1-t)/2,
+            z_pa != 1 & z_from == 2 & z_to == 1 ~ t,
+            z_pa != 1 & z_from == 2 & z_to == 2 ~ (1-t)*(1-p_s),
+            z_pa != 1 & z_from == 2 & z_to == 3 ~ (1-t)*p_s,
+            z_pa != 1 & z_from == 3 & z_to == 1 ~ t, 
+            z_pa != 1 & z_from == 3 & z_to == 2 ~ (1-t)*p_s, 
+            z_pa != 1 & z_from == 3 & z_to == 3 ~ (1-t)*(1-p_s)
+        )
+    }
+
+    states = c("neu", "theta_up", "theta_down")
+
+    states_grid = expand.grid(1:3, 1:3, 1:3) %>%
+        setNames(c('z_t_1', 'z_t', 'z_t_pa'))
+
+    # generate lookup table for conditional state probablities
+    # p_z[t, z_t-1, z_t, z_t_pa]
+    p_z = sapply(
+            states_grid %>% split(1:nrow(.)),
+            function(Z){
+                get_z_conditional(
+                    t,
+                    p_s = p_s,
+                    Z$z_t_1,
+                    Z$z_t,
+                    Z$z_t_pa)
+            }
+        ) %>%
+        array(dim = c(length(p_s),3,3,3))
+
+    # compute f_it in log scale
+    logf_it = function(t, z_t, z_t_1, z_t_pa, z_t_ch, z_t_1_ch) {
+        log(p_z[t, z_t_1, z_t, z_t_pa]) + log(p_z[t, z_t_1_ch, z_t_ch, z_t])
+    }
+
+    # generate a list of transition matrices across time
+    f_z = lapply(
+        1:bigT,
+        function(t) {
+            logf_it(
+                t = t,
+                z_t = 1:3,
+                z_t_1 = 1:3,
+                z_t_pa = z_t_pa[t],
+                z_t_ch = z_t_ch[t],
+                z_t_1_ch = ifelse(t == 1, 1, z_t_ch[t-1])
+            ) %>% exp
+        }
+    )
+
+    # renormalize the transition matrix
+    for (t in bigT:1) {
+        f_z[[t]] = t(t(f_z[[t]]) * g_z)
+        g_z = rowSums(f_z[[t]])
+        f_z[[t]] = f_z[[t]]/g_z
+    }
+    
+    return(f_z)
+    
+}
+
+
 
 #' @keywords internal
 forward_back_allele = function (obj, ...) {
@@ -240,83 +455,14 @@ calc_allele_lik = function (pAD, DP, p_s, theta, gamma = 20) {
 #' @keywords internal
 calc_allele_maxlik = function (pAD, DP, p_s, theta, gamma = 20) {
     hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma)
-    LL = HiddenMarkov::Viterbi(hmm)$LL
+    LL = viterbi_allele(hmm)$LL
     return(LL)
 }
 
 ############ Joint HMM ############
 
 #' @keywords internal
-Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
-
-    x <- object$x
-    dfunc <- makedensity(object$distn)
-    
-    x2 <- object$x2
-    dfunc2 <- makedensity(object$distn2)
-
-    n <- length(x)
-    m <- nrow(object$Pi[[1]])
-    nu <- matrix(NA, nrow = n, ncol = m)
-    mu <- matrix(NA, nrow = n, ncol = m + 1)
-    y <- rep(NA, n)
-    
-    
-    nu[1, ] = log(object$delta)
-    
-        
-    if (!is.na(x[1])) {
-        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, getj(object$pn, 1), log = TRUE)
-    }
-    
-    if (!is.na(x2[1])) {
-
-        nu[1, ] = nu[1, ] + dfunc2(
-            x = x2[1],
-            list('shape' = object$alpha[1]),
-            list('rate' = object$beta[1]/(object$phi * object$d * object$lambda_star[1])),
-            log = TRUE
-        )
-        
-    }
-            
-    logPi <- lapply(object$Pi, log)
-
-    for (i in 2:n) {
-        matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
-        
-        nu[i, ] = apply(matrixnu + logPi[[i]], 2, max)
-            
-        if (!is.na(x[i])) {
-            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, getj(object$pn, i), log = TRUE)
-        }
-        
-        if (!is.na(x2[i])) {
-            nu[i, ] = nu[i, ] + dfunc2(
-                x = x2[i],
-                list('shape' = object$alpha[i]),
-                list('rate' = object$beta[i]/(object$phi * object$d * object$lambda_star[i])),
-                log = TRUE
-            )
-            
-        }
-    }
-    
-    # if (any(nu[n, ] == -Inf)) {
-    #     stop("Problems With Underflow")
-    # }
-    # display(tail(nu, 100))
-    # fwrite(nu, '~/debug.txt')
-              
-    y[n] <- which.max(nu[n, ])
-
-    for (i in seq(n - 1, 1, -1)) y[i] <- which.max(logPi[[i+1]][, y[i+1]] + nu[i, ])
-        
-    return(y)
-}
-
-#' @keywords internal
-Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
+viterbi_joint <- function (object, ...){
 
     x <- object$x
     dfunc <- makedensity(object$distn)
@@ -388,67 +534,6 @@ Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
     LL = max(nu[n, ])
         
     return(list(y = y, LL = LL))
-}
-
-#' @keywords internal
-forward.mv.inhom = function (obj, ...) {
-    
-    x <- obj$x
-    p_x <- makedensity(obj$distn)
-    
-    y <- obj$y
-    p_y <- makedensity(obj$distn_y)
-    
-    m <- nrow(obj$Pi[[1]])
-    n <- length(x)
-    
-    logprob = sapply(1:m, function(k) {
-        
-        l_x = p_x(x = x, getj(obj$pm, k), obj$pn, log = TRUE)
-        
-        l_x[is.na(l_x)] = 0
-        
-        l_y = p_y(
-                x = y,
-                list('shape' = obj$alpha),
-                list('rate' = obj$beta/(obj$phi[k] * obj$d * obj$lambda_star)),
-                log = TRUE
-            )
-        
-        l_y[is.na(l_y)] = 0
-        
-        return(l_x + l_y)
-        
-    })
-        
-    logphi <- log(as.double(obj$delta))
-
-    logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
-    
-    lscale <- as.double(0)
-    
-    logPi <- lapply(obj$Pi, log)
-    
-    for (i in 1:n) {
-        
-        if (i > 1) {
-            logphi <- sapply(1:m, function(j) logSumExp(logphi + logPi[[i]][,j]))
-        }
-                          
-        logphi <- logphi + logprob[i,]
-                          
-        logSumPhi <- logSumExp(logphi)
-                          
-        logphi <- logphi - logSumPhi
-                          
-        lscale <- lscale + logSumPhi
-                          
-        logalpha[i,] <- logphi + lscale
-                          
-        LL <- lscale
-    }
-    
-    return(LL)
 }
 
 # cn/phase are sclars, only p_s is vectorized
@@ -603,32 +688,18 @@ run_hmm_mv_inhom = function(
     hmm$lambda_star = lambda_ref
     hmm$d = d_total
 
-    if (exp_model == 'gpois') {
-
-        # print('running gpois model')
-
-        hmm$distn2 = 'gpois'
-        hmm$alpha = alpha
-        hmm$beta = beta
-        
-        class(hmm) = 'dthmm.mv.inhom.gpois'
-
-    } else {
-
-        if (length(mu) == 1 & length(sig) == 1) {
-            mu = rep(mu, length(Y_obs))
-            sig = rep(sig, length(Y_obs))
-        }
-
-        hmm$distn2 = 'poilog'
-        hmm$mu = mu
-        hmm$sig = sig
-        
-        class(hmm) = 'dthmm.mv.inhom.lnpois'
-
+    if (length(mu) == 1 & length(sig) == 1) {
+        mu = rep(mu, length(Y_obs))
+        sig = rep(sig, length(Y_obs))
     }
 
-    MPC = HiddenMarkov::Viterbi(hmm)
+    hmm$distn2 = 'poilog'
+    hmm$mu = mu
+    hmm$sig = sig
+    
+    class(hmm) = 'dthmm.mv.inhom.lnpois'
+
+    MPC = viterbi_joint(hmm)
         
     return(states[as.character(MPC$y)])
 }
