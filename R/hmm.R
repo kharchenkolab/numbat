@@ -63,7 +63,7 @@ viterbi_allele <- function (obj, ...){
 
     LL = max(nu[n, ])
         
-    return(list(y = y, LL = LL))
+    return(y)
 }
 
 # allele-only HMM
@@ -72,7 +72,7 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
 
     hmm = get_full_allele_hmm(pAD, DP, p_s, t = t, theta_min = theta_min, gamma = gamma, prior = prior)
         
-    solution = hmm$states[viterbi_allele(hmm)$y]
+    solution = hmm$states[viterbi_allele(hmm)]
     
     return(solution)
 }
@@ -147,99 +147,25 @@ get_single_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma
     }
     
     # states
-    states = c("theta_up", "neu", "theta_down")
+    states = c("neu", "theta_up", "theta_down")
     
     # transition matrices
-    calc_trans_mat = function(p_s, t, n_states) {
+    calc_trans_mat = function(p_s, t) {
         matrix(
             c(
-                (1-t) * (1-p_s), t, (1-t) * p_s, 
-                t/2, (1-t), t/2,
-                (1-t) * p_s, t, (1-t) * (1-p_s)
+                (1-t), t/2, t/2,
+                t, (1-t)*(1-p_s), (1-t)*p_s, 
+                t, (1-t)*p_s, (1-t)*(1-p_s)
             ),
-            ncol = n_states,
+            ncol = 3,
             byrow = TRUE
         )
     }
     
     As = lapply(
         p_s,
-        function(p_s) {calc_trans_mat(p_s, t, n_states = length(states))}
+        function(p_s) {calc_trans_mat(p_s, t)}
     )
-    
-    # intitial probabilities
-    if (is.null(prior)) {
-        prior = rep(1/length(states), length(states))
-    }
-
-    alpha_up = (0.5 + theta_min) * gamma
-    beta_up = (0.5 - theta_min) * gamma
-    alpha_down = beta_up
-    beta_down = alpha_up
-    alpha_neu = gamma/2
-    beta_neu = gamma/2
-        
-    hmm = HiddenMarkov::dthmm(
-        x = pAD, 
-        Pi = As, 
-        delta = prior, 
-        distn = "bbinom",
-        pm = list(alpha=c(alpha_up,alpha_neu,alpha_down), beta=c(beta_up,beta_neu,beta_down)),
-        pn = list(size = DP),
-        discrete = TRUE)
-
-    hmm$states = states
-
-    class(hmm) = 'dthmm.inhom'
-
-    return(hmm)
-}
-
-#' Allele treeHMM with one theta state
-#' @param z_pa parent states
-#' @param z_ch children states
-#' @param z_t current states
-#' @keywords internal
-get_allele_treehmm = function(pAD, DP, p_s, z_t, z_pa, z_ch, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
-
-    gamma = unique(gamma)
-
-    if (length(gamma) > 1) {
-        stop('More than one gamma parameter')
-    }
-    
-    # states
-    states = c("theta_up", "neu", "theta_down")
-    
-    
-    calc_trans_mat = function(p_s, t, pa) {
-        if (pa == 0) {
-            matrix(
-                c(
-                    (1-t) * (1-p_s), t, (1-t) * p_s, 
-                    t/2, (1-t), t/2,
-                    (1-t) * p_s, t, (1-t) * (1-p_s)
-                ),
-                ncol = 3,
-                byrow = TRUE
-            )
-        } else if (pa == 1) {
-            matrix(
-                c(
-                    (1-t) * (1-p_s), t, (1-t) * p_s, 
-                    (1-t)/2, t, (1-t)/2,
-                    (1-t) * p_s, t, (1-t) * (1-p_s)
-                ),
-                ncol = 3,
-                byrow = TRUE
-            )
-        } else {
-            stop('Parent state invalid')
-        }
-    }
-    
-    As_pa = mapply(function(p_s, pa) {calc_trans_mat(p_s, t, pa)}, p_s, pa, SIMPLIFY = FALSE)
-    As_ch = mapply(function(p_s, pa) {calc_trans_mat(p_s, t, pa)}, p_s, pa, SIMPLIFY = FALSE)
     
     # intitial probabilities
     if (is.null(prior)) {
@@ -258,7 +184,7 @@ get_allele_treehmm = function(pAD, DP, p_s, z_t, z_pa, z_ch, t = 1e-5, theta_min
         Pi = As, 
         delta = prior, 
         distn = "bbinom",
-        pm = list(alpha=c(alpha_up,alpha_neu,alpha_down), beta=c(beta_up,beta_neu,beta_down)),
+        pm = list(alpha=c(alpha_neu,alpha_up,alpha_down), beta=c(beta_neu,beta_up,beta_down)),
         pn = list(size = DP),
         discrete = TRUE)
 
@@ -269,82 +195,134 @@ get_allele_treehmm = function(pAD, DP, p_s, z_t, z_pa, z_ch, t = 1e-5, theta_min
     return(hmm)
 }
 
-adjust_trans = function(t, p_s, z_t_pa, z_t_ch) {
+#' Allele treeHMM with one theta state
+#' @param pAD
+#' @param DP
+#' @param p_s
+#' @param Q node marginals
+#' @param pa parent chain
+#' @param ch children chains
+#' @keywords internal
+get_allele_treehmm = function(pAD, DP, p_s, Q = NULL, pa = NULL, ch = NULL, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
+
+    gamma = unique(gamma)
+
+    if (length(gamma) > 1) {
+        stop('More than one gamma parameter')
+    }
     
+    # states
+    states = c("neu", "theta_up", "theta_down")
+    
+    As = treehmm_trans_mat(t, p_s, Q, pa, ch)
+    
+    # intitial probabilities
+    if (is.null(prior)) {
+        prior = rep(1/3, 3)
+    }
+
+    alpha_up = (0.5 + theta_min) * gamma
+    beta_up = (0.5 - theta_min) * gamma
+    alpha_down = beta_up
+    beta_down = alpha_up
+    alpha_neu = gamma/2
+    beta_neu = gamma/2
+        
+    hmm = HiddenMarkov::dthmm(
+        x = pAD, 
+        Pi = As, 
+        delta = prior, 
+        distn = "bbinom",
+        pm = list(alpha=c(alpha_neu, alpha_up, alpha_down), beta=c(beta_neu, beta_up,beta_down)),
+        pn = list(size = DP),
+        discrete = TRUE)
+
+    hmm$states = states
+
+    class(hmm) = 'dthmm.inhom'
+
+    return(hmm)
+}
+
+# calculate transition matrices based on new marginals
+#' @param ch
+treehmm_trans_mat = function(t, p_s, Q, pa, ch) {
+
     bigT = length(p_s)
-    
+
     # calculate state conditionals
-    get_z_conditional = function(t, p_s, z_from, z_to, z_pa) {
+    get_z_conditional = function(t, p_s, z_pa, z_t_1, z_t) {
 
         case_when(
-            z_pa == 1 & z_from == 1 & z_to == 1 ~ (1-t), 
-            z_pa == 1 & z_from == 1 & z_to == 2 ~ t/2, 
-            z_pa == 1 & z_from == 1 & z_to == 3 ~ t/2,
-            z_pa == 1 & z_from == 2 & z_to == 1 ~ t,
-            z_pa == 1 & z_from == 2 & z_to == 2 ~ (1-t)*(1-p_s),
-            z_pa == 1 & z_from == 2 & z_to == 3 ~ (1-t)*p_s,
-            z_pa == 1 & z_from == 3 & z_to == 1 ~ t, 
-            z_pa == 1 & z_from == 3 & z_to == 2 ~ (1-t)*p_s, 
-            z_pa == 1 & z_from == 3 & z_to == 3 ~ (1-t)*(1-p_s),
-            z_pa != 1 & z_from == 1 & z_to == 1 ~ t, 
-            z_pa != 1 & z_from == 1 & z_to == 2 ~ (1-t)/2, 
-            z_pa != 1 & z_from == 1 & z_to == 3 ~ (1-t)/2,
-            z_pa != 1 & z_from == 2 & z_to == 1 ~ t,
-            z_pa != 1 & z_from == 2 & z_to == 2 ~ (1-t)*(1-p_s),
-            z_pa != 1 & z_from == 2 & z_to == 3 ~ (1-t)*p_s,
-            z_pa != 1 & z_from == 3 & z_to == 1 ~ t, 
-            z_pa != 1 & z_from == 3 & z_to == 2 ~ (1-t)*p_s, 
-            z_pa != 1 & z_from == 3 & z_to == 3 ~ (1-t)*(1-p_s)
+            z_pa == 1 & z_t_1 == 1 & z_t == 1 ~ (1-t), 
+            z_pa == 1 & z_t_1 == 1 & z_t == 2 ~ t/2, 
+            z_pa == 1 & z_t_1 == 1 & z_t == 3 ~ t/2,
+            z_pa == 1 & z_t_1 == 2 & z_t == 1 ~ t,
+            z_pa == 1 & z_t_1 == 2 & z_t == 2 ~ (1-t)*(1-p_s),
+            z_pa == 1 & z_t_1 == 2 & z_t == 3 ~ (1-t)*p_s,
+            z_pa == 1 & z_t_1 == 3 & z_t == 1 ~ t, 
+            z_pa == 1 & z_t_1 == 3 & z_t == 2 ~ (1-t)*p_s, 
+            z_pa == 1 & z_t_1 == 3 & z_t == 3 ~ (1-t)*(1-p_s),
+            z_pa != 1 & z_t_1 == 1 & z_t == 1 ~ t, 
+            z_pa != 1 & z_t_1 == 1 & z_t == 2 ~ (1-t)/2, 
+            z_pa != 1 & z_t_1 == 1 & z_t == 3 ~ (1-t)/2,
+            z_pa != 1 & z_t_1 == 2 & z_t == 1 ~ t,
+            z_pa != 1 & z_t_1 == 2 & z_t == 2 ~ (1-t)*(1-p_s),
+            z_pa != 1 & z_t_1 == 2 & z_t == 3 ~ (1-t)*p_s,
+            z_pa != 1 & z_t_1 == 3 & z_t == 1 ~ t, 
+            z_pa != 1 & z_t_1 == 3 & z_t == 2 ~ (1-t)*p_s, 
+            z_pa != 1 & z_t_1 == 3 & z_t == 3 ~ (1-t)*(1-p_s)
         )
     }
 
     states = c("neu", "theta_up", "theta_down")
 
     states_grid = expand.grid(1:3, 1:3, 1:3) %>%
-        setNames(c('z_t_1', 'z_t', 'z_t_pa'))
+        setNames(c('z_t_pa', 'z_t_1', 'z_t'))
 
     # generate lookup table for conditional state probablities
-    # p_z[t, z_t-1, z_t, z_t_pa]
+    # p_z[t, z_t_pa, z_t-1, z_t]
     p_z = sapply(
             states_grid %>% split(1:nrow(.)),
             function(Z){
                 get_z_conditional(
                     t,
                     p_s = p_s,
+                    Z$z_t_pa,
                     Z$z_t_1,
-                    Z$z_t,
-                    Z$z_t_pa)
+                    Z$z_t)
             }
         ) %>%
         array(dim = c(length(p_s),3,3,3))
 
     # compute f_it in log scale
-    logf_it = function(t, z_t, z_t_1, z_t_pa, z_t_ch, z_t_1_ch) {
-        log(p_z[t, z_t_1, z_t, z_t_pa]) + log(p_z[t, z_t_1_ch, z_t_ch, z_t])
+    logf_it = function(pa, t, z_t_1, z_t) {
+        colSums(log(p_z[t,,z_t_1,z_t]) * Q[[pa]][t,])
     }
 
     # generate a list of transition matrices across time
     f_z = lapply(
         1:bigT,
         function(t) {
-            logf_it(
-                t = t,
-                z_t = 1:3,
-                z_t_1 = 1:3,
-                z_t_pa = z_t_pa[t],
-                z_t_ch = z_t_ch[t],
-                z_t_1_ch = ifelse(t == 1, 1, z_t_ch[t-1])
-            ) %>% exp
+            sapply(1:3, function(z_t_1){
+                logf_it(
+                    pa = pa,
+                    t = t,
+                    z_t_1 = z_t_1,
+                    z_t = 1:3
+                )
+            }) %>% exp
         }
     )
 
     # renormalize the transition matrix
+    g_z = rep(1,3)
     for (t in bigT:1) {
         f_z[[t]] = t(t(f_z[[t]]) * g_z)
         g_z = rowSums(f_z[[t]])
         f_z[[t]] = f_z[[t]]/g_z
     }
-    
+
     return(f_z)
     
 }
@@ -386,6 +364,78 @@ forward_back_allele = function (obj, ...) {
 
     return(marginals)
 }
+
+forward_back_allele_R = function (obj, ...) {
+
+    # case of one-data point
+    if (length(obj$x) == 1) {
+        return(NA)
+    }
+    
+    x <- obj$x
+    p_x <- makedensity(obj$distn)
+    
+    m <- nrow(obj$Pi[[1]])
+    n <- length(x)
+    
+    logprob = sapply(1:m, function(k) {
+        
+        l_x = p_x(x = x,  getj(obj$pm, k), obj$pn, log = TRUE)
+        
+        l_x[is.na(l_x)] = 0
+        
+        return(l_x)
+        
+    })
+        
+    logphi <- log(as.double(obj$delta))
+    logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
+    lscale <- as.double(0)
+    logPi <- lapply(obj$Pi, log)
+    
+    for (t in 1:n) {
+        
+        if (t > 1) {
+            logphi <- sapply(1:m, function(j) matrixStats::logSumExp(logphi + logPi[[t]][,j]))
+        }
+                          
+        logphi <- logphi + logprob[t,]
+                          
+        logsumphi <- matrixStats::logSumExp(logphi)
+                          
+        logphi <- logphi - logsumphi
+                          
+        lscale <- lscale + logsumphi
+                          
+        logalpha[t,] <- logphi + lscale
+                          
+        LL <- lscale
+    }
+
+    logbeta <- matrix(as.double(rep(0, m * n)), nrow = n)
+    logphi <- log(as.double(rep(1/m, m)))
+    lscale <- as.double(log(m))
+
+    for (t in seq(n-1, 1, -1)){
+        
+        logphi = sapply(1:m, function(i) matrixStats::logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
+
+        logbeta[t,] <- logphi + lscale
+
+        logsumphi <- matrixStats::logSumExp(logphi)
+
+        logphi <- logphi - logsumphi
+
+        lscale <- lscale + logsumphi
+    }
+
+    marginals = exp(logalpha + logbeta - LL)
+
+    colnames(marginals) = obj$states
+
+    return(list(marginals = marginals, logalpha = logalpha, logbeta = logbeta, LL = LL))
+}
+
 
 # only compute total log likelihood
 #' @keywords internal
@@ -453,11 +503,11 @@ calc_allele_lik = function (pAD, DP, p_s, theta, gamma = 20) {
 }
 
 #' @keywords internal
-calc_allele_maxlik = function (pAD, DP, p_s, theta, gamma = 20) {
-    hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma)
-    LL = viterbi_allele(hmm)$LL
-    return(LL)
-}
+# calc_allele_maxlik = function (pAD, DP, p_s, theta, gamma = 20) {
+#     hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma)
+#     LL = viterbi_allele(hmm)$LL
+#     return(LL)
+# }
 
 ############ Joint HMM ############
 

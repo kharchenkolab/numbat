@@ -1097,7 +1097,8 @@ plot_consensus = function(segs) {
     ) +
     scale_x_continuous(
         expand = expansion(mult = 0.05)
-    )
+    ) +
+    guides(fill = 'none')
 }
 
 #' @export
