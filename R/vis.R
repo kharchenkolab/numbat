@@ -879,16 +879,20 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio 
 }
 
 #' @export
-plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, node_id = TRUE, pal_clone = NULL) {
+plot_mut_history = function(G_m, edge_label_size = 4, node_label_size = 6, node_size = 10, horizontal = TRUE, label = TRUE, node_id = TRUE, pal_clone = NULL) {
 
     G_m = label_genotype(G_m)
 
     if (is.null(pal_clone)) {
-        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 5, 'Spectral'))
+        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 8, 'Set1'))
         pal_clone = c('gray', getPalette(length(V(G_m))))
     }
 
     G_df = G_m %>% as_tbl_graph() %>% mutate(clone = factor(clone))
+    
+    if (!'superclone' %in% colnames(as.data.frame(activate(G_df, 'nodes')))) {
+        G_df = G_df %>% mutate(superclone = clone)
+    }
 
     if (!label) {
         G_df = G_df %>% activate(edges) %>% mutate(to_label = '')
@@ -901,16 +905,17 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, node_id = TRUE
             vjust = -1,
             arrow = arrow(length = unit(3, "mm")),
             end_cap = circle(4, 'mm'),
-            start_cap = circle(4, 'mm')
+            start_cap = circle(4, 'mm'),
+            label_size = edge_label_size
         ) + 
-        geom_node_point(aes(color = clone), size = 10) +
+        geom_node_point(aes(color = as.factor(superclone)), size = node_size) +
         theme_void() +
         scale_x_continuous(expand = expansion(0.2)) +
         scale_color_manual(values = pal_clone, limits = force) +
         guides(color = 'none')
 
     if (node_id) {
-        p = p + geom_node_text(aes(label = clone), size = 6)
+        p = p + geom_node_text(aes(label = clone), size = node_label_size)
     }
 
     if (horizontal) {
@@ -1097,7 +1102,8 @@ plot_consensus = function(segs) {
     ) +
     scale_x_continuous(
         expand = expansion(mult = 0.05)
-    )
+    ) +
+    guides(fill = 'none')
 }
 
 #' @export
