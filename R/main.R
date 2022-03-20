@@ -533,7 +533,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, gene
 }
 
 #' Run mutitple HMMs 
-#' @export
+#' @keywords internal
 run_group_hmms = function(
     bulks, t = 1e-4, gamma = 20, theta_min = 0.08,
     exp_model = 'lnpois', alpha = 1e-4,
@@ -1267,7 +1267,7 @@ retest_bulks = function(bulks, segs_consensus, use_loh = FALSE, diploid_chroms =
     
     # retest CNVs
     bulks = bulks %>% 
-        run_group_hmms(run_hmm = F) %>%
+        run_group_hmms(run_hmm = FALSE) %>%
         mutate(
             LLR = ifelse(is.na(LLR), 0, LLR)
         )
