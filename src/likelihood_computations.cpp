@@ -64,7 +64,7 @@ double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcp
 
 
 // [[Rcpp::export]]
-Rcpp::NumericVector forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
+Rcpp::NumericMatrix forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
 
     const int nrow = n;
     const int ncol = m;
