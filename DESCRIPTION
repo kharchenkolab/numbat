@@ -36,6 +36,7 @@ Imports:
     R.utils,
     Rcpp,
     reshape2,
+    RhpcBLASctl,
     stringr,
     tidygraph,
     tidyr,

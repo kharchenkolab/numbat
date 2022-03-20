@@ -3,6 +3,7 @@
 
 #' @keywords internal
 phangorn_allChildren <- function(x) {
+
   ## https://github.com/KlausVigo/phangorn/blob/master/R/treeManipulation.R#L687
   l <- length(x$tip.label)
   if (l < 20) {
@@ -26,7 +27,7 @@ phangorn_allChildren <- function(x) {
 #' @param get_l_matrix whether to compute the whole likelihood matrix
 #' @export
 score_tree = function(tree, P, get_l_matrix = FALSE) {
-    
+ 
     tree = reorder(tree, order = 'postorder')
         
     n = nrow(P)
@@ -69,6 +70,8 @@ score_tree = function(tree, P, get_l_matrix = FALSE) {
 #' @export
 perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 20, verbose = TRUE) {
 
+    RhpcBLASctl::blas_set_num_threads(1)
+    RhpcBLASctl::omp_set_num_threads(1)
     P = as.matrix(P)
     
     converge = FALSE
@@ -123,7 +126,7 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 20, ve
 #' @return a tidygraph tree
 #' @export
 mark_tumor_lineage = function(gtree) {
-    
+  
     mut_nodes = gtree %>%
         activate(nodes) %>%
         filter(!is.na(site)) %>%
@@ -236,7 +239,7 @@ get_mut_tree = function(gtree, mut_assign) {
 # compute site branch likelihood
 #' @keywords internal
 l_s_v = function(node, site, gtree, geno) {
-    
+  
     gtree %>%
     activate(nodes) %>%
     mutate(seq = bfs_rank(root = node)) %>%
@@ -256,7 +259,7 @@ l_s_v = function(node, site, gtree, geno) {
 #' 
 #' @export
 get_tree_post = function(tree, P) {
-    
+   
     sites = colnames(P)
     n = nrow(P)
     tree_stats = score_tree(tree, P, get_l_matrix = TRUE)
@@ -313,7 +316,7 @@ get_tree_post = function(tree, P) {
 
 #' @export
 mut_to_tree = function(gtree, mut_nodes) {
-    
+   
     # transfer mutation to tree
     gtree = gtree %>%
         activate(nodes) %>%
@@ -428,6 +431,7 @@ transfer_links = function(G) {
 
 #' @keywords internal
 label_genotype = function(G) {
+
     id_to_label = igraph::as_data_frame(G, 'vertices') %>% {setNames(.$label, .$id)}
 
     # for some reason, the output from all_simple_path is out of order if supplied directly
