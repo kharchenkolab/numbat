@@ -52,6 +52,8 @@ run_numbat = function(
         plot = TRUE
     ) {
 
+
+    ######### Basic checks #########
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
     if (file.exists(logfile)) {file.remove(logfile)}
@@ -87,6 +89,7 @@ run_numbat = function(
 
     RhpcBLASctl::blas_set_num_threads(1)
     RhpcBLASctl::omp_set_num_threads(1)
+    data.table::setDTthreads(1)
     ######### Basic checks #########
 
     count_mat = check_matrix(count_mat)
