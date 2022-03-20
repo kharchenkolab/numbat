@@ -1045,7 +1045,6 @@ find_common_diploid = function(
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
     }
-    
     # define balanced regions in each sample
     bulks = mclapply(
         bulks %>% split(.$sample),

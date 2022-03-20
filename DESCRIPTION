@@ -36,12 +36,12 @@ Imports:
     R.utils,
     Rcpp,
     reshape2,
+    RhpcBLASctl,
     stringr,
     tidygraph,
     tidyr,
     vcfR,
-    zoo, 
-    RhpcBLASctl
+    zoo
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

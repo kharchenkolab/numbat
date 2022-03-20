@@ -53,6 +53,7 @@ run_numbat = function(
 
     RhpcBLASctl::blas_set_num_threads(1)
     RhpcBLASctl::omp_set_num_threads(1)
+    data.table::setDTthreads(1)
     ######### Basic checks #########
 
     if (is(count_mat, 'Matrix')) {
@@ -99,6 +100,7 @@ run_numbat = function(
 
     log_message('Approximating initial clusters using smoothed expression ..', verbose = verbose)
 
+
     clust = exp_hclust(
         count_mat,
         lambdas_ref = lambdas_ref,
@@ -124,6 +126,7 @@ run_numbat = function(
 
     ######## Begin iterations ########
     for (i in 1:max_iter) {
+
 
         log_message(glue('Iteration {i}'), verbose = verbose)
 
@@ -323,6 +326,7 @@ run_numbat = function(
             log_message('Using UPGMA tree as seed..', verbose = verbose)
         }
         
+
         # maximum likelihood tree search with NNI
         tree_list = perform_nni(tree_init, P, ncores = ncores, eps = eps)
         saveRDS(tree_list, glue('{out_dir}/tree_list_{i}.rds'))
@@ -408,6 +412,7 @@ log_message = function(msg, verbose = FALSE) {
 #' @keywords internal 
 exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores = 10, verbose = T) {
 
+
     Y_obs = rowSums(count_mat_obs)
 
     fit = fit_multi_ref(Y_obs, lambdas_ref, sum(Y_obs), gtf_transcript)
@@ -444,6 +449,7 @@ exp_hclust = function(count_mat_obs, lambdas_ref, gtf_transcript, k = 5, ncores 
 #' @keywords internal 
 make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf_transcript, genetic_map, min_depth = 0, ncores = NULL) {
     
+
     if (length(groups) == 0) {
         return(data.frame())
     }
@@ -495,6 +501,7 @@ run_group_hmms = function(
     common_diploid = TRUE, diploid_chroms = NULL, allele_only = FALSE, retest = TRUE, run_hmm = TRUE,
     ncores = NULL, verbose = FALSE, debug = FALSE
 ) {
+
 
     if (nrow(bulks) == 0) {
         return(data.frame())
@@ -560,6 +567,7 @@ run_group_hmms = function(
 #' @return consensus segments dataframe
 #' @export
 get_segs_consensus = function(bulks, min_LLR = 20, min_overlap = 0.45) {
+
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -667,7 +675,7 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
 #' @return clone posteriors
 #' @export
 cell_to_clone = function(gtree, exp_post, allele_post) {
-
+    setDTthreads(1)
     clones = gtree %>%
         activate(nodes) %>%
         data.frame() %>% 
@@ -1187,6 +1195,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
 #' @return pseudobulks dataframe
 #' @export 
 retest_bulks = function(bulks, segs_consensus, use_loh = FALSE, diploid_chroms = NULL) {
+
 
     # default
     if (is.null(use_loh)) {
