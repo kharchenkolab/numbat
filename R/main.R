@@ -52,6 +52,8 @@ run_numbat = function(
         plot = TRUE
     ) {
 
+
+    ######### Basic checks #########
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
     if (file.exists(logfile)) {file.remove(logfile)}
@@ -87,6 +89,7 @@ run_numbat = function(
 
     RhpcBLASctl::blas_set_num_threads(1)
     RhpcBLASctl::omp_set_num_threads(1)
+    data.table::setDTthreads(1)
     ######### Basic checks #########
 
     count_mat = check_matrix(count_mat)
@@ -531,7 +534,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, gene
 }
 
 #' Run mutitple HMMs 
-#' @export
+#' @keywords internal
 run_group_hmms = function(
     bulks, t = 1e-4, gamma = 20, theta_min = 0.08,
     exp_model = 'lnpois', alpha = 1e-4,
@@ -1265,7 +1268,7 @@ retest_bulks = function(bulks, segs_consensus, use_loh = FALSE, diploid_chroms =
     
     # retest CNVs
     bulks = bulks %>% 
-        run_group_hmms(run_hmm = F) %>%
+        run_group_hmms(run_hmm = FALSE) %>%
         mutate(
             LLR = ifelse(is.na(LLR), 0, LLR)
         )

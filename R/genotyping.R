@@ -1,7 +1,11 @@
 #' Main function
+#'
 #' @param label character string 
 #' @param samples list of strings
 #' @param vcfs vcfR objects
+#' @param outdir output directory
+#' @param het_only boolean (default=FALSE)
+#' @param chr_prefix boolean (default=TRUE)
 #' @return a status code
 #' @export
 genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE) {
@@ -142,7 +146,8 @@ vcfR_file_fix <- function(file) {
 
 }
 
-#' preprocess allele data
+#' Preprocess allele data
+#' 
 #' @param sample sample label
 #' @param vcf_pu pileup VCF from cell-snp-lite
 #' @param vcf_phased phased VCF from eagle2
