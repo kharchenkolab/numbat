@@ -97,7 +97,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // forward_backward_compute
-Rcpp::NumericVector forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m);
+Rcpp::NumericMatrix forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m);
 RcppExport SEXP _numbat_forward_backward_compute(SEXP objSEXP, SEXP logphiSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

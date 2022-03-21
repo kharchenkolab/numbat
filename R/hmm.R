@@ -167,13 +167,9 @@ forward_back_allele = function (obj, ...) {
         
     logphi <- log(as.double(obj$delta))
     
-
     logPi <- lapply(obj$Pi, log)
         
     marginals = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
-
-        print(marginals)
-
 
     colnames(marginals) = obj$states
 
