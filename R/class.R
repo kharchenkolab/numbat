@@ -130,6 +130,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
         #  return: NULL
 
         fetch_results = function(out_dir, i = 2, old_index = FALSE) {
+ 
             # joint_post_colnames = c("cell", "CHROM",  "seg",  "cnv_state")
             self$joint_post = read_file(inputfile=glue('{out_dir}/joint_post_{i}.tsv'), filetype="tsv")
             # exp_post_colnames = c("seg", "cnv_state", "n", "phi_mle")
@@ -137,7 +138,11 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             # allele_post_colnames = c("cell", "CHROM", "seg", "cnv_state", "major", "minor", "total", "MAF", "seg_start", "seg_end", "prior_loh", "prior_amp", "prior_del", "prior_bamp", "prior_bdel")
             self$allele_post = read_file(inputfile=glue('{out_dir}/allele_post_{i}.tsv'), filetype="tsv")
             # bulk_subtrees_colnames = c("cnv_state_post", "state_post", "p_up", "haplo_post", "haplo_naive", "theta_hat_roll", "phi_mle_roll", "lambda", "gamma")
-            self$bulk_subtrees = read_file(inputfile=glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), filetype="tsv")
+            if (old_index) {
+                self$bulk_subtrees = read_file(inputfile=glue('{out_dir}/bulk_subtrees_{i-1}.tsv.gz'), filetype="tsv")
+            } else {
+                self$bulk_subtrees = read_file(inputfile=glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), filetype="tsv")
+            }
             # bulk_clones_colnames = c("n_genes", "n_snps", "seg_start", "seg_end", "theta_hat", "theta_mle", "theta_sigma")
             self$bulk_clones = read_file(inputfile=glue('{out_dir}/bulk_clones_{i}.tsv.gz'), filetype="tsv")
             # segs_consensus_colnames = c("sample", "CHROM", "seg", "cnv_state", "cnv_state_post", "seg_start", "seg_end", "seg_start_index", 

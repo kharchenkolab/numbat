@@ -48,10 +48,12 @@ run_numbat = function(
         max_cost = ncol(count_mat) * 0.3, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, exp_model = 'lnpois', random_init = FALSE,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 0.995,
+        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 0.995, hclust_only = FALSE,
         plot = TRUE
     ) {
 
+
+    ######### Basic checks #########
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
     if (file.exists(logfile)) {file.remove(logfile)}
@@ -87,6 +89,7 @@ run_numbat = function(
 
     RhpcBLASctl::blas_set_num_threads(1)
     RhpcBLASctl::omp_set_num_threads(1)
+    data.table::setDTthreads(1)
     ######### Basic checks #########
 
     count_mat = check_matrix(count_mat)
@@ -248,6 +251,7 @@ run_numbat = function(
         }
         
         ######## Evaluate CNV per cell ########
+        if (hclust_only) { break }
         log_message('Evaluating CNV per cell ..', verbose = verbose)
         log_mem()
 
@@ -530,7 +534,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, gene
 }
 
 #' Run mutitple HMMs 
-#' @export
+#' @keywords internal
 run_group_hmms = function(
     bulks, t = 1e-4, gamma = 20, theta_min = 0.08,
     exp_model = 'lnpois', alpha = 1e-4,
@@ -794,7 +798,7 @@ get_clone_post = function(gtree, exp_post, allele_post) {
 
 #' Get unique CNVs from set of segments
 #' @param segs_all dataframe CNV segments from multiple samples
-#' @param min_overlap numeric Minimum overlap fraction to determine count two events as as overlapping
+#' @param min_overlap numeric scalar Minimum overlap fraction to determine count two events as as overlapping
 #' @return dataframe Consensus CNV segments
 #' @export
 resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
@@ -1264,7 +1268,7 @@ retest_bulks = function(bulks, segs_consensus, use_loh = FALSE, diploid_chroms =
     
     # retest CNVs
     bulks = bulks %>% 
-        run_group_hmms(run_hmm = F) %>%
+        run_group_hmms(run_hmm = FALSE) %>%
         mutate(
             LLR = ifelse(is.na(LLR), 0, LLR)
         )
