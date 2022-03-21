@@ -570,7 +570,7 @@ analyze_bulk = function(
             mutate(state_post = str_remove(state_post, '_NA'))
 
         # note that this uses restest cnv states
-        # bulk = bulk %>% classify_alleles()
+        bulk = bulk %>% classify_alleles()
 
         bulk = annot_theta_roll(bulk)
         

@@ -798,7 +798,7 @@ get_clone_post = function(gtree, exp_post, allele_post) {
 
 #' Get unique CNVs from set of segments
 #' @param segs_all dataframe CNV segments from multiple samples
-#' @param min_overlap numeric Minimum overlap fraction to determine count two events as as overlapping
+#' @param min_overlap numeric scalar Minimum overlap fraction to determine count two events as as overlapping
 #' @return dataframe Consensus CNV segments
 #' @export
 resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {

@@ -1359,13 +1359,14 @@ cnv_heatmap = function(segs) {
         axis.title.x = element_blank(),
         axis.ticks.y = element_blank()
     ) +
-    facet_grid(sample~CHROM, space = 'free_x', scale = 'free') +
+    facet_grid(group~CHROM, space = 'free_x', scale = 'free') +
     scale_fill_manual(
         values = c('neu' = 'white', cnv_colors[names(cnv_colors) != 'neu']),
         na.value = 'white',
         limits = force,
         labels = cnv_labels,
-        na.translate = F
+        na.translate = F,
+        name = 'States'
     ) +
     scale_x_continuous(expand = expansion(add = 0))
 }
