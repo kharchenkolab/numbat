@@ -156,6 +156,9 @@ forward_back_allele = function (obj, ...) {
         
     marginals = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
 
+        print(marginals)
+
+
     colnames(marginals) = obj$states
 
     return(marginals)

@@ -1314,3 +1314,58 @@ plot_phylo_heatmap = function(
         (p_tree | p_segs) + plot_layout(widths = c(tree_height, 15), guides = 'collect')
     }
 }
+
+cnv_heatmap = function(segs) {
+    
+    gaps_hg38_filtered = gaps_hg38 %>% filter(end - start > 1e6)
+    
+    ggplot(
+        segs
+    ) +
+    geom_rect(
+        data = chrom_sizes_hg38,
+        aes(xmin = 0, xmax = size, ymin = -0.5, ymax = 0.5, fill = NA)
+    ) +
+    geom_rect(
+        aes(xmin = seg_start, xmax = seg_end, ymin = -0.5, ymax = 0.5, fill = cnv_state)
+    ) +
+    geom_rect(
+        inherit.aes = F,
+        data = gaps_hg38_filtered,
+        aes(xmin = start, 
+            xmax = end,
+            ymin = -0.5,
+            ymax = 0.5),
+        fill = 'white'
+    ) +
+    geom_rect(
+        inherit.aes = F,
+        data = gaps_hg38_filtered,
+        aes(xmin = start, 
+            xmax = end,
+            ymin = -0.5,
+            ymax = 0.5),
+        fill = 'gray',
+        alpha = 0.5
+    ) +
+    theme_classic() +
+    theme(
+        panel.spacing = unit(0, 'mm'),
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.background = element_blank(),
+        strip.text.y = element_text(angle = 0),
+        axis.text = element_blank(),
+        plot.margin = margin(0, 0, 0, 0),
+        axis.title.x = element_blank(),
+        axis.ticks.y = element_blank()
+    ) +
+    facet_grid(sample~CHROM, space = 'free_x', scale = 'free') +
+    scale_fill_manual(
+        values = c('neu' = 'white', cnv_colors[names(cnv_colors) != 'neu']),
+        na.value = 'white',
+        limits = force,
+        labels = cnv_labels,
+        na.translate = F
+    ) +
+    scale_x_continuous(expand = expansion(add = 0))
+}

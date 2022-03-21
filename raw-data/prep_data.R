@@ -63,6 +63,21 @@ gtf_transcript = gtf %>% filter(biotype == 'transcript') %>% distinct(start, end
     rename(gene_start = start, gene_end = end) %>%
     arrange(CHROM, gene_start)
 
+## chrom_sizes_hg38.rda ##
+chrom_sizes_hg38 = fread('~/ref/hg38.chrom.sizes.txt') %>% 
+    setNames(c('CHROM', 'size')) %>%
+    mutate(CHROM = str_remove(CHROM, 'chr')) %>%
+    filter(CHROM %in% 1:22) %>%
+    mutate(CHROM = factor(as.integer(CHROM)))
+
+## gaps_hg38.rda ##
+gaps_hg38 = fread('~/ref/gaps.38.txt') %>%
+        setNames(c('CHROM', 'start', 'end')) %>%
+        mutate(CHROM = str_remove(CHROM, 'hs')) %>%
+        filter(CHROM %in% 1:22) %>%
+        mutate(CHROM = as.factor(as.integer(CHROM))) %>%
+        arrange(CHROM)
+
 ## vcf_meta.rda ##
 # wget ftp://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz
 # https://github.com/picrin/pysccnv/blob/master/Eagle2_benchmark.ipynb

@@ -48,7 +48,7 @@ run_numbat = function(
         max_cost = ncol(count_mat) * 0.3, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, exp_model = 'lnpois', random_init = FALSE,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL,
-        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 0.995,
+        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 0.995, hclust_only = FALSE,
         plot = TRUE
     ) {
 
@@ -248,6 +248,7 @@ run_numbat = function(
         }
         
         ######## Evaluate CNV per cell ########
+        if (hclust_only) { break }
         log_message('Evaluating CNV per cell ..', verbose = verbose)
         log_mem()
 
