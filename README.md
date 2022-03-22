@@ -126,7 +126,6 @@ out = run_numbat(
     out_dir = './test'
 )
 ```
-**Note**: To avoid a known memory issue (see [#23](https://github.com/kharchenkolab/numbat/issues/23)), **please set `export OMP_NUM_THREADS=1` in your bash shell before starting R/Rscript**. We're currently looking for a solution to control the behavior of OpenMP within R.
 
 ## Run parameters
 There are a few parameters you can consider tuning to a specific dataset. 
