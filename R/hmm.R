@@ -61,8 +61,12 @@ viterbi_allele <- function (obj, ...){
     if (!is.na(x[1])) {
         nu[1, ] <- nu[1, ] + dfunc(x=x[1], obj$pm, getj(obj$pn, 1), log=TRUE)
     }
-    
-    logPi <- lapply(obj$Pi, log)
+
+    if (is.null(obj$logPi)) {
+        logPi <- lapply(obj$Pi, log)
+    } else {
+        logPi = obj$logPi
+    }
 
     for (i in 2:n) {
         matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
@@ -216,10 +220,11 @@ get_single_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma
 #' @param DP
 #' @param p_s
 #' @param Q node marginals
+#' @param Q_pair edge marginals
 #' @param pa parent chain
 #' @param ch children chains
 #' @keywords internal
-get_allele_treehmm = function(pAD, DP, p_s, Q = NULL, pa = NULL, ch = NULL, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
+get_allele_treehmm = function(pAD, DP, p_s, Q = NULL, Q_pair = NULL, pa = NULL, ch = NULL, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
 
     gamma = unique(gamma)
 
@@ -229,8 +234,26 @@ get_allele_treehmm = function(pAD, DP, p_s, Q = NULL, pa = NULL, ch = NULL, t = 
     
     # states
     states = c("neu", "theta_up", "theta_down")
-    
-    As = treehmm_trans_mat(t, p_s, Q, pa, ch)
+
+    # no parent or children
+    if (is.null(pa) & is.null(ch)) {
+        calc_trans_mat = function(p_s, t) {
+            matrix(
+                c(
+                    (1-t), t/2, t/2,
+                    t, (1-t)*(1-p_s), (1-t)*p_s, 
+                    t, (1-t)*p_s, (1-t)*(1-p_s)
+                ),
+                ncol = 3,
+                byrow = TRUE
+            )
+        }
+        As = lapply(p_s, function(p_s) {calc_trans_mat(p_s, t)})
+        logAs = As %>% purrr::map(log)
+    } else {
+        logAs = treehmm_trans_mat(t, p_s, Q, Q_pair, pa, ch)
+        As = logAs %>% purrr::map(exp)
+    }
     
     # intitial probabilities
     if (is.null(prior)) {
@@ -254,6 +277,7 @@ get_allele_treehmm = function(pAD, DP, p_s, Q = NULL, pa = NULL, ch = NULL, t = 
         discrete = TRUE)
 
     hmm$states = states
+    hmm$logPi = logAs
 
     class(hmm) = 'dthmm.inhom'
 
@@ -261,10 +285,15 @@ get_allele_treehmm = function(pAD, DP, p_s, Q = NULL, pa = NULL, ch = NULL, t = 
 }
 
 # calculate transition matrices based on new marginals
-#' @param ch
-treehmm_trans_mat = function(t, p_s, Q, pa, ch) {
+#' @param pa parent index
+#' @param ch children indices
+#' @param Q Q[i, 1:t, z_t]
+#' @param Q_pair Q_pair[i, t, z_t-1, z_t]
+treehmm_trans_mat = function(t, p_s, Q, Q_pair, pa, ch) {
 
     bigT = length(p_s)
+
+    eta = 1e2
 
     # calculate state conditionals
     get_z_conditional = function(t, p_s, z_pa, z_t_1, z_t) {
@@ -279,9 +308,15 @@ treehmm_trans_mat = function(t, p_s, Q, pa, ch) {
             z_pa == 1 & z_t_1 == 3 & z_t == 1 ~ t, 
             z_pa == 1 & z_t_1 == 3 & z_t == 2 ~ (1-t)*p_s, 
             z_pa == 1 & z_t_1 == 3 & z_t == 3 ~ (1-t)*(1-p_s),
-            z_pa != 1 & z_t_1 == 1 & z_t == 1 ~ t, 
-            z_pa != 1 & z_t_1 == 1 & z_t == 2 ~ (1-t)/2, 
-            z_pa != 1 & z_t_1 == 1 & z_t == 3 ~ (1-t)/2,
+            # z_pa != 1 & z_t_1 == 1 & z_t == 1 ~ (1-t*eta),
+            # z_pa != 1 & z_t_1 == 1 & z_t == 2 ~ t*eta/2, 
+            # z_pa != 1 & z_t_1 == 1 & z_t == 3 ~ t*eta/2, 
+            # z_pa != 1 & z_t_1 == 1 & z_t == 1 ~ t,
+            # z_pa != 1 & z_t_1 == 1 & z_t == 2 ~ (1-t)/2, 
+            # z_pa != 1 & z_t_1 == 1 & z_t == 3 ~ (1-t)/2, 
+            z_pa != 1 & z_t_1 == 1 & z_t == 1 ~ 1/3,
+            z_pa != 1 & z_t_1 == 1 & z_t == 2 ~ 1/3, 
+            z_pa != 1 & z_t_1 == 1 & z_t == 3 ~ 1/3, 
             z_pa != 1 & z_t_1 == 2 & z_t == 1 ~ t,
             z_pa != 1 & z_t_1 == 2 & z_t == 2 ~ (1-t)*(1-p_s),
             z_pa != 1 & z_t_1 == 2 & z_t == 3 ~ (1-t)*p_s,
@@ -311,36 +346,131 @@ treehmm_trans_mat = function(t, p_s, Q, pa, ch) {
         ) %>%
         array(dim = c(length(p_s),3,3,3))
 
-    # compute f_it in log scale
-    logf_it = function(pa, t, z_t_1, z_t) {
-        colSums(log(p_z[t,,z_t_1,z_t]) * Q[[pa]][t,])
+    # defined for t=2:T
+    logf_it = function(pa, ch, t, z_t_1, z_t) {
+
+        if (!is.null(pa)) {
+            # p_z[t, , z_t_1, z_t] is z_pa x z_t; Q[pa, t, ] is z_pa x 1 => m_pa is 1 x z_t
+            m_pa = colSums(log(p_z[t, , z_t_1, z_t]) * Q[pa, t, ])
+        } else {
+            m_pa = log(p_z[t, 1, z_t_1, z_t])
+        }
+
+        if (!is.null(ch)) {
+            m_ch = sapply(
+                ch,
+                function(i) {
+                    sapply(
+                        1:3,
+                        function(w) {
+                            sapply(
+                                1:3,
+                                function(y) {
+                                    log(p_z[t, z_t, y, w]) * Q_pair[i, t, y, w]
+                                }
+                            ) %>% rowSums
+                        }
+                    ) %>% rowSums
+                }
+            ) %>%
+            rowSums
+            
+        } else {
+            m_ch = 0
+        }
+
+        m_pa + m_ch
     }
 
     # generate a list of transition matrices across time
-    f_z = lapply(
+    logf_z = lapply(
         1:bigT,
         function(t) {
-            sapply(1:3, function(z_t_1){
-                logf_it(
-                    pa = pa,
-                    t = t,
-                    z_t_1 = z_t_1,
-                    z_t = 1:3
-                )
-            }) %>% exp
+            if (t == 1) {
+                return(matrix(rep(NA,9), ncol = 3, nrow = 3))
+            } else {
+                sapply(1:3, function(z_t_1) {
+                    logf_it(
+                        pa = pa,
+                        ch = ch,
+                        t = t,
+                        z_t_1 = z_t_1,
+                        z_t = 1:3
+                    )
+                })
+            }
         }
     )
 
+    logf_z_old = logf_z
+
     # renormalize the transition matrix
-    g_z = rep(1,3)
-    for (t in bigT:1) {
-        f_z[[t]] = t(t(f_z[[t]]) * g_z)
-        g_z = rowSums(f_z[[t]])
-        f_z[[t]] = f_z[[t]]/g_z
+    log_gz = rep(0,3)
+
+    for (t in bigT:2) {
+        logf_z[[t]] = t(t(logf_z[[t]]) + log_gz)
+        log_gz = sapply(1:3, function(i){logSumExp(logf_z[[t]][i,])})
+        logf_z[[t]] = logf_z[[t]] - log_gz
     }
 
-    return(f_z)
+    return(logf_z)
+}
+
+run_treehmm = function(bulks, pa_dict, ch_dict, theta_min = 0.08, max_iter = 10) {
     
+    bulks = bulks %>% split(.$sample)
+    
+    I = length(bulks)
+    N = nrow(bulks[[1]])
+    
+    k = 1
+    
+    Q = array(rep(NA, I*N*3), dim = c(I, N, 3))
+    Q_pair = array(rep(NA, I*N*3*3), dim = c(I, N, 3, 3))
+    S = array(rep(NA, max_iter*I*N), dim = c(max_iter, I, N))
+    P = array(rep(NA, max_iter*I*N), dim = c(max_iter, I, N))
+    
+    while (k <= max_iter) {
+
+        message(glue('iter {k}'))
+        
+        for (i in I:1) {
+            
+            if (k == 1) {
+                pa = NULL
+                ch = NULL
+            } else {
+                pa = pa_dict[[i]]
+                ch = ch_dict[[i]]
+            }
+            
+            treehmm = bulks[[i]] %>% {
+                get_allele_treehmm(
+                    .$pAD, .$DP, .$p_s, 
+                    t = 1e-5,
+                    theta_min = theta_min,
+                    Q = Q, 
+                    Q_pair = Q_pair, 
+                    pa = pa,
+                    ch = ch
+                    # prior = c(1-2*t, t, t)
+                )
+            }
+            
+            fb = forward_back_allele_R(treehmm)
+
+            Q[i,,] = fb$marginals
+            Q_pair[i,,,] = fb$edge_marginals
+            
+            S[k,i,] = viterbi_allele(treehmm)
+            P[k,i,] = Q[i,,1]
+            
+        }
+
+        k = k + 1
+    }
+
+    return(list(S = S, P = P))
 }
 
 
@@ -370,9 +500,13 @@ forward_back_allele = function (obj, ...) {
     })
         
     logphi <- log(as.double(obj$delta))
-    
-    logPi <- lapply(obj$Pi, log)
-        
+
+    if (is.null(obj$logPi)) {
+        logPi <- lapply(obj$Pi, log)
+    } else {
+        logPi = obj$logPi
+    }
+            
     marginals = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
 
     colnames(marginals) = obj$states
@@ -406,8 +540,13 @@ forward_back_allele_R = function (obj, ...) {
     logphi <- log(as.double(obj$delta))
     logalpha <- matrix(as.double(rep(0, m * n)), nrow = n)
     lscale <- as.double(0)
-    logPi <- lapply(obj$Pi, log)
-    
+
+    if (is.null(obj$logPi)) {
+        logPi <- lapply(obj$Pi, log)
+    } else {
+        logPi = obj$logPi
+    }
+
     for (t in 1:n) {
         
         if (t > 1) {
@@ -445,10 +584,21 @@ forward_back_allele_R = function (obj, ...) {
     }
 
     marginals = exp(logalpha + logbeta - LL)
-
     colnames(marginals) = obj$states
 
-    return(list(marginals = marginals, logalpha = logalpha, logbeta = logbeta, LL = LL))
+    edge_marginals = lapply(
+        1:(n-1),
+        function(t) {
+            x = exp(outer(logalpha[t,], logbeta[t+1,], FUN = '+') + logPi[[t+1]] + logprob[t+1,] - LL)
+            return(x)
+        }
+    )
+    # defined for (t-1, t) for t=2:T
+    edge_marginals = c(matrix(rep(NA,9), ncol = 3, nrow = 3), edge_marginals)
+
+    edge_marginals = aperm(array(unlist(edge_marginals), dim = c(m,m,n), dimnames = list(obj$states, obj$states, 1:(n))), c(3,1,2))
+
+    return(list(marginals = marginals, edge_marginals = edge_marginals, logalpha = logalpha, logbeta = logbeta, logprob = logprob, LL = LL, logPi = logPi))
 }
 
 
@@ -478,7 +628,6 @@ likelihood_allele = function (obj, ...) {
         
     LL <- likelihood_allele_compute(obj, logphi, logprob, logPi, n, m)
 
-    
     return(LL)
 }
 
