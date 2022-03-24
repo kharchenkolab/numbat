@@ -357,12 +357,7 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, sc_refs
 
     count_mat = check_matrix(count_mat)
 
-    # if (is.null(sc_refs)) {
-    #     sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
-    # }
-    # lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs[colnames(count_mat)], verbose = FALSE)
-    
-    fit = fit_multi_ref(rowSums(count_mat), lambdas_ref, sum(count_mat), gtf)
+    fit = fit_ref_sse(rowSums(count_mat), lambdas_ref, gtf)
 
     exp_bulk = get_exp_bulk(
             count_mat,
@@ -393,6 +388,48 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, sc_refs
         mutate(CHROM = as.character(CHROM)) %>%
         mutate(CHROM = ifelse(CHROM == 'X', 23, CHROM)) %>%
         mutate(CHROM = factor(as.integer(CHROM)))
+}
+
+fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FALSE) {
+
+    if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
+        return(list('w' = 1, 'lambdas_bar' = lambdas_ref))
+    }
+    
+    Y_obs = Y_obs[Y_obs > 0]
+
+    # take the union of expressed genes across cell type
+    genes_common = gtf$gene %>% 
+        intersect(names(Y_obs)) %>%
+        intersect(rownames(lambdas_ref)[rowMeans(lambdas_ref) > min_lambda])
+
+    if (verbose) {
+        log_info(glue('{length(genes_common)} genes common in reference and observation'))
+    }
+
+    Y_obs = Y_obs[genes_common]
+    lambdas_obs = Y_obs/sum(Y_obs)
+    lambdas_ref = lambdas_ref[genes_common,,drop=FALSE]
+
+    n_ref = ncol(lambdas_ref)
+    
+    fit = optim(
+        fn = function(w) {
+            w = w/sum(w)
+            sum(log(lambdas_obs/as.vector(lambdas_ref %*% w))^2)
+        },
+        method = 'L-BFGS-B',
+        par = rep(1/n_ref, n_ref),
+        lower = rep(1e-6, n_ref)
+    )
+
+    w = fit$par
+    w = w/sum(w)
+    w = setNames(w, colnames(lambdas_ref))
+
+    lambdas_bar = lambdas_ref %*% w %>% {setNames(as.vector(.), rownames(.))}
+
+    return(list('w' = w, 'lambdas_bar' = lambdas_bar))
 }
 
 #' Annotate genetic distance between markers
