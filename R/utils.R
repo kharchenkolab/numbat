@@ -504,8 +504,8 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
 #' @return a dataframe of segments with CNV posterior information
 #' @export
 analyze_bulk = function(
-    bulk, t = 1e-5, gamma = 20, theta_min = 0.08, lambda = 1, 
-    phi_del = 2^(-0.25), phi_amp = 2^(0.25),
+    bulk, t = 1e-5, gamma = 20, theta_min = 0.08, logphi_min = 0.25,
+    lambda = 1, min_genes = 10,
     exp_only = FALSE, allele_only = FALSE, retest = TRUE, 
     find_diploid = TRUE, diploid_chroms = NULL,
     classify_allele = FALSE, run_hmm = TRUE, bal_cnv = TRUE, prior = NULL, 
@@ -529,7 +529,9 @@ analyze_bulk = function(
         log_info(glue('Using diploid chromosomes given: {paste0(diploid_chroms, collapse = ",")}'))
         bulk = bulk %>% mutate(diploid = CHROM %in% diploid_chroms)
     } else if (find_diploid) {
-        out = find_common_diploid(bulk, gamma = gamma, t = t, theta_min = theta_min)
+        out = find_common_diploid(
+            bulk, gamma = gamma, t = t, theta_min = theta_min, 
+            min_genes = min_genes, fc_min = 2^logphi_min)
         bulk = out$bulks
         bal_cnv = out$bamp
     } else if (!'diploid' %in% colnames(bulk)) {
@@ -556,15 +558,15 @@ analyze_bulk = function(
                     Y_obs = Y_obs, 
                     lambda_ref = lambda_ref, 
                     d_total = na.omit(unique(d_obs)),
-                    phi_amp = phi_amp,
-                    phi_del = phi_del,
+                    phi_amp = 2^(logphi_min),
+                    phi_del = 2^(-logphi_min),
                     mu = mu,
                     sig = sig,
                     t = t,
                     gamma = unique(gamma),
                     theta_min = theta_min,
                     prior = prior,
-                    bal_cnv = bal_cnv,
+                    bal_cnv = TRUE,
                     exp_only = exp_only,
                     allele_only = allele_only,
                     classify_allele = classify_allele,
@@ -574,7 +576,7 @@ analyze_bulk = function(
             ) %>% 
             mutate(cnv_state = str_remove(state, '_down|_up')) %>%
             annot_segs() %>%
-            smooth_segs() %>%
+            smooth_segs(min_genes = min_genes) %>%
             annot_segs()
     }
 
@@ -588,7 +590,10 @@ analyze_bulk = function(
             message('Retesting CNVs..')
         }
 
-        segs_post = retest_cnv(bulk, gamma = gamma, exp_model = 'lnpois', allele_only = allele_only)
+        segs_post = retest_cnv(
+            bulk, gamma = gamma, theta_min = theta_min,
+            logphi_min = logphi_min, exp_model = 'lnpois',
+            allele_only = allele_only)
         
         bulk = bulk %>% 
             select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM', 'seg_start', 'seg_end')])) %>%
@@ -664,12 +669,12 @@ analyze_bulk = function(
 #' @param allele_only whether to retest only using allele data
 #' @return a dataframe of segments with CNV posterior information
 #' @export
-retest_cnv = function(bulk, exp_model = 'lnpois', gamma = 20, allele_only = FALSE) {
+retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE) {
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     
-    theta_min = 0.065
-    delta_phi_min = 0.15
+    # theta_min = 0.065
+    # delta_phi_min = 0.15
 
     if (allele_only) {
         segs_post = bulk %>% 
@@ -713,9 +718,9 @@ retest_cnv = function(bulk, exp_model = 'lnpois', gamma = 20, allele_only = FALS
                     sig = sig[!is.na(Y_obs)],
                     model = exp_model
                 ),
-                L_x_n = pnorm.range(1 - delta_phi_min, 1 + delta_phi_min, phi_mle, phi_sigma),
-                L_x_d = pnorm.range(0.1, 1 - delta_phi_min, phi_mle, phi_sigma),
-                L_x_a = pnorm.range(1 + delta_phi_min, 3, phi_mle, phi_sigma),
+                L_x_n = pnorm.range(2^(-logphi_min), 2^logphi_min, phi_mle, phi_sigma),
+                L_x_d = pnorm.range(0.1, 2^(-logphi_min), phi_mle, phi_sigma),
+                L_x_a = pnorm.range(2^logphi_min, 3, phi_mle, phi_sigma),
                 Z = sum(G['20'] * L_x_n * L_y_d,
                         G['10'] * L_x_d * L_y_d,
                         G['21'] * L_x_a * L_y_a,
@@ -1009,7 +1014,7 @@ annot_consensus = function(bulk, segs_consensus) {
 #' @return list Ploidy information
 #' @export
 find_common_diploid = function(
-    bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 1.25, alpha = 1e-4, 
+    bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 2^0.25, alpha = 1e-4, min_genes = 10, 
     ncores = 1, debug = FALSE, verbose = TRUE) {
 
     if (!'sample' %in% colnames(bulks)) {
@@ -1035,6 +1040,8 @@ find_common_diploid = function(
                     )
                 ) %>% ungroup() %>%
                 mutate(cnv_state = str_remove(state, '_down|_up')) %>%
+                annot_segs() %>%
+                smooth_segs(min_genes = min_genes) %>%
                 annot_segs()
 
         }) %>%
@@ -1118,7 +1125,6 @@ find_common_diploid = function(
         # build graph
         V = segs_bal
 
-        # E = tests %>% filter(q > alpha | delta_max < log(fc_min))
         E = tests %>% filter(q > alpha)
 
         G = igraph::graph_from_data_frame(d=E, vertices=V, directed=FALSE)
