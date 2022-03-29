@@ -128,7 +128,7 @@ fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf, min_lambda = 2e-6, verbose 
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf dataframe Transcript gtf
-#' @return dataframe Logx+1 transformed normalized expression values for single cells
+#' @return dataframe Log(x+1) transformed normalized expression values for single cells
 #' @keywords internal
 smooth_expression = function(count_mat, lambdas_ref, gtf, window = 101, verbose = T) {
 
@@ -245,7 +245,7 @@ get_exp_bulk = function(count_mat, lambdas_ref, gtf, verbose = TRUE) {
 #' @return dataframe Pseudobulk allele profile
 #' @keywords internal
 get_allele_bulk = function(df_allele, genetic_map, lambda = 1, min_depth = 0) {
-    pseudobulk = df_allele %>%
+    df_allele %>%
         filter(GT %in% c('1|0', '0|1')) %>%
         group_by(snp_id, CHROM, POS, REF, ALT, GT, gene) %>%
         summarise(
@@ -707,9 +707,9 @@ retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min =
                 n_snps = sum(!is.na(pAD)),
                 theta_hat = theta_hat_seg(major_count[!is.na(major_count)], minor_count[!is.na(minor_count)]),
                 approx_theta_post(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = theta_hat),
-                L_y_n = pnorm.range(0, theta_min, theta_mle, theta_sigma),
-                L_y_d = pnorm.range(theta_min, 0.499, theta_mle, theta_sigma),
-                L_y_a = pnorm.range(theta_min, 0.375, theta_mle, theta_sigma),
+                P_y_n = pnorm.range(0, theta_min, theta_mle, theta_sigma),
+                P_y_d = pnorm.range(theta_min, 0.499, theta_mle, theta_sigma),
+                P_y_a = pnorm.range(theta_min, 0.375, theta_mle, theta_sigma),
                 approx_phi_post(
                     Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
                     alpha = alpha[!is.na(Y_obs)],
@@ -718,20 +718,20 @@ retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min =
                     sig = sig[!is.na(Y_obs)],
                     model = exp_model
                 ),
-                L_x_n = pnorm.range(2^(-logphi_min), 2^logphi_min, phi_mle, phi_sigma),
-                L_x_d = pnorm.range(0.1, 2^(-logphi_min), phi_mle, phi_sigma),
-                L_x_a = pnorm.range(2^logphi_min, 3, phi_mle, phi_sigma),
-                Z = sum(G['20'] * L_x_n * L_y_d,
-                        G['10'] * L_x_d * L_y_d,
-                        G['21'] * L_x_a * L_y_a,
-                        G['31'] * L_x_a * L_y_a,
-                        G['22'] * L_x_a * L_y_n, 
-                        G['00'] * L_x_d * L_y_n),
-                p_loh = (G['20'] * L_x_n * L_y_d)/Z,
-                p_amp = ((G['31'] + G['21']) * L_x_a * L_y_a)/Z,
-                p_del = (G['10'] * L_x_d * L_y_d)/Z,
-                p_bamp = (G['22'] * L_x_a * L_y_n)/Z,
-                p_bdel = (G['00'] * L_x_d * L_y_n)/Z,
+                P_x_n = pnorm.range(2^(-logphi_min), 2^logphi_min, phi_mle, phi_sigma),
+                P_x_d = pnorm.range(0.1, 2^(-logphi_min), phi_mle, phi_sigma),
+                P_x_a = pnorm.range(2^logphi_min, 3, phi_mle, phi_sigma),
+                Z = sum(G['20'] * P_x_n * P_y_d,
+                        G['10'] * P_x_d * P_y_d,
+                        G['21'] * P_x_a * P_y_a,
+                        G['31'] * P_x_a * P_y_a,
+                        G['22'] * P_x_a * P_y_n, 
+                        G['00'] * P_x_d * P_y_n),
+                p_loh = (G['20'] * P_x_n * P_y_d)/Z,
+                p_amp = ((G['31'] + G['21']) * P_x_a * P_y_a)/Z,
+                p_del = (G['10'] * P_x_d * P_y_d)/Z,
+                p_bamp = (G['22'] * P_x_a * P_y_n)/Z,
+                p_bdel = (G['00'] * P_x_d * P_y_n)/Z,
                 LLR_x = calc_exp_LLR(
                     Y_obs[!is.na(Y_obs)],
                     lambda_ref[!is.na(Y_obs)], 
@@ -1436,6 +1436,52 @@ approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu =
     }
 
     return(tibble('phi_mle' = mean, 'phi_sigma' = sd))
+}
+
+l_geno_2d = function(g, theta_mle, phi_mle, theta_sigma, phi_sigma) {
+
+    if (g[[1]] == 2 & g[[2]] == 2) {
+        integrand = function(f) {
+            pnorm.range(0, 0.04, theta_mle, theta_sigma) * 
+            dnorm(2^logphi_f(f, g[[1]], g[[2]]), phi_mle, phi_sigma) 
+        }
+    } else {
+        integrand = function(f) {
+            dnorm(theta_f(f, g[[1]], g[[2]])-0.5, theta_mle, theta_sigma) * 
+            dnorm(2^logphi_f(f, g[[1]], g[[2]]), phi_mle, phi_sigma) 
+        }
+    }
+
+    integrate(
+        integrand,
+        lower = 0, 
+        upper = 1
+    )$value
+
+}
+
+p_geno_2d = function(theta_mle, phi_mle, theta_sigma, phi_sigma) {
+    
+    ps = sapply(
+        list(c(3,1), c(2,1), c(2,2), c(1,0), c(2,0)),
+        function(g) {
+            l_geno_2d(g, theta_mle, phi_mle, theta_sigma, phi_sigma)
+        }
+    )
+    
+    ps = ps/sum(ps)
+
+    tibble('p_amp' = ps[1] + ps[2], 'p_bamp' = ps[3], 'p_del' = ps[4], 'p_loh' = ps[5])
+    
+}
+
+logphi_f = function(f, m = 0, p = 1) {
+  log2((2 * (1 - f) + (m + p) * f) / 2)
+}
+
+theta_f = function(f, m = 0, p = 1) {
+    baf = (m * f + 1 - f)/((m * f + 1 - f) + (p * f + 1 - f))
+    baf
 }
 
 #' Helper function to get the internal nodes of a dendrogram and the leafs in each subtree 

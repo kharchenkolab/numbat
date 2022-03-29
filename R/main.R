@@ -43,12 +43,12 @@ NULL
 #' @export
 run_numbat = function(
         count_mat, lambdas_ref, df_allele, gtf, genetic_map, 
-        out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 50,
-        alpha = 1e-4, eps = 1e-5, max_entropy = 0.6, init_k = 3, min_cells = 10,
+        out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 40,
+        alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 10,
         max_cost = ncol(count_mat) * 0.3, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, exp_model = 'lnpois', random_init = FALSE,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
-        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 0.995, hclust_only = FALSE,
+        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 1-alpha, hclust_only = FALSE,
         plot = TRUE
     ) {
 
@@ -130,6 +130,18 @@ run_numbat = function(
         colnames(dist_mat) = colnames(count_mat)
         hc = hclust(as.dist(dist_mat), method = "ward.D2")
 
+        saveRDS(hc, glue('{out_dir}/hc.rds'))
+
+        # extract cell groupings
+        nodes = get_nodes_celltree(hc, cutree(hc, k = init_k))
+
+    } else if (init_k == 1) {
+
+        log_message('Initializing with all-cell pseudobulk ..', verbose = verbose)
+        log_mem()
+
+        nodes = list(list('cells' = colnames(count_mat), 'size' = ncol(count_mat), 'sample' = 1))
+
     } else {
 
         log_message('Approximating initial clusters using smoothed expression ..', verbose = verbose)
@@ -152,12 +164,14 @@ run_numbat = function(
             row.names = TRUE,
             nThread = min(4, ncores)
         )
+
+        saveRDS(hc, glue('{out_dir}/hc.rds'))
+
+        # extract cell groupings
+        nodes = get_nodes_celltree(hc, cutree(hc, k = init_k))
+
     }
 
-    saveRDS(hc, glue('{out_dir}/hc.rds'))
-
-    # extract cell groupings
-    nodes = get_nodes_celltree(hc, cutree(hc, k = init_k))
     subtrees = purrr::keep(nodes, function(x) x$size > min_cells)
     clones = purrr::keep(subtrees, function(x) x$sample %in% 1:init_k)
 
@@ -196,7 +210,7 @@ run_numbat = function(
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
 
         # find consensus CNVs
-        segs_consensus = get_segs_consensus(bulk_subtrees, min_overlap = min_overlap)
+        segs_consensus = get_segs_consensus(bulk_subtrees, min_LLR = min_LLR, min_overlap = min_overlap)
 
         # retest consensus CNVs on clones
         bulk_clones = make_group_bulks(
@@ -484,6 +498,7 @@ exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101,
 }
 
 #' Make a group of pseudobulks
+#' @param groups list Contains fields named "sample", "cells", "size", "members"
 #' @keywords internal 
 make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, genetic_map, min_depth = 0, sc_refs = NULL, ncores = NULL) {
     
@@ -1278,7 +1293,7 @@ retest_bulks = function(bulks, segs_consensus, min_genes = 10, use_loh = FALSE, 
 
 #' test for multi-allelic CNVs
 #' @keywords internal 
-test_multi_allelic = function(bulks, segs_consensus, min_LLR = 100, p_min = 0.995) {
+test_multi_allelic = function(bulks, segs_consensus, min_LLR = 40, p_min = 0.999) {
 
     log_message('Testing for multi-allelic CNVs ..')
     
