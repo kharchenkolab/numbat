@@ -529,11 +529,9 @@ analyze_bulk = function(
         log_info(glue('Using diploid chromosomes given: {paste0(diploid_chroms, collapse = ",")}'))
         bulk = bulk %>% mutate(diploid = CHROM %in% diploid_chroms)
     } else if (find_diploid) {
-        out = find_common_diploid(
+        bulk = find_common_diploid(
             bulk, gamma = gamma, t = t, theta_min = theta_min, 
             min_genes = min_genes, fc_min = 2^logphi_min)
-        bulk = out$bulks
-        bal_cnv = out$bamp
     } else if (!'diploid' %in% colnames(bulk)) {
         stop('Must define diploid region if not given')
     }
@@ -1202,7 +1200,7 @@ find_common_diploid = function(
         res = list('bamp' = bamp, 'bulks' = bulks)
     }
 
-    return(res)
+    return(bulks)
 }
 
 #' get neutral segments from multiple pseudobulks
