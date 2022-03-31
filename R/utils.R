@@ -599,8 +599,8 @@ analyze_bulk = function(
                 segs_post, by = c('seg', 'CHROM', 'seg_start', 'seg_end')
             ) %>%
             mutate(
-                cnv_state_post = tidyr::replace_na(cnv_state_post, 'neu'),
-                cnv_state = tidyr::replace_na(cnv_state, 'neu')
+                cnv_state_post = ifelse(is.na(cnv_state_post), 'neu', cnv_state_post),
+                cnv_state = ifelse(is.na(cnv_state), 'neu', cnv_state)
             ) %>%
             mutate(state_post = ifelse(
                 cnv_state_post %in% c('amp', 'del', 'loh') & (!cnv_state %in% c('bamp', 'bdel')),
@@ -745,11 +745,21 @@ retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min =
                 LLR = LLR_x + LLR_y,
                 .groups = 'drop'
             ) %>%
+            mutate_at(
+                c('p_loh', 'p_amp', 'p_del', 'p_bamp', 'p_bdel'),
+                function(x) {ifelse(is.na(x), 0, x)}
+            ) %>%
             rowwise() %>%
             mutate(cnv_state_post = c('loh', 'amp', 'del', 'bamp', 'bdel')[
                 which.max(c(p_loh, p_amp, p_del, p_bamp, p_bdel))
             ]) %>%
-            ungroup()
+            ungroup() %>%
+            mutate(
+                cnv_state_post = ifelse(Z == 0, 'neu', cnv_state_post),
+                LLR = ifelse(Z == 0, 0, LLR),
+                LLR_x = ifelse(Z == 0, 0, LLR_x),
+                LLR_y = ifelse(Z == 0, 0, LLR_y)
+            )
     }
 
     return(segs_post)
@@ -803,7 +813,7 @@ annot_theta_roll = function(bulk) {
         mutate(haplo_theta_min = case_when(
             str_detect(state, 'up') ~ 'major',
             str_detect(state, 'down') ~ 'minor',
-            T ~ ifelse(pBAF > 0.5, 'major', 'minor')
+            TRUE ~ ifelse(pBAF > 0.5, 'major', 'minor')
         )) %>% 
         mutate(
             major_count = ifelse(haplo_theta_min == 'major', pAD, DP - pAD),
