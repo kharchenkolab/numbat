@@ -622,7 +622,7 @@ run_group_hmms = function(
 #' @param min_overlap numeric Minimum overlap fraction to determine count two events as as overlapping
 #' @return dataframe Consensus segments
 #' @export
-get_segs_consensus = function(bulks, min_LLR = 50, min_overlap = 0.45) {
+get_segs_consensus = function(bulks, min_LLR = 40, min_overlap = 0.45) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -1253,13 +1253,13 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
 #' @param diploid_chroms vector User-provided diploid chromosomes
 #' @return dataframe Retested pseudobulks 
 #' @export 
-retest_bulks = function(bulks, segs_consensus,
+retest_bulks = function(bulks, segs_consensus = NULL,
     t = 1e-5, min_genes = 10, gamma = 20, 
     use_loh = FALSE, diploid_chroms = NULL) {
 
-    # if (length(unique(bulks$sample)) == 1) {
-    #     return(bulks)
-    # }
+    if (is.null(segs_consensus)) {
+        segs_consensus = get_segs_consensus(bulks)
+    }
 
     # default
     if (is.null(use_loh)) {
