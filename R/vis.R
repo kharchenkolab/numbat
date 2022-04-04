@@ -546,12 +546,12 @@ plot_psbulk = function(
             labels = cnv_labels,
             na.translate = F
         ) +
-        guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = FALSE, alpha = FALSE, shape = FALSE) +
+        guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = 'none', alpha = 'none', shape = 'none') +
         xlab(marker) +
         ylab('')
 
     if (!legend) {
-        p = p + guides(color = FALSE, fill = FALSE, alpha = FALSE, shape = FALSE)
+        p = p + guides(color = 'none', fill = 'none', alpha = 'none', shape = 'none')
     }
 
     if (phi_mle) {
@@ -993,7 +993,7 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
 }
 
 #' @export
-plot_sc_tree = function(gtree, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, pal_clone = NULL,tip_length = 0.5) {
+plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, pal_clone = NULL, tip_length = 0.5) {
 
     mut_nodes = gtree %>% activate(nodes) %>%
       filter(!is.na(site)) %>% data.frame() %>%
@@ -1032,13 +1032,17 @@ plot_sc_tree = function(gtree, label_size = 3, dot_size = 2, branch_width = 0.5,
             axis.ticks.y = element_line(size = 0.2),
             axis.text.y = element_text(size = 8)
         ) +
-        geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
-        geom_text2(
-            aes(x = branch, label = str_trunc(site, 20, side = 'center')),
-            size = label_size, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
-        ) +
-        guides(color = F) +
+        guides(color = 'none') +
         xlab('Number of mutations')
+
+    if (label_mut) {
+        p_tree = p_tree + 
+            geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
+            geom_text2(
+                aes(x = branch, label = str_trunc(site, 20, side = 'center')),
+                size = label_size, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
+            )
+    }
 
     if (tip) {
 
@@ -1048,7 +1052,7 @@ plot_sc_tree = function(gtree, label_size = 3, dot_size = 2, branch_width = 0.5,
         }
 
         p_tree = p_tree + 
-            geom_tippoint(aes(color = as.factor(clone)), size=1, stroke = 0.2) +
+            geom_tippoint(aes(color = as.factor(clone)), size=dot_size, stroke = 0.2) +
             scale_color_manual(values = pal_clone, limits = force)
     }
     
@@ -1110,8 +1114,8 @@ plot_consensus = function(segs) {
 plot_phylo_heatmap = function(
         gtree, joint_post, segs_consensus,
         annot = NULL, line_width = 0.1, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
-        logBF_max = 5, geno_bar = FALSE, superclone = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
-        pal_annot = NULL, tree_height = 1, annot_title = 'Annotation', annot_scale = NULL
+        logBF_max = 5, geno_bar = FALSE, superclone = FALSE, clone_dict = NULL, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
+        pal_annot = NULL, tree_height = 1, annot_title = 'Annotation', geno_title = 'Genotype', annot_scale = NULL
     ) {
     
     # make sure chromosomes are in order
@@ -1165,7 +1169,7 @@ plot_phylo_heatmap = function(
                 panel.background = element_rect(fill = "transparent",colour = NA),
                 plot.background = element_rect(fill = "transparent", color = NA)
             ) +
-            guides(color = F)
+            guides(color = 'none')
 
     # order the cells
     cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
@@ -1268,16 +1272,18 @@ plot_phylo_heatmap = function(
         xlab('Genomic position')
 
     # clone annotation
-    clone_dict = gtree %>%
-        activate(nodes) %>%
-        data.frame %>%
-        mutate(
-            GT = ifelse(compartment == 'normal', '', GT),
-            GT = factor(GT),
-            clone = ifelse(compartment == 'normal', 1, clone),
-            clone = as.factor(clone)
-        ) %>%
-        {setNames(.$clone, .$name)}
+    if (is.null(clone_dict)) {
+        clone_dict = gtree %>%
+            activate(nodes) %>%
+            data.frame %>%
+            mutate(
+                GT = ifelse(compartment == 'normal', '', GT),
+                GT = factor(GT),
+                clone = ifelse(compartment == 'normal', 1, clone),
+                clone = as.factor(clone)
+            ) %>%
+            {setNames(.$clone, .$name)}
+    }
 
     if (is.null(pal_clone)) {
         getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 10, 'Spectral'))
@@ -1290,7 +1296,7 @@ plot_phylo_heatmap = function(
         ) %>%
         mutate(cell = factor(cell, cell_order)) %>%
         filter(!is.na(cell)) %>%
-        annot_bar(transpose = T, legend = clone_legend, pal_annot = pal_clone, legend_title = 'Genotype', size = size)
+        annot_bar(transpose = T, legend = clone_legend, pal_annot = pal_clone, legend_title = geno_title, size = size)
     
     # external annotation
     if (!is.null(annot)) {

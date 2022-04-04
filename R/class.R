@@ -73,7 +73,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @param line_width numeric Heatmap line width (default=0.1)
     #' @param tree_height numeric Plotting height of the tree (default=1)
     #' @return ggplot Plot
-    plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, p_min = 0.9, tip_length = 1, branch_width = 0.2, line_width = 0.1, tree_height = 1) {
+    plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, pal_annot = NULL, p_min = 0.9, tip_length = 1, branch_width = 0.2, line_width = 0.1, tree_height = 1) {
 
         p = plot_phylo_heatmap(  
             self$gtree,
@@ -86,6 +86,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             geno_bar = geno_bar,
             annot = annot,
             pal_clone = pal_clone,
+            pal_annot = pal_annot,
             tree_height = tree_height
         )
         return(p)
