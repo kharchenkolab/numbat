@@ -158,7 +158,7 @@ get_full_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma =
 
 #' Allele HMM with one theta state
 #' @keywords internal
-get_single_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
+get_single_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, theta_neu = 0, prior = NULL) {
 
     gamma = unique(gamma)
 
@@ -196,8 +196,8 @@ get_single_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma
     beta_up = (0.5 - theta_min) * gamma
     alpha_down = beta_up
     beta_down = alpha_up
-    alpha_neu = gamma/2
-    beta_neu = gamma/2
+    alpha_neu = (0.5 + theta_neu) * gamma
+    beta_neu = (0.5 - theta_neu) * gamma
         
     hmm = HiddenMarkov::dthmm(
         x = pAD, 
@@ -214,6 +214,7 @@ get_single_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma
 
     return(hmm)
 }
+
 
 #' Allele treeHMM with one theta state
 #' @param pAD
@@ -284,16 +285,9 @@ get_allele_treehmm = function(pAD, DP, p_s, Q = NULL, Q_pair = NULL, pa = NULL, 
     return(hmm)
 }
 
-# calculate transition matrices based on new marginals
-#' @param pa parent index
-#' @param ch children indices
-#' @param Q Q[i, 1:t, z_t]
-#' @param Q_pair Q_pair[i, t, z_t-1, z_t]
-treehmm_trans_mat = function(t, p_s, Q, Q_pair, pa, ch) {
-
-    bigT = length(p_s)
-
-    eta = 1e2
+# generate lookup table for conditional state probablities
+# p_z[t, z_t_pa, z_t-1, z_t]
+get_p_z = function(t, p_s) {
 
     # calculate state conditionals
     get_z_conditional = function(t, p_s, z_pa, z_t_1, z_t) {
@@ -331,8 +325,6 @@ treehmm_trans_mat = function(t, p_s, Q, Q_pair, pa, ch) {
     states_grid = expand.grid(1:3, 1:3, 1:3) %>%
         setNames(c('z_t_pa', 'z_t_1', 'z_t'))
 
-    # generate lookup table for conditional state probablities
-    # p_z[t, z_t_pa, z_t-1, z_t]
     p_z = sapply(
             states_grid %>% split(1:nrow(.)),
             function(Z){
@@ -345,6 +337,22 @@ treehmm_trans_mat = function(t, p_s, Q, Q_pair, pa, ch) {
             }
         ) %>%
         array(dim = c(length(p_s),3,3,3))
+
+    return(p_z)
+}
+
+# calculate transition matrices based on new marginals
+#' @param pa parent index
+#' @param ch children indices
+#' @param Q Q[i, 1:t, z_t]
+#' @param Q_pair Q_pair[i, t, z_t-1, z_t]
+treehmm_trans_mat = function(t, p_s, Q, Q_pair, pa, ch) {
+
+    bigT = length(p_s)
+
+    eta = 1e2
+
+    p_z = get_p_z(t, p_s)
 
     # defined for t=2:T
     logf_it = function(pa, ch, t, z_t_1, z_t) {
@@ -416,7 +424,7 @@ treehmm_trans_mat = function(t, p_s, Q, Q_pair, pa, ch) {
     return(logf_z)
 }
 
-run_treehmm = function(bulks, pa_dict, ch_dict, theta_min = 0.08, max_iter = 10) {
+run_treehmm = function(bulks, pa_dict, ch_dict, theta_min = 0.08, gamma = 20, t = 1e-5, max_iter = 10) {
     
     bulks = bulks %>% split(.$sample)
     
@@ -429,13 +437,18 @@ run_treehmm = function(bulks, pa_dict, ch_dict, theta_min = 0.08, max_iter = 10)
     Q_pair = array(rep(NA, I*N*3*3), dim = c(I, N, 3, 3))
     S = array(rep(NA, max_iter*I*N), dim = c(max_iter, I, N))
     P = array(rep(NA, max_iter*I*N), dim = c(max_iter, I, N))
+
+    logprob = array(rep(NA, I*N*3), dim = c(I, N, 3))
+    logtheta = log(get_p_z(t, bulks[[1]]$p_s))
+    F = c()
     
     while (k <= max_iter) {
 
         message(glue('iter {k}'))
         
+        ### update variational distribution ###
         for (i in I:1) {
-            
+
             if (k == 1) {
                 pa = NULL
                 ch = NULL
@@ -447,9 +460,10 @@ run_treehmm = function(bulks, pa_dict, ch_dict, theta_min = 0.08, max_iter = 10)
             treehmm = bulks[[i]] %>% {
                 get_allele_treehmm(
                     .$pAD, .$DP, .$p_s, 
-                    t = 1e-5,
+                    t = t,
                     theta_min = theta_min,
                     Q = Q, 
+                    gamma = gamma, 
                     Q_pair = Q_pair, 
                     pa = pa,
                     ch = ch
@@ -461,16 +475,60 @@ run_treehmm = function(bulks, pa_dict, ch_dict, theta_min = 0.08, max_iter = 10)
 
             Q[i,,] = fb$marginals
             Q_pair[i,,,] = fb$edge_marginals
+            logprob[i,,] = fb$logprob
             
             S[k,i,] = viterbi_allele(treehmm)
             P[k,i,] = Q[i,,1]
             
         }
 
+
+        ### calculate free energy ###
+        Fk = 0
+
+        for (i in I:1) {
+
+            pa = pa_dict[[i]]
+
+            # entropy term
+            H = sapply(
+                2:bigT,
+                function(t) {
+                    q_cond = Q_pair[i, t, , ]/Q[i, t-1, ]
+                    sum(Q_pair[i, t, , ] * log(q_cond))
+                }
+            ) %>% sum
+
+            H = H + sum(Q[i,1,] * log(Q[i,1,]))
+
+            # likelihood term
+            L = sapply(
+                2:bigT,
+                function(t) {
+                    
+                    emission_term = sum(Q[i,t,] * logprob[i,t,])
+                    
+                    transition_term = sum(sapply(1:3,
+                        function(z_pa) {
+                            sum(logtheta[t, z_pa, , ] * Q_pair[i, t, , ] * Q[pa, t, z_pa])
+                        })
+                    )
+                    
+                    emission_term + transition_term
+                }
+            ) %>% sum
+
+            # free energy
+            Fk = Fk + H - L
+
+        }
+
+        F = c(F, Fk)
+
         k = k + 1
     }
 
-    return(list(S = S, P = P))
+    return(list(S = S, P = P, F = F))
 }
 
 
