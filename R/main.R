@@ -755,9 +755,10 @@ get_clone_post = function(gtree, exp_post, allele_post) {
             seg,
             tidyr::nesting(GT, clone, compartment, prior_clone, clone_size),
             fill = list('I' = 0)
-        )
+        ) %>% 
+        filter(seg != '')
 
-    clone_post = inner_join(
+    clone_post = full_join(
             exp_post %>%
                 filter(cnv_state != 'neu') %>%
                 inner_join(clone_segs, by = c('seg' = 'seg')) %>%
@@ -777,6 +778,10 @@ get_clone_post = function(gtree, exp_post, allele_post) {
                     .groups = 'drop'
                 ),
             by = c("cell", "clone", "GT", "prior_clone")
+        ) %>%
+        mutate(
+            l_clone_y = ifelse(is.na(l_clone_y), 0, l_clone_y),
+            l_clone_x = ifelse(is.na(l_clone_x), 0, l_clone_x)
         ) %>%
         group_by(cell) %>%
         mutate(
