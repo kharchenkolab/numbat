@@ -681,19 +681,13 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
     
     # take complement of consensus aberrant segs
     gaps = GenomicRanges::setdiff(
-        segs_neu %>% {GenomicRanges::GRanges(
-            seqnames = .$CHROM,
-            IRanges::IRanges(start = .$seg_start,
-                   end = .$seg_end)
+        segs_neu %>% 
+            {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$seg_start,
+                    end = .$seg_end)
         )},
         segs_consensus %>% 
-            group_by(seg, CHROM) %>%
-            summarise(
-                seg_start = min(seg_start),
-                seg_end = max(seg_end),
-                .groups = 'drop'
-            ) %>%
-            ungroup() %>%
             {GenomicRanges::GRanges(
                 seqnames = .$CHROM,
                 IRanges::IRanges(start = .$seg_start,
