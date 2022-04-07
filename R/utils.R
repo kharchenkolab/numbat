@@ -346,10 +346,9 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #' @param df_allele dataframe Single-cell allele counts
 #' @param gtf dataframe Transcript gtf
 #' @param genetic_map dataframe Genetic map
-#' @param sc_refs named vector Single cell reference matches
 #' @return dataframe Pseudobulk gene expression and allele profile
 #' @export
-get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, sc_refs = NULL, min_depth = 0, lambda = 1, verbose = TRUE) {
+get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_depth = 0, lambda = 1, verbose = TRUE) {
 
     if (nrow(df_allele) == 0) {
         stop('empty allele dataframe - check cell names')
@@ -1078,8 +1077,22 @@ find_common_diploid = function(
     segs_consensus = fill_neu_segs(segs_imbal, get_segs_neu(bulks)) %>% mutate(seg = seg_cons)
     bulks = bulks %>% annot_consensus(segs_consensus)
 
-    bulks_bal = bulks %>% filter(cnv_state == 'neu') %>% filter(!is.na(lnFC))
-    segs_bal = bulks_bal %>% count(seg) %>% filter(n > 50) %>% pull(seg) %>% as.character
+    # only keep segments with sufficient SNPs and genes
+    segs_bal = bulks %>% 
+        filter(cnv_state == 'neu') %>%
+        group_by(seg, sample) %>%
+        summarise(
+            n_snps = sum(DP >= 5, na.rm = TRUE),
+            n_genes = sum(!is.na(gene)),
+            .groups = 'drop'
+        ) %>%
+        group_by(seg) %>%
+        filter(any(n_genes > 50 & n_snps > 50)) %>%
+        pull(seg) %>% 
+        as.character %>% 
+        unique()
+
+    bulks_bal = bulks %>% filter(seg %in% segs_bal) %>% filter(!is.na(lnFC))
 
     if (length(segs_bal) == 0) {
         msg = 'No balanced segments, using all segments as baseline'
@@ -1206,8 +1219,7 @@ find_common_diploid = function(
             'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests,
             'test_dat' = test_dat, 'FC' = FC, 'cliques' = cliques, 'segs_bal' = segs_bal
         )
-    } else {
-        res = list('bamp' = bamp, 'bulks' = bulks)
+        return(res)
     }
 
     return(bulks)

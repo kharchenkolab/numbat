@@ -49,7 +49,7 @@ run_numbat = function(
         ncores = 1, ncores_nni = ncores, exp_model = 'lnpois', random_init = FALSE,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
         skip_nj = FALSE, multi_allelic = FALSE, p_multi = 1-alpha, hclust_only = FALSE,
-        plot = TRUE
+        plot = TRUE, check_converge = FALSE
     ) {
 
 
@@ -80,6 +80,8 @@ run_numbat = function(
         glue('ncores = {ncores}'),
         glue('ncores_nni = {ncores_nni}'),
         glue('common_diploid = {common_diploid}'),
+        glue('tau = {tau}'),
+        glue('check_converge = {check_converge}'),
         'Input metrics:',
         glue('{ncol(count_mat)} cells'),
         sep = "\n"
@@ -193,7 +195,6 @@ run_numbat = function(
                 gtf = gtf,
                 genetic_map = genetic_map,
                 min_depth = min_depth,
-                sc_refs = sc_refs,
                 ncores = ncores)
 
         bulk_subtrees = bulk_subtrees %>%
@@ -221,7 +222,6 @@ run_numbat = function(
                 gtf = gtf,
                 genetic_map = genetic_map,
                 min_depth = min_depth,
-                sc_refs = sc_refs,
                 ncores = ncores)
 
         bulk_clones = bulk_clones %>% 
@@ -342,7 +342,11 @@ run_numbat = function(
             tibble::column_to_rownames('cell') %>%
             as.matrix
 
-        fwrite(as.data.frame(P), glue('{out_dir}/geno_{i}.tsv'), row.names = T, sep = '\t')
+        fwrite(
+            as.data.frame(P) %>% tibble::rownames_to_column('cell'),
+            glue('{out_dir}/geno_{i}.tsv'),
+            sep = '\t'
+        )
 
         # contruct initial tree
         dist_mat = parallelDist::parDist(rbind(P, 'outgroup' = 1), threads = ncores)
@@ -417,7 +421,7 @@ run_numbat = function(
                 tip_length = 0.2,
                 branch_width = 0.2,
                 line_width = 0.1,
-                geno_bar = T
+                geno_bar = TRUE
             )
         
             ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 8, height = 3.5, dpi = 200)
@@ -500,17 +504,13 @@ exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101,
 #' Make a group of pseudobulks
 #' @param groups list Contains fields named "sample", "cells", "size", "members"
 #' @keywords internal 
-make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, genetic_map, min_depth = 0, sc_refs = NULL, ncores = NULL) {
+make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, genetic_map, min_depth = 0, ncores = NULL) {
     
     if (length(groups) == 0) {
         return(data.frame())
     }
 
     ncores = ifelse(is.null(ncores), length(groups), ncores)
-
-    if (is.null(sc_refs)) {
-        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
-    }
 
     results = mclapply(
             groups,
@@ -522,8 +522,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, gene
                     lambdas_ref = lambdas_ref,
                     gtf = gtf,
                     genetic_map = genetic_map,
-                    min_depth = min_depth,
-                    sc_refs = sc_refs
+                    min_depth = min_depth
                 ) %>%
                 mutate(
                     n_cells = g$size,
