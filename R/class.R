@@ -172,6 +172,9 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             self$geno = read_file(inputfile=glue('{out_dir}/geno_{i}.tsv'), filetype="tsv")
                 
             if (!is.null(self$geno)) {
+                if ('V1' %in% colnames(self$geno)) {
+                    self$geno = self$geno %>% rename(cell = V1)
+                }
                 self$geno = self$geno %>% tibble::column_to_rownames('cell') %>% as.matrix
             }
     })

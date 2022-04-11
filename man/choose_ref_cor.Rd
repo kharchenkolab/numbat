@@ -4,14 +4,14 @@
 \alias{choose_ref_cor}
 \title{choose beest reference for each cell based on correlation}
 \usage{
-choose_ref_cor(count_mat, lambdas_ref, gtf_transcript)
+choose_ref_cor(count_mat, lambdas_ref, gtf)
 }
 \arguments{
 \item{count_mat}{dgCMatrix Gene expression counts}
 
 \item{lambdas_ref}{matrix Reference expression profiles}
 
-\item{gtf_transcript}{dataframe Transcript gtf}
+\item{gtf}{dataframe Transcript gtf}
 }
 \value{
 named vector Best references for each cell

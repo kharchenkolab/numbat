@@ -4,7 +4,14 @@
 \alias{retest_cnv}
 \title{retest CNVs in a pseudobulk}
 \usage{
-retest_cnv(bulk, exp_model = "lnpois", gamma = 20, allele_only = FALSE)
+retest_cnv(
+  bulk,
+  exp_model = "lnpois",
+  theta_min = 0.08,
+  logphi_min = 0.25,
+  gamma = 20,
+  allele_only = FALSE
+)
 }
 \arguments{
 \item{bulk}{pesudobulk dataframe}

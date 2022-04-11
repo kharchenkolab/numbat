@@ -27,11 +27,14 @@ NULL
 #' @param t numeric Transition probability
 #' @param init_k integer Number of clusters in the initial clustering
 #' @param min_cells integer Minimum number of cells to run HMM on
-#' @param max_cost numeric Maximum cost to simplify the phylogeny
+#' @param max_cost numeric Likelihood threshold to collapse internal branches
+#' @param tau numeric Factor to determine max_cost as a function of the number of cells (0-1)
 #' @param max_iter integer Maximum number of iterations to run the phyologeny optimization
+#' @param max_nni integer Maximum number of iterations to run NNI in the ML phylogeny inference
 #' @param min_dpeth integer Minimum allele depth 
 #' @param common_diploid logical Whether to find common diploid regions in a group of peusdobulks
-#' @param ncores integer Number of threads to use
+#' @param ncores integer Number of threads to use 
+#' @param ncores_nni integer Number of threads to use for NNI
 #' @param max_entropy numeric Entropy threshold to filter CNVs
 #' @param min_LLR numeric Minimum LLR to filter CNVs
 #' @param eps numeric Convergence threshold for ML tree search

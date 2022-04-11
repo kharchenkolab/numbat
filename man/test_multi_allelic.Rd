@@ -4,7 +4,7 @@
 \alias{test_multi_allelic}
 \title{test for multi-allelic CNVs}
 \usage{
-test_multi_allelic(bulks, segs_consensus, min_LLR = 100, p_min = 0.995)
+test_multi_allelic(bulks, segs_consensus, min_LLR = 40, p_min = 0.999)
 }
 \description{
 test for multi-allelic CNVs

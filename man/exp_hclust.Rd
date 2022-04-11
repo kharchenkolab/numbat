@@ -7,7 +7,7 @@
 exp_hclust(
   count_mat,
   lambdas_ref,
-  gtf_transcript,
+  gtf,
   sc_refs = NULL,
   window = 101,
   ncores = 1,

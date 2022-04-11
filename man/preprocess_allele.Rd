@@ -2,7 +2,7 @@
 % Please edit documentation in R/genotyping.R
 \name{preprocess_allele}
 \alias{preprocess_allele}
-\title{preprocess allele data}
+\title{Preprocess allele data}
 \usage{
 preprocess_allele(sample, vcf_pu, vcf_phased, AD, DP, barcodes, gtf_transcript)
 }
@@ -25,5 +25,5 @@ preprocess_allele(sample, vcf_pu, vcf_phased, AD, DP, barcodes, gtf_transcript)
 a long dataframe with allele counts by cell
 }
 \description{
-preprocess allele data
+Preprocess allele data
 }

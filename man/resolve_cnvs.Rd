@@ -9,7 +9,7 @@ resolve_cnvs(segs_all, min_overlap = 0.5, debug = FALSE)
 \arguments{
 \item{segs_all}{dataframe CNV segments from multiple samples}
 
-\item{min_overlap}{numeric Minimum overlap fraction to determine count two events as as overlapping}
+\item{min_overlap}{numeric scalar Minimum overlap fraction to determine count two events as as overlapping}
 }
 \value{
 dataframe Consensus CNV segments

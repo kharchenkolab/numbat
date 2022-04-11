@@ -7,7 +7,7 @@
 get_exp_post(
   segs_consensus,
   count_mat,
-  gtf_transcript,
+  gtf,
   lambdas_ref,
   sc_refs = NULL,
   diploid_chroms = NULL,
@@ -22,7 +22,7 @@ get_exp_post(
 
 \item{count_mat}{dgCMatrix gene expression count matrix}
 
-\item{gtf_transcript}{dataframe transcript gtf}
+\item{gtf}{dataframe transcript gtf}
 
 \item{lambdas_ref}{matrix Reference expression profiles}
 }

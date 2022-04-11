@@ -9,12 +9,14 @@ make_group_bulks(
   count_mat,
   df_allele,
   lambdas_ref,
-  gtf_transcript,
+  gtf,
   genetic_map,
   min_depth = 0,
-  sc_refs = NULL,
   ncores = NULL
 )
+}
+\arguments{
+\item{groups}{list Contains fields named "sample", "cells", "size", "members"}
 }
 \description{
 Make a group of pseudobulks

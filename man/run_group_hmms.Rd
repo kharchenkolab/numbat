@@ -8,9 +8,9 @@ run_group_hmms(
   bulks,
   t = 1e-04,
   gamma = 20,
-  theta_min = 0.08,
   exp_model = "lnpois",
   alpha = 1e-04,
+  min_genes = 10,
   common_diploid = TRUE,
   diploid_chroms = NULL,
   allele_only = FALSE,
@@ -24,3 +24,4 @@ run_group_hmms(
 \description{
 Run mutitple HMMs
 }
+\keyword{internal}

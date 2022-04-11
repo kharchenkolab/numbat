@@ -4,14 +4,7 @@
 \alias{fit_multi_ref}
 \title{fit reference weights for a pseudobulk expression profile}
 \usage{
-fit_multi_ref(
-  Y_obs,
-  lambdas_ref,
-  d,
-  gtf_transcript,
-  min_lambda = 2e-06,
-  verbose = FALSE
-)
+fit_multi_ref(Y_obs, lambdas_ref, d, gtf, min_lambda = 2e-06, verbose = FALSE)
 }
 \arguments{
 \item{Y_obs}{numeric vector Gene expression counts}
@@ -20,7 +13,7 @@ fit_multi_ref(
 
 \item{d}{numeric Total library size}
 
-\item{gtf_transcript}{dataframe Transcript gtf}
+\item{gtf}{dataframe Transcript gtf}
 
 \item{min_lambda}{numeric Expression level threshold to filter genes}
 }

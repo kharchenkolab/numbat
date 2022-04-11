@@ -520,7 +520,7 @@ analyze_bulk = function(
     }
 
     # update transition probablity
-    bulk = bulk %>% mutate(p_s = switch_prob_cm(inter_snp_cm, lambda = lambda))
+    bulk = bulk %>% mutate(p_s = switch_prob_cm(inter_snp_cm, lambda = UQ(lambda)))
 
     if (exp_only | allele_only) {
         bulk$diploid = TRUE
