@@ -126,6 +126,7 @@ out = run_numbat(
     out_dir = './test'
 )
 ```
+**Note**: If you wish to use your own custom reference, please use the `aggregate_counts` function as per the example in [preparing data](#preparing-data).
 
 ## Run parameters
 There are a few parameters you can consider tuning to a specific dataset. 
