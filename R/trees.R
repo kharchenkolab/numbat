@@ -4,6 +4,7 @@
 #' @param tree phylo object
 #' @param P genotype probability matrix
 #' @param get_l_matrix whether to compute the whole likelihood matrix
+#' @return list Likelihood scores of a tree
 #' @export
 score_tree = function(tree, P, get_l_matrix = FALSE) {
     
@@ -99,6 +100,9 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, ver
 }
 
 # from phangorn
+#' Perform the NNI at a specific branch
+#' @param tree phylo Single-cell phylogenetic tree
+#' @param n integer Branch ID
 #' @keywords internal
 nnin <- function(tree, n) {
   attr(tree, "order") <- NULL
@@ -137,6 +141,9 @@ nnin <- function(tree, n) {
 }
 
 # from phangorn
+#' Generate tree neighbourhood
+#' @param tree phylo Single-cell phylogenetic tree
+#' @param ncores integer Number of cores to use
 #' @keywords internal
 nni <- function(tree, ncores = 1) {
   tip.label <- tree$tip.label
@@ -223,45 +230,12 @@ mark_tumor_lineage = function(gtree) {
     
 }
 
+#' Convert a single-cell phylogeny with mutation placements into a mutation graph
+#' @param gtree tbl_graph The single-cell phylogeny
+#' @param mut_nodes dataframe Mutation placements
+#' @return igraph Mutation graph
 #' @keywords internal
-label_mut_tree = function(G, mut_assign) {
-
-    # fix the root node
-    if (all(V(G)$label != ' ')) {
-        
-        V(G)$id = V(G)$id + 1
-        
-        G = G %>% 
-            igraph::add_vertices(1, attr = list('label' = ' ', 'id' = 1)) %>%
-            igraph::add_edges(c(length(V(G))+1,1)) 
-    }
-
-    G = G %>% as_tbl_graph() %>% arrange(id != 1) %>%
-        mutate(id = 1:length(V(G))) %>%
-        mutate(label = ifelse(label == ' ', '', label)) 
-
-    G = label_edges(G)
-
-    for (i in 1:nrow(mut_assign)) {
-        node_set = unlist(str_split(mut_assign[i,]$site, ','))
-        G = G %>% contract_nodes(node_set)
-    }
-
-    V(G)$node = G %>%
-        igraph::as_data_frame('vertices') %>%
-        left_join(
-            mut_assign %>% dplyr::rename(node = name),
-            by = c('label' = 'site')
-        ) %>%
-        pull(node)
-
-    G = G %>% transfer_links()
-
-    return(G)
-}
-
-#' @keywords internal
-get_mut_tree = function(gtree, mut_assign) {
+get_mut_tree = function(gtree, mut_nodes) {
 
     G = gtree %>%
         activate(nodes) %>%
@@ -275,7 +249,7 @@ get_mut_tree = function(gtree, mut_assign) {
     V(G)$node = G %>%
         igraph::as_data_frame('vertices') %>%
         left_join(
-            mut_assign %>% dplyr::rename(node = name),
+            mut_nodes %>% dplyr::rename(node = name),
             by = c('label' = 'site')
         ) %>%
         pull(node)
@@ -286,7 +260,12 @@ get_mut_tree = function(gtree, mut_assign) {
 
 }
 
-# compute site branch likelihood
+#' Compute site branch likelihood (not used)
+#' @param node integer Node id
+#' @param site character Mutation site name
+#' @param gtree tbl_graph The single-cell phylogeny
+#' @param geno matrix Genotype probability matrix
+#' @return numeric Likelihood of assigning the mutation to this node
 #' @keywords internal
 l_s_v = function(node, site, gtree, geno) {
     
@@ -305,9 +284,11 @@ l_s_v = function(node, site, gtree, geno) {
     sum
 }
 
-#' annotate optimal mutation assignment on tree
-#' 
-#' @export
+#' Find maximum lilkelihood assignment of mutations on a tree
+#' @param tree phylo Single-cell phylogenetic tree
+#' @param P matrix Genotype probability matrix
+#' @return list Mutation 
+#' @keywords internal
 get_tree_post = function(tree, P) {
     
     sites = colnames(P)
@@ -364,7 +345,11 @@ get_tree_post = function(tree, P) {
     return(list('mut_nodes' = mut_nodes, 'gtree' = gtree, 'l_matrix' = l_matrix))
 }
 
-#' @export
+#' transfer mutation assignment onto a single-cell phylogeny
+#' @param gtree tbl_graph The single-cell phylogeny
+#' @param mut_nodes dataframe Mutation placements
+#' @return tbl_graph A single-cell phylogeny with mutation placements
+#' @keywords internal
 mut_to_tree = function(gtree, mut_nodes) {
     
     # transfer mutation to tree
@@ -427,6 +412,9 @@ mut_to_tree = function(gtree, mut_nodes) {
     return(gtree)
 }
 
+#' Convert the phylogeny from tidygraph to igraph object
+#' @param gtree tbl_graph The single-cell phylogeny
+#' @return phylo The single-cell phylogeny
 #' @keywords internal
 to_phylo = function(gtree) {
     
@@ -439,6 +427,9 @@ to_phylo = function(gtree) {
     return(phytree)
 }
 
+#' Annotate the direct upstream or downstream mutations on the edges
+#' @param G igraph Mutation graph
+#' @return igraph Mutation graph 
 #' @keywords internal
 label_edges = function(G) {
     
@@ -460,6 +451,9 @@ label_edges = function(G) {
     return(G)
 }
 
+#' Annotate the direct upstream or downstream node on the edges
+#' @param G igraph Mutation graph
+#' @return igraph Mutation graph 
 #' @keywords internal
 transfer_links = function(G) {
     
@@ -479,6 +473,9 @@ transfer_links = function(G) {
     return(G)
 }
 
+#' Label the genotypes on a mutation graph
+#' @param G igraph Mutation graph
+#' @return igraph Mutation graph
 #' @keywords internal
 label_genotype = function(G) {
     id_to_label = igraph::as_data_frame(G, 'vertices') %>% {setNames(.$label, .$id)}
@@ -504,7 +501,10 @@ label_genotype = function(G) {
     return(G)
 }
 
-# merge adjacent set of nodes
+#' Merge adjacent set of nodes
+#' @param G igraph Mutation graph
+#' @param vset vector Set of adjacent vertices to merge
+#' @return igraph Mutation graph
 #' @keywords internal
 contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
     
@@ -552,6 +552,10 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
     
 }
 
+#' Simplify the mutational history based on likelihood evidence
+#' @param G igraph Mutation graph 
+#' @param l_matrix matrix Mutation placement likelihood matrix (node by mutation)
+#' @return igraph Mutation graph
 #' @export
 simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
 
@@ -583,6 +587,11 @@ simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
     return(G)
 }
 
+#' Get the cost of a mutation reassignment
+#' @param muts character Mutations dlimited by comma
+#' @param node_ori character Name of the "from" node
+#' @param node_tar character Name of the "to" node
+#' @return numeric Likelihood cost of the mutation reassignment
 #' @keywords internal
 get_move_cost = function(muts, node_ori, node_tar, l_matrix) {
 
@@ -597,6 +606,10 @@ get_move_cost = function(muts, node_ori, node_tar, l_matrix) {
     sum(l_matrix[node_ori, muts] - l_matrix[node_tar, muts])
 }
 
+#' Get the least costly mutation reassignment 
+#' @param G igraph Mutation graph
+#' @param l_matrix matrix Likelihood matrix of mutation placements
+#' @return numeric Lieklihood cost of performing the mutation move
 #' @keywords internal
 get_move_opt = function(G, l_matrix) {
     
@@ -700,23 +713,3 @@ score_mut_helper = function(gtree, geno, s, v, p_min = 0.95) {
         ) %>%
         tibble()
 }
-
-#' @export
-plot_mut_tree = function(G) {
-    
-    par(mar = c(0, 0, 0, 0))
-
-    plot(G, 
-         edge.label = NA,
-         edge.label.cex = 0.5,
-         vertex.label.cex = 0.5,
-         edge.label.dist = 1,
-         vertex.label.degree = -pi/2,
-         vertex.label.dist = 1, 
-         layout = layout_as_tree(G) %>% {-.[,2:1]},
-         vertex.size = 2,
-         edge.arrow.size = 0.25,
-         asp = 0.25
-    )
-}
-

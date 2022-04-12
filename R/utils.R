@@ -389,6 +389,12 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_dep
         mutate(CHROM = factor(as.integer(CHROM)))
 }
 
+#' Fit a reference profile from multiple references using constrained least square
+#' @param Y_obs vector 
+#' @param lambdas_ref named vector 
+#' @param gtf dataframe 
+#' @return fitted expression profile
+#' @keywords internal
 fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FALSE) {
 
     if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
@@ -1458,52 +1464,6 @@ approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu =
     return(tibble('phi_mle' = mean, 'phi_sigma' = sd))
 }
 
-l_geno_2d = function(g, theta_mle, phi_mle, theta_sigma, phi_sigma) {
-
-    if (g[[1]] == 2 & g[[2]] == 2) {
-        integrand = function(f) {
-            pnorm.range(0, 0.04, theta_mle, theta_sigma) * 
-            dnorm(2^logphi_f(f, g[[1]], g[[2]]), phi_mle, phi_sigma) 
-        }
-    } else {
-        integrand = function(f) {
-            dnorm(theta_f(f, g[[1]], g[[2]])-0.5, theta_mle, theta_sigma) * 
-            dnorm(2^logphi_f(f, g[[1]], g[[2]]), phi_mle, phi_sigma) 
-        }
-    }
-
-    integrate(
-        integrand,
-        lower = 0, 
-        upper = 1
-    )$value
-
-}
-
-p_geno_2d = function(theta_mle, phi_mle, theta_sigma, phi_sigma) {
-    
-    ps = sapply(
-        list(c(3,1), c(2,1), c(2,2), c(1,0), c(2,0)),
-        function(g) {
-            l_geno_2d(g, theta_mle, phi_mle, theta_sigma, phi_sigma)
-        }
-    )
-    
-    ps = ps/sum(ps)
-
-    tibble('p_amp' = ps[1] + ps[2], 'p_bamp' = ps[3], 'p_del' = ps[4], 'p_loh' = ps[5])
-    
-}
-
-logphi_f = function(f, m = 0, p = 1) {
-  log2((2 * (1 - f) + (m + p) * f) / 2)
-}
-
-theta_f = function(f, m = 0, p = 1) {
-    baf = (m * f + 1 - f)/((m * f + 1 - f) + (p * f + 1 - f))
-    baf
-}
-
 #' Helper function to get the internal nodes of a dendrogram and the leafs in each subtree 
 #' @keywords internal
 get_internal_nodes = function(den, node, labels) {
@@ -1648,6 +1608,52 @@ calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, al
     return(l_1 - l_0)
 }
 
+########################### Misc ############################
+
+#' check the format of a count matrix
+#' @keywords internal
+check_matrix = function(count_mat) {
+    if ('matrix' %in% class(count_mat)) {
+        count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
+    }
+    if (!('dgCMatrix' %in% class(count_mat))) {
+        stop("count_mat is not of class dgCMatrix or matrix")
+    }
+    return(count_mat)
+}
+
+#' Calculate simes' p
+#' @keywords internal
+simes_p = function(p.vals, n_dim) {
+    n_dim * min(sort(p.vals)/seq_along(p.vals))
+}
+
+#' Get the total probability from a region of a normal pdf
+#' @keywords internal
+pnorm.range = function(lower, upper, mu, sd) {
+    if (sd == 0) {
+        return(1)
+    }
+    pnorm(upper, mu, sd) - pnorm(lower, mu, sd)
+}
+
+#' Get the modes of a vector
+#' @keywords internal
+Modes <- function(x) {
+  ux <- unique(x)
+  tab <- tabulate(match(x, ux))
+  ux[tab == max(tab)]
+}
+
+#' calculate entropy for a binary variable 
+#' @keywords internal
+binary_entropy = function(p) {
+    H = -p*log2(p)-(1-p)*log2(1-p)
+    H[is.na(H)] = 0
+    return(H)
+}
+
+
 fit_switch_prob = function(y, d) {
     
     eta = function(d, lambda, min_p = 1e-10) {
@@ -1706,45 +1712,6 @@ switch_prob_mle2 = function(pAD, DP, d, gamma = 20) {
     
 }
 
-########################### Misc ############################
-
-#' Calculate simes' p
-#' @keywords internal
-simes_p = function(p.vals, n_dim) {
-    n_dim * min(sort(p.vals)/seq_along(p.vals))
-}
-
-#' Get the total probability from a region of a normal pdf
-#' @keywords internal
-pnorm.range = function(lower, upper, mu, sd) {
-    if (sd == 0) {
-        return(1)
-    }
-    pnorm(upper, mu, sd) - pnorm(lower, mu, sd)
-}
-
-#' Get the modes of a vector
-#' @keywords internal
-Modes <- function(x) {
-  ux <- unique(x)
-  tab <- tabulate(match(x, ux))
-  ux[tab == max(tab)]
-}
-
-#' calculate entropy for a binary variable 
-#' @keywords internal
-binary_entropy = function(p) {
-    H = -p*log2(p)-(1-p)*log2(1-p)
-    H[is.na(H)] = 0
-    return(H)
-}
-
-rename_seg = function(seg) {
-    chr = str_split(seg, '_')[[1]][1]
-    id = as.integer(str_split(seg, '_')[[1]][2])
-    paste0(chr, letters[id])
-}
-
 read_if_exist = function(f) {
 
     if (file.exists(f)) {
@@ -1758,12 +1725,49 @@ read_if_exist = function(f) {
     }
 }
 
-check_matrix = function(count_mat) {
-    if ('matrix' %in% class(count_mat)) {
-        count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
+
+l_geno_2d = function(g, theta_mle, phi_mle, theta_sigma, phi_sigma) {
+
+    if (g[[1]] == 2 & g[[2]] == 2) {
+        integrand = function(f) {
+            pnorm.range(0, 0.04, theta_mle, theta_sigma) * 
+            dnorm(2^logphi_f(f, g[[1]], g[[2]]), phi_mle, phi_sigma) 
+        }
+    } else {
+        integrand = function(f) {
+            dnorm(theta_f(f, g[[1]], g[[2]])-0.5, theta_mle, theta_sigma) * 
+            dnorm(2^logphi_f(f, g[[1]], g[[2]]), phi_mle, phi_sigma) 
+        }
     }
-    if (!('dgCMatrix' %in% class(count_mat))) {
-        stop("count_mat is not of class dgCMatrix or matrix")
-    }
-    return(count_mat)
+
+    integrate(
+        integrand,
+        lower = 0, 
+        upper = 1
+    )$value
+
+}
+
+p_geno_2d = function(theta_mle, phi_mle, theta_sigma, phi_sigma) {
+    
+    ps = sapply(
+        list(c(3,1), c(2,1), c(2,2), c(1,0), c(2,0)),
+        function(g) {
+            l_geno_2d(g, theta_mle, phi_mle, theta_sigma, phi_sigma)
+        }
+    )
+    
+    ps = ps/sum(ps)
+
+    tibble('p_amp' = ps[1] + ps[2], 'p_bamp' = ps[3], 'p_del' = ps[4], 'p_loh' = ps[5])
+    
+}
+
+logphi_f = function(f, m = 0, p = 1) {
+  log2((2 * (1 - f) + (m + p) * f) / 2)
+}
+
+theta_f = function(f, m = 0, p = 1) {
+    baf = (m * f + 1 - f)/((m * f + 1 - f) + (p * f + 1 - f))
+    baf
 }

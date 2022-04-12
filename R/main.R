@@ -473,6 +473,14 @@ log_message = function(msg, verbose = TRUE) {
 }
 
 #' Run smoothed expression-based hclust
+#' @param count_mat dgCMatrix Gene counts
+#' @param df_allele dataframe Alelle counts
+#' @param lambdas_ref matrix Reference expression profiles
+#' @param gtf dataframe Transcript GTF
+#' @param sc_refs named list Reference choices for single cells
+#' @param window integer Sliding window size
+#' @param ncores integer Number of cores
+#' @param verbose logical Verbosity
 #' @keywords internal 
 exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101, ncores = 1, verbose = TRUE) {
 
@@ -506,6 +514,14 @@ exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101,
 
 #' Make a group of pseudobulks
 #' @param groups list Contains fields named "sample", "cells", "size", "members"
+#' @param count_mat dgCMatrix Gene counts
+#' @param df_allele dataframe Alelle counts
+#' @param lambdas_ref matrix Reference expression profiles
+#' @param gtf dataframe Transcript GTF
+#' @param genetic_map dataframe Genetic map
+#' @param min_depth integer Minimum allele depth to include
+#' @param ncores integer Number of cores
+#' @return dataframe Pseudobulk profiles
 #' @keywords internal 
 make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, genetic_map, min_depth = 0, ncores = NULL) {
     
@@ -553,6 +569,16 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, gene
 }
 
 #' Run mutitple HMMs 
+#' @param bulks dataframe Pseudobulk profiles
+#' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
+#' @param t numeric Transition probability
+#' @param alpha numeric P value cut-off to determine segment clusters in find_diploid
+#' @param common_diploid logical Whether to find common diploid regions between pseudobulks
+#' @param diploid_chroms character vector Known diploid chromosomes to use as baseline 
+#' @param retest logcial Whether to retest CNVs
+#' @param run_hmm logical Whether to run HMM segments or just retest
+#' @param ncores integer Number of cores
+#' @param allele_only logical Whether only use allele data to run HMM
 #' @keywords internal
 run_group_hmms = function(
     bulks, t = 1e-4, gamma = 20, 
@@ -875,6 +901,9 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
 
 #' get the single cell expression likelihoods
 #' @param exp_sc dataframe Single-cell expression counts
+#' @param diploid_chroms character vector Known diploid chromosomes
+#' @param use_loh logical Whether to include CNLOH regions in baseline
+#' @return dataframe Single-cell CNV likelihood scores
 #' @keywords internal
 get_exp_likelihoods = function(exp_sc, diploid_chroms = NULL, use_loh = FALSE, depth_obs = NULL, mu = NULL, sigma = NULL) {
 
@@ -1069,7 +1098,9 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
     return(list('exp_post' = exp_post, 'exp_sc' = exp_sc))
 }
 
-#' do bayesian averaging to get posteriors
+#' Do bayesian averaging to get posteriors
+#' @param sc_post dataframe Likelihoods
+#' @return dataframe Posteriors
 #' @keywords internal
 compute_posterior = function(sc_post) {
     sc_post %>% 
@@ -1101,21 +1132,25 @@ compute_posterior = function(sc_post) {
 }
 
 #' get CNV allele posteriors
+#' @param bulks dataframe Subtree pseudobulk profiles
+#' @param segs_consensus dataframe Consensus CNV segments
+#' @param df_allele dataframe Allele counts
+#' @return dataframe Allele posteriors
 #' @keywords internal
-get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
+get_allele_post = function(bulks, segs_consensus, df_allele, naive = FALSE) {
 
-    if ((!'sample' %in% colnames(bulk_all)) | (!'sample' %in% colnames(segs_consensus))) {
-        bulk_all['sample'] = '0'
+    if ((!'sample' %in% colnames(bulks)) | (!'sample' %in% colnames(segs_consensus))) {
+        bulks['sample'] = '0'
         segs_consensus['sample'] = '0'
         # warning('Sample column missing')
     }
 
     if (naive) {
-        bulk_all = bulk_all %>% mutate(haplo_post = ifelse(AR >= 0.5, 'major', 'minor'))
+        bulks = bulks %>% mutate(haplo_post = ifelse(AR >= 0.5, 'major', 'minor'))
     }
     
     # allele posteriors
-    snp_seg = bulk_all %>%
+    snp_seg = bulks %>%
         filter(!is.na(pAD)) %>%
         select(snp_id, snp_index, sample, seg, haplo_post) %>%
         inner_join(
@@ -1185,6 +1220,10 @@ get_allele_post = function(bulk_all, segs_consensus, df_allele, naive = FALSE) {
 }
 
 #' get joint posteriors
+#' @param exp_post dataframe Expression single-cell CNV posteriors
+#' @param allele_post dataframe Allele single-cell CNV posteriors
+#' @param segs_consensus dataframe Consensus CNV segments
+#' @return dataframe Joint single-cell CNV posteriors
 #' @keywords internal
 get_joint_post = function(exp_post, allele_post, segs_consensus) {
     
@@ -1303,6 +1342,11 @@ retest_bulks = function(bulks, segs_consensus = NULL,
 }
 
 #' test for multi-allelic CNVs
+#' @param bulks dataframe Pseudobulk profiles
+#' @param segs_consensus dataframe Consensus segments
+#' @param min_LLR numeric CNV LLR threshold to filter events
+#' @param p_min numeric Probability threshold to call multi-allelic events
+#' @return dataframe Consensus segments annotated with multi-allelic events
 #' @keywords internal 
 test_multi_allelic = function(bulks, segs_consensus, min_LLR = 40, p_min = 0.999) {
 
@@ -1355,6 +1399,9 @@ test_multi_allelic = function(bulks, segs_consensus, min_LLR = 40, p_min = 0.999
 }
 
 #' expand multi-allelic CNVs into separate entries in the single-cell posterior dataframe
+#' @param sc_post dataframe Single-cell posteriors
+#' @param segs_consensus dataframe Consensus segments
+#' @return dataframe Single-cell posteriors with multi-allelic CNVs split into different entries
 #' @keywords internal 
 expand_states = function(sc_post, segs_consensus) {
 

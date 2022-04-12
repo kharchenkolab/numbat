@@ -6,6 +6,18 @@
 \usage{
 test_multi_allelic(bulks, segs_consensus, min_LLR = 40, p_min = 0.999)
 }
+\arguments{
+\item{bulks}{dataframe Pseudobulk profiles}
+
+\item{segs_consensus}{dataframe Consensus segments}
+
+\item{min_LLR}{numeric CNV LLR threshold to filter events}
+
+\item{p_min}{numeric Probability threshold to call multi-allelic events}
+}
+\value{
+dataframe Consensus segments annotated with multi-allelic events
+}
 \description{
 test for multi-allelic CNVs
 }

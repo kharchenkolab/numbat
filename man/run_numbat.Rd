@@ -57,6 +57,8 @@ run_numbat(
 
 \item{max_iter}{integer Maximum number of iterations to run the phyologeny optimization}
 
+\item{max_nni}{integer Maximum number of iterations to run NNI in the ML phylogeny inference}
+
 \item{t}{numeric Transition probability}
 
 \item{gamma}{numeric Dispersion parameter for the Beta-Binomial allele model}
@@ -71,11 +73,15 @@ run_numbat(
 
 \item{min_cells}{integer Minimum number of cells to run HMM on}
 
-\item{max_cost}{numeric Maximum cost to simplify the phylogeny}
+\item{tau}{numeric Factor to determine max_cost as a function of the number of cells (0-1)}
+
+\item{max_cost}{numeric Likelihood threshold to collapse internal branches}
 
 \item{common_diploid}{logical Whether to find common diploid regions in a group of peusdobulks}
 
 \item{ncores}{integer Number of threads to use}
+
+\item{ncores_nni}{integer Number of threads to use for NNI}
 
 \item{diploid_chroms}{vector Known diploid chromosomes}
 

@@ -14,6 +14,23 @@ exp_hclust(
   verbose = TRUE
 )
 }
+\arguments{
+\item{count_mat}{dgCMatrix Gene counts}
+
+\item{lambdas_ref}{matrix Reference expression profiles}
+
+\item{gtf}{dataframe Transcript GTF}
+
+\item{sc_refs}{named list Reference choices for single cells}
+
+\item{window}{integer Sliding window size}
+
+\item{ncores}{integer Number of cores}
+
+\item{verbose}{logical Verbosity}
+
+\item{df_allele}{dataframe Alelle counts}
+}
 \description{
 Run smoothed expression-based hclust
 }

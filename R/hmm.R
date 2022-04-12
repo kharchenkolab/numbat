@@ -46,6 +46,7 @@ getj <- function(x, j){
 
 ############ time inhomogenous univariate HMM ############
 
+#' Viterbi algorithm for allele HMM
 #' @keywords internal
 Viterbi.dthmm.inhom <- function (obj, ...){
 #     print('Solving univariate nonhomogenous markov chain')
@@ -82,7 +83,14 @@ Viterbi.dthmm.inhom <- function (obj, ...){
     return(list(y = y, LL = LL))
 }
 
-# allele-only HMM
+#' allele-only HMM
+#' @param pAD integer vector Paternal allele counts
+#' @param DP integer vector Total alelle counts
+#' @param p_s numeric vector Phase switch probabilities
+#' @param t numeric Transition probability between copy number states
+#' @param theta_min numeric Minimum haplotype frequency deviation threshold
+#' @param gamma numeric Overdispersion in the allele-specific expression
+#' @return character vector Decoded states
 #' @keywords internal
 run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
 
@@ -141,6 +149,7 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
     return(solution)
 }
 
+#' Forward-backward algorithm for allele HMM
 #' @keywords internal
 forward_back_allele = function (obj, ...) {
 
@@ -176,7 +185,7 @@ forward_back_allele = function (obj, ...) {
     return(marginals)
 }
 
-# only compute total log likelihood
+# Only compute total log likelihood
 #' @keywords internal
 likelihood_allele = function (obj, ...) {
         
@@ -206,6 +215,13 @@ likelihood_allele = function (obj, ...) {
     return(LL)
 }
 
+#' Get an allele HMM
+#' @param pAD integer vector Paternal allele counts
+#' @param DP integer vector Total alelle counts
+#' @param p_s numeric vector Phase switch probabilities
+#' @param theta numeric Haplotype imbalance
+#' @param gamma numeric Overdispersion in the allele-specific expression
+#' @return HMM object
 #' @keywords internal
 get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
 
@@ -233,7 +249,13 @@ get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
 
     return(hmm)
 }
-    
+
+#' Calculate allele likelihoods
+#' @param pAD integer vector Paternal allele counts
+#' @param DP integer vector Total alelle counts
+#' @param p_s numeric vector Phase switch probabilities
+#' @param theta numeric Haplotype imbalance
+#' @param gamma numeric Overdispersion in the allele-specific expression
 #' @keywords internal                         
 calc_allele_lik = function (pAD, DP, p_s, theta, gamma = 20) {
     hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma)
@@ -241,15 +263,9 @@ calc_allele_lik = function (pAD, DP, p_s, theta, gamma = 20) {
     return(LL)
 }
 
-#' @keywords internal
-calc_allele_maxlik = function (pAD, DP, p_s, theta, gamma = 20) {
-    hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma)
-    LL = HiddenMarkov::Viterbi(hmm)$LL
-    return(LL)
-}
-
 ############ Joint HMM ############
 
+#' Viterbi algorithm for joint HMM (gamma-poisson expression likelihood)
 #' @keywords internal
 Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
 
@@ -319,6 +335,7 @@ Viterbi.dthmm.mv.inhom.gpois <- function (object, ...){
     return(y)
 }
 
+#' Viterbi algorithm for joint HMM (PLN expression likelihood)
 #' @keywords internal
 Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
 
@@ -394,6 +411,7 @@ Viterbi.dthmm.mv.inhom.lnpois <- function (object, ...){
     return(list(y = y, LL = LL))
 }
 
+#' Forward algorithm for joint HMM
 #' @keywords internal
 forward.mv.inhom = function (obj, ...) {
     
@@ -455,6 +473,21 @@ forward.mv.inhom = function (obj, ...) {
     return(LL)
 }
 
+
+#' Calculate the transition matrix for joint HMM
+#' @keywords internal
+calc_trans_mat = function(t, p_s, w, states_cn, states_phase) {
+
+    sapply(1:length(states_cn), function(from) {
+        sapply(1:length(states_cn), function(to) {
+            get_trans_probs(t, p_s, w, states_cn[from], states_phase[from], states_cn[to], states_phase[to])
+        }) %>% t
+    }) %>% t %>%
+    array(dim = c(length(states_cn), length(states_cn), length(p_s)))
+
+}
+
+#' Helper function to calculate transition porbabilities
 # cn/phase are sclars, only p_s is vectorized
 #' @keywords internal
 get_trans_probs = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
@@ -483,19 +516,24 @@ get_trans_probs = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
     return(p)
 }
 
-#' @keywords internal
-calc_trans_mat = function(t, p_s, w, states_cn, states_phase) {
-
-    sapply(1:length(states_cn), function(from) {
-        sapply(1:length(states_cn), function(to) {
-            get_trans_probs(t, p_s, w, states_cn[from], states_phase[from], states_cn[to], states_phase[to])
-        }) %>% t
-    }) %>% t %>%
-    array(dim = c(length(states_cn), length(states_cn), length(p_s)))
-
-}
-
 ########## HMM wrappers ###########
+#' @param pAD integer vector Paternal allele counts
+#' @param DP integer vector Total alelle counts
+#' @param p_s numeric vector Phase switch probabilities
+#' @param theta_min numeric Minimum haplotype imbalance threshold
+#' @param gamma numeric Overdispersion in the allele-specific expression
+#' @param Y_obs numeric vector Observed gene counts
+#' @param lambda_ref numeric vector Reference expression rates
+#' @param d_total integer Total library size for expression counts
+#' @param phi_del numeric Expected fold change for deletion
+#' @param phi_amp numeric Expected fold change for amplification
+#' @param phi_bamp numeric Expected fold change for balanced amplification
+#' @param phi_bdel numeric Expected fold change for balanced deletion
+#' @param mu numeric Global expression bias
+#' @param sig numeric Global expression variance
+#' @param t numeric Transition probability between copy number states
+#' @param exp_only logical Whether to only use expression data
+#' @param allele_only logical Whether to only use allele data
 #' @keywords internal
 run_hmm_mv_inhom = function(
     pAD, DP, p_s, Y_obs = 0, lambda_ref = 0, d_total = 0, theta_min = 0.08, theta_neu = 0,

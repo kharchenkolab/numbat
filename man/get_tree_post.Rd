@@ -2,10 +2,19 @@
 % Please edit documentation in R/trees.R
 \name{get_tree_post}
 \alias{get_tree_post}
-\title{annotate optimal mutation assignment on tree}
+\title{Find maximum lilkelihood assignment of mutations on a tree}
 \usage{
 get_tree_post(tree, P)
 }
-\description{
-annotate optimal mutation assignment on tree
+\arguments{
+\item{tree}{phylo Single-cell phylogenetic tree}
+
+\item{P}{matrix Genotype probability matrix}
 }
+\value{
+list Mutation
+}
+\description{
+Find maximum lilkelihood assignment of mutations on a tree
+}
+\keyword{internal}
