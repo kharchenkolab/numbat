@@ -228,7 +228,7 @@ run_numbat = function(
         if (all(segs_consensus$cnv_state_post == 'neu')) {
             msg = 'No CNV remains after filtering - terminating.'
             log_message(msg)
-            stop(msg)
+            return(msg)
         }
 
         # retest consensus CNVs on clones
@@ -328,9 +328,9 @@ run_numbat = function(
             filter(avg_entropy < max_entropy & LLR > min_LLR)
 
         if (nrow(joint_post_filtered) == 0) {
-            msg = 'No CNVs remain after filtering - terminating.'
+            msg = 'No CNV remains after filtering - terminating.'
             log_message(msg)
-            stop(msg)
+            return(msg)
         } else {
             n_cnv = length(unique(joint_post_filtered$seg))
             log_message(glue('Using {n_cnv} CNVs to construct phylogeny'), verbose = verbose)
