@@ -722,12 +722,12 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
 #' @export
 classify_alleles = function(bulk) {
 
-    if (all(bulk$cnv_state_post %in% c('neu', 'bdel', 'bamp'))) {
+    if (all(bulk$cnv_state_post %in% c('neu'))) {
         return(bulk)
     }
     
     allele_post = bulk %>%
-        filter(!cnv_state_post %in% c('neu', 'bdel', 'bamp')) %>%
+        filter(!cnv_state_post %in% c('neu')) %>%
         filter(!is.na(AD)) %>%
         group_by(CHROM, seg) %>%
         filter(n() > 1) %>%
