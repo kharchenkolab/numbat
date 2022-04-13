@@ -136,6 +136,9 @@ There are a few parameters you can consider tuning to a specific dataset.
 - `min_LLR`: minimum log-likelihood ratio threshold to filter CNVs by. To ensure quality of phylogeny inference, we only use confident CNVs to reconstruct the phylogeny. By default, this threshold is 50.
 - `max_entropy`: another criteria that we use to filter CNVs before phylogeny construction. The entropy of the binary posterior quantifies the uncertainty of an event across single cells. The value can be from 0 to 1 where 1 is the least stringent.
   
+*Phylogeny*
+- `tau`: Stringency to simplify the mutational history (0-1). A higher `tau` produces less clones and a more simplied evolutionary history.
+
 *Iterative optimization*
 - `init_k`: initial number of subclusters to use for the `hclust` initialization. Numbat by default uses hierarchical clustering (`hclust`) of smoothed expression values to approximate an initial phylogeny. This will cut the initial tree into k clusters. More clusters means more resolution at the initial stage for subclonal CNV detection. By default, we set init_k to be 3.
 - `max_iter`: maximum number of iterations. Numbat iteratively optimizes the phylogeny and copy number estimations. In practice, we find that results after 2 iterations are usually stable.  
