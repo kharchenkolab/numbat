@@ -97,7 +97,7 @@ This will produce a file named `{sample}_allele_counts.tsv.gz` under the specifi
 
 2. Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.
   
-3. Prepare the expression reference, which is a gene by cell type matrix of normalized expression values (not raw counts!). For a quick start, you may use a our HCA collection (`ref_hca`) that ships with the package. If you have matched normal cells (ideally, of various cell type) from the same patient or dataset and would like to make your own references, you may use this utility function:
+3. Prepare the expression reference, which is a gene by cell type matrix of normalized expression values (raw gene counts divided by total counts). For a quick start, you may use a our HCA collection (`ref_hca`) that ships with the package. If you have matched normal cells (ideally, of various cell type) from the same patient or dataset and would like to make your own references, you may use this utility function:
 ```
 # count_mat is a gene x cell raw count matrices
 # cell_annot is a dataframe with columns "cell" and "cell_type"
@@ -127,7 +127,7 @@ out = run_numbat(
     out_dir = './test'
 )
 ```
-**Note**: To avoid a known memory issue (see [#23](https://github.com/kharchenkolab/numbat/issues/23)), **please set `export OMP_NUM_THREADS=1` in your bash shell before starting R/Rscript**. We're currently looking for a solution to control the behavior of OpenMP within R.
+**Note**: If you wish to use your own custom reference, please use the `aggregate_counts` function as per the example in [preparing data](#preparing-data).
 
 ## Run parameters
 There are a few parameters you can consider tuning to a specific dataset. 

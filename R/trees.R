@@ -7,7 +7,7 @@
 #' @return list Likelihood scores of a tree
 #' @export
 score_tree = function(tree, P, get_l_matrix = FALSE) {
-    
+ 
     tree = reorder(tree, order = 'postorder')
         
     n = nrow(P)
@@ -50,6 +50,8 @@ score_tree = function(tree, P, get_l_matrix = FALSE) {
 #' @export
 perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, verbose = TRUE) {
 
+    RhpcBLASctl::blas_set_num_threads(1)
+    RhpcBLASctl::omp_set_num_threads(1)
     P = as.matrix(P)
     
     converge = FALSE
@@ -183,7 +185,7 @@ nni <- function(tree, ncores = 1) {
 #' @return a tidygraph tree
 #' @export
 mark_tumor_lineage = function(gtree) {
-    
+  
     mut_nodes = gtree %>%
         activate(nodes) %>%
         filter(!is.na(site)) %>%
@@ -268,7 +270,7 @@ get_mut_tree = function(gtree, mut_nodes) {
 #' @return numeric Likelihood of assigning the mutation to this node
 #' @keywords internal
 l_s_v = function(node, site, gtree, geno) {
-    
+  
     gtree %>%
     activate(nodes) %>%
     mutate(seq = bfs_rank(root = node)) %>%
@@ -290,7 +292,7 @@ l_s_v = function(node, site, gtree, geno) {
 #' @return list Mutation 
 #' @keywords internal
 get_tree_post = function(tree, P) {
-    
+   
     sites = colnames(P)
     n = nrow(P)
     tree_stats = score_tree(tree, P, get_l_matrix = TRUE)
@@ -351,7 +353,7 @@ get_tree_post = function(tree, P) {
 #' @return tbl_graph A single-cell phylogeny with mutation placements
 #' @keywords internal
 mut_to_tree = function(gtree, mut_nodes) {
-    
+   
     # transfer mutation to tree
     gtree = gtree %>%
         activate(nodes) %>%
@@ -478,6 +480,7 @@ transfer_links = function(G) {
 #' @return igraph Mutation graph
 #' @keywords internal
 label_genotype = function(G) {
+
     id_to_label = igraph::as_data_frame(G, 'vertices') %>% {setNames(.$label, .$id)}
 
     # for some reason, the output from all_simple_path is out of order if supplied directly
