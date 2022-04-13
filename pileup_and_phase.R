@@ -1,4 +1,3 @@
-library(logger, quietly = T)
 library(glue, quietly = T)
 library(stringr, quietly = T)
 library(argparse, quietly = T)
@@ -6,7 +5,7 @@ library(data.table, quietly = T)
 library(dplyr, quietly = T)
 library(vcfR, quietly = T)
 library(Matrix, quietly = T)
-library(numbat)
+library(numbat, quietly = T)
 
 parser <- ArgumentParser(description='Run SNP pileup and phasing with 1000G')
 parser$add_argument('--label', type = "character", required = TRUE, help = "Individual label")
@@ -104,7 +103,7 @@ list(cmds) %>% fwrite(script, sep = '\n')
 system(glue('chmod +x {script}'))
 
 tryCatch({
-    system(glue('sh {script} &> {outdir}/pileup.log'), intern = TRUE)
+    system(glue('sh {script}'), intern = TRUE)
 },
 warning = function(w){
     stop('Pileup failed')

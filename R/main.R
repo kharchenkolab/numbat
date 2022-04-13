@@ -49,10 +49,10 @@ run_numbat = function(
         out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 40,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 10, tau = 0.3,
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
-        ncores = 1, ncores_nni = ncores, exp_model = 'lnpois', random_init = FALSE,
+        ncores = 1, ncores_nni = ncores, random_init = FALSE,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
         skip_nj = FALSE, multi_allelic = FALSE, p_multi = 1-alpha, hclust_only = FALSE,
-        plot = TRUE, check_converge = FALSE
+        plot = TRUE, check_convergence = FALSE
     ) {
 
 
@@ -84,7 +84,7 @@ run_numbat = function(
         glue('ncores_nni = {ncores_nni}'),
         glue('common_diploid = {common_diploid}'),
         glue('tau = {tau}'),
-        glue('check_converge = {check_converge}'),
+        glue('check_convergence = {check_convergence}'),
         'Input metrics:',
         glue('{ncol(count_mat)} cells'),
         sep = "\n"
@@ -163,10 +163,9 @@ run_numbat = function(
         hc = clust$hc
 
         fwrite(
-            as.data.frame(clust$gexp_roll_wide),
+            as.data.frame(clust$gexp_roll_wide) %>% tibble::rownames_to_column('cell'),
             glue('{out_dir}/gexp_roll_wide.tsv.gz'),
             sep = '\t',
-            row.names = TRUE,
             nThread = min(4, ncores)
         )
 
@@ -181,7 +180,8 @@ run_numbat = function(
     clones = purrr::keep(subtrees, function(x) x$sample %in% 1:init_k)
 
     normal_cells = c()
-    
+    segs_consensus_old = data.frame()
+
     ######## Begin iterations ########
     for (i in 1:max_iter) {
 
@@ -205,7 +205,6 @@ run_numbat = function(
                 t = t,
                 gamma = gamma,
                 alpha = alpha,
-                exp_model = exp_model,
                 min_genes = min_genes,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
@@ -235,7 +234,6 @@ run_numbat = function(
                 min_genes = min_genes,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
-                exp_model = exp_model,
                 ncores = ncores,
                 verbose = verbose,
                 retest = FALSE)
@@ -452,11 +450,41 @@ run_numbat = function(
         saveRDS(clones, glue('{out_dir}/clones_{i}.rds'))
         clones = purrr::keep(clones, function(x) x$size > min_cells)
 
+        #### check convergence ####
+        if (check_convergence) {
+
+            converge = segs_equal(segs_consensus_old, segs_consensus)
+
+            if (converge) {
+                log_message('Convergence reached')
+                break
+            } else {
+                segs_consensus_old = segs_consensus
+            }
+
+        }
     }
 
-    log_message('All done!', verbose = verbose)
+    log_message('All done!')
 
     return('Success')
+}
+
+segs_equal = function(segs_1, segs_2) {
+    
+    cols = c('CHROM', 'seg', 'seg_start', 'seg_end', 'cnv_state_post')
+    
+    equal = isTRUE(all.equal(
+        segs_1 %>% select(any_of(cols)), 
+        segs_2 %>% select(any_of(cols))
+    ))
+    
+    return(equal)
+    
+}
+
+subtrees_equal = function(subtrees_1, subtrees_2) {
+    isTRUE(all.equal(subtrees_1, subtrees_2))
 }
 
 log_mem = function() {
@@ -581,8 +609,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, gene
 #' @param allele_only logical Whether only use allele data to run HMM
 #' @keywords internal
 run_group_hmms = function(
-    bulks, t = 1e-4, gamma = 20, 
-    exp_model = 'lnpois', alpha = 1e-4, min_genes = 10,
+    bulks, t = 1e-4, gamma = 20, alpha = 1e-4, min_genes = 10,
     common_diploid = TRUE, diploid_chroms = NULL, allele_only = FALSE, retest = TRUE, run_hmm = TRUE,
     ncores = NULL, verbose = FALSE, debug = FALSE
 ) {

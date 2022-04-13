@@ -74,56 +74,6 @@ aggregate_counts = function(count_mat, cell_annot, verbose = T) {
     return(list('exp_mat' = as.matrix(exp_mat_clust), 'count_mat' = as.matrix(count_mat_clust)))
 }
 
-#' fit reference weights for a pseudobulk expression profile
-#' @param Y_obs numeric vector Gene expression counts
-#' @param lambdas_ref matrix Reference expression profiles
-#' @param d numeric Total library size
-#' @param gtf dataframe Transcript gtf
-#' @param min_lambda numeric Expression level threshold to filter genes
-#' @return list Fitted reference weights and expression model parameters
-#' @keywords internal
-fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf, min_lambda = 2e-6, verbose = FALSE) {
-
-    if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
-        return(list('w' = 1, 'lambdas_bar' = lambdas_ref))
-    }
-
-    # take the union of expressed genes across cell type
-    genes_common = gtf$gene %>% 
-        intersect(names(Y_obs)) %>%
-        intersect(rownames(lambdas_ref)[rowMeans(lambdas_ref) > min_lambda])
-
-    if (verbose) {
-        log_info(glue('{length(genes_common)} genes common in reference and observation'))
-    }
-
-    Y_obs = Y_obs[genes_common]
-    lambdas_ref = lambdas_ref[genes_common,,drop=FALSE]
-
-    n_ref = ncol(lambdas_ref)
-    
-    fit = optim(
-        fn = function(params) {
-            alpha = params[1]
-            w = params[2:length(params)]
-            -sum(dgpois(Y_obs, shape = alpha, rate = 1/(d * (lambdas_ref %*% w)), log = TRUE))
-        },
-        method = 'L-BFGS-B',
-        par = c(1, rep(1/n_ref, n_ref)),
-        lower = c(0.01, rep(1e-6, n_ref))
-    )
-
-    alpha = fit$par[1]
-    w = fit$par[2:length(fit$par)]
-    beta = 1/sum(w)
-    w = w * beta
-    w = setNames(w, colnames(lambdas_ref))
-
-    lambdas_bar = lambdas_ref %*% w %>% {setNames(as.vector(.), rownames(.))}
-
-    return(list('alpha' = alpha, 'beta' = beta, 'w' = w, 'lambdas_bar' = lambdas_bar))
-}
-
 #' filtering, normalization and capping
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
@@ -573,8 +523,7 @@ analyze_bulk = function(
                     exp_only = exp_only,
                     allele_only = allele_only,
                     classify_allele = classify_allele,
-                    phasing = phasing,
-                    exp_model = 'lnpois'
+                    phasing = phasing
                 )
             ) %>% 
             mutate(cnv_state = str_remove(state, '_down|_up')) %>%
@@ -595,7 +544,7 @@ analyze_bulk = function(
 
         segs_post = retest_cnv(
             bulk, gamma = gamma, theta_min = theta_min,
-            logphi_min = logphi_min, exp_model = 'lnpois',
+            logphi_min = logphi_min,
             allele_only = allele_only)
         
         bulk = bulk %>% 
@@ -667,12 +616,11 @@ analyze_bulk = function(
 
 #' retest CNVs in a pseudobulk
 #' @param bulk pesudobulk dataframe
-#' @param exp_model model for gene expression - Poisson-Lognormal or Gamma-Poisson
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param allele_only whether to retest only using allele data
 #' @return a dataframe of segments with CNV posterior information
 #' @export
-retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE) {
+retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE) {
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     
@@ -718,8 +666,7 @@ retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min =
                     alpha = alpha[!is.na(Y_obs)],
                     beta = beta[!is.na(Y_obs)],
                     mu = mu[!is.na(Y_obs)],
-                    sig = sig[!is.na(Y_obs)],
-                    model = exp_model
+                    sig = sig[!is.na(Y_obs)]
                 ),
                 P_x_n = pnorm.range(2^(-logphi_min), 2^logphi_min, phi_mle, phi_sigma),
                 P_x_d = pnorm.range(0.1, 2^(-logphi_min), phi_mle, phi_sigma),
@@ -743,8 +690,7 @@ retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min =
                     alpha = alpha[!is.na(Y_obs)],
                     beta = beta[!is.na(Y_obs)],
                     mu = mu[!is.na(Y_obs)],
-                    sig = sig[!is.na(Y_obs)],
-                    model = exp_model
+                    sig = sig[!is.na(Y_obs)]
                 ),
                 LLR_y = calc_allele_LLR(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta_mle, gamma = unique(gamma)),
                 LLR = LLR_x + LLR_y,
@@ -1428,7 +1374,7 @@ approx_theta_post = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start =
 
 #' Laplace approximation of the posterior of expression fold change phi
 #' @keywords internal
-approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, model = 'lnpois', lower = 0.2, upper = 10, start = 1) {
+approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, lower = 0.2, upper = 10, start = 1) {
     
     if (length(Y_obs) == 0) {
         return(tibble('phi_mle' = 1, 'phi_sigma' = 0))
@@ -1436,11 +1382,7 @@ approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu =
     
     start = max(min(1, upper), lower)
 
-    if (model == 'gpois') {
-        l = function(phi) {l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi)}
-    } else {
-        l = function(phi) {l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = phi)}
-    }
+    l = function(phi) {l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = phi)}
 
     fit = optim(
         start,
@@ -1593,17 +1535,13 @@ calc_allele_LLR = function(pAD, DP, p_s, theta_mle, theta_0 = 0, gamma = 20) {
 #' @param beta numeric Hyperparameter for the gamma poisson model (not used)
 #' @return numeric Log-likelihood ratio
 #' @keywords internal
-calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, alpha = NULL, beta = NULL, model = 'lnpois') {
+calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, alpha = NULL, beta = NULL) {
     if (length(Y_obs) == 0) {
         return(0)
     }
-    if (model == 'gpois') {
-        l_1 = l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi_mle)
-        l_0 = l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = 1)
-    } else {
-        l_1 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = phi_mle)
-        l_0 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = 1)
-    }
+
+    l_1 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = phi_mle)
+    l_0 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = 1)
     
     return(l_1 - l_0)
 }

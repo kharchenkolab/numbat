@@ -11,6 +11,7 @@ Depends:
 biocViews:
 Imports:
     ape,
+    argparse,
     caTools,
     data.table,
     dendextend,
