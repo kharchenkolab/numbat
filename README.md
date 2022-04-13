@@ -30,10 +30,11 @@ Numbat uses cellsnp-lite for generating SNP pileup data and eagle2 for phasing. 
 
 1. [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
 2. [eagle2](https://alkesgroup.broadinstitute.org/Eagle/)
+3. [samtools](http://www.htslib.org/)
 
 Additionally, numbat needs a common SNP VCF and phasing reference panel. You can use the 1000 Genome reference below:
 
-3. 1000G SNP reference file 
+4. 1000G SNP reference file 
 ```
 # hg38
 wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
@@ -49,14 +50,7 @@ wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
 ```
 
 # Installation
-Please first install the below dependencies via `BiocManager`:
-```
-BiocManager::install("GenomicRanges")
-BiocManager::install("Rsamtools")
-BiocManager::install("ggtree")
-```
-and make sure that `samtools` is already installed.
-Then install the numbat R package via:
+You can nstall the numbat R package via:
 ```
 devtools::install_github("https://github.com/kharchenkolab/numbat")
 ```
