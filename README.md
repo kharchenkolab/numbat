@@ -34,7 +34,7 @@ Numbat uses cellsnp-lite for generating SNP pileup data and eagle2 for phasing. 
 
 Additionally, numbat needs a common SNP VCF and phasing reference panel. You can use the 1000 Genome reference below:
 
-4. 1000G SNP reference file 
+4. 1000G SNP VCF
 ```
 # hg38
 wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
