@@ -51,7 +51,7 @@ run_numbat = function(
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, random_init = FALSE,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
-        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 1-alpha, hclust_only = FALSE,
+        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 1-alpha, 
         plot = TRUE, check_convergence = FALSE
     ) {
 
@@ -212,8 +212,22 @@ run_numbat = function(
         
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
 
+        if (plot) {
+            p = plot_bulks(bulk_subtrees)
+            ggsave(
+                glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
+                width = 12, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200
+            )
+        }
+
         # find consensus CNVs
         segs_consensus = get_segs_consensus(bulk_subtrees, min_LLR = min_LLR, min_overlap = min_overlap)
+        
+        if (all(segs_consensus$cnv_state_post == 'neu')) {
+            msg = 'No CNV remains after filtering - terminating.'
+            log_message(msg)
+            stop(msg)
+        }
 
         # retest consensus CNVs on clones
         bulk_clones = make_group_bulks(
@@ -246,29 +260,22 @@ run_numbat = function(
 
         fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
+        if (plot) {
+            p = plot_bulks(bulk_clones, min_LLR = min_LLR)
+            ggsave(
+                glue('{out_dir}/bulk_clones_{i}.png'), p, 
+                width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 200
+            )
+        }
+
         # test for multi-allelic CNVs
         if (multi_allelic) {
             segs_consensus = test_multi_allelic(bulk_clones, segs_consensus, min_LLR = min_LLR, p_min = p_multi)
         }
 
         fwrite(segs_consensus, glue('{out_dir}/segs_consensus_{i}.tsv'), sep = '\t')
-
-        if (plot) {
-
-            log_message('Making plots..', verbose = verbose)
-
-            p = plot_bulks(bulk_subtrees)
-
-            ggsave(glue('{out_dir}/bulk_subtrees_{i}.png'), p, width = 14, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200)
-
-            p = plot_bulks(bulk_clones, min_LLR = min_LLR)
-
-            ggsave(glue('{out_dir}/bulk_clones_{i}.png'), p, width = 14, height = 2*length(unique(bulk_clones$sample)), dpi = 200)
-            
-        }
         
         ######## Evaluate CNV per cell ########
-        if (hclust_only) { break }
         log_message('Evaluating CNV per cell ..', verbose = verbose)
         log_mem()
 
@@ -325,8 +332,8 @@ run_numbat = function(
             filter(avg_entropy < max_entropy & LLR > min_LLR)
 
         if (nrow(joint_post_filtered) == 0) {
-            msg = 'No CNVs remain after filtering! Check threshold'
-            log_error(msg)
+            msg = 'No CNVs remain after filtering - terminating.'
+            log_message(msg)
             stop(msg)
         } else {
             n_cnv = length(unique(joint_post_filtered$seg))
@@ -696,10 +703,6 @@ get_segs_consensus = function(bulks, min_LLR = 40, min_overlap = 0.45) {
         select(any_of(info_cols)) %>%
         distinct() %>%
         mutate(cnv_state = ifelse(LLR < min_LLR | is.na(LLR), 'neu', cnv_state))
-    
-    if (all(segs_all$cnv_state == 'neu')){
-        stop('No CNV remains after filtering')
-    }
 
     # reduce to unique intervals
     segs_neu = segs_all %>%
@@ -714,6 +717,11 @@ get_segs_consensus = function(bulks, min_LLR = 40, min_overlap = 0.45) {
         as.data.frame() %>%
         select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
         mutate(seg_length = seg_end - seg_start)
+    
+    if (all(segs_all$cnv_state == 'neu')){
+        segs_neu = segs_neu %>% mutate(cnv_state = 'neu', cnv_state_post = 'neu')
+        return(segs_neu)
+    }
     
     segs_consensus = segs_all %>% 
         filter(cnv_state != 'neu') %>%
@@ -1166,10 +1174,16 @@ compute_posterior = function(sc_post) {
 #' @keywords internal
 get_allele_post = function(bulks, segs_consensus, df_allele, naive = FALSE) {
 
+    # add sample column if only one sample
     if ((!'sample' %in% colnames(bulks)) | (!'sample' %in% colnames(segs_consensus))) {
         bulks['sample'] = '0'
         segs_consensus['sample'] = '0'
-        # warning('Sample column missing')
+    }
+
+    # nothing to test
+    if (all(segs_consensus$cnv_state_post %in% c('neu', 'bdel', 'bamp'))) {
+        log_message('No allelically imbalanced CNVs - skip allele posteriors')
+        return(data.frame())
     }
 
     if (naive) {
@@ -1258,17 +1272,17 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
             exp_post %>%
                 filter(cnv_state != 'neu') %>%
                 select(
-                    cell, CHROM, seg, cnv_state, 
-                    l11_x = l11, l20_x = l20, l10_x = l10, l21_x = l21, l31_x = l31, l22_x = l22, l00_x = l00,
-                    Z_x = Z, Z_cnv_x = Z_cnv, Z_n_x = Z_n, logBF_x = logBF
+                    any_of(c('cell', 'CHROM', 'seg', 'cnv_state', 
+                    'l11_x' = 'l11', 'l20_x' = 'l20', 'l10_x' = 'l10', 'l21_x' = 'l21', 'l31_x' = 'l31', 'l22_x' = 'l22', 'l00_x' = 'l00',
+                    'Z_x' = 'Z', 'Z_cnv_x' = 'Z_cnv', 'Z_n_x' = 'Z_n', 'logBF_x' = 'logBF'))
                 ),
             allele_post %>% 
                 select(
-                    cell, CHROM, seg, cnv_state,
-                    l11_y = l11, l20_y = l20, l10_y = l10, l21_y = l21, l31_y = l31, l22_y = l22, l00_y = l00,
-                    Z_y = Z, Z_cnv_y = Z_cnv, Z_n_y = Z_n, logBF_y = logBF,
-                    n_snp = total, MAF, major, total
-            ),
+                    any_of(c('cell', 'CHROM', 'seg', 'cnv_state',
+                    'l11_y' = 'l11', 'l20_y' = 'l20', 'l10_y' = 'l10', 'l21_y' = 'l21', 'l31_y' = 'l31', 'l22_y' = 'l22', 'l00_y' = 'l00',
+                    'Z_y' = 'Z', 'Z_cnv_y' = 'Z_cnv', 'Z_n_y' = 'Z_n', 'logBF_y' = 'logBF',
+                    'n_snp' = 'total', 'MAF', 'major', 'total'))
+                ),
             c("cell", "CHROM", "seg", "cnv_state")
         ) %>%
         mutate_at(
