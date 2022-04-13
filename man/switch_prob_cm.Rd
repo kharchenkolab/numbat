@@ -7,14 +7,14 @@
 switch_prob_cm(d, lambda = 1, min_p = 1e-10)
 }
 \arguments{
-\item{d}{genetic distance in cM}
+\item{d}{numeric vector Genetic distance in cM}
 
-\item{lambda}{rate of phase switch}
+\item{lambda}{numeric Phase switch rate}
 
-\item{min_p}{minimum phase switch probability}
+\item{min_p}{numeric Minimum phase switch probability}
 }
 \value{
-phase switch probability
+numeric vector Phase switch probability
 }
 \description{
 predict phase switch probablity as a function of genetic distance

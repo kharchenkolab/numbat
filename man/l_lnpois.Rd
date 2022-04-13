@@ -7,14 +7,14 @@
 l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = 1)
 }
 \arguments{
-\item{Y_obs}{gene expression counts}
+\item{Y_obs}{numeric vector Gene expression counts}
 
-\item{lambda_ref}{reference expression levels}
+\item{lambda_ref}{numeric vector Reference expression levels}
 
-\item{d}{total library size}
+\item{d}{numeric Total library size}
 }
 \value{
-joint log likelihood
+numeric Joint log likelihood
 }
 \description{
 ccalculate joint likelihood of a PLN model

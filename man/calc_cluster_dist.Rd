@@ -7,7 +7,7 @@
 calc_cluster_dist(count_mat, cell_annot)
 }
 \arguments{
-\item{count_mat}{expression count matrix}
+\item{count_mat}{dgCMatrix Gene expression counts}
 
 \item{cell_annot}{dataframe specifying the cell ID and cluster memberships}
 }

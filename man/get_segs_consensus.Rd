@@ -4,17 +4,17 @@
 \alias{get_segs_consensus}
 \title{Extract consensus CNV segments}
 \usage{
-get_segs_consensus(bulks, min_LLR = 20, min_overlap = 0.45)
+get_segs_consensus(bulks, min_LLR = 40, min_overlap = 0.45)
 }
 \arguments{
-\item{bulks}{pseudobulks dataframe}
+\item{bulks}{dataframe Pseudobulks}
 
-\item{min_LLR}{LLR threshold to filter CNVs}
+\item{min_LLR}{numeric LLR threshold to filter CNVs}
 
-\item{min_overlap}{minimum overlap fraction to determine count two events as as overlapping}
+\item{min_overlap}{numeric Minimum overlap fraction to determine count two events as as overlapping}
 }
 \value{
-consensus segments dataframe
+dataframe Consensus segments
 }
 \description{
 Extract consensus CNV segments

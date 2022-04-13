@@ -7,9 +7,9 @@
 fit_bbinom(AD, DP)
 }
 \arguments{
-\item{AD}{variant allele depth}
+\item{AD}{numeric vector Variant allele depth}
 
-\item{DP}{total allele depth}
+\item{DP}{numeric vector Total allele depth}
 }
 \value{
 MLE of alpha and beta

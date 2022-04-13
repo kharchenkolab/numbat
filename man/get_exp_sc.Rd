@@ -4,17 +4,17 @@
 \alias{get_exp_sc}
 \title{get the single cell expression dataframe}
 \usage{
-get_exp_sc(segs_consensus, count_mat, gtf_transcript)
+get_exp_sc(segs_consensus, count_mat, gtf)
 }
 \arguments{
-\item{segs_consensus}{consensus segments}
+\item{segs_consensus}{dataframe Consensus segments}
 
-\item{count_mat}{gene expression count matrix}
+\item{count_mat}{dgCMatrix gene expression count matrix}
 
-\item{gtf_transcript}{transcript dataframe}
+\item{gtf}{dataframe Transcript gtf}
 }
 \value{
-single cell expression dataframe
+dataframe single cell expression counts annotated with segments
 }
 \description{
 get the single cell expression dataframe

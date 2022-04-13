@@ -4,7 +4,17 @@
 \alias{get_allele_post}
 \title{get CNV allele posteriors}
 \usage{
-get_allele_post(bulk_all, segs_consensus, df_allele, naive = FALSE)
+get_allele_post(bulks, segs_consensus, df_allele, naive = FALSE)
+}
+\arguments{
+\item{bulks}{dataframe Subtree pseudobulk profiles}
+
+\item{segs_consensus}{dataframe Consensus CNV segments}
+
+\item{df_allele}{dataframe Allele counts}
+}
+\value{
+dataframe Allele posteriors
 }
 \description{
 get CNV allele posteriors

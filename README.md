@@ -10,7 +10,10 @@
 
 Numbat is a haplotype-enhanced CNV caller from single-cell transcriptomics data. It integrates signals from gene expression, allelic ratio, and population-derived haplotype information to accurately infer allele-specific CNVs in single cells and reconstruct their lineage relationship. 
 
-Numbat can be used to 1. detect allele-specific copy number variations from scRNA-seq 2. differentiate tumor versus normal cells in the tumor microenvironment 3. infer the clonal architecture and evolutionary history of profiled tumors. 
+Numbat can be used to:
+ 1. Detect allele-specific copy number variations from scRNA-seq 
+ 2. Differentiate tumor versus normal cells in the tumor microenvironment 
+ 3. Infer the clonal architecture and evolutionary history of profiled tumors. 
 
 ![image](https://user-images.githubusercontent.com/13375875/153020818-2e782689-09db-427f-ad98-2c175021a936.png)
 
@@ -31,10 +34,11 @@ Numbat uses cellsnp-lite for generating SNP pileup data and eagle2 for phasing. 
 
 1. [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
 2. [eagle2](https://alkesgroup.broadinstitute.org/Eagle/)
+3. [samtools](http://www.htslib.org/)
 
 Additionally, Numbat needs a common SNP VCF and phasing reference panel. You can use the 1000 Genome reference below:
 
-3. 1000G SNP reference file 
+4. 1000G SNP VCF
 ```
 # hg38
 wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
@@ -51,14 +55,7 @@ wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
 **Note**: currently Numbat only supports human hg19 and hg38 reference.
 
 # Installation
-Please first install the below dependencies via `BiocManager`:
-```
-BiocManager::install("GenomicRanges")
-BiocManager::install("Rsamtools")
-BiocManager::install("ggtree")
-```
-and make sure that `samtools` is already installed.
-Then install the Numbat R package via:
+You can install the numbat R package via:
 ```
 devtools::install_github("https://github.com/kharchenkolab/numbat")
 ```
@@ -70,9 +67,10 @@ devtools::install_github("https://github.com/kharchenkolab/Numbat/tree/devel")
 1. Prepare the allele data. Run the preprocessing script (`pileup_and_phase.R`) to count alleles and phase SNPs
 ```
 usage: pileup_and_phase.R [-h] --label LABEL --samples SAMPLES --bams BAMS
-                          --barcodes BARCODES --gmap GMAP --snpvcf SNPVCF
-                          --paneldir PANELDIR --outdir OUTDIR --ncores NCORES
-                          [--UMItag UMITAG] [--cellTAG CELLTAG]
+                          --barcodes BARCODES --gmap GMAP [--eagle EAGLE]
+                          --snpvcf SNPVCF --paneldir PANELDIR --outdir OUTDIR
+                          --ncores NCORES [--UMItag UMITAG]
+                          [--cellTAG CELLTAG] [--smartseq]
 
 Run SNP pileup and phasing with 1000G
 
@@ -91,7 +89,10 @@ optional arguments:
                        Slide-seq
   --cellTAG CELLTAG    Cell tag in bam. Should be CB for 10x and XC for Slide-
                        seq
+  --smartseq           running with smart-seq mode
 ```
+Note: If running with `--smartseq` mode, you may provide a file containing a list of bams (each as its own line) to `--bams` and a file containing a list of cell names (each as its own line) to `--barcodes`.
+
 This will produce a file named `{sample}_allele_counts.tsv.gz` under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under `phasing/` folder and raw pileup counts under `pileup/`.
 
 2. Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.

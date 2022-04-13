@@ -21,29 +21,29 @@ plot_bulks(
 )
 }
 \arguments{
-\item{use_pos}{use marker position instead of index as x coordinate}
+\item{use_pos}{logical Use marker position instead of index as x coordinate}
 
-\item{allele_only}{only plot alleles}
+\item{allele_only}{logical Only plot alleles}
 
-\item{min_LLR}{LLR threshold for event filtering}
+\item{min_LLR}{numeric LLR threshold for event filtering}
 
-\item{min_depth}{minimum coverage depth for a SNP to be plotted}
+\item{min_depth}{numeric Minimum coverage depth for a SNP to be plotted}
 
-\item{exp_limit}{expression logFC axis limit}
+\item{exp_limit}{numeric Expression logFC axis limit}
 
-\item{phi_mle}{whether to plot estimates of segmental expression fold change}
+\item{phi_mle}{logical Whether to plot estimates of segmental expression fold change}
 
-\item{theta_roll}{whether to plot rolling estimates of allele imbalance}
+\item{theta_roll}{logical Whether to plot rolling estimates of allele imbalance}
 
-\item{dot_size}{size of marker dots}
+\item{dot_size}{numeric Size of marker dots}
 
-\item{dot_alpha}{transparency of the marker dots}
+\item{dot_alpha}{numeric Transparency of the marker dots}
 
-\item{ncol}{number of columns}
+\item{ncol}{integer Number of columns}
 
-\item{legend}{whether to show legend}
+\item{legend}{logical Whether to show legend}
 
-\item{title}{whether to add titles to individual plots}
+\item{title}{logical Whether to add titles to individual plots}
 
 \item{bulks}{pseudobulks dataframe}
 }

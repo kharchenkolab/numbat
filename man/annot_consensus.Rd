@@ -7,12 +7,12 @@
 annot_consensus(bulk, segs_consensus)
 }
 \arguments{
-\item{bulk}{a pseudobulk dataframe}
+\item{bulk}{dataframe Pseudobulk profile}
 
-\item{segs_consensus}{a consensus segment dataframe}
+\item{segs_consensus}{datatframe Consensus segment dataframe}
 }
 \value{
-a pseudobulk dataframe
+dataframe Pseudobulk profile
 }
 \description{
 Annotate a consensus segments on a pseudobulk dataframe

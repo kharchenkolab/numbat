@@ -17,6 +17,18 @@ poilog1 <- function(x, my, sig, nrN) {
     .Call('_numbat_poilog1', PACKAGE = 'numbat', x, my, sig, nrN)
 }
 
+logSumExp <- function(x) {
+    .Call('_numbat_logSumExp', PACKAGE = 'numbat', x)
+}
+
+likelihood_allele_compute <- function(obj, logphi, logprob, logPi, n, m) {
+    .Call('_numbat_likelihood_allele_compute', PACKAGE = 'numbat', obj, logphi, logprob, logPi, n, m)
+}
+
+forward_backward_compute <- function(obj, logphi, logprob, logPi, n, m) {
+    .Call('_numbat_forward_backward_compute', PACKAGE = 'numbat', obj, logphi, logprob, logPi, n, m)
+}
+
 CgetQ <- function(logQ, children_dict, node_order) {
     .Call('_numbat_CgetQ', PACKAGE = 'numbat', logQ, children_dict, node_order)
 }

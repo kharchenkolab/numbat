@@ -6,6 +6,14 @@
 \usage{
 expand_states(sc_post, segs_consensus)
 }
+\arguments{
+\item{sc_post}{dataframe Single-cell posteriors}
+
+\item{segs_consensus}{dataframe Consensus segments}
+}
+\value{
+dataframe Single-cell posteriors with multi-allelic CNVs split into different entries
+}
 \description{
 expand multi-allelic CNVs into separate entries in the single-cell posterior dataframe
 }

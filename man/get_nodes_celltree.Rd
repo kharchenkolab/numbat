@@ -7,12 +7,12 @@
 get_nodes_celltree(hc, clusters)
 }
 \arguments{
-\item{hc}{hclust object}
+\item{hc}{hclust Clustering results}
 
-\item{clusters}{cutree output specifying the terminal clusters}
+\item{clusters}{named vector Cutree output specifying the terminal clusters}
 }
 \value{
-a list of interal node subtrees with leaf memberships
+list Interal node subtrees with leaf memberships
 }
 \description{
 Get the internal nodes of a dendrogram and the leafs in each subtree

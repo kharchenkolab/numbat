@@ -4,17 +4,17 @@
 \alias{get_exp_bulk}
 \title{Aggregate into bulk expression profile}
 \usage{
-get_exp_bulk(count_mat, lambdas_ref, gtf_transcript, verbose = TRUE)
+get_exp_bulk(count_mat, lambdas_ref, gtf, verbose = TRUE)
 }
 \arguments{
-\item{count_mat}{observed gene count matrices}
+\item{count_mat}{dgCMatrix Gene expression counts}
 
-\item{lambdas_ref}{expression values in reference profile}
+\item{lambdas_ref}{matrix Reference expression profiles}
 
-\item{gtf_transcript}{transcript dataframe}
+\item{gtf}{dataframe Transcript gtf}
 }
 \value{
-a dataframe of bulk gene expression profile
+dataframe Pseudobulk gene expression profile
 }
 \description{
 Aggregate into bulk expression profile

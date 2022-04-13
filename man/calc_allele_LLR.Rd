@@ -7,20 +7,20 @@
 calc_allele_LLR(pAD, DP, p_s, theta_mle, theta_0 = 0, gamma = 20)
 }
 \arguments{
-\item{pAD}{vector of phased allele depth}
+\item{pAD}{numeric vector Phased allele depth}
 
-\item{DP}{vector of total allele depth}
+\item{DP}{numeric vector Total allele depth}
 
-\item{p_s}{vector of phase switch probabilities}
+\item{p_s}{numeric vector Phase switch probabilities}
 
-\item{theta_mle}{MLE of imbalance level theta (alternative hypothesis)}
+\item{theta_mle}{numeric MLE of imbalance level theta (alternative hypothesis)}
 
-\item{theta_0}{imbalance level in the null hypothesis}
+\item{theta_0}{numeric Imbalance level in the null hypothesis}
 
-\item{gamma}{dispersion parameter for the Beta-Binomial allele model}
+\item{gamma}{numeric Dispersion parameter for the Beta-Binomial allele model}
 }
 \value{
-a log-likelihood ratio
+numeric Log-likelihood ratio
 }
 \description{
 Calculate LLR for an allele HMM

@@ -7,7 +7,7 @@
 annot_segs(bulk)
 }
 \arguments{
-\item{bulk}{a pseudobulk dataframe}
+\item{bulk}{dataframe Pseudobulk profile}
 }
 \value{
 a pseudobulk dataframe

@@ -2,11 +2,17 @@
 % Please edit documentation in R/main.R
 \name{compute_posterior}
 \alias{compute_posterior}
-\title{do bayesian averaging to get posteriors}
+\title{Do bayesian averaging to get posteriors}
 \usage{
 compute_posterior(sc_post)
 }
+\arguments{
+\item{sc_post}{dataframe Likelihoods}
+}
+\value{
+dataframe Posteriors
+}
 \description{
-do bayesian averaging to get posteriors
+Do bayesian averaging to get posteriors
 }
 \keyword{internal}

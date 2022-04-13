@@ -4,6 +4,7 @@ pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 
 #' @export
 cnv_colors = c("neu" = "gray", 
+        "neu_up" = "darkgray", "neu_down" = "gray",
         "del_up" = "royalblue", "del_down" = "darkblue", 
         "loh_up" = "darkgreen", "loh_down" = "olivedrab4",
         "amp_up" = "red", "amp_down" = "tomato3",
@@ -257,15 +258,15 @@ do_plot = function(p, f, w, h, out_dir = '~/figures') {
 }
 
 
-annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL) {
+annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL, annot_scale = NULL) {
 
-    if (is.null(pal_annot)) {
-        pal_annot = getPalette(length(unique(D$annot)))
-    }
+    D = D %>% mutate(cell_index = as.integer(cell))
+
+    index_max = length(levels(D$cell))
 
     p = ggplot(
         D,
-        aes(x = cell, y = '', fill = annot)
+        aes(x = cell_index, y = '', fill = annot)
     ) +
     geom_tile(width=1, height=0.9, size = 0) +
     # geom_segment(
@@ -274,18 +275,26 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', siz
     # ) +
     theme_void() +
     scale_y_discrete(expand = expansion(0)) +
-    scale_x_discrete(expand = expansion(0)) +
+    scale_x_continuous(expand = expansion(0), limits = c(1,index_max)) +
     theme(
         panel.spacing = unit(0.1, 'mm'),
         panel.border = element_rect(size = 0, color = 'black', fill = NA),
-        panel.background = element_rect(fill = 'white'),
+        panel.background = element_rect(fill = 'gray90'),
         strip.background = element_blank(),
         strip.text = element_blank(),
         # axis.text = element_text(size = 8),
         axis.text = element_blank(),
         plot.margin = margin(0.5,0,0.5,0, unit = 'mm')
     )
-    # scale_fill_manual(values = pal_annot)
+
+    if (!is.null(annot_scale)) {
+        p = p + annot_scale
+    } else {
+        if (is.null(pal_annot)) {
+            pal_annot = getPalette(length(unique(D$annot)))
+        }
+        p = p + scale_fill_manual(values = pal_annot, na.value = 'gray90')
+    }
 
     if (transpose) {
         p = p + coord_flip() +
@@ -302,68 +311,13 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', siz
 }
 
 #' @export
-cell_heatmap = function(geno, cnv_order = NULL, cell_order = NULL, limit = 5, cnv_type = TRUE) {
-
-    # geno = geno %>% mutate(logBF = Z_cnv - Z_n)
-
-    if (is.null(cnv_order)) {
-        cnv_order = unique(geno$seg)
-    }
-
-    if (is.null(cell_order)) {
-        cell_order = unique(geno$cell)
-    }
-
-    geno = geno %>% 
-        filter(cell %in% cell_order) %>%
-        filter(cnv_state != 'neu') %>%
-        mutate(seg = factor(seg, cnv_order)) %>%
-        arrange(seg) %>%
-        mutate(seg_label = factor(seg_label, unique(seg_label))) %>%
-        mutate(cell = factor(cell, cell_order))
-
-    pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
-
-    if (!cnv_type) {
-        geno = geno %>% mutate(seg_label = seg)
-    }
-
-    p_map = ggplot(
-            geno,
-            aes(x = cell, y = seg_label, fill = logBF)
-        ) +
-        geom_tile(width=0.4, height=0.9) +
-        theme_classic() +
-        scale_y_discrete(expand = expansion(0)) +
-        scale_x_discrete(expand = expansion(add = 0.5)) +
-        theme(
-            panel.spacing = unit(0.1, 'mm'),
-            # panel.border = element_rect(size = 0.5, color = 'black', fill = NA),
-            axis.line.x = element_blank(),
-            axis.line.y = element_blank(),
-            axis.ticks.x = element_blank(),
-            panel.border = element_blank(),
-            panel.background = element_rect(fill = 'white'),
-            strip.background = element_blank(),
-            axis.text.x = element_blank(),
-            strip.text = element_text(angle = 90, size = 8, vjust = 0.5),
-            plot.margin = margin(0,0,0,0, unit = 'mm')
-        ) +
-        scale_fill_gradient2(low = pal[2], high = pal[1], midpoint = 0, limits = c(-limit, limit), oob = scales::oob_squish) +
-        # xlab('') +
-        theme(plot.title = element_blank()) +
-        ylab('') +
-        guides(fill = guide_colorbar(barwidth = unit(3, 'mm'), barheight = unit(15, 'mm')))
-
-    return(p_map)
-}
-
-#' @export
-plot_sc_roll = function(gexp_roll_wide, hc, k, gtf_transcript, lim = 0.8, n_sample = 50, reverse = TRUE, plot_tree = TRUE) {
+plot_sc_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 50, reverse = TRUE, plot_tree = TRUE) {
 
     gexp_norm_long = gexp_roll_wide %>% 
+        as.data.frame() %>%
+        tibble::rownames_to_column('cell') %>%
         reshape2::melt(id.var = 'cell', variable.name = 'gene', value.name = 'exp_rollmean') %>%
-        left_join(gtf_transcript, by = 'gene') %>%
+        left_join(gtf, by = 'gene') %>%
         mutate(gene_index = as.integer(factor(gene, unique(gene))))
 
     cells = unique(gexp_norm_long$cell)
@@ -494,26 +448,30 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 }
 
 #' plot a pseudobulk HMM profile
-#' @param bulk pseudobulk dataframe
-#' @param use_pos use marker position instead of index as x coordinate
-#' @param allele_only only plot alleles
-#' @param min_LLR LLR threshold for event filtering
-#' @param min_depth minimum coverage depth for a SNP to be plotted
-#' @param exp_limit expression logFC axis limit
-#' @param phi_mle whether to plot estimates of segmental expression fold change 
-#' @param theta_roll whether to plot rolling estimates of allele imbalance
-#' @param dot_size size of marker dots
-#' @param dot_alpha transparency of the marker dots
-#' @param legend whether to show legend
-#' @return a ggplot object
+#' @param bulk dataframe Pseudobulk profile
+#' @param use_pos logical Use marker position instead of index as x coordinate
+#' @param allele_only logical Only plot alleles
+#' @param min_LLR numeric LLR threshold for event filtering
+#' @param min_depth numeric Minimum coverage depth for a SNP to be plotted
+#' @param exp_limit numeric Expression logFC axis limit
+#' @param phi_mle logical Whether to plot estimates of segmental expression fold change 
+#' @param theta_roll logical Whether to plot rolling estimates of allele imbalance
+#' @param dot_size numeric Size of marker dots
+#' @param dot_alpha numeric Transparency of the marker dots
+#' @param legend logical Whether to show legend
+#' @return ggplot Plot of pseudobulk HMM profile
 #' @export
 plot_psbulk = function(
-    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 10, min_depth = 8, exp_limit = 2, 
+    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 0, min_depth = 8, exp_limit = 2, 
     phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = TRUE
     ) {
 
-    if (!'state_post' %in% colnames(bulk)) {
-        bulk = bulk %>% mutate(state_post = state)
+    if (!all(c('state_post', 'cnv_state_post') %in% colnames(bulk))) {
+        bulk = bulk %>%
+            mutate(
+                state_post = state,
+                cnv_state_post = cnv_state
+            )
     }
 
     if (min_LLR != 0) {
@@ -588,12 +546,12 @@ plot_psbulk = function(
             labels = cnv_labels,
             na.translate = F
         ) +
-        guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = FALSE, alpha = FALSE, shape = FALSE) +
+        guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = 'none', alpha = 'none', shape = 'none') +
         xlab(marker) +
         ylab('')
 
     if (!legend) {
-        p = p + guides(color = FALSE, fill = FALSE, alpha = FALSE, shape = FALSE)
+        p = p + guides(color = 'none', fill = 'none', alpha = 'none', shape = 'none')
     }
 
     if (phi_mle) {
@@ -630,20 +588,21 @@ plot_psbulk = function(
     }
 
     if (theta_roll) {
-        p = p + geom_line(
-            inherit.aes = FALSE,
-            data = D %>% mutate(variable = 'pHF'),
-            aes(x = snp_index, y = 0.5 - theta_hat_roll, color = paste0(cnv_state_post, '_down')),
-            # color = 'black',
-            size = 0.35
-        ) +
-        geom_line(
-            inherit.aes = FALSE,
-            data = D %>% mutate(variable = 'pHF'),
-            aes(x = snp_index, y = 0.5 + theta_hat_roll, color = paste0(cnv_state_post, '_up')),
-            # color = 'gray',
-            size = 0.35
-        )
+        p = p + 
+            geom_line(
+                inherit.aes = FALSE,
+                data = D %>% mutate(variable = 'pHF'),
+                aes(x = snp_index, y = 0.5 - theta_hat_roll, color = paste0(cnv_state_post, '_down')),
+                # color = 'black',
+                size = 0.35
+            ) +
+            geom_line(
+                inherit.aes = FALSE,
+                data = D %>% mutate(variable = 'pHF'),
+                aes(x = snp_index, y = 0.5 + theta_hat_roll, color = paste0(cnv_state_post, '_up')),
+                # color = 'gray',
+                size = 0.35
+            )
     } 
 
     p = p + xlab(marker_label)
@@ -651,21 +610,20 @@ plot_psbulk = function(
     return(p)
 }
 
-
 #' plot a group of pseudobulks HMM profile
 #' @param bulks pseudobulks dataframe
-#' @param use_pos use marker position instead of index as x coordinate
-#' @param allele_only only plot alleles
-#' @param min_LLR LLR threshold for event filtering
-#' @param min_depth minimum coverage depth for a SNP to be plotted
-#' @param exp_limit expression logFC axis limit
-#' @param phi_mle whether to plot estimates of segmental expression fold change 
-#' @param theta_roll whether to plot rolling estimates of allele imbalance
-#' @param dot_size size of marker dots
-#' @param dot_alpha transparency of the marker dots
-#' @param ncol number of columns
-#' @param legend whether to show legend
-#' @param title whether to add titles to individual plots
+#' @param use_pos logical Use marker position instead of index as x coordinate
+#' @param allele_only logical Only plot alleles
+#' @param min_LLR numeric LLR threshold for event filtering
+#' @param min_depth numeric Minimum coverage depth for a SNP to be plotted
+#' @param exp_limit numeric Expression logFC axis limit
+#' @param phi_mle logical Whether to plot estimates of segmental expression fold change 
+#' @param theta_roll logical Whether to plot rolling estimates of allele imbalance
+#' @param dot_size numeric Size of marker dots
+#' @param dot_alpha numeric Transparency of the marker dots
+#' @param legend logical Whether to show legend
+#' @param ncol integer Number of columns
+#' @param title logical Whether to add titles to individual plots
 #' @return a ggplot object
 #' @export
 plot_bulks = function(
@@ -673,6 +631,10 @@ plot_bulks = function(
     exp_limit = 2, phi_mle = TRUE, theta_roll = FALSE, 
     dot_size = 0.8, dot_alpha = 0.5, ncol = 1, legend = FALSE, title = TRUE
     ) {
+
+    if (!'sample' %in% colnames(bulk_all)) {
+        bulk_all$sample = 1
+    }
 
     options(warn = -1)
     plot_list = bulk_all %>%
@@ -917,16 +879,20 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio 
 }
 
 #' @export
-plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, node_id = TRUE, pal_clone = NULL) {
+plot_mut_history = function(G_m, edge_label_size = 4, node_label_size = 6, node_size = 10, horizontal = TRUE, label = TRUE, node_id = TRUE, pal_clone = NULL) {
 
     G_m = label_genotype(G_m)
 
     if (is.null(pal_clone)) {
-        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 5, 'Spectral'))
+        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 8, 'Set1'))
         pal_clone = c('gray', getPalette(length(V(G_m))))
     }
 
     G_df = G_m %>% as_tbl_graph() %>% mutate(clone = factor(clone))
+    
+    if (!'superclone' %in% colnames(as.data.frame(activate(G_df, 'nodes')))) {
+        G_df = G_df %>% mutate(superclone = clone)
+    }
 
     if (!label) {
         G_df = G_df %>% activate(edges) %>% mutate(to_label = '')
@@ -939,16 +905,17 @@ plot_mut_history = function(G_m, horizontal = TRUE, label = TRUE, node_id = TRUE
             vjust = -1,
             arrow = arrow(length = unit(3, "mm")),
             end_cap = circle(4, 'mm'),
-            start_cap = circle(4, 'mm')
+            start_cap = circle(4, 'mm'),
+            label_size = edge_label_size
         ) + 
-        geom_node_point(aes(color = clone), size = 10) +
+        geom_node_point(aes(color = as.factor(superclone)), size = node_size) +
         theme_void() +
         scale_x_continuous(expand = expansion(0.2)) +
         scale_color_manual(values = pal_clone, limits = force) +
         guides(color = 'none')
 
     if (node_id) {
-        p = p + geom_node_text(aes(label = clone), size = 6)
+        p = p + geom_node_text(aes(label = clone), size = node_label_size)
     }
 
     if (horizontal) {
@@ -1026,7 +993,7 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
 }
 
 #' @export
-plot_sc_tree = function(gtree, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, pal_clone = NULL,tip_length = 0.5) {
+plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, pal_clone = NULL, tip_length = 0.5) {
 
     mut_nodes = gtree %>% activate(nodes) %>%
       filter(!is.na(site)) %>% data.frame() %>%
@@ -1065,13 +1032,17 @@ plot_sc_tree = function(gtree, label_size = 3, dot_size = 2, branch_width = 0.5,
             axis.ticks.y = element_line(size = 0.2),
             axis.text.y = element_text(size = 8)
         ) +
-        geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
-        geom_text2(
-            aes(x = branch, label = str_trunc(site, 20, side = 'center')),
-            size = label_size, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
-        ) +
-        guides(color = F) +
+        guides(color = 'none') +
         xlab('Number of mutations')
+
+    if (label_mut) {
+        p_tree = p_tree + 
+            geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
+            geom_text2(
+                aes(x = branch, label = str_trunc(site, 20, side = 'center')),
+                size = label_size, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
+            )
+    }
 
     if (tip) {
 
@@ -1081,148 +1052,12 @@ plot_sc_tree = function(gtree, label_size = 3, dot_size = 2, branch_width = 0.5,
         }
 
         p_tree = p_tree + 
-            geom_tippoint(aes(color = as.factor(clone)), size=1, stroke = 0.2) +
+            geom_tippoint(aes(color = as.factor(clone)), size=dot_size, stroke = 0.2) +
             scale_color_manual(values = pal_clone, limits = force)
     }
     
     return(p_tree)
     
-}
-
-#' @export
-tree_heatmap = function(joint_post, gtree, ratio = 1, limit = 5, cell_dict = NULL, cnv_order = NULL, label_mut = TRUE, cnv_type = TRUE, branch_width = 0.2, tip = T, tip_length = 0.5, pal_annot = NULL, pal_clone = NULL, layout = 'rect', tvn = FALSE, legend = T) {
-    
-    if (!'clone' %in% colnames(as.data.frame(activate(gtree, 'nodes')))) {
-        gtree = gtree %>% activate(nodes) %>% mutate(clone = as.integer(as.factor(GT)))
-    }
-
-    gtree = mark_tumor_lineage(gtree)
-
-    joint_post = joint_post %>% filter(cnv_state != 'neu')
-
-    if (!'seg_label' %in% colnames(joint_post)) {
-        joint_post = joint_post %>% mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
-            mutate(seg_label = factor(seg_label, unique(seg_label)))
-    }
-
-    if (!'logBF' %in% colnames(joint_post)) {
-        joint_post = joint_post %>% mutate(logBF = Z_cnv - Z_n)
-    }
-
-    if (tvn) {
-        clone_dict = gtree %>%
-            activate(nodes) %>%
-            data.frame %>%
-            mutate(compartment = factor(compartment)) %>%
-            {setNames(.$compartment, .$name)}
-    } else {
-        clone_dict = gtree %>%
-            activate(nodes) %>%
-            data.frame %>%
-            mutate(
-                GT = ifelse(compartment == 'normal', '', GT),
-                GT = factor(GT),
-                clone = as.factor(clone)
-            ) %>%
-            {setNames(.$clone, .$name)}
-    }
-
-    getPalette = colorRampPalette(pal)
-
-    if (is.null(pal_annot)) {
-        pal_annot = getPalette(length(unique(cell_dict)))
-    }
-
-    if (is.null(pal_clone)) {
-        pal_clone = getPalette(length(unique(clone_dict)))
-    }
-
-    OTU_dict = lapply(levels(clone_dict), function(x) names(clone_dict[clone_dict == x])) %>% setNames(levels(clone_dict))
-
-    mut_nodes = gtree %>% activate(nodes) %>% filter(!is.na(site)) %>% data.frame() %>% select(name, site)
-
-    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
-    
-    p_tree = gtree %>% 
-        to_phylo() %>%
-        groupOTU(
-            OTU_dict,
-            'clone'
-        ) %>%
-        ggtree(ladderize = T, size = branch_width, layout = layout) %<+%
-        mut_nodes +
-        layout_dendrogram() +
-        # geom_rootedge(size = branch_width) +
-        theme(
-            plot.margin = margin(0,0,0,0),
-            axis.title.x = element_blank(),
-            axis.ticks.x = element_blank(),
-            axis.text.x = element_blank(),
-            axis.line.y = element_line(size = 0.2),
-            axis.ticks.y = element_line(size = 0.2),
-            # axis.text.y = element_text(size = 5)
-            axis.text.y = element_blank()
-        ) +
-        guides(color = F) 
-
-    if (tip) {
-        p_tree = p_tree + geom_tippoint(aes(color = clone), size=0, stroke = 0.2) +
-            scale_color_manual(values = c('gray', pal_clone), limits = force)
-    }
-
-    if (label_mut) {
-        p_tree = p_tree + 
-            geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = 1, fill = 'red') +
-            geom_text2(
-                aes(x = branch, label = str_trunc(site, 20, side = 'center')),
-                size = 2, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
-            )
-    }
-    
-    if (legend) {
-        p_tree = p_tree + 
-            guides(color = guide_legend(keywidth = unit(3, 'mm'), override.aes = list(size = 2), keyheight = unit(1, 'mm'), title = NULL))
-    }
-
-    cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
-
-    if (is.null(cnv_order)) {
-        cnv_order = gtree %>% 
-            activate(nodes) %>%
-            mutate(rank = dfs_rank(root = node_is_root())) %>%
-            data.frame() %>%
-            filter(!is.na(site)) %>%
-            arrange(-rank) %>%
-            pull(site) %>%
-            map(function(x){rev(unlist(str_split(x, ',')))}) %>%
-            unlist
-    }
-
-    p_map = cell_heatmap(joint_post, cnv_order, cell_order, limit, cnv_type = cnv_type)
-
-    p_clones = data.frame(
-            cell = names(clone_dict),
-            annot = unname(clone_dict)
-        ) %>%
-        mutate(cell = factor(cell, cell_order)) %>%
-        annot_bar(transpose = F) +
-        scale_fill_manual(values = c('gray', pal_clone))
-
-    if (!is.null(cell_dict)) {
-        p_annot = data.frame(
-                cell = names(cell_dict),
-                annot = unname(cell_dict)
-            ) %>%
-            mutate(cell = factor(cell, cell_order)) %>%
-            annot_bar(transpose = F)
-            # scale_fill_manual(values = pal_annot)
-
-        panel = (p_tree / p_clones / p_annot / p_map) + plot_layout(heights = c(ratio,0.06,0.06,1), guides = 'collect')
-    } else {
-        panel = (p_tree / p_clones / p_map) + plot_layout(heights = c(ratio,0.1,1), guides = 'collect')
-    }
-
-    return(panel)
 }
 
 #' @export
@@ -1271,16 +1106,21 @@ plot_consensus = function(segs) {
     ) +
     scale_x_continuous(
         expand = expansion(mult = 0.05)
-    )
+    ) +
+    guides(fill = 'none')
 }
 
 #' @export
 plot_phylo_heatmap = function(
         gtree, joint_post, segs_consensus,
         annot = NULL, line_width = 0.1, branch_width = 0.2, tip_length = 0.2, logBF_min = 1, p_min = 0.9,
-        logBF_max = 5, geno_bar = FALSE, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
-        pal_annot = NULL, tree_height = 1, annot_title = 'Annotation'
+        logBF_max = 5, geno_bar = FALSE, superclone = FALSE, clone_dict = NULL, clone_legend = TRUE, clone_line = FALSE, pal_clone = NULL,
+        pal_annot = NULL, tree_height = 1, annot_title = 'Annotation', geno_title = 'Genotype', annot_scale = NULL
     ) {
+    
+    # make sure chromosomes are in order
+    joint_post = joint_post %>% mutate(CHROM = as.integer(as.character(CHROM)))
+    segs_consensus = segs_consensus %>% mutate(CHROM = as.integer(as.character(CHROM)))
 
     # if no multi allelic CNVs
     if (!'n_states' %in% colnames(joint_post)) {
@@ -1296,6 +1136,16 @@ plot_phylo_heatmap = function(
             ungroup() %>%
             distinct(cell, CHROM, seg_end, seg_start, .keep_all = T) %>%
             mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
+    }
+
+    if (!'clone' %in% colnames(data.frame(activate(gtree, 'nodes')))) {
+        gtree = gtree %>%
+            activate(nodes) %>%
+            mutate(clone = as.integer(factor(GT)))
+    }
+
+    if (superclone) {
+        gtree = gtree %>% activate(nodes) %>% mutate(clone = superclone)
     }
 
     gtree = mark_tumor_lineage(gtree)
@@ -1319,7 +1169,7 @@ plot_phylo_heatmap = function(
                 panel.background = element_rect(fill = "transparent",colour = NA),
                 plot.background = element_rect(fill = "transparent", color = NA)
             ) +
-            guides(color = F)
+            guides(color = 'none')
 
     # order the cells
     cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
@@ -1422,16 +1272,18 @@ plot_phylo_heatmap = function(
         xlab('Genomic position')
 
     # clone annotation
-    clone_dict = gtree %>%
-        activate(nodes) %>%
-        data.frame %>%
-        mutate(
-            GT = ifelse(compartment == 'normal', '', GT),
-            GT = factor(GT),
-            clone = ifelse(compartment == 'normal', 1, clone),
-            clone = as.factor(clone)
-        ) %>%
-        {setNames(.$clone, .$name)}
+    if (is.null(clone_dict)) {
+        clone_dict = gtree %>%
+            activate(nodes) %>%
+            data.frame %>%
+            mutate(
+                GT = ifelse(compartment == 'normal', '', GT),
+                GT = factor(GT),
+                clone = ifelse(compartment == 'normal', 1, clone),
+                clone = as.factor(clone)
+            ) %>%
+            {setNames(.$clone, .$name)}
+    }
 
     if (is.null(pal_clone)) {
         getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 10, 'Spectral'))
@@ -1443,9 +1295,9 @@ plot_phylo_heatmap = function(
             annot = unname(clone_dict)
         ) %>%
         mutate(cell = factor(cell, cell_order)) %>%
-        annot_bar(transpose = T, legend = clone_legend, legend_title = 'Genotype', size = size) +
-        scale_fill_manual(values = pal_clone)
-
+        filter(!is.na(cell)) %>%
+        annot_bar(transpose = T, legend = clone_legend, pal_annot = pal_clone, legend_title = geno_title, size = size)
+    
     # external annotation
     if (!is.null(annot)) {
         
@@ -1453,9 +1305,9 @@ plot_phylo_heatmap = function(
                 cell = names(annot),
                 annot = unname(annot)
             ) %>%
-            filter(cell %in% joint_post$cell) %>%
+            filter(cell %in% cell_order) %>%
             mutate(cell = factor(cell, cell_order)) %>%
-            annot_bar(transpose = T, pal_annot = pal_annot, legend_title = annot_title, size = size)
+            annot_bar(transpose = T, pal_annot = pal_annot, legend_title = annot_title, size = size, annot_scale = annot_scale)
 
         if (geno_bar) {
             (p_tree | p_geno | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')
@@ -1467,4 +1319,60 @@ plot_phylo_heatmap = function(
     } else {
         (p_tree | p_segs) + plot_layout(widths = c(tree_height, 15), guides = 'collect')
     }
+}
+
+cnv_heatmap = function(segs) {
+    
+    gaps_hg38_filtered = gaps_hg38 %>% filter(end - start > 1e6)
+    
+    ggplot(
+        segs
+    ) +
+    geom_rect(
+        data = chrom_sizes_hg38,
+        aes(xmin = 0, xmax = size, ymin = -0.5, ymax = 0.5, fill = NA)
+    ) +
+    geom_rect(
+        aes(xmin = seg_start, xmax = seg_end, ymin = -0.5, ymax = 0.5, fill = cnv_state)
+    ) +
+    geom_rect(
+        inherit.aes = F,
+        data = gaps_hg38_filtered,
+        aes(xmin = start, 
+            xmax = end,
+            ymin = -0.5,
+            ymax = 0.5),
+        fill = 'white'
+    ) +
+    geom_rect(
+        inherit.aes = F,
+        data = gaps_hg38_filtered,
+        aes(xmin = start, 
+            xmax = end,
+            ymin = -0.5,
+            ymax = 0.5),
+        fill = 'gray',
+        alpha = 0.5
+    ) +
+    theme_classic() +
+    theme(
+        panel.spacing = unit(0, 'mm'),
+        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+        strip.background = element_blank(),
+        strip.text.y = element_text(angle = 0),
+        axis.text = element_blank(),
+        plot.margin = margin(0, 0, 0, 0),
+        axis.title.x = element_blank(),
+        axis.ticks.y = element_blank()
+    ) +
+    facet_grid(group~CHROM, space = 'free_x', scale = 'free') +
+    scale_fill_manual(
+        values = c('neu' = 'white', cnv_colors[names(cnv_colors) != 'neu']),
+        na.value = 'white',
+        limits = force,
+        labels = cnv_labels,
+        na.translate = F,
+        name = 'States'
+    ) +
+    scale_x_continuous(expand = expansion(add = 0))
 }

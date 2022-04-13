@@ -7,12 +7,12 @@
 combine_bulk(allele_bulk, exp_bulk)
 }
 \arguments{
-\item{allele_bulk}{bulk allele profile}
+\item{allele_bulk}{dataframe Bulk allele profile}
 
-\item{genetic_map}{a genetic map dataframe}
+\item{genetic_map}{dataframe Genetic map}
 }
 \value{
-a dataframe of bulk allele and bulk profile
+dataframe Pseudobulk allele and expression profile
 }
 \description{
 Combine allele and expression pseudobulks

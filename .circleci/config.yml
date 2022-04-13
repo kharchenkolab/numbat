@@ -7,6 +7,9 @@ jobs:
             _R_CHECK_FORCE_SUGGESTS_: false
     steps:
       - checkout
+      - run: 
+          name: Install matrixStats v0.61.0 
+          command: R -e "install.packages('https://cran.rstudio.com/src/contrib/matrixStats_0.61.0.tar.gz', repos=NULL, type='source')"  
       - run:
           name: Install package dependencies
           command: |

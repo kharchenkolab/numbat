@@ -9,7 +9,9 @@ analyze_bulk(
   t = 1e-05,
   gamma = 20,
   theta_min = 0.08,
+  logphi_min = 0.25,
   lambda = 1,
+  min_genes = 10,
   exp_only = FALSE,
   allele_only = FALSE,
   retest = TRUE,
@@ -24,15 +26,15 @@ analyze_bulk(
 )
 }
 \arguments{
-\item{bulk}{pesudobulk dataframe}
+\item{bulk}{dataframe Pesudobulk profile}
 
-\item{t}{transition probability}
+\item{t}{numeric Transition probability}
 
-\item{gamma}{dispersion parameter for the Beta-Binomial allele model}
+\item{gamma}{numeric Dispersion parameter for the Beta-Binomial allele model}
 
-\item{theta_min}{minimum imbalance threshold}
+\item{theta_min}{numeric Minimum imbalance threshold}
 
-\item{lambda}{phase switch rate}
+\item{lambda}{numeric Phase switch rate}
 
 \item{exp_only}{whether to run expression-only HMM}
 

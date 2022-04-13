@@ -6,12 +6,6 @@
 \usage{
 annot_haplo_segs(bulk)
 }
-\arguments{
-\item{bulk}{a pseudobulk dataframe}
-}
-\value{
-a pseudobulk dataframe
-}
 \description{
 Annotate haplotype segments after HMM decoding
 }

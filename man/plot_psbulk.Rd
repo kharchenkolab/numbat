@@ -8,7 +8,7 @@ plot_psbulk(
   bulk,
   use_pos = FALSE,
   allele_only = FALSE,
-  min_LLR = 10,
+  min_LLR = 0,
   min_depth = 8,
   exp_limit = 2,
   phi_mle = TRUE,
@@ -19,30 +19,30 @@ plot_psbulk(
 )
 }
 \arguments{
-\item{bulk}{pseudobulk dataframe}
+\item{bulk}{dataframe Pseudobulk profile}
 
-\item{use_pos}{use marker position instead of index as x coordinate}
+\item{use_pos}{logical Use marker position instead of index as x coordinate}
 
-\item{allele_only}{only plot alleles}
+\item{allele_only}{logical Only plot alleles}
 
-\item{min_LLR}{LLR threshold for event filtering}
+\item{min_LLR}{numeric LLR threshold for event filtering}
 
-\item{min_depth}{minimum coverage depth for a SNP to be plotted}
+\item{min_depth}{numeric Minimum coverage depth for a SNP to be plotted}
 
-\item{exp_limit}{expression logFC axis limit}
+\item{exp_limit}{numeric Expression logFC axis limit}
 
-\item{phi_mle}{whether to plot estimates of segmental expression fold change}
+\item{phi_mle}{logical Whether to plot estimates of segmental expression fold change}
 
-\item{theta_roll}{whether to plot rolling estimates of allele imbalance}
+\item{theta_roll}{logical Whether to plot rolling estimates of allele imbalance}
 
-\item{dot_size}{size of marker dots}
+\item{dot_size}{numeric Size of marker dots}
 
-\item{dot_alpha}{transparency of the marker dots}
+\item{dot_alpha}{numeric Transparency of the marker dots}
 
-\item{legend}{whether to show legend}
+\item{legend}{logical Whether to show legend}
 }
 \value{
-a ggplot object
+ggplot Plot of pseudobulk HMM profile
 }
 \description{
 plot a pseudobulk HMM profile

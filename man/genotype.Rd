@@ -12,6 +12,12 @@ genotype(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE)
 \item{samples}{list of strings}
 
 \item{vcfs}{vcfR objects}
+
+\item{outdir}{output directory}
+
+\item{het_only}{boolean (default=FALSE)}
+
+\item{chr_prefix}{boolean (default=TRUE)}
 }
 \value{
 a status code

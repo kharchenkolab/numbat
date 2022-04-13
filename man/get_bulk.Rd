@@ -8,24 +8,26 @@ get_bulk(
   count_mat,
   lambdas_ref,
   df_allele,
-  gtf_transcript,
+  gtf,
   genetic_map,
   min_depth = 0,
-  lambda = 2,
+  lambda = 1,
   verbose = TRUE
 )
 }
 \arguments{
-\item{count_mat}{observed gene count matrices}
+\item{count_mat}{dgCMatrix Gene expression counts}
 
-\item{lambdas_ref}{expression values in reference profile}
+\item{lambdas_ref}{matrix Reference expression profiles}
 
-\item{df_allele}{allele dataframe}
+\item{df_allele}{dataframe Single-cell allele counts}
 
-\item{gtf_transcript}{transcript dataframe}
+\item{gtf}{dataframe Transcript gtf}
+
+\item{genetic_map}{dataframe Genetic map}
 }
 \value{
-a dataframe of bulk gene expression and allele profile
+dataframe Pseudobulk gene expression and allele profile
 }
 \description{
 Aggregate into combined bulk expression and allele profile

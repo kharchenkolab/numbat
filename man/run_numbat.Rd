@@ -8,81 +8,90 @@ run_numbat(
   count_mat,
   lambdas_ref,
   df_allele,
-  gtf_transcript,
+  gtf,
   genetic_map,
   out_dir = "./",
   max_iter = 2,
+  max_nni = 100,
   t = 1e-05,
   gamma = 20,
-  min_LLR = 50,
+  min_LLR = 40,
   alpha = 1e-04,
   eps = 1e-05,
-  max_entropy = 0.6,
+  max_entropy = 0.5,
   init_k = 3,
-  sample_size = 1e+05,
   min_cells = 10,
-  max_cost = ncol(count_mat) * 0.3,
+  tau = 0.3,
+  max_cost = ncol(count_mat) * tau,
   min_depth = 0,
   common_diploid = TRUE,
-  ncores = 30,
+  min_overlap = 0.45,
+  ncores = 1,
+  ncores_nni = ncores,
   exp_model = "lnpois",
+  random_init = FALSE,
   verbose = TRUE,
   diploid_chroms = NULL,
   use_loh = NULL,
-  exclude_normal = FALSE,
+  min_genes = 10,
   skip_nj = FALSE,
-  multi_allelic = TRUE,
-  plot = TRUE
+  multi_allelic = FALSE,
+  p_multi = 1 - alpha,
+  hclust_only = FALSE,
+  plot = TRUE,
+  check_converge = FALSE
 )
 }
 \arguments{
-\item{count_mat}{raw count matrices where rownames are genes and column names are cells}
+\item{count_mat}{dgCMatrix Raw count matrices where rownames are genes and column names are cells}
 
-\item{lambdas_ref}{either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names}
+\item{lambdas_ref}{matrix Either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names}
 
-\item{df_allele}{dataframe of allele counts per cell, produced by preprocess_allele}
+\item{df_allele}{dataframe Allele counts per cell, produced by preprocess_allele}
 
-\item{gtf_transcript}{gtf dataframe of transcripts}
+\item{gtf}{dataframe GTF of transcripts}
 
-\item{genetic_map}{a genetic map dataframe}
+\item{genetic_map}{dataframe A genetic map dataframe}
 
-\item{out_dir}{output directory}
+\item{out_dir}{string Output directory}
 
-\item{max_iter}{maximum number of iterations to run the phyologeny optimization}
+\item{max_iter}{integer Maximum number of iterations to run the phyologeny optimization}
 
-\item{t}{transition probability}
+\item{max_nni}{integer Maximum number of iterations to run NNI in the ML phylogeny inference}
 
-\item{gamma}{dispersion parameter for the Beta-Binomial allele model}
+\item{t}{numeric Transition probability}
 
-\item{min_LLR}{minimum LLR to filter CNVs by}
+\item{gamma}{numeric Dispersion parameter for the Beta-Binomial allele model}
 
-\item{eps}{convergence threshold for ML tree search}
+\item{min_LLR}{numeric Minimum LLR to filter CNVs}
 
-\item{max_entropy}{entorpy threshold to filter CNVs by}
+\item{eps}{numeric Convergence threshold for ML tree search}
 
-\item{init_k}{number of clusters in the initial clustering}
+\item{max_entropy}{numeric Entropy threshold to filter CNVs}
 
-\item{sample_size}{subsampling size}
+\item{init_k}{integer Number of clusters in the initial clustering}
 
-\item{min_cells}{minimum number of cells to run HMM on}
+\item{min_cells}{integer Minimum number of cells to run HMM on}
 
-\item{max_cost}{maximum cost to simplify the phylogeny}
+\item{tau}{numeric Factor to determine max_cost as a function of the number of cells (0-1)}
 
-\item{common_diploid}{whether to find common diploid regions in a group of peusdobulks}
+\item{max_cost}{numeric Likelihood threshold to collapse internal branches}
 
-\item{ncores}{number of threads to use}
+\item{common_diploid}{logical Whether to find common diploid regions in a group of peusdobulks}
 
-\item{diploid_chroms}{known diploid chromosomes}
+\item{ncores}{integer Number of threads to use}
 
-\item{use_loh}{whether to include LOH regions in the expression baseline}
+\item{ncores_nni}{integer Number of threads to use for NNI}
 
-\item{exclude_normal}{whether to exclude normal cells in the tree construction}
+\item{diploid_chroms}{vector Known diploid chromosomes}
 
-\item{skip_nj}{whether to skip NJ tree construction and only use UPGMA}
+\item{use_loh}{logical Whether to include LOH regions in the expression baseline}
 
-\item{multi_allelic}{whether to call multi-allelic CNVs}
+\item{skip_nj}{logical Whether to skip NJ tree construction and only use UPGMA}
 
-\item{min_dpeth}{minimum allele depth}
+\item{multi_allelic}{logical Whether to call multi-allelic CNVs}
+
+\item{min_dpeth}{integer Minimum allele depth}
 }
 \value{
 a status code

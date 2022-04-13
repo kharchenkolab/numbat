@@ -7,14 +7,14 @@
 fit_gpois(Y_obs, lambda_ref, d)
 }
 \arguments{
-\item{Y_obs}{gene expression counts}
+\item{Y_obs}{numeric vector Gene expression counts}
 
-\item{lambda_ref}{reference expression levels}
+\item{lambda_ref}{numeric vector Reference expression levels}
 
-\item{d}{total library size}
+\item{d}{numeric Total library size}
 }
 \value{
-MLE of alpha and beta
+numeric MLE of alpha and beta
 }
 \description{
 fit a Gamma-Poisson model by maximum likelihood
