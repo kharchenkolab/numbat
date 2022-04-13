@@ -131,14 +131,25 @@ out = run_numbat(
 
 ## Run parameters
 There are a few parameters you can consider tuning to a specific dataset. 
+  
+*CNV detection*
 - `t`: the transition probability used in the HMM. A lower `t` is more appropriate for tumors with more complex copy number landscapes (from which you can expect more breakpoints) and is sometimes better for detecting subclonal events. A higher `t` is more effective for controlling false-positive rates of CNV calls.
-- `max_iter`: maximum number of iterations. Numbat iteratively optimizes the phylogeny and copy number estimations. In practice, we find that results after 2 iterations are usually stable.  
+- `gamma`: Overdispersion in allele counts (default: 20). For 10x data, 20 is recommended. Non-UMI protocols (e.g. SMART-Seq) usually produce noisier allele data, and a smaller value of gamma is recommended (e.g. 5). 
+- `min_cells`: minimum number of cells for which an pseudobulk HMM will be run. If the allele coverage per cell is very sparse for a dataset, then I would consider setting this threshold to be higher.
+- `multi_allelic`: Whether to enable calling of multiallelic CNVs
+  
+*CNV filtering*
 - `min_LLR`: minimum log-likelihood ratio threshold to filter CNVs by. To ensure quality of phylogeny inference, we only use confident CNVs to reconstruct the phylogeny. By default, this threshold is 50.
 - `max_entropy`: another criteria that we use to filter CNVs before phylogeny construction. The entropy of the binary posterior quantifies the uncertainty of an event across single cells. The value can be from 0 to 1 where 1 is the least stringent.
-- `max_cost`: the likelihood cost threshold by which to simplify the phylogeny. A higher cost leads to less clones with distinct genotypes. Usually, this is a function of the dataset size, and is by default 0.3 times the number of cells.
-- `min_cells`: minimum number of cells for which an pseudobulk HMM will be run. If the allele coverage per cell is very sparse for a dataset, then I would consider setting this threshold to be higher.
+  
+*Iterative optimization*
 - `init_k`: initial number of subclusters to use for the `hclust` initialization. Numbat by default uses hierarchical clustering (`hclust`) of smoothed expression values to approximate an initial phylogeny. This will cut the initial tree into k clusters. More clusters means more resolution at the initial stage for subclonal CNV detection. By default, we set init_k to be 3.
-- `skip_nj`: if the number of cells is extremely large (>100k), the initial NJ tree construction may take a long time. You can set skip_nj to be TRUE to only use the faster UPGMA as seed for maximum likelihood tree search.
+- `max_iter`: maximum number of iterations. Numbat iteratively optimizes the phylogeny and copy number estimations. In practice, we find that results after 2 iterations are usually stable.  
+- `check_convergence`: stop iterating if the results have converged (based on consensus CNV segments).
+
+*Parallelization*
+- `ncores`: number of cores to use for single-cell CNV testing
+- `ncores_nni`: number of cores to use for phylogeny inference
   
 # Understanding results
 A detailed vignette on how to interpret and visualize Numbat results is available:  

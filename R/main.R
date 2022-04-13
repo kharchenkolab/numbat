@@ -114,7 +114,9 @@ run_numbat = function(
         df_allele = df_allele %>% filter(!cell %in% zero_cov)
     }
 
-    if (length(intersect(colnames(count_mat), unique(df_allele$cell))) == 0){
+    # only keep cells that have a transcriptome
+    df_allele = df_allele %>% filter(cell %in% colnames(count_mat))
+    if (nrow(df_allele) == 0){
         stop('No matching cell names between count_mat and df_allele')
     }
 
@@ -227,7 +229,7 @@ run_numbat = function(
         if (all(segs_consensus$cnv_state_post == 'neu')) {
             msg = 'No CNV remains after filtering - terminating.'
             log_message(msg)
-            stop(msg)
+            return(msg)
         }
 
         # retest consensus CNVs on clones
@@ -280,7 +282,7 @@ run_numbat = function(
         log_message('Evaluating CNV per cell ..', verbose = verbose)
         log_mem()
 
-        exp_post_res = get_exp_post(
+        exp_post = get_exp_post(
             segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
             count_mat,
             lambdas_ref,
@@ -288,11 +290,6 @@ run_numbat = function(
             gtf = gtf,
             ncores = ncores)
 
-        exp_post = exp_post_res$exp_post
-        exp_sc = exp_post_res$exp_sc
-
-        fwrite(exp_sc, glue('{out_dir}/exp_sc_{i}.tsv.gz'), sep = '\t')
-        
         allele_post = get_allele_post(
             bulk_subtrees,
             segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
@@ -313,7 +310,6 @@ run_numbat = function(
 
         if (multi_allelic) {
             log_message('Expanding allelic states..', verbose = verbose)
-            # expand multi-allelic segments into multiple CNV states
             exp_post = expand_states(exp_post, segs_consensus)
             allele_post = expand_states(allele_post, segs_consensus)
             joint_post = expand_states(joint_post, segs_consensus)
@@ -333,9 +329,9 @@ run_numbat = function(
             filter(avg_entropy < max_entropy & LLR > min_LLR)
 
         if (nrow(joint_post_filtered) == 0) {
-            msg = 'No CNVs remain after filtering - terminating.'
+            msg = 'No CNV remains after filtering - terminating.'
             log_message(msg)
-            stop(msg)
+            return(msg)
         } else {
             n_cnv = length(unique(joint_post_filtered$seg))
             log_message(glue('Using {n_cnv} CNVs to construct phylogeny'), verbose = verbose)
@@ -1135,7 +1131,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
         mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
         mutate(seg_label = factor(seg_label, unique(seg_label)))
     
-    return(list('exp_post' = exp_post, 'exp_sc' = exp_sc))
+    return(exp_post)
 }
 
 #' Do bayesian averaging to get posteriors
@@ -1186,9 +1182,8 @@ get_allele_post = function(bulks, segs_consensus, df_allele, naive = FALSE) {
     }
 
     # nothing to test
-    if (all(segs_consensus$cnv_state_post %in% c('neu', 'bdel', 'bamp'))) {
-        log_message('No allelically imbalanced CNVs - skip allele posteriors')
-        return(data.frame())
+    if (all(segs_consensus$cnv_state_post == 'neu')) {
+        stop('No CNVs')
     }
 
     if (naive) {
@@ -1211,7 +1206,7 @@ get_allele_post = function(bulks, segs_consensus, df_allele, naive = FALSE) {
             snp_seg %>% select(snp_id, snp_index, haplo_post, seg = seg_cons, cnv_state),
             by = c('snp_id')
         ) %>%
-        filter(!cnv_state %in% c('neu', 'bamp', 'bdel')) %>%
+        filter(cnv_state != 'neu') %>%
         mutate(
             major_count = ifelse(haplo_post == 'major', AD, DP - AD),
             minor_count = DP - major_count,
