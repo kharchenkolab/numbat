@@ -38,6 +38,7 @@ Imports:
     Rcpp,
     reshape2,
     RhpcBLASctl,
+    Rsamtools,
     stringr,
     tidygraph,
     tidyr,
