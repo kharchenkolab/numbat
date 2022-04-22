@@ -356,7 +356,7 @@ run_numbat = function(
         # contruct initial tree
         dist_mat = parallelDist::parDist(rbind(P, 'outgroup' = 1), threads = ncores)
 
-        treeUPGMA = phangorn::upgma(dist_mat) %>%
+        treeUPGMA = upgma(dist_mat) %>%
             ape::root(outgroup = 'outgroup') %>%
             ape::drop.tip('outgroup') %>%
             reorder(order = 'postorder')
@@ -368,7 +368,7 @@ run_numbat = function(
 
         # note that dist_mat gets modified by NJ
         if(!skip_nj){
-            treeNJ = phangorn::NJ(dist_mat) %>%
+            treeNJ = ape::nj(dist_mat) %>%
                 ape::root(outgroup = 'outgroup') %>%
                 ape::drop.tip('outgroup') %>%
                 reorder(order = 'postorder')

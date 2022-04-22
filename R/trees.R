@@ -50,8 +50,6 @@ score_tree = function(tree, P, get_l_matrix = FALSE) {
 #' @export
 perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, verbose = TRUE) {
 
-    RhpcBLASctl::blas_set_num_threads(1)
-    RhpcBLASctl::omp_set_num_threads(1)
     P = as.matrix(P)
     
     converge = FALSE
