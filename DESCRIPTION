@@ -29,6 +29,7 @@ Imports:
     logger,
     magrittr,
     Matrix,
+    phangorn,
     parallel,
     parallelDist,
     patchwork,
