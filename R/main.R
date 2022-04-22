@@ -187,6 +187,7 @@ run_numbat = function(
     ######## Begin iterations ########
     for (i in 1:max_iter) {
 
+
         log_message(glue('Iteration {i}'), verbose = verbose)
         log_mem()
 
@@ -386,6 +387,7 @@ run_numbat = function(
         }
         log_mem()
         
+
         # maximum likelihood tree search with NNI
         tree_list = perform_nni(tree_init, P, ncores = ncores_nni, eps = eps, max_iter = max_nni)
         saveRDS(tree_list, glue('{out_dir}/tree_list_{i}.rds'))
@@ -556,6 +558,7 @@ exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101,
 #' @keywords internal 
 make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, genetic_map, min_depth = 0, ncores = NULL) {
     
+
     if (length(groups) == 0) {
         return(data.frame())
     }
@@ -616,6 +619,7 @@ run_group_hmms = function(
     common_diploid = TRUE, diploid_chroms = NULL, allele_only = FALSE, retest = TRUE, run_hmm = TRUE,
     ncores = NULL, verbose = FALSE, debug = FALSE
 ) {
+
 
     if (nrow(bulks) == 0) {
         return(data.frame())
@@ -681,6 +685,7 @@ run_group_hmms = function(
 #' @return dataframe Consensus segments
 #' @export
 get_segs_consensus = function(bulks, min_LLR = 40, min_overlap = 0.45) {
+
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -1336,6 +1341,7 @@ retest_bulks = function(bulks, segs_consensus = NULL,
     if (is.null(segs_consensus)) {
         segs_consensus = get_segs_consensus(bulks)
     }
+
 
     # default
     if (is.null(use_loh)) {

@@ -17,8 +17,12 @@ Numbat can be used to:
 
 ![image](https://user-images.githubusercontent.com/13375875/153020818-2e782689-09db-427f-ad98-2c175021a936.png)
 
-Numbat does not require paired DNA or genotype data and operates solely on the donor scRNA-data data (for example, 10x Cell Ranger output).
+Numbat does not require paired DNA or genotype data and operates solely on the donor scRNA-data data (for example, 10x Cell Ranger output). For details of the method, please checkout our preprint:
 
+[Teng Gao, Ruslan Soldatov, Hirak Sarkar, et al. Haplotype-enhanced inference of somatic copy number profiles from single-cell transcriptomes. bioRxiv 2022.](https://www.biorxiv.org/content/10.1101/2022.02.07.479314v1)
+
+# Table of contents
+  
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Preparing data](#preparing-data)
@@ -32,7 +36,7 @@ Numbat uses cellsnp-lite for generating SNP pileup data and eagle2 for phasing. 
 2. [eagle2](https://alkesgroup.broadinstitute.org/Eagle/)
 3. [samtools](http://www.htslib.org/)
 
-Additionally, numbat needs a common SNP VCF and phasing reference panel. You can use the 1000 Genome reference below:
+Additionally, Numbat needs a common SNP VCF and phasing reference panel. You can use the 1000 Genome reference below:
 
 4. 1000G SNP VCF
 ```
@@ -48,9 +52,10 @@ wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
 # hg19
 wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
 ```
+**Note**: currently Numbat only supports human hg19 and hg38 reference.
 
 # Installation
-You can nstall the numbat R package via:
+You can install the numbat R package via:
 ```
 devtools::install_github("https://github.com/kharchenkolab/numbat")
 ```
@@ -75,8 +80,7 @@ optional arguments:
   --samples SAMPLES    Sample names, comma delimited
   --bams BAMS          BAM files, one per sample, comma delimited
   --barcodes BARCODES  Cell barcode files, one per sample, comma delimited
-  --gmap GMAP          Path to genetic map provided by Eagle2
-  --eagle EAGLE        Path to Eagle2 binary file
+  --gmap GMAP          Path to genetic map provided by Eagle2 (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)
   --snpvcf SNPVCF      SNP VCF for pileup
   --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
   --outdir OUTDIR      Output directory
@@ -93,14 +97,14 @@ This will produce a file named `{sample}_allele_counts.tsv.gz` under the specifi
 
 2. Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.
   
-3. Prepare the expression reference, which is a gene by cell type matrix of normalized expression values (not raw counts!). For a quick start, you may use a our HCA collection (`ref_hca`) that ships with the package. If you have matched normal cells (ideally, of various cell type) from the same patient or dataset and would like to make your own references, you may use this utility function:
+3. Prepare the expression reference, which is a gene by cell type matrix of normalized expression values (raw gene counts divided by total counts). For a quick start, you may use a our HCA collection (`ref_hca`) that ships with the package. If you have matched normal cells (ideally, of various cell type) from the same patient or dataset and would like to make your own references, you may use this utility function:
 ```
 # count_mat is a gene x cell raw count matrices
-# cell_annot is a dataframe with columns "gene" and "cell_type"
+# cell_annot is a dataframe with columns "cell" and "cell_type"
 ref_internal = aggregate_counts(count_mat, cell_annot)$exp_mat
 ```
   
-# Running numbat
+# Running Numbat
   
 In this example (ATC2 from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2)), the gene expression count matrix and allele dataframe are already prepared for you.
 ```
@@ -118,11 +122,13 @@ out = run_numbat(
     max_iter = 2,
     min_LLR = 50,
     init_k = 3,
-    ncores = 20,
+    ncores = 10,
     plot = TRUE,
     out_dir = './test'
 )
 ```
+**Note**: If you wish to use your own custom reference, please use the `aggregate_counts` function as per the example in [preparing data](#preparing-data).
+
 ## Run parameters
 There are a few parameters you can consider tuning to a specific dataset. 
   
@@ -149,8 +155,8 @@ There are a few parameters you can consider tuning to a specific dataset.
 - `ncores_nni`: number of cores to use for phylogeny inference
   
 # Understanding results
-A detailed vignette on how to interpret and visualize numbat results is available:  
-- [Interpreting numbat results](https://kharchenkolab.github.io/Numbat)
+A detailed vignette on how to interpret and visualize Numbat results is available:  
+- [Interpreting Numbat results](https://kharchenkolab.github.io/numbat)
   
 Numbat generates a number of files in the output folder. The file names are post-fixed with the `i`th iteration of phylogeny optimization. Here is a detailed list:
 - `gexp_roll_wide.tsv.gz`: window-smoothed normalized expression profiles of single cells
