@@ -85,6 +85,7 @@ run_numbat = function(
         glue('common_diploid = {common_diploid}'),
         glue('tau = {tau}'),
         glue('check_convergence = {check_convergence}'),
+        glue('plot = {plot}'),
         'Input metrics:',
         glue('{ncol(count_mat)} cells'),
         sep = "\n"

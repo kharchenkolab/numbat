@@ -1155,7 +1155,7 @@ plot_phylo_heatmap = function(
     # plot phylogeny 
     p_tree = gtree %>% 
             to_phylo() %>%
-            ggtree(ladderize = T, size = branch_width) +
+            ggtree(ladderize = TRUE, size = branch_width) +
             # geom_rootedge(size = branch_width) +
             theme(
                 plot.margin = margin(0,1,0,0, unit = 'mm'),
