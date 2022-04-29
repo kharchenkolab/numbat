@@ -6,6 +6,16 @@
 \usage{
 get_joint_post(exp_post, allele_post, segs_consensus)
 }
+\arguments{
+\item{exp_post}{dataframe Expression single-cell CNV posteriors}
+
+\item{allele_post}{dataframe Allele single-cell CNV posteriors}
+
+\item{segs_consensus}{dataframe Consensus CNV segments}
+}
+\value{
+dataframe Joint single-cell CNV posteriors
+}
 \description{
 get joint posteriors
 }

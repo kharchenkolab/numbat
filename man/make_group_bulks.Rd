@@ -9,12 +9,31 @@ make_group_bulks(
   count_mat,
   df_allele,
   lambdas_ref,
-  gtf_transcript,
+  gtf,
   genetic_map,
   min_depth = 0,
-  sc_refs = NULL,
   ncores = NULL
 )
+}
+\arguments{
+\item{groups}{list Contains fields named "sample", "cells", "size", "members"}
+
+\item{count_mat}{dgCMatrix Gene counts}
+
+\item{df_allele}{dataframe Alelle counts}
+
+\item{lambdas_ref}{matrix Reference expression profiles}
+
+\item{gtf}{dataframe Transcript GTF}
+
+\item{genetic_map}{dataframe Genetic map}
+
+\item{min_depth}{integer Minimum allele depth to include}
+
+\item{ncores}{integer Number of cores}
+}
+\value{
+dataframe Pseudobulk profiles
 }
 \description{
 Make a group of pseudobulks

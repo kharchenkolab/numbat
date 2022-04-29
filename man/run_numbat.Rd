@@ -8,33 +8,38 @@ run_numbat(
   count_mat,
   lambdas_ref,
   df_allele,
-  gtf_transcript,
+  gtf,
   genetic_map,
   out_dir = "./",
   max_iter = 2,
   max_nni = 100,
   t = 1e-05,
   gamma = 20,
-  min_LLR = 50,
+  min_LLR = 40,
   alpha = 1e-04,
   eps = 1e-05,
-  max_entropy = 0.6,
+  max_entropy = 0.5,
   init_k = 3,
   min_cells = 10,
-  max_cost = ncol(count_mat) * 0.3,
+  tau = 0.3,
+  max_cost = ncol(count_mat) * tau,
   min_depth = 0,
   common_diploid = TRUE,
   min_overlap = 0.45,
   ncores = 1,
   ncores_nni = ncores,
   exp_model = "lnpois",
+  random_init = FALSE,
   verbose = TRUE,
   diploid_chroms = NULL,
   use_loh = NULL,
+  min_genes = 10,
   skip_nj = FALSE,
   multi_allelic = FALSE,
-  p_multi = 0.995,
-  plot = TRUE
+  p_multi = 1 - alpha,
+  hclust_only = FALSE,
+  plot = TRUE,
+  check_converge = FALSE
 )
 }
 \arguments{
@@ -44,13 +49,15 @@ run_numbat(
 
 \item{df_allele}{dataframe Allele counts per cell, produced by preprocess_allele}
 
-\item{gtf_transcript}{dataframe GTF of transcripts}
+\item{gtf}{dataframe GTF of transcripts}
 
 \item{genetic_map}{dataframe A genetic map dataframe}
 
 \item{out_dir}{string Output directory}
 
 \item{max_iter}{integer Maximum number of iterations to run the phyologeny optimization}
+
+\item{max_nni}{integer Maximum number of iterations to run NNI in the ML phylogeny inference}
 
 \item{t}{numeric Transition probability}
 
@@ -66,11 +73,15 @@ run_numbat(
 
 \item{min_cells}{integer Minimum number of cells to run HMM on}
 
-\item{max_cost}{numeric Maximum cost to simplify the phylogeny}
+\item{tau}{numeric Factor to determine max_cost as a function of the number of cells (0-1)}
+
+\item{max_cost}{numeric Likelihood threshold to collapse internal branches}
 
 \item{common_diploid}{logical Whether to find common diploid regions in a group of peusdobulks}
 
 \item{ncores}{integer Number of threads to use}
+
+\item{ncores_nni}{integer Number of threads to use for NNI}
 
 \item{diploid_chroms}{vector Known diploid chromosomes}
 

@@ -74,56 +74,6 @@ aggregate_counts = function(count_mat, cell_annot, verbose = T) {
     return(list('exp_mat' = as.matrix(exp_mat_clust), 'count_mat' = as.matrix(count_mat_clust)))
 }
 
-#' fit reference weights for a pseudobulk expression profile
-#' @param Y_obs numeric vector Gene expression counts
-#' @param lambdas_ref matrix Reference expression profiles
-#' @param d numeric Total library size
-#' @param gtf dataframe Transcript gtf
-#' @param min_lambda numeric Expression level threshold to filter genes
-#' @return list Fitted reference weights and expression model parameters
-#' @keywords internal
-fit_multi_ref = function(Y_obs, lambdas_ref, d, gtf, min_lambda = 2e-6, verbose = FALSE) {
-
-    if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
-        return(list('w' = 1, 'lambdas_bar' = lambdas_ref))
-    }
-
-    # take the union of expressed genes across cell type
-    genes_common = gtf$gene %>% 
-        intersect(names(Y_obs)) %>%
-        intersect(rownames(lambdas_ref)[rowMeans(lambdas_ref) > min_lambda])
-
-    if (verbose) {
-        log_info(glue('{length(genes_common)} genes common in reference and observation'))
-    }
-
-    Y_obs = Y_obs[genes_common]
-    lambdas_ref = lambdas_ref[genes_common,,drop=FALSE]
-
-    n_ref = ncol(lambdas_ref)
-    
-    fit = optim(
-        fn = function(params) {
-            alpha = params[1]
-            w = params[2:length(params)]
-            -sum(dgpois(Y_obs, shape = alpha, rate = 1/(d * (lambdas_ref %*% w)), log = TRUE))
-        },
-        method = 'L-BFGS-B',
-        par = c(1, rep(1/n_ref, n_ref)),
-        lower = c(0.01, rep(1e-6, n_ref))
-    )
-
-    alpha = fit$par[1]
-    w = fit$par[2:length(fit$par)]
-    beta = 1/sum(w)
-    w = w * beta
-    w = setNames(w, colnames(lambdas_ref))
-
-    lambdas_bar = lambdas_ref %*% w %>% {setNames(as.vector(.), rownames(.))}
-
-    return(list('alpha' = alpha, 'beta' = beta, 'w' = w, 'lambdas_bar' = lambdas_bar))
-}
-
 #' filtering, normalization and capping
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
@@ -346,10 +296,9 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #' @param df_allele dataframe Single-cell allele counts
 #' @param gtf dataframe Transcript gtf
 #' @param genetic_map dataframe Genetic map
-#' @param sc_refs named vector Single cell reference matches
 #' @return dataframe Pseudobulk gene expression and allele profile
 #' @export
-get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, sc_refs = NULL, min_depth = 0, lambda = 1, verbose = TRUE) {
+get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_depth = 0, lambda = 1, verbose = TRUE) {
 
     if (nrow(df_allele) == 0) {
         stop('empty allele dataframe - check cell names')
@@ -390,6 +339,12 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, sc_refs
         mutate(CHROM = factor(as.integer(CHROM)))
 }
 
+#' Fit a reference profile from multiple references using constrained least square
+#' @param Y_obs vector 
+#' @param lambdas_ref named vector 
+#' @param gtf dataframe 
+#' @return fitted expression profile
+#' @keywords internal
 fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FALSE) {
 
     if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
@@ -521,7 +476,7 @@ analyze_bulk = function(
     }
 
     # update transition probablity
-    bulk = bulk %>% mutate(p_s = switch_prob_cm(inter_snp_cm, lambda = lambda))
+    bulk = bulk %>% mutate(p_s = switch_prob_cm(inter_snp_cm, lambda = UQ(lambda)))
 
     if (exp_only | allele_only) {
         bulk$diploid = TRUE
@@ -568,8 +523,7 @@ analyze_bulk = function(
                     exp_only = exp_only,
                     allele_only = allele_only,
                     classify_allele = classify_allele,
-                    phasing = phasing,
-                    exp_model = 'lnpois'
+                    phasing = phasing
                 )
             ) %>% 
             mutate(cnv_state = str_remove(state, '_down|_up')) %>%
@@ -590,7 +544,7 @@ analyze_bulk = function(
 
         segs_post = retest_cnv(
             bulk, gamma = gamma, theta_min = theta_min,
-            logphi_min = logphi_min, exp_model = 'lnpois',
+            logphi_min = logphi_min,
             allele_only = allele_only)
         
         bulk = bulk %>% 
@@ -609,7 +563,7 @@ analyze_bulk = function(
             )) %>%
             mutate(state_post = str_remove(state_post, '_NA'))
 
-        # note that this uses restest cnv states
+        # note that this uses retest cnv states
         bulk = bulk %>% classify_alleles()
 
         bulk = annot_theta_roll(bulk)
@@ -662,12 +616,11 @@ analyze_bulk = function(
 
 #' retest CNVs in a pseudobulk
 #' @param bulk pesudobulk dataframe
-#' @param exp_model model for gene expression - Poisson-Lognormal or Gamma-Poisson
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param allele_only whether to retest only using allele data
 #' @return a dataframe of segments with CNV posterior information
 #' @export
-retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE) {
+retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE) {
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     
@@ -713,8 +666,7 @@ retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min =
                     alpha = alpha[!is.na(Y_obs)],
                     beta = beta[!is.na(Y_obs)],
                     mu = mu[!is.na(Y_obs)],
-                    sig = sig[!is.na(Y_obs)],
-                    model = exp_model
+                    sig = sig[!is.na(Y_obs)]
                 ),
                 P_x_n = pnorm.range(2^(-logphi_min), 2^logphi_min, phi_mle, phi_sigma),
                 P_x_d = pnorm.range(0.1, 2^(-logphi_min), phi_mle, phi_sigma),
@@ -738,8 +690,7 @@ retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min =
                     alpha = alpha[!is.na(Y_obs)],
                     beta = beta[!is.na(Y_obs)],
                     mu = mu[!is.na(Y_obs)],
-                    sig = sig[!is.na(Y_obs)],
-                    model = exp_model
+                    sig = sig[!is.na(Y_obs)]
                 ),
                 LLR_y = calc_allele_LLR(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta_mle, gamma = unique(gamma)),
                 LLR = LLR_x + LLR_y,
@@ -771,12 +722,12 @@ retest_cnv = function(bulk, exp_model = 'lnpois', theta_min = 0.08, logphi_min =
 #' @export
 classify_alleles = function(bulk) {
 
-    if (all(bulk$cnv_state_post %in% c('neu', 'bdel', 'bamp'))) {
+    if (all(bulk$cnv_state_post %in% c('neu'))) {
         return(bulk)
     }
     
     allele_post = bulk %>%
-        filter(!cnv_state_post %in% c('neu', 'bdel', 'bamp')) %>%
+        filter(!cnv_state_post %in% c('neu')) %>%
         filter(!is.na(AD)) %>%
         group_by(CHROM, seg) %>%
         filter(n() > 1) %>%
@@ -1028,7 +979,6 @@ find_common_diploid = function(
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = '1'
     }
-    
     # define balanced regions in each sample
     bulks = mclapply(
         bulks %>% split(.$sample),
@@ -1078,8 +1028,22 @@ find_common_diploid = function(
     segs_consensus = fill_neu_segs(segs_imbal, get_segs_neu(bulks)) %>% mutate(seg = seg_cons)
     bulks = bulks %>% annot_consensus(segs_consensus)
 
-    bulks_bal = bulks %>% filter(cnv_state == 'neu') %>% filter(!is.na(lnFC))
-    segs_bal = bulks_bal %>% count(seg) %>% filter(n > 50) %>% pull(seg) %>% as.character
+    # only keep segments with sufficient SNPs and genes
+    segs_bal = bulks %>% 
+        filter(cnv_state == 'neu') %>%
+        group_by(seg, sample) %>%
+        summarise(
+            n_snps = sum(DP >= 5, na.rm = TRUE),
+            n_genes = sum(!is.na(gene)),
+            .groups = 'drop'
+        ) %>%
+        group_by(seg) %>%
+        filter(any(n_genes > 50 & n_snps > 50)) %>%
+        pull(seg) %>% 
+        as.character %>% 
+        unique()
+
+    bulks_bal = bulks %>% filter(seg %in% segs_bal) %>% filter(!is.na(lnFC))
 
     if (length(segs_bal) == 0) {
         msg = 'No balanced segments, using all segments as baseline'
@@ -1206,8 +1170,7 @@ find_common_diploid = function(
             'segs_consensus' = segs_consensus, 'G' = G, 'tests' = tests,
             'test_dat' = test_dat, 'FC' = FC, 'cliques' = cliques, 'segs_bal' = segs_bal
         )
-    } else {
-        res = list('bamp' = bamp, 'bulks' = bulks)
+        return(res)
     }
 
     return(bulks)
@@ -1410,7 +1373,7 @@ approx_theta_post = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start =
 
 #' Laplace approximation of the posterior of expression fold change phi
 #' @keywords internal
-approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, model = 'lnpois', lower = 0.2, upper = 10, start = 1) {
+approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, lower = 0.2, upper = 10, start = 1) {
     
     if (length(Y_obs) == 0) {
         return(tibble('phi_mle' = 1, 'phi_sigma' = 0))
@@ -1418,11 +1381,7 @@ approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu =
     
     start = max(min(1, upper), lower)
 
-    if (model == 'gpois') {
-        l = function(phi) {l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi)}
-    } else {
-        l = function(phi) {l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = phi)}
-    }
+    l = function(phi) {l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = phi)}
 
     fit = optim(
         start,
@@ -1444,52 +1403,6 @@ approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu =
     }
 
     return(tibble('phi_mle' = mean, 'phi_sigma' = sd))
-}
-
-l_geno_2d = function(g, theta_mle, phi_mle, theta_sigma, phi_sigma) {
-
-    if (g[[1]] == 2 & g[[2]] == 2) {
-        integrand = function(f) {
-            pnorm.range(0, 0.04, theta_mle, theta_sigma) * 
-            dnorm(2^logphi_f(f, g[[1]], g[[2]]), phi_mle, phi_sigma) 
-        }
-    } else {
-        integrand = function(f) {
-            dnorm(theta_f(f, g[[1]], g[[2]])-0.5, theta_mle, theta_sigma) * 
-            dnorm(2^logphi_f(f, g[[1]], g[[2]]), phi_mle, phi_sigma) 
-        }
-    }
-
-    integrate(
-        integrand,
-        lower = 0, 
-        upper = 1
-    )$value
-
-}
-
-p_geno_2d = function(theta_mle, phi_mle, theta_sigma, phi_sigma) {
-    
-    ps = sapply(
-        list(c(3,1), c(2,1), c(2,2), c(1,0), c(2,0)),
-        function(g) {
-            l_geno_2d(g, theta_mle, phi_mle, theta_sigma, phi_sigma)
-        }
-    )
-    
-    ps = ps/sum(ps)
-
-    tibble('p_amp' = ps[1] + ps[2], 'p_bamp' = ps[3], 'p_del' = ps[4], 'p_loh' = ps[5])
-    
-}
-
-logphi_f = function(f, m = 0, p = 1) {
-  log2((2 * (1 - f) + (m + p) * f) / 2)
-}
-
-theta_f = function(f, m = 0, p = 1) {
-    baf = (m * f + 1 - f)/((m * f + 1 - f) + (p * f + 1 - f))
-    baf
 }
 
 #' Helper function to get the internal nodes of a dendrogram and the leafs in each subtree 
@@ -1621,20 +1534,62 @@ calc_allele_LLR = function(pAD, DP, p_s, theta_mle, theta_0 = 0, gamma = 20) {
 #' @param beta numeric Hyperparameter for the gamma poisson model (not used)
 #' @return numeric Log-likelihood ratio
 #' @keywords internal
-calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, alpha = NULL, beta = NULL, model = 'lnpois') {
+calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, alpha = NULL, beta = NULL) {
     if (length(Y_obs) == 0) {
         return(0)
     }
-    if (model == 'gpois') {
-        l_1 = l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = phi_mle)
-        l_0 = l_gpois(Y_obs, lambda_ref, d, alpha, beta, phi = 1)
-    } else {
-        l_1 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = phi_mle)
-        l_0 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = 1)
-    }
+
+    l_1 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = phi_mle)
+    l_0 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = 1)
     
     return(l_1 - l_0)
 }
+
+########################### Misc ############################
+
+#' check the format of a count matrix
+#' @keywords internal
+check_matrix = function(count_mat) {
+    if ('matrix' %in% class(count_mat)) {
+        count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
+    }
+    if (!('dgCMatrix' %in% class(count_mat))) {
+        stop("count_mat is not of class dgCMatrix or matrix")
+    }
+    return(count_mat)
+}
+
+#' Calculate simes' p
+#' @keywords internal
+simes_p = function(p.vals, n_dim) {
+    n_dim * min(sort(p.vals)/seq_along(p.vals))
+}
+
+#' Get the total probability from a region of a normal pdf
+#' @keywords internal
+pnorm.range = function(lower, upper, mu, sd) {
+    if (sd == 0) {
+        return(1)
+    }
+    pnorm(upper, mu, sd) - pnorm(lower, mu, sd)
+}
+
+#' Get the modes of a vector
+#' @keywords internal
+Modes <- function(x) {
+  ux <- unique(x)
+  tab <- tabulate(match(x, ux))
+  ux[tab == max(tab)]
+}
+
+#' calculate entropy for a binary variable 
+#' @keywords internal
+binary_entropy = function(p) {
+    H = -p*log2(p)-(1-p)*log2(1-p)
+    H[is.na(H)] = 0
+    return(H)
+}
+
 
 fit_switch_prob = function(y, d) {
     
@@ -1694,45 +1649,6 @@ switch_prob_mle2 = function(pAD, DP, d, gamma = 20) {
     
 }
 
-########################### Misc ############################
-
-#' Calculate simes' p
-#' @keywords internal
-simes_p = function(p.vals, n_dim) {
-    n_dim * min(sort(p.vals)/seq_along(p.vals))
-}
-
-#' Get the total probability from a region of a normal pdf
-#' @keywords internal
-pnorm.range = function(lower, upper, mu, sd) {
-    if (sd == 0) {
-        return(1)
-    }
-    pnorm(upper, mu, sd) - pnorm(lower, mu, sd)
-}
-
-#' Get the modes of a vector
-#' @keywords internal
-Modes <- function(x) {
-  ux <- unique(x)
-  tab <- tabulate(match(x, ux))
-  ux[tab == max(tab)]
-}
-
-#' calculate entropy for a binary variable 
-#' @keywords internal
-binary_entropy = function(p) {
-    H = -p*log2(p)-(1-p)*log2(1-p)
-    H[is.na(H)] = 0
-    return(H)
-}
-
-rename_seg = function(seg) {
-    chr = str_split(seg, '_')[[1]][1]
-    id = as.integer(str_split(seg, '_')[[1]][2])
-    paste0(chr, letters[id])
-}
-
 read_if_exist = function(f) {
 
     if (file.exists(f)) {
@@ -1746,12 +1662,49 @@ read_if_exist = function(f) {
     }
 }
 
-check_matrix = function(count_mat) {
-    if ('matrix' %in% class(count_mat)) {
-        count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
+
+l_geno_2d = function(g, theta_mle, phi_mle, theta_sigma, phi_sigma) {
+
+    if (g[[1]] == 2 & g[[2]] == 2) {
+        integrand = function(f) {
+            pnorm.range(0, 0.04, theta_mle, theta_sigma) * 
+            dnorm(2^logphi_f(f, g[[1]], g[[2]]), phi_mle, phi_sigma) 
+        }
+    } else {
+        integrand = function(f) {
+            dnorm(theta_f(f, g[[1]], g[[2]])-0.5, theta_mle, theta_sigma) * 
+            dnorm(2^logphi_f(f, g[[1]], g[[2]]), phi_mle, phi_sigma) 
+        }
     }
-    if (!('dgCMatrix' %in% class(count_mat))) {
-        stop("count_mat is not of class dgCMatrix or matrix")
-    }
-    return(count_mat)
+
+    integrate(
+        integrand,
+        lower = 0, 
+        upper = 1
+    )$value
+
+}
+
+p_geno_2d = function(theta_mle, phi_mle, theta_sigma, phi_sigma) {
+    
+    ps = sapply(
+        list(c(3,1), c(2,1), c(2,2), c(1,0), c(2,0)),
+        function(g) {
+            l_geno_2d(g, theta_mle, phi_mle, theta_sigma, phi_sigma)
+        }
+    )
+    
+    ps = ps/sum(ps)
+
+    tibble('p_amp' = ps[1] + ps[2], 'p_bamp' = ps[3], 'p_del' = ps[4], 'p_loh' = ps[5])
+    
+}
+
+logphi_f = function(f, m = 0, p = 1) {
+  log2((2 * (1 - f) + (m + p) * f) / 2)
+}
+
+theta_f = function(f, m = 0, p = 1) {
+    baf = (m * f + 1 - f)/((m * f + 1 - f) + (p * f + 1 - f))
+    baf
 }

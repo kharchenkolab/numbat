@@ -10,8 +10,9 @@ find_common_diploid(
   gamma = 20,
   theta_min = 0.08,
   t = 1e-05,
-  fc_min = 1.25,
+  fc_min = 2^0.25,
   alpha = 1e-04,
+  min_genes = 10,
   ncores = 1,
   debug = FALSE,
   verbose = TRUE

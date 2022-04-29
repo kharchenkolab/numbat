@@ -13,6 +13,9 @@ score_tree(tree, P, get_l_matrix = FALSE)
 
 \item{get_l_matrix}{whether to compute the whole likelihood matrix}
 }
+\value{
+list Likelihood scores of a tree
+}
 \description{
 score a tree based on maximum likelihood
 }

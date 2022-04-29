@@ -4,14 +4,14 @@
 \alias{filter_genes}
 \title{filter for mutually expressed genes}
 \usage{
-filter_genes(count_mat, lambdas_ref, gtf_transcript, verbose = T)
+filter_genes(count_mat, lambdas_ref, gtf, verbose = T)
 }
 \arguments{
 \item{count_mat}{dgCMatrix Gene expression counts}
 
 \item{lambdas_ref}{named numeric vector A reference expression profile}
 
-\item{gtf_transcript}{dataframe Transcript gtf}
+\item{gtf}{dataframe Transcript gtf}
 }
 \value{
 vector Genes that are kept after filtering

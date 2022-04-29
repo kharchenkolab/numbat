@@ -165,14 +165,20 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             self$gexp_roll_wide = read_file(inputfile=glue('{out_dir}/gexp_roll_wide.tsv.gz'), filetype="tsv")
             
             if (!is.null(self$gexp_roll_wide)) {
-                self$gexp_roll_wide = self$gexp_roll_wide %>% tibble::column_to_rownames('V1')
+                if ('V1' %in% colnames(self$gexp_roll_wide)) {
+                    self$gexp_roll_wide = self$gexp_roll_wide %>% rename(cell = V1)
+                }
+                self$gexp_roll_wide = self$gexp_roll_wide %>% tibble::column_to_rownames('cell')
             }
             
             self$hc = read_hc_rds(inputfile=glue('{out_dir}/hc.rds'))
             self$geno = read_file(inputfile=glue('{out_dir}/geno_{i}.tsv'), filetype="tsv")
                 
             if (!is.null(self$geno)) {
-                self$geno = self$geno %>% tibble::column_to_rownames('V1') %>% as.matrix
+                if ('V1' %in% colnames(self$geno)) {
+                    self$geno = self$geno %>% rename(cell = V1)
+                }
+                self$geno = self$geno %>% tibble::column_to_rownames('cell') %>% as.matrix
             }
     })
 )

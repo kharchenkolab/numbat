@@ -8,9 +8,9 @@ run_group_hmms(
   bulks,
   t = 1e-04,
   gamma = 20,
-  theta_min = 0.08,
   exp_model = "lnpois",
   alpha = 1e-04,
+  min_genes = 10,
   common_diploid = TRUE,
   diploid_chroms = NULL,
   allele_only = FALSE,
@@ -21,6 +21,28 @@ run_group_hmms(
   debug = FALSE
 )
 }
+\arguments{
+\item{bulks}{dataframe Pseudobulk profiles}
+
+\item{t}{numeric Transition probability}
+
+\item{gamma}{numeric Dispersion parameter for the Beta-Binomial allele model}
+
+\item{alpha}{numeric P value cut-off to determine segment clusters in find_diploid}
+
+\item{common_diploid}{logical Whether to find common diploid regions between pseudobulks}
+
+\item{diploid_chroms}{character vector Known diploid chromosomes to use as baseline}
+
+\item{allele_only}{logical Whether only use allele data to run HMM}
+
+\item{retest}{logcial Whether to retest CNVs}
+
+\item{run_hmm}{logical Whether to run HMM segments or just retest}
+
+\item{ncores}{integer Number of cores}
+}
 \description{
 Run mutitple HMMs
 }
+\keyword{internal}

@@ -8,9 +8,8 @@ get_bulk(
   count_mat,
   lambdas_ref,
   df_allele,
-  gtf_transcript,
+  gtf,
   genetic_map,
-  sc_refs = NULL,
   min_depth = 0,
   lambda = 1,
   verbose = TRUE
@@ -23,11 +22,9 @@ get_bulk(
 
 \item{df_allele}{dataframe Single-cell allele counts}
 
-\item{gtf_transcript}{dataframe Transcript gtf}
+\item{gtf}{dataframe Transcript gtf}
 
 \item{genetic_map}{dataframe Genetic map}
-
-\item{sc_refs}{named vector Single cell reference matches}
 }
 \value{
 dataframe Pseudobulk gene expression and allele profile

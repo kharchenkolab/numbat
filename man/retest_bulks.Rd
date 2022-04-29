@@ -4,7 +4,15 @@
 \alias{retest_bulks}
 \title{retest consensus segments on pseudobulks}
 \usage{
-retest_bulks(bulks, segs_consensus, use_loh = FALSE, diploid_chroms = NULL)
+retest_bulks(
+  bulks,
+  segs_consensus = NULL,
+  t = 1e-05,
+  min_genes = 10,
+  gamma = 20,
+  use_loh = FALSE,
+  diploid_chroms = NULL
+)
 }
 \arguments{
 \item{bulks}{dataframe Pseudobulk profiles}

@@ -8,7 +8,7 @@ plot_psbulk(
   bulk,
   use_pos = FALSE,
   allele_only = FALSE,
-  min_LLR = 10,
+  min_LLR = 0,
   min_depth = 8,
   exp_limit = 2,
   phi_mle = TRUE,
