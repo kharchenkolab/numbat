@@ -645,7 +645,7 @@ run_treehmm = function(bulks, pa_dict, ch_dict, theta_min = 0.08, gamma = 20, t 
 
             # entropy term
             H = sapply(
-                2:bigT,
+                2:N,
                 function(t) {
                     q_cond = Q_pair[i, t, , ]/Q[i, t-1, ]
                     sum(Q_pair[i, t, , ] * log(q_cond))
@@ -656,7 +656,7 @@ run_treehmm = function(bulks, pa_dict, ch_dict, theta_min = 0.08, gamma = 20, t 
 
             # likelihood term
             L = sapply(
-                2:bigT,
+                2:N,
                 function(t) {
                     
                     emission_term = sum(Q[i,t,] * logprob[i,t,])
