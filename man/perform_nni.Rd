@@ -32,3 +32,4 @@ multiPhylo List of trees corresponding to the rearrangement steps
 \description{
 Maximum likelihood tree search via NNI
 }
+\keyword{internal}

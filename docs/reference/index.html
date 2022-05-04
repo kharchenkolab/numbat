@@ -35,9 +35,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="preparing-data">Preparing data<a class="anchor" aria-label="anchor" href="#preparing-data"></a></h2>
       
-      
+      <p class="section-desc"></p><p>Functions for data preprocessing</p>
 
       
     </div><div id="" class="section level2">
@@ -47,99 +47,63 @@
 
       <dl><dt>
           
-          <code><a href="Numbat.html">Numbat</a></code> 
-        </dt>
-        <dd>Numbat R6 class</dd>
-      </dl><dl><dt>
-          
           <code><a href="aggregate_counts.html">aggregate_counts()</a></code> 
         </dt>
         <dd>Utility function to make reference gene expression profiles</dd>
       </dl><dl><dt>
           
-          <code><a href="analyze_bulk.html">analyze_bulk()</a></code> 
+          <code><a href="preprocess_allele.html">preprocess_allele()</a></code> 
         </dt>
-        <dd>Call CNVs in a pseudobulk</dd>
-      </dl><dl><dt>
-          
-          <code><a href="annot_consensus.html">annot_consensus()</a></code> 
-        </dt>
-        <dd>Annotate a consensus segments on a pseudobulk dataframe</dd>
-      </dl><dl><dt>
-          
-          <code><a href="annot_superclones.html">annot_superclones()</a></code> 
-        </dt>
-        <dd>Annotate superclones on a tree</dd>
-      </dl><dl><dt>
-          
-          <code><a href="choose_ref_cor.html">choose_ref_cor()</a></code> 
-        </dt>
-        <dd>choose beest reference for each cell based on correlation</dd>
-      </dl><dl><dt>
-          
-          <code><a href="classify_alleles.html">classify_alleles()</a></code> 
-        </dt>
-        <dd>classify alleles using viterbi and forward-backward</dd>
-      </dl><dl><dt>
-          
-          <code><a href="dbbinom.html">dbbinom()</a></code> 
-        </dt>
-        <dd>Beta-binomial distribution density function
-A distribution is beta-binomial if p, the probability of success, 
-in a binomial distribution has a beta distribution with shape 
-parameters alpha &gt; 0 and beta &gt; 0
-For more details, see extraDistr::dbbinom</dd>
-      </dl><dl><dt>
-          
-          <code><a href="dpoilog.html">dpoilog()</a></code> 
-        </dt>
-        <dd>Returns the density for the Poisson lognormal distribution with parameters mu and sig</dd>
-      </dl><dl><dt>
-          
-          <code><a href="find_common_diploid.html">find_common_diploid()</a></code> 
-        </dt>
-        <dd>Find the common diploid region in a group of pseudobulks</dd>
-      </dl><dl><dt>
-          
-          <code><a href="genotype.html">genotype()</a></code> 
-        </dt>
-        <dd>Main function</dd>
-      </dl><dl><dt>
+        <dd>Preprocess allele data</dd>
+      </dl></div><div class="section level2">
+      <h2 id="bulk-analysis">Bulk analysis<a class="anchor" aria-label="anchor" href="#bulk-analysis"></a></h2>
+      
+      <p class="section-desc"></p><p>Functions for performing bulk analysis using the Numbat haplotype-aware HMM.</p>
+
+      
+    </div><div id="" class="section level2">
+      
+      
+      
+
+      <dl><dt>
           
           <code><a href="get_bulk.html">get_bulk()</a></code> 
         </dt>
         <dd>Aggregate into combined bulk expression and allele profile</dd>
       </dl><dl><dt>
           
-          <code><a href="get_clone_post.html">get_clone_post()</a></code> 
+          <code><a href="analyze_bulk.html">analyze_bulk()</a></code> 
         </dt>
-        <dd>Map cells to the phylogeny (or genotypes) based on CNV posteriors</dd>
-      </dl><dl><dt>
+        <dd>Call CNVs in a pseudobulk</dd>
+      </dl></div><div class="section level2">
+      <h2 id="single-cell-analysis">Single-cell analysis<a class="anchor" aria-label="anchor" href="#single-cell-analysis"></a></h2>
+      
+      <p class="section-desc"></p><p>Functions for performing single-cell CNV and phylogeny analysis.</p>
+
+      
+    </div><div id="" class="section level2">
+      
+      
+      
+
+      <dl><dt>
           
-          <code><a href="get_segs_consensus.html">get_segs_consensus()</a></code> 
+          <code><a href="run_numbat.html">run_numbat()</a></code> 
         </dt>
-        <dd>Extract consensus CNV segments</dd>
-      </dl><dl><dt>
-          
-          <code><a href="get_snps.html">get_snps()</a></code> 
-        </dt>
-        <dd>process VCFs into SNP dataframe</dd>
-      </dl><dl><dt>
-          
-          <code><a href="ladderize.html">ladderize()</a></code> 
-        </dt>
-        <dd>from ape</dd>
-      </dl><dl><dt>
-          
-          <code><a href="mark_tumor_lineage.html">mark_tumor_lineage()</a></code> 
-        </dt>
-        <dd>mark the tumor lineage of a phylogeny</dd>
-      </dl><dl><dt>
-          
-          <code><a href="perform_nni.html">perform_nni()</a></code> 
-        </dt>
-        <dd>maximum likelihood tree search via NNI</dd>
-      </dl><dl><dt>
+        <dd>Run workflow to decompose tumor subclones</dd>
+      </dl></div><div class="section level2">
+      <h2 id="visualization">Visualization<a class="anchor" aria-label="anchor" href="#visualization"></a></h2>
+      
+      <p class="section-desc"></p><p>Functions visualizing results.</p>
+
+      
+    </div><div id="" class="section level2">
+      
+      
+      
+
+      <dl><dt>
           
           <code><a href="plot_bulks.html">plot_bulks()</a></code> 
         </dt>
@@ -149,6 +113,11 @@ For more details, see extraDistr::dbbinom</dd>
           <code><a href="plot_consensus.html">plot_consensus()</a></code> 
         </dt>
         <dd>plot consensus CNVs</dd>
+      </dl><dl><dt>
+          
+          <code><a href="plot_exp_roll.html">plot_exp_roll()</a></code> 
+        </dt>
+        <dd>Plot single-cell smoothed expression magnitude heatmap</dd>
       </dl><dl><dt>
           
           <code><a href="plot_mut_history.html">plot_mut_history()</a></code> 
@@ -164,54 +133,9 @@ For more details, see extraDistr::dbbinom</dd>
           <code><a href="plot_psbulk.html">plot_psbulk()</a></code> 
         </dt>
         <dd>plot a pseudobulk HMM profile</dd>
-      </dl><dl><dt>
-          
-          <code><a href="plot_sc_roll.html">plot_sc_roll()</a></code> 
-        </dt>
-        <dd>Plot single-cell smoothed expression magnitude heatmap</dd>
-      </dl><dl><dt>
-          
-          <code><a href="pre_likelihood_hmm.html">pre_likelihood_hmm</a></code> 
-        </dt>
-        <dd>Input to likelihood_allele() for unit tests
-Based on example using bulk = get_bulk(count_mat = count_mat_ATC2, df_allele = df_allele_ATC2, lambdas_ref = ref_hca,gtf_transcript = gtf_hg38,genetic_map = genetic_map_hg38)</dd>
-      </dl><dl><dt>
-          
-          <code><a href="preprocess_allele.html">preprocess_allele()</a></code> 
-        </dt>
-        <dd>Preprocess allele data</dd>
-      </dl><dl><dt>
-          
-          <code><a href="resolve_cnvs.html">resolve_cnvs()</a></code> 
-        </dt>
-        <dd>Get unique CNVs from set of segments</dd>
-      </dl><dl><dt>
-          
-          <code><a href="retest_bulks.html">retest_bulks()</a></code> 
-        </dt>
-        <dd>retest consensus segments on pseudobulks</dd>
-      </dl><dl><dt>
-          
-          <code><a href="retest_cnv.html">retest_cnv()</a></code> 
-        </dt>
-        <dd>retest CNVs in a pseudobulk</dd>
-      </dl><dl><dt>
-          
-          <code><a href="run_numbat.html">run_numbat()</a></code> 
-        </dt>
-        <dd>Run workflow to decompose tumor subclones</dd>
-      </dl><dl><dt>
-          
-          <code><a href="score_tree.html">score_tree()</a></code> 
-        </dt>
-        <dd>score a tree based on maximum likelihood</dd>
-      </dl><dl><dt>
-          
-          <code><a href="simplify_history.html">simplify_history()</a></code> 
-        </dt>
-        <dd>Simplify the mutational history based on likelihood evidence</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

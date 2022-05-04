@@ -47,7 +47,7 @@ score_tree = function(tree, P, get_l_matrix = FALSE) {
 #' @param verbose logical Verbosity
 #' @param ncores integer Number of cores to use
 #' @return multiPhylo List of trees corresponding to the rearrangement steps
-#' @export
+#' @keywords internal
 perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, verbose = TRUE) {
 
     P = as.matrix(P)

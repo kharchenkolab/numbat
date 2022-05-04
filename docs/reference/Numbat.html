@@ -44,59 +44,59 @@
     <div class="section level2">
     <h2 id="public-fields">Public fields<a class="anchor" aria-label="anchor" href="#public-fields"></a></h2>
     <p></p><div class="r6-fields"><dl><dt><code>label</code></dt>
-<dd><p>sample name</p></dd>
+<dd><p>character Sample name</p></dd>
 
 
 <dt><code>gtf</code></dt>
-<dd><p>transcript annotation</p></dd>
+<dd><p>dataframe Transcript annotation</p></dd>
 
 
 <dt><code>joint_post</code></dt>
-<dd><p>joint posterior</p></dd>
+<dd><p>dataframe Joint posterior</p></dd>
 
 
 <dt><code>exp_post</code></dt>
-<dd><p>expression posterior</p></dd>
+<dd><p>dataframe Expression posterior</p></dd>
 
 
 <dt><code>allele_post</code></dt>
-<dd><p>allele posetrior</p></dd>
+<dd><p>dataframe Allele posetrior</p></dd>
 
 
 <dt><code>bulk_subtrees</code></dt>
-<dd><p>bulk profiles of lineage subtrees</p></dd>
+<dd><p>dataframe Bulk profiles of lineage subtrees</p></dd>
 
 
 <dt><code>bulk_clones</code></dt>
-<dd><p>bulk profiles of clones</p></dd>
+<dd><p>dataframe Bulk profiles of clones</p></dd>
 
 
 <dt><code>segs_consensus</code></dt>
-<dd><p>consensus segments</p></dd>
+<dd><p>dataframe Consensus segments</p></dd>
 
 
 <dt><code>tree_post</code></dt>
-<dd><p>tree posterior</p></dd>
+<dd><p>list Tree posterior</p></dd>
 
 
 <dt><code>mut_graph</code></dt>
-<dd><p>mutation history graph</p></dd>
+<dd><p>igraph Mutation history graph</p></dd>
 
 
 <dt><code>gtree</code></dt>
-<dd><p>single-cell phylogeny</p></dd>
+<dd><p>tbl_graph Single-cell phylogeny</p></dd>
 
 
 <dt><code>clone_post</code></dt>
-<dd><p>clone posteriors</p></dd>
+<dd><p>dataframe Clone posteriors</p></dd>
 
 
 <dt><code>gexp_roll_wide</code></dt>
-<dd><p>smoothed expression of single cells</p></dd>
+<dd><p>matrix Smoothed expression of single cells</p></dd>
 
 
 <dt><code>hc</code></dt>
-<dd><p>hclust object for initial clustering</p></dd>
+<dd><p>hclust Initial hierarchical clustering</p></dd>
 
 
 </dl><p></p></div>
@@ -161,7 +161,7 @@
 </div>
 
 </div><p></p><hr><a id="method-plot_exp_roll"></a><div class="section">
-<h3 id="method-plot-exp-roll-">Method <code>plot_exp_roll()</code><a class="anchor" aria-label="anchor" href="#method-plot-exp-roll-"></a></h3>
+<h3 id="method-plot-exp-roll-">Method <code><a href="plot_exp_roll.html">plot_exp_roll()</a></code><a class="anchor" aria-label="anchor" href="#method-plot-exp-roll-"></a></h3>
 <p>Plot window-smoothed expression profiles</p><div class="section">
 <h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span class="va">Numbat</span><span class="op">$</span><span class="fu">plot_exp_roll</span><span class="op">(</span>k <span class="op">=</span> <span class="fl">3</span>, n_sample <span class="op">=</span> <span class="fl">300</span>, <span class="va">...</span><span class="op">)</span></code></pre></div><p></p></div>

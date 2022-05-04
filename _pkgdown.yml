@@ -1,2 +1,22 @@
 template:
         bootstrap: 5
+reference:
+- title: "Preparing data"
+  desc: >
+    Functions for data preprocessing 
+  contents: 
+  - aggregate_counts
+  - preprocess_allele
+- title: "Bulk analysis"
+  desc: "Functions for performing bulk analysis using the Numbat haplotype-aware HMM."
+  contents:
+  - get_bulk
+  - analyze_bulk
+- title: "Single-cell analysis"
+  desc: "Functions for performing single-cell CNV and phylogeny analysis."
+  contents:
+  - run_numbat
+- title: "Visualization"
+  desc: "Functions visualizing results."
+  contents:
+  - starts_with("plot_")

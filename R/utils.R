@@ -289,7 +289,7 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
     return(lambdas_bar)
 }
 
-#' Aggregate into combined bulk expression and allele profile
+#' Aggregate single-cell data into combined bulk expression and allele profile
 #'
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
@@ -445,7 +445,7 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
 
 ########################### Analysis ############################
 
-#' Call CNVs in a pseudobulk
+#' Call CNVs in a pseudobulk profile using the Numbat joint HMM
 #' @param bulk dataframe Pesudobulk profile
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param t numeric Transition probability

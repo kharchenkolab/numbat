@@ -31,9 +31,4 @@ in a binomial distribution has a beta distribution with shape
 parameters alpha > 0 and beta > 0
 For more details, see extraDistr::dbbinom
 }
-\examples{
-xx <- 1:1000
-dbbinom(xx, 1000, 5, 13)
-
-}
 \keyword{internal}
