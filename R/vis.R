@@ -692,7 +692,6 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
 
 ########################### Functions for internal use ############################
 
-#' @export
 plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     
     # cell_order = exp_post %>% 
@@ -736,7 +735,6 @@ plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = scales::oob_squish)
 }
 
-#' @export
 plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
     
     snp_seg = bulk_subtrees %>%
@@ -792,7 +790,6 @@ plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
     return(p)
 }
 
-#' @export
 plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_annot = NULL) {
 
     if (is.null(pal_annot)) {
@@ -1020,7 +1017,6 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
     (p1 / p2) + plot_layout(guides = 'auto')
 }
 
-#' @export
 plot_exp = function(gexp_bulk, exp_limit = 3) {
     ggplot(
         gexp_bulk,
@@ -1044,7 +1040,6 @@ plot_exp = function(gexp_bulk, exp_limit = 3) {
     ylim(-exp_limit, exp_limit)
 }
 
-#' @export
 plot_segs_post = function(segs_consensus) {
     segs_consensus %>% 
         filter(cnv_state != 'neu') %>%
@@ -1060,7 +1055,6 @@ plot_segs_post = function(segs_consensus) {
 }
 
 # model diagnostics
-#' @export
 plot_exp_post = function(exp_post, jitter = TRUE) {
     if (!'annot' %in% colnames(exp_post)) {
         exp_post$annot = '0'
@@ -1088,7 +1082,6 @@ plot_exp_post = function(exp_post, jitter = TRUE) {
     return(p)
 }
 
-#' @export
 plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio = 0.1, pal_clone = NULL, pal_annot = NULL) {
 
     if (is.null(pal_clone)) {
@@ -1219,7 +1212,6 @@ plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio 
     
 }
 
-#' @export
 plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1, tvn = FALSE, tree = TRUE, p_min = 0.5, bar_ratio = 0.1, pal_clone = NULL, pal_annot = NULL) {
 
     if (is.null(pal_clone)) {
@@ -1282,7 +1274,6 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
     (p_mut / p_clones) + plot_layout(heights = c(ratio, 1)) + plot_title
 }
 
-#' @export
 plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, pal_clone = NULL, tip_length = 0.5) {
 
     mut_nodes = gtree %>% activate(nodes) %>%

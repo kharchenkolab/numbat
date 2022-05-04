@@ -7,11 +7,12 @@
 classify_alleles(bulk)
 }
 \arguments{
-\item{bulk}{a pesudobulk dataframe}
+\item{bulk}{dataframe Pesudobulk profile}
 }
 \value{
-a pesudobulk dataframe
+dataframe Pesudobulk profile
 }
 \description{
 classify alleles using viterbi and forward-backward
 }
+\keyword{internal}

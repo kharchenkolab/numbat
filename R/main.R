@@ -683,7 +683,7 @@ run_group_hmms = function(
 #' @param min_LLR numeric LLR threshold to filter CNVs 
 #' @param min_overlap numeric Minimum overlap fraction to determine count two events as as overlapping
 #' @return dataframe Consensus segments
-#' @export
+#' @keywords internal
 get_segs_consensus = function(bulks, min_LLR = 40, min_overlap = 0.45) {
 
 

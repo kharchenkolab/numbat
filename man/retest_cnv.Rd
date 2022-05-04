@@ -25,3 +25,4 @@ a dataframe of segments with CNV posterior information
 \description{
 retest CNVs in a pseudobulk
 }
+\keyword{internal}

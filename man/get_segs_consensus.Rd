@@ -19,3 +19,4 @@ dataframe Consensus segments
 \description{
 Extract consensus CNV segments
 }
+\keyword{internal}

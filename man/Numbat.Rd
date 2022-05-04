@@ -9,33 +9,33 @@ Used to allow users to plot results
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{label}}{sample name}
+\item{\code{label}}{character Sample name}
 
-\item{\code{gtf}}{transcript annotation}
+\item{\code{gtf}}{dataframe Transcript annotation}
 
-\item{\code{joint_post}}{joint posterior}
+\item{\code{joint_post}}{dataframe Joint posterior}
 
-\item{\code{exp_post}}{expression posterior}
+\item{\code{exp_post}}{dataframe Expression posterior}
 
-\item{\code{allele_post}}{allele posetrior}
+\item{\code{allele_post}}{dataframe Allele posetrior}
 
-\item{\code{bulk_subtrees}}{bulk profiles of lineage subtrees}
+\item{\code{bulk_subtrees}}{dataframe Bulk profiles of lineage subtrees}
 
-\item{\code{bulk_clones}}{bulk profiles of clones}
+\item{\code{bulk_clones}}{dataframe Bulk profiles of clones}
 
-\item{\code{segs_consensus}}{consensus segments}
+\item{\code{segs_consensus}}{dataframe Consensus segments}
 
-\item{\code{tree_post}}{tree posterior}
+\item{\code{tree_post}}{list Tree posterior}
 
-\item{\code{mut_graph}}{mutation history graph}
+\item{\code{mut_graph}}{igraph Mutation history graph}
 
-\item{\code{gtree}}{single-cell phylogeny}
+\item{\code{gtree}}{tbl_graph Single-cell phylogeny}
 
-\item{\code{clone_post}}{clone posteriors}
+\item{\code{clone_post}}{dataframe Clone posteriors}
 
-\item{\code{gexp_roll_wide}}{smoothed expression of single cells}
+\item{\code{gexp_roll_wide}}{matrix Smoothed expression of single cells}
 
-\item{\code{hc}}{hclust object for initial clustering}
+\item{\code{hc}}{hclust Initial hierarchical clustering}
 }
 \if{html}{\out{</div>}}
 }

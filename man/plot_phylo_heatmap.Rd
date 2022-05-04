@@ -33,35 +33,35 @@ plot_phylo_heatmap(
 
 \item{segs_consensus}{datatframe Consensus segment dataframe}
 
-\item{annot}{named vector Cell annotations, keys are cell names (default=NULL)}
+\item{annot}{named vector Cell annotations, keys are cell names}
 
-\item{pal_annot}{named vector Colors for cell annotations (default=NULL)}
+\item{pal_annot}{named vector Colors for cell annotations}
 
-\item{annot_title}{character Legend title for the annotation bar  (default=Annotation)}
+\item{annot_title}{character Legend title for the annotation bar}
 
-\item{annot_scale}{ggplot scale Color scale for the annotation bar (default=NULL)}
+\item{annot_scale}{ggplot scale Color scale for the annotation bar}
 
-\item{clone_dict}{named vector Clone annotations, mapping from cell name to clones (default=NULL)}
+\item{clone_dict}{named vector Clone annotations, mapping from cell name to clones}
 
-\item{clone_bar}{logical Whether to display clone bar plot (default=FALSE)}
+\item{clone_bar}{logical Whether to display clone bar plot}
 
-\item{clone_title}{character Legend title for the clone bar (default=Genotype)}
+\item{clone_title}{character Legend title for the clone bar}
 
-\item{clone_legend}{logical Whether to display the clone legend (default=TRUE)}
+\item{clone_legend}{logical Whether to display the clone legend}
 
-\item{p_min}{numeric Probability threshold to display CNV calls (default=0.9)}
+\item{p_min}{numeric Probability threshold to display CNV calls}
 
-\item{line_width}{numeric Line width for CNV heatmap (default=0.1)}
+\item{line_width}{numeric Line width for CNV heatmap}
 
-\item{tree_height}{numeric Relative height of the phylogeny plot (default=1)}
+\item{tree_height}{numeric Relative height of the phylogeny plot}
 
-\item{branch_width}{numeric Line width in the phylogeny (default=0.2)}
+\item{branch_width}{numeric Line width in the phylogeny}
 
-\item{tip_length}{numeric Length of tips in the phylogeny (default=0.2)}
+\item{tip_length}{numeric Length of tips in the phylogeny}
 
-\item{clone_line}{logical Whether to display borders for clones in the heatmap (default=FALSE)}
+\item{clone_line}{logical Whether to display borders for clones in the heatmap}
 
-\item{superclone}{logical Wehether to display superclones in the clone bar (default=FALSE)}
+\item{superclone}{logical Wehether to display superclones in the clone bar}
 }
 \value{
 ggplot panel

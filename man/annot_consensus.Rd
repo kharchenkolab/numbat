@@ -17,3 +17,4 @@ dataframe Pseudobulk profile
 \description{
 Annotate a consensus segments on a pseudobulk dataframe
 }
+\keyword{internal}

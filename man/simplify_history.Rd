@@ -17,3 +17,4 @@ igraph Mutation graph
 \description{
 Simplify the mutational history based on likelihood evidence
 }
+\keyword{internal}

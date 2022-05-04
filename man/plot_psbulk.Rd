@@ -21,25 +21,25 @@ plot_psbulk(
 \arguments{
 \item{bulk}{dataframe Pseudobulk profile}
 
-\item{use_pos}{logical Use marker position instead of index as x coordinate (default=FALSE)}
+\item{use_pos}{logical Use marker position instead of index as x coordinate}
 
-\item{allele_only}{logical Only plot alleles (default=FALSE)}
+\item{allele_only}{logical Only plot alleles}
 
-\item{min_LLR}{numeric LLR threshold for event filtering (default=20)}
+\item{min_LLR}{numeric LLR threshold for event filtering}
 
-\item{min_depth}{numeric Minimum coverage depth for a SNP to be plotted (default=8)}
+\item{min_depth}{numeric Minimum coverage depth for a SNP to be plotted}
 
-\item{exp_limit}{numeric Expression logFC axis limit (default=2)}
+\item{exp_limit}{numeric Expression logFC axis limit}
 
-\item{phi_mle}{logical Whether to plot estimates of segmental expression fold change (default=TRUE)}
+\item{phi_mle}{logical Whether to plot estimates of segmental expression fold change}
 
-\item{theta_roll}{logical Whether to plot rolling estimates of allele imbalance (default=FALSE)}
+\item{theta_roll}{logical Whether to plot rolling estimates of allele imbalance}
 
-\item{dot_size}{numeric Size of marker dots (default=0.8)}
+\item{dot_size}{numeric Size of marker dots}
 
-\item{dot_alpha}{numeric Transparency of the marker dots (default=0.5)}
+\item{dot_alpha}{numeric Transparency of the marker dots}
 
-\item{legend}{logical Whether to show legend (default=FALSE)}
+\item{legend}{logical Whether to show legend}
 }
 \value{
 ggplot Plot of pseudobulk HMM profile

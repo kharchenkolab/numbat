@@ -22,21 +22,21 @@ plot_mut_history(
 
 \item{clone_post}{dataframe Clone assignment posteriors}
 
-\item{edge_label_size}{numeric Size of edge label (default=4)}
+\item{edge_label_size}{numeric Size of edge label}
 
-\item{node_label_size}{numeric Size of node label (default=6)}
+\item{node_label_size}{numeric Size of node label}
 
-\item{node_size}{numeric Size of nodes (default=10)}
+\item{node_size}{numeric Size of nodes}
 
-\item{show_clone_size}{logical Whether to show clone size (default=TRUE)}
+\item{show_clone_size}{logical Whether to show clone size}
 
-\item{edge_label}{logical Whether to label edges (default=TRUE)}
+\item{edge_label}{logical Whether to label edges}
 
-\item{node_label}{logical Whether to label nodes (default=TRUE)}
+\item{node_label}{logical Whether to label nodes}
 
-\item{horizontal}{logical Whether to use horizontal layout (default=TRUE)}
+\item{horizontal}{logical Whether to use horizontal layout}
 
-\item{pal}{named vector Node colors (default=NULL)}
+\item{pal}{named vector Node colors}
 }
 \value{
 ggplot object

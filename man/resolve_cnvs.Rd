@@ -17,3 +17,4 @@ dataframe Consensus CNV segments
 \description{
 Get unique CNVs from set of segments
 }
+\keyword{internal}

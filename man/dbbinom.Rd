@@ -36,3 +36,4 @@ xx <- 1:1000
 dbbinom(xx, 1000, 5, 13)
 
 }
+\keyword{internal}

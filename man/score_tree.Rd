@@ -19,3 +19,4 @@ list Likelihood scores of a tree
 \description{
 score a tree based on maximum likelihood
 }
+\keyword{internal}

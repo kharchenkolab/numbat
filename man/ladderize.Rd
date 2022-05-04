@@ -9,3 +9,4 @@ ladderize(phy, right = TRUE)
 \description{
 from ape
 }
+\keyword{internal}

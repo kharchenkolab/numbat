@@ -11,9 +11,9 @@ plot_bulks(bulks, ..., ncol = 1, title = TRUE)
 
 \item{...}{additional parameters passed to plot_psbulk()}
 
-\item{ncol}{integer Number of columns (default=1)}
+\item{ncol}{integer Number of columns}
 
-\item{title}{logical Whether to add titles to individual plots (default=TRUE)}
+\item{title}{logical Whether to add titles to individual plots}
 }
 \value{
 a ggplot object

@@ -19,3 +19,4 @@ named vector Best references for each cell
 \description{
 choose beest reference for each cell based on correlation
 }
+\keyword{internal}

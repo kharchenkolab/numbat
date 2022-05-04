@@ -2,7 +2,7 @@
 % Please edit documentation in R/main.R
 \name{run_group_hmms}
 \alias{run_group_hmms}
-\title{Run mutitple HMMs}
+\title{Run multiple HMMs}
 \usage{
 run_group_hmms(
   bulks,
@@ -42,6 +42,6 @@ run_group_hmms(
 \item{ncores}{integer Number of cores}
 }
 \description{
-Run mutitple HMMs
+Run multiple HMMs
 }
 \keyword{internal}

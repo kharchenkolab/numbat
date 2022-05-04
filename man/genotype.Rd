@@ -2,26 +2,26 @@
 % Please edit documentation in R/genotyping.R
 \name{genotype}
 \alias{genotype}
-\title{Main function}
+\title{Genotyping main function}
 \usage{
 genotype(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE)
 }
 \arguments{
-\item{label}{character string}
+\item{label}{character Individual/sample label}
 
-\item{samples}{list of strings}
+\item{samples}{vector Sample names}
 
-\item{vcfs}{vcfR objects}
+\item{vcfs}{list of vcfR VCFs from cellsnp-lite pileup}
 
-\item{outdir}{output directory}
+\item{outdir}{character Output directory}
 
-\item{het_only}{boolean (default=FALSE)}
+\item{het_only}{logical Whether to only use heterozygous SNPs}
 
-\item{chr_prefix}{boolean (default=TRUE)}
+\item{chr_prefix}{logical Whether to add chr prefix}
 }
 \value{
-a status code
+integer Status code
 }
 \description{
-Main function
+Genotyping main function
 }
