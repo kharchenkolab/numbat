@@ -158,7 +158,7 @@ vcfR_file_fix <- function(file) {
 #' @param barcodes vector List of barcodes from pileup
 #' @param gtf_transcript dataframe Transcript GTF
 #' @return dataframe Allele counts by cell
-#' @export
+#' @keywords internal
 preprocess_allele = function(
     sample,
     vcf_pu,

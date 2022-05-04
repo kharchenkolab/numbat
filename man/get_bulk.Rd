@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{get_bulk}
 \alias{get_bulk}
-\title{Aggregate into combined bulk expression and allele profile}
+\title{Aggregate single-cell data into combined bulk expression and allele profile}
 \usage{
 get_bulk(
   count_mat,
@@ -30,5 +30,5 @@ get_bulk(
 dataframe Pseudobulk gene expression and allele profile
 }
 \description{
-Aggregate into combined bulk expression and allele profile
+Aggregate single-cell data into combined bulk expression and allele profile
 }

@@ -64,7 +64,8 @@ To get the most recent updates, you can install the development version:
 devtools::install_github("https://github.com/kharchenkolab/Numbat/tree/devel")
 ```
 # Preparing data
-1. Prepare the allele data. Run the preprocessing script (`pileup_and_phase.R`) to count alleles and phase SNPs
+1. Prepare the allele data. Run the preprocessing script (`pileup_and_phase.R`) to count alleles and phase SNPs.
+
 ```
 usage: pileup_and_phase.R [-h] --label LABEL --samples SAMPLES --bams BAMS
                           --barcodes BARCODES --gmap GMAP [--eagle EAGLE]
@@ -91,6 +92,7 @@ optional arguments:
                        seq
   --smartseq           running with smart-seq mode
 ```
+
 Note: If running with `--smartseq` mode, you may provide a file containing a list of bams (each as its own line) to `--bams` and a file containing a list of cell names (each as its own line) to `--barcodes`.
 
 This will produce a file named `{sample}_allele_counts.tsv.gz` under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under `phasing/` folder and raw pileup counts under `pileup/`.
@@ -98,6 +100,7 @@ This will produce a file named `{sample}_allele_counts.tsv.gz` under the specifi
 2. Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.
   
 3. Prepare the expression reference, which is a gene by cell type matrix of normalized expression values (raw gene counts divided by total counts). For a quick start, you may use a our HCA collection (`ref_hca`) that ships with the package. If you have matched normal cells (ideally, of various cell type) from the same patient or dataset and would like to make your own references, you may use this utility function:
+
 ```
 # count_mat is a gene x cell raw count matrices
 # cell_annot is a dataframe with columns "cell" and "cell_type"

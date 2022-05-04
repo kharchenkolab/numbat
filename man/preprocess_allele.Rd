@@ -27,3 +27,4 @@ dataframe Allele counts by cell
 \description{
 Preprocess allele data
 }
+\keyword{internal}
