@@ -43,16 +43,16 @@ cnv_labels = names(cnv_colors) %>%
 
 #' plot a pseudobulk HMM profile
 #' @param bulk dataframe Pseudobulk profile
-#' @param use_pos logical Use marker position instead of index as x coordinate (default=FALSE)
-#' @param allele_only logical Only plot alleles (default=FALSE)
-#' @param min_LLR numeric LLR threshold for event filtering (default=20)
-#' @param min_depth numeric Minimum coverage depth for a SNP to be plotted (default=8)
-#' @param exp_limit numeric Expression logFC axis limit (default=2)
-#' @param phi_mle logical Whether to plot estimates of segmental expression fold change (default=TRUE)
-#' @param theta_roll logical Whether to plot rolling estimates of allele imbalance (default=FALSE)
-#' @param dot_size numeric Size of marker dots (default=0.8)
-#' @param dot_alpha numeric Transparency of the marker dots (default=0.5)
-#' @param legend logical Whether to show legend (default=FALSE)
+#' @param use_pos logical Use marker position instead of index as x coordinate
+#' @param allele_only logical Only plot alleles
+#' @param min_LLR numeric LLR threshold for event filtering
+#' @param min_depth numeric Minimum coverage depth for a SNP to be plotted
+#' @param exp_limit numeric Expression logFC axis limit
+#' @param phi_mle logical Whether to plot estimates of segmental expression fold change
+#' @param theta_roll logical Whether to plot rolling estimates of allele imbalance
+#' @param dot_size numeric Size of marker dots
+#' @param dot_alpha numeric Transparency of the marker dots
+#' @param legend logical Whether to show legend
 #' @return ggplot Plot of pseudobulk HMM profile
 #' @export
 plot_psbulk = function(
@@ -206,8 +206,8 @@ plot_psbulk = function(
 
 #' plot a group of pseudobulks HMM profile
 #' @param bulks dataframe Pseudobulk profiles annotated with "sample" column
-#' @param ncol integer Number of columns (default=1)
-#' @param title logical Whether to add titles to individual plots (default=TRUE)
+#' @param ncol integer Number of columns
+#' @param title logical Whether to add titles to individual plots
 #' @param ... additional parameters passed to plot_psbulk()
 #' @return a ggplot object
 #' @export
@@ -255,14 +255,14 @@ plot_bulks = function(
 #' plot mutational history
 #' @param G igraph Mutation history graph
 #' @param clone_post dataframe Clone assignment posteriors
-#' @param edge_label_size numeric Size of edge label (default=4)
-#' @param node_label_size numeric Size of node label (default=6)
-#' @param node_size numeric Size of nodes (default=10)
-#' @param edge_label logical Whether to label edges (default=TRUE)
-#' @param node_label logical Whether to label nodes (default=TRUE)
-#' @param horizontal logical Whether to use horizontal layout (default=TRUE)
-#' @param show_clone_size logical Whether to show clone size (default=TRUE)
-#' @param pal named vector Node colors (default=NULL)
+#' @param edge_label_size numeric Size of edge label
+#' @param node_label_size numeric Size of node label
+#' @param node_size numeric Size of nodes
+#' @param edge_label logical Whether to label edges
+#' @param node_label logical Whether to label nodes
+#' @param horizontal logical Whether to use horizontal layout 
+#' @param show_clone_size logical Whether to show clone size
+#' @param pal named vector Node colors
 #' @return ggplot object
 #' @export
 plot_mut_history = function(
@@ -342,21 +342,21 @@ plot_mut_history = function(
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @param joint_post dataframe Joint single cell CNV posteriors
 #' @param segs_consensus datatframe Consensus segment dataframe
-#' @param annot named vector Cell annotations, keys are cell names (default=NULL)
-#' @param pal_annot named vector Colors for cell annotations (default=NULL)
-#' @param annot_title character Legend title for the annotation bar  (default=Annotation)
-#' @param annot_scale ggplot scale Color scale for the annotation bar (default=NULL)
-#' @param clone_dict named vector Clone annotations, mapping from cell name to clones (default=NULL)
-#' @param clone_bar logical Whether to display clone bar plot (default=FALSE)
-#' @param clone_title character Legend title for the clone bar (default=Genotype)
-#' @param clone_legend logical Whether to display the clone legend (default=TRUE)
-#' @param tree_height numeric Relative height of the phylogeny plot (default=1)
-#' @param p_min numeric Probability threshold to display CNV calls (default=0.9)
-#' @param line_width numeric Line width for CNV heatmap (default=0.1)
-#' @param branch_width numeric Line width in the phylogeny (default=0.2)
-#' @param tip_length numeric Length of tips in the phylogeny (default=0.2)
-#' @param clone_line logical Whether to display borders for clones in the heatmap (default=FALSE)
-#' @param superclone logical Wehether to display superclones in the clone bar (default=FALSE)
+#' @param annot named vector Cell annotations, keys are cell names
+#' @param pal_annot named vector Colors for cell annotations
+#' @param annot_title character Legend title for the annotation bar 
+#' @param annot_scale ggplot scale Color scale for the annotation bar 
+#' @param clone_dict named vector Clone annotations, mapping from cell name to clones
+#' @param clone_bar logical Whether to display clone bar plot
+#' @param clone_title character Legend title for the clone bar
+#' @param clone_legend logical Whether to display the clone legend
+#' @param tree_height numeric Relative height of the phylogeny plot
+#' @param p_min numeric Probability threshold to display CNV calls
+#' @param line_width numeric Line width for CNV heatmap
+#' @param branch_width numeric Line width in the phylogeny
+#' @param tip_length numeric Length of tips in the phylogeny
+#' @param clone_line logical Whether to display borders for clones in the heatmap
+#' @param superclone logical Wehether to display superclones in the clone bar
 #' @return ggplot panel
 #' @export
 plot_phylo_heatmap = function(
@@ -627,13 +627,13 @@ plot_consensus = function(segs) {
 #' @param gexp_roll_wide matrix Cell x gene smoothed expression magnitudes
 #' @param hc hclust Hierarchical clustring result
 #' @param gtf dataframe Transcript GTF
-#' @param lim numeric Limit for expression magnitudes (default=0.8)
-#' @param k integer Number of clusters (default=3)
-#' @param n_sample integer Number of cells to subsample (default=300)
-#' @param reverse logical Whether to reverse the cell order (default=TRUE)
-#' @param plot_tree logical Whether to plot the dendrogram (default=TRUE)
+#' @param lim numeric Limit for expression magnitudes
+#' @param k integer Number of clusters
+#' @param n_sample integer Number of cells to subsample
+#' @param reverse logical Whether to reverse the cell order
+#' @param plot_tree logical Whether to plot the dendrogram
 #' @export
-plot_sc_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, reverse = TRUE, plot_tree = TRUE) {
+plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, reverse = TRUE, plot_tree = TRUE) {
 
     gexp_norm_long = gexp_roll_wide %>% 
         as.data.frame() %>%

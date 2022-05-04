@@ -5,47 +5,47 @@
 Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
   public = list(
 
-    #' @field label sample name
+    #' @field label character Sample name
     label = 'sample',
     
-    #' @field gtf transcript annotation
+    #' @field gtf dataframe Transcript annotation
     gtf = NULL,
 
-    #' @field joint_post joint posterior
+    #' @field joint_post dataframe Joint posterior
     joint_post = NULL,
 
-    #' @field exp_post expression posterior
+    #' @field exp_post dataframe Expression posterior
     exp_post = NULL,
 
-    #' @field allele_post allele posetrior
+    #' @field allele_post dataframe Allele posetrior
     allele_post = NULL,
 
-    #' @field bulk_subtrees bulk profiles of lineage subtrees
+    #' @field bulk_subtrees dataframe Bulk profiles of lineage subtrees
     bulk_subtrees = NULL,
 
-    #' @field bulk_clones bulk profiles of clones
+    #' @field bulk_clones dataframe Bulk profiles of clones
     bulk_clones = NULL,
 
-    #' @field segs_consensus consensus segments
+    #' @field segs_consensus dataframe Consensus segments
     segs_consensus = NULL,
 
-    #' @field tree_post tree posterior
+    #' @field tree_post list Tree posterior
     tree_post = NULL,
 
-    #' @field mut_graph mutation history graph
+    #' @field mut_graph igraph Mutation history graph
     mut_graph = NULL,
 
-    #' @field gtree single-cell phylogeny
+    #' @field gtree tbl_graph Single-cell phylogeny
     gtree = NULL,
 
-    #' @field clone_post clone posteriors
+    #' @field clone_post dataframe Clone posteriors
     clone_post = NULL,
 
-    #' @field gexp_roll_wide smoothed expression of single cells
+    #' @field gexp_roll_wide matrix Smoothed expression of single cells
     gexp_roll_wide = NULL,
 
-    #' @field hc hclust object for initial clustering
-    hc = NULL,   
+    #' @field hc hclust Initial hierarchical clustering
+    hc = NULL,
 
     #' @description initialize Numbat class
     #' @param out_dir character string Output directory
@@ -82,7 +82,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @param ... additional parameters passed to plot_exp_roll()
     plot_exp_roll = function(k = 3, n_sample = 300, ...) {
         
-        p = plot_sc_roll(
+        p = plot_exp_roll(
             gexp_roll_wide = self$gexp_roll_wide,
             hc = self$hc,
             gtf = self$gtf,

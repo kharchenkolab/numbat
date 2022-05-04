@@ -1,12 +1,12 @@
-#' Main function
+#' Genotyping main function
 #'
-#' @param label character string 
-#' @param samples list of strings
-#' @param vcfs vcfR objects
-#' @param outdir output directory
-#' @param het_only boolean (default=FALSE)
-#' @param chr_prefix boolean (default=TRUE)
-#' @return a status code
+#' @param label character Individual/sample label 
+#' @param samples vector Sample names
+#' @param vcfs list of vcfR VCFs from cellsnp-lite pileup
+#' @param outdir character Output directory
+#' @param het_only logical Whether to only use heterozygous SNPs
+#' @param chr_prefix logical Whether to add chr prefix
+#' @return integer Status code
 #' @export
 genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE) {
 
@@ -43,6 +43,8 @@ genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix =
 
 #' process VCFs into SNP dataframe
 #' @param vcf vcfR object
+#' @return dataframe SNP information
+#' @keywords internal 
 get_snps = function(vcf) {
 
     snps = as.data.frame(vcf@fix) %>%
@@ -148,14 +150,14 @@ vcfR_file_fix <- function(file) {
 
 #' Preprocess allele data
 #' 
-#' @param sample sample label
-#' @param vcf_pu pileup VCF from cell-snp-lite
-#' @param vcf_phased phased VCF from eagle2
-#' @param AD alt allele depth matrix from pileup
-#' @param DP total allele depth matrix from pileup
-#' @param barcodes list of barcodes from pileup
-#' @param gtf_transcript transcript dataframe
-#' @return a long dataframe with allele counts by cell
+#' @param sample character Sample label
+#' @param vcf_pu dataframe Pileup VCF from cell-snp-lite
+#' @param vcf_phased dataframe Phased VCF from eagle2
+#' @param AD dgTMatrix Alt allele depth matrix from pileup
+#' @param DP dgTMatrix Total allele depth matrix from pileup
+#' @param barcodes vector List of barcodes from pileup
+#' @param gtf_transcript dataframe Transcript GTF
+#' @return dataframe Allele counts by cell
 #' @export
 preprocess_allele = function(
     sample,

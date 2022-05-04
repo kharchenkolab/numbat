@@ -162,7 +162,7 @@ run_hmm_mv_inhom = function(
 #' xx <- 1:1000
 #' dbbinom(xx, 1000, 5, 13)
 #'
-#' @export
+#' @keywords internal
 dbbinom <- function(x, size, alpha = 1, beta = 1, log = FALSE) {
     cppdbbinom(x, size, alpha, beta, log[1L])
 }

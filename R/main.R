@@ -602,7 +602,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, gene
     return(bulks)
 }
 
-#' Run mutitple HMMs 
+#' Run multiple HMMs 
 #' @param bulks dataframe Pseudobulk profiles
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param t numeric Transition probability
@@ -783,7 +783,7 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
 #' @param exp_post dataframe Expression posteriors
 #' @param allele_post dataframe Allele posteriors
 #' @return dataframe Clone posteriors
-#' @export
+#' @keywords internal
 get_clone_post = function(gtree, exp_post, allele_post) {
 
     clones = gtree %>%
@@ -877,7 +877,7 @@ get_clone_post = function(gtree, exp_post, allele_post) {
 #' @param segs_all dataframe CNV segments from multiple samples
 #' @param min_overlap numeric scalar Minimum overlap fraction to determine count two events as as overlapping
 #' @return dataframe Consensus CNV segments
-#' @export
+#' @keywords internal 
 resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
             
     V = segs_all %>% ungroup() %>% mutate(vertex = 1:n(), .before = 1)
@@ -1333,7 +1333,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
 #' @param use_loh logical Whether to use loh in the baseline
 #' @param diploid_chroms vector User-provided diploid chromosomes
 #' @return dataframe Retested pseudobulks 
-#' @export 
+#' @keywords internal 
 retest_bulks = function(bulks, segs_consensus = NULL,
     t = 1e-5, min_genes = 10, gamma = 20, 
     use_loh = FALSE, diploid_chroms = NULL) {

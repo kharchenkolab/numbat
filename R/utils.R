@@ -5,7 +5,7 @@
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf dataframe Transcript gtf
 #' @return named vector Best references for each cell
-#' @export
+#' @keywords internal
 choose_ref_cor = function(count_mat, lambdas_ref, gtf) {
 
     if (ncol(lambdas_ref) == 1) {
@@ -619,7 +619,7 @@ analyze_bulk = function(
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param allele_only whether to retest only using allele data
 #' @return a dataframe of segments with CNV posterior information
-#' @export
+#' @keywords internal
 retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE) {
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
@@ -717,9 +717,9 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
 }
 
 #' classify alleles using viterbi and forward-backward
-#' @param bulk a pesudobulk dataframe
-#' @return a pesudobulk dataframe
-#' @export
+#' @param bulk dataframe Pesudobulk profile
+#' @return dataframe Pesudobulk profile
+#' @keywords internal
 classify_alleles = function(bulk) {
 
     if (all(bulk$cnv_state_post %in% c('neu'))) {
@@ -921,7 +921,7 @@ smooth_segs = function(bulk, min_genes = 10) {
 #' @param bulk dataframe Pseudobulk profile
 #' @param segs_consensus datatframe Consensus segment dataframe
 #' @return dataframe Pseudobulk profile
-#' @export
+#' @keywords internal
 annot_consensus = function(bulk, segs_consensus) {
 
     bulk = bulk %>% ungroup()
@@ -971,7 +971,7 @@ annot_consensus = function(bulk, segs_consensus) {
 #' @param alpha numeric FDR cut-off for q values to determine edges
 #' @param ncores integer Number of cores to use  
 #' @return list Ploidy information
-#' @export
+#' @keywords internal
 find_common_diploid = function(
     bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 2^0.25, alpha = 1e-4, min_genes = 10, 
     ncores = 1, debug = FALSE, verbose = TRUE) {
