@@ -5,7 +5,7 @@
 \title{Beta-binomial distribution density function
 A distribution is beta-binomial if p, the probability of success, 
 in a binomial distribution has a beta distribution with shape 
-parameters α > 0 and β > 0
+parameters alpha > 0 and beta > 0
 For more details, see extraDistr::dbbinom}
 \usage{
 dbbinom(x, size, alpha = 1, beta = 1, log = FALSE)
@@ -28,7 +28,7 @@ density values returned as numeric vector
 Beta-binomial distribution density function
 A distribution is beta-binomial if p, the probability of success, 
 in a binomial distribution has a beta distribution with shape 
-parameters α > 0 and β > 0
+parameters alpha > 0 and beta > 0
 For more details, see extraDistr::dbbinom
 }
 \examples{

@@ -81,42 +81,15 @@ a new 'Numbat' object
 \subsection{Method \code{plot_phylo_heatmap()}}{
 Plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_phylo_heatmap(
-  annot = NULL,
-  geno_bar = FALSE,
-  pal_clone = NULL,
-  pal_annot = NULL,
-  p_min = 0.9,
-  tip_length = 1,
-  branch_width = 0.2,
-  line_width = 0.1,
-  tree_height = 1
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_phylo_heatmap(...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{annot}}{named list Cell annotations (default=NULL)}
-
-\item{\code{geno_bar}}{logical Whether to show genotype annotation (default=FALSE)}
-
-\item{\code{pal_clone}}{named vector Clone color palette (default=NULL)}
-
-\item{\code{p_min}}{numeric Minimum probability threshold to filter the calls (default=0.9)}
-
-\item{\code{tip_length}}{numeric Tree tip length (default=1)}
-
-\item{\code{branch_width}}{numeric Tree branch width (default=0.2)}
-
-\item{\code{line_width}}{numeric Heatmap line width (default=0.1)}
-
-\item{\code{tree_height}}{numeric Plotting height of the tree (default=1)}
+\item{\code{...}}{additional parameters passed to plot_phylo_heatmap()}
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-ggplot Plot
 }
 }
 \if{html}{\out{<hr>}}
@@ -125,20 +98,19 @@ ggplot Plot
 \subsection{Method \code{plot_exp_roll()}}{
 Plot window-smoothed expression profiles
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_exp_roll(k = 3, n_sample = 300)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_exp_roll(k = 3, n_sample = 300, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{k}}{integer Number of clusters (default=3)}
+\item{\code{k}}{integer Number of clusters}
 
-\item{\code{n_sample}}{integer Number of cells to subsample (default=300)}
+\item{\code{n_sample}}{integer Number of cells to subsample}
+
+\item{\code{...}}{additional parameters passed to plot_exp_roll()}
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-ggplot Plot
 }
 }
 \if{html}{\out{<hr>}}
@@ -147,29 +119,15 @@ ggplot Plot
 \subsection{Method \code{plot_mut_history()}}{
 Plot the mutation history of the tumor
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_mut_history(
-  horizontal = TRUE,
-  label = TRUE,
-  pal_clone = NULL,
-  node_id = TRUE
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_mut_history(...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{horizontal}}{logical Horizontal layout or vertical}
-
-\item{\code{label}}{logical Whether to label the mutations on edges}
-
-\item{\code{pal_clone}}{named vector Clone color palette}
-
-\item{\code{node_id}}{logical Whether to label nodes with clone id}
+\item{\code{...}}{additional parameters passed to plot_mut_history()}
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-ggplot Plot
 }
 }
 \if{html}{\out{<hr>}}

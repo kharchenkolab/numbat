@@ -153,29 +153,19 @@ nni <- function(tree, ncores = 1) {
   result <- vector("list", 2 * n)
   l <- 1
   
-  result = mclapply(
+  result = Reduce('c', 
+    mclapply(
           mc.cores = ncores,
           seq(1,n),
           function(i) {
                nnin(tree, i)
           }
-     ) %>% Reduce('c', .)
+     ))
 
   attr(result, "TipLabel") <- tip.label
   class(result) <- "multiPhylo"
 
   return(result)
-}
-
-#' from phangorn
-#' @rdname upgma
-#' @export
-"upgma" <- function(D, method = "average", ...) {
-  DD <- as.dist(D)
-  hc <- hclust(DD, method = method, ...)
-  result <- ape::as.phylo(hc)
-  result <- reorder(result, "postorder")
-  result
 }
 
 #' from ape

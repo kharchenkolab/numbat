@@ -12,7 +12,6 @@ approx_phi_post(
   beta = NULL,
   mu = NULL,
   sig = NULL,
-  model = "lnpois",
   lower = 0.2,
   upper = 10,
   start = 1

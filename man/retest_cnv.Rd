@@ -6,7 +6,6 @@
 \usage{
 retest_cnv(
   bulk,
-  exp_model = "lnpois",
   theta_min = 0.08,
   logphi_min = 0.25,
   gamma = 20,
@@ -15,8 +14,6 @@ retest_cnv(
 }
 \arguments{
 \item{bulk}{pesudobulk dataframe}
-
-\item{exp_model}{model for gene expression - Poisson-Lognormal or Gamma-Poisson}
 
 \item{gamma}{numeric Dispersion parameter for the Beta-Binomial allele model}
 

@@ -356,7 +356,7 @@ run_numbat = function(
         # contruct initial tree
         dist_mat = parallelDist::parDist(rbind(P, 'outgroup' = 1), threads = ncores)
 
-        treeUPGMA = upgma(dist_mat) %>%
+        treeUPGMA = phangorn::upgma(dist_mat) %>%
             ape::root(outgroup = 'outgroup') %>%
             ape::drop.tip('outgroup') %>%
             reorder(order = 'postorder')
@@ -427,7 +427,7 @@ run_numbat = function(
                 tip_length = 0.2,
                 branch_width = 0.2,
                 line_width = 0.1,
-                geno_bar = TRUE
+                clone_bar = TRUE
             )
         
             ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 8, height = 3.5, dpi = 200)

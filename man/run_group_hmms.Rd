@@ -8,7 +8,6 @@ run_group_hmms(
   bulks,
   t = 1e-04,
   gamma = 20,
-  exp_model = "lnpois",
   alpha = 1e-04,
   min_genes = 10,
   common_diploid = TRUE,
