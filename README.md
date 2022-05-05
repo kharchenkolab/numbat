@@ -21,4 +21,5 @@ Numbat does not require paired DNA or genotype data and operates solely on the d
 
 [Teng Gao, Ruslan Soldatov, Hirak Sarkar, et al. Haplotype-enhanced inference of somatic copy number profiles from single-cell transcriptomes. bioRxiv 2022.](https://www.biorxiv.org/content/10.1101/2022.02.07.479314v1)
 
-# [User Guide](https://kharchenkolab.github.io/numbat/)
+# User Guide
+For a complete guide, please see [Numbat User Guide](https://kharchenkolab.github.io/numbat/).
