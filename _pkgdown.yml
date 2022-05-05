@@ -1,5 +1,7 @@
 template:
   bootstrap: 5
+  params:
+    google_site_verification: _nn6ile-a6x6lctOW
 home:
   title: Numbat Guide
   description: >
