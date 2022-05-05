@@ -690,6 +690,84 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
     }
 }
 
+#' Plot single-cell smoothed expression magnitude heatmap
+#' @param gtree tbl_graph The single-cell phylogeny
+#' @param label_mut logical Whether to label mutations
+#' @param label_size numeric Size of mutation labels
+#' @param dot_size numeric Size of mutation nodes
+#' @param branch_width numeric Width of branches in tree
+#' @param tip logical Whether to plot tip point
+#' @param tip_length numeric Length of the tips
+#' @param pal_clone named vector Clone colors
+#' @export
+plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, tip_length = 0.5, pal_clone = NULL) {
+
+    mut_nodes = gtree %>% activate(nodes) %>%
+      filter(!is.na(site)) %>% data.frame() %>%
+      select(name, site)
+    
+    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
+    
+    clone_dict = gtree %>%
+        activate(nodes) %>%
+        data.frame %>%
+        mutate(
+            GT = ifelse(compartment == 'normal', '', GT),
+            GT = factor(GT),
+            clone = as.factor(clone)
+        ) %>%
+      {setNames(.$clone, .$name)}
+    
+    OTU_dict = lapply(levels(clone_dict), function(x) names(clone_dict[clone_dict == x])) %>% setNames(levels(clone_dict))
+
+    p_tree = gtree %>% 
+        to_phylo() %>%
+        groupOTU(
+            OTU_dict,
+            'clone'
+        ) %>%
+        ggtree(ladderize = T, size = branch_width) %<+%
+        mut_nodes +
+        layout_dendrogram() +
+        geom_rootedge(size = branch_width) +
+        theme(
+            plot.margin = margin(0,0,0,0),
+            axis.title.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.text.x = element_blank(),
+            axis.line.y = element_line(size = 0.2),
+            axis.ticks.y = element_line(size = 0.2),
+            axis.text.y = element_text(size = 8)
+        ) +
+        guides(color = 'none') +
+        xlab('Number of mutations')
+
+    if (label_mut) {
+        p_tree = p_tree + 
+            geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
+            geom_text2(
+                aes(x = branch, label = str_trunc(site, 20, side = 'center')),
+                size = label_size, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
+            )
+    }
+
+    if (tip) {
+
+        if (is.null(pal_clone)) {
+            getPalette = colorRampPalette(pal)
+            pal_clone = getPalette(nrow(mut_nodes) + 1)
+        }
+
+        p_tree = p_tree + 
+            geom_tippoint(aes(color = as.factor(clone)), size=dot_size, stroke = 0.2) +
+            scale_color_manual(values = pal_clone, limits = force)
+    }
+    
+    return(p_tree)
+    
+}
+
+
 ########################### Functions for internal use ############################
 
 plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
@@ -1269,76 +1347,9 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
         return(p_clones + plot_title)
     }
 
-    p_mut = res$G_m %>% plot_mut_history(pal_clone = pal_clone) 
+    p_mut = res$G_m %>% plot_mut_history(pal = pal_clone) 
 
     (p_mut / p_clones) + plot_layout(heights = c(ratio, 1)) + plot_title
-}
-
-plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, pal_clone = NULL, tip_length = 0.5) {
-
-    mut_nodes = gtree %>% activate(nodes) %>%
-      filter(!is.na(site)) %>% data.frame() %>%
-      select(name, site)
-    
-    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
-    
-    clone_dict = gtree %>%
-        activate(nodes) %>%
-        data.frame %>%
-        mutate(
-            GT = ifelse(compartment == 'normal', '', GT),
-            GT = factor(GT),
-            clone = as.factor(clone)
-        ) %>%
-      {setNames(.$clone, .$name)}
-    
-    OTU_dict = lapply(levels(clone_dict), function(x) names(clone_dict[clone_dict == x])) %>% setNames(levels(clone_dict))
-
-    p_tree = gtree %>% 
-        to_phylo() %>%
-        groupOTU(
-            OTU_dict,
-            'clone'
-        ) %>%
-        ggtree(ladderize = T, size = branch_width) %<+%
-        mut_nodes +
-        layout_dendrogram() +
-        geom_rootedge(size = branch_width) +
-        theme(
-            plot.margin = margin(0,0,0,0),
-            axis.title.x = element_blank(),
-            axis.ticks.x = element_blank(),
-            axis.text.x = element_blank(),
-            axis.line.y = element_line(size = 0.2),
-            axis.ticks.y = element_line(size = 0.2),
-            axis.text.y = element_text(size = 8)
-        ) +
-        guides(color = 'none') +
-        xlab('Number of mutations')
-
-    if (label_mut) {
-        p_tree = p_tree + 
-            geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
-            geom_text2(
-                aes(x = branch, label = str_trunc(site, 20, side = 'center')),
-                size = label_size, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
-            )
-    }
-
-    if (tip) {
-
-        if (is.null(pal_clone)) {
-            getPalette = colorRampPalette(pal)
-            pal_clone = getPalette(nrow(mut_nodes) + 1)
-        }
-
-        p_tree = p_tree + 
-            geom_tippoint(aes(color = as.factor(clone)), size=dot_size, stroke = 0.2) +
-            scale_color_manual(values = pal_clone, limits = force)
-    }
-    
-    return(p_tree)
-    
 }
 
 cnv_heatmap = function(segs) {

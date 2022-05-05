@@ -102,6 +102,26 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
                 ...
             )
         return(p)
+    },
+
+    #' @description Plot the single cell phylogeny
+    #' @param ... additional parameters passed to plot_sc_tree()
+    plot_sc_tree = function(...) {
+        p = plot_sc_tree(
+                gtree = self$gtree,
+                ...
+            )
+        return(p)
+    },
+
+    #' @description Plot consensus segments
+    #' @param ... additional parameters passed to plot_sc_tree()
+    plot_consensus = function(...) {
+        p = plot_consensus(
+                segs = self$segs_consensus,
+                ...
+            )
+        return(p)
     }),
 
     ## Private functions

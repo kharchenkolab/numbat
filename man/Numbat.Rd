@@ -46,6 +46,8 @@ Used to allow users to plot results
 \item \href{#method-plot_phylo_heatmap}{\code{Numbat$plot_phylo_heatmap()}}
 \item \href{#method-plot_exp_roll}{\code{Numbat$plot_exp_roll()}}
 \item \href{#method-plot_mut_history}{\code{Numbat$plot_mut_history()}}
+\item \href{#method-plot_sc_tree}{\code{Numbat$plot_sc_tree()}}
+\item \href{#method-plot_consensus}{\code{Numbat$plot_consensus()}}
 \item \href{#method-clone}{\code{Numbat$clone()}}
 }
 }
@@ -126,6 +128,40 @@ Plot the mutation history of the tumor
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{...}}{additional parameters passed to plot_mut_history()}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plot_sc_tree"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_sc_tree}{}}}
+\subsection{Method \code{plot_sc_tree()}}{
+Plot the single cell phylogeny
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_sc_tree(...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{additional parameters passed to plot_sc_tree()}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plot_consensus"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_consensus}{}}}
+\subsection{Method \code{plot_consensus()}}{
+Plot consensus segments
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_consensus(...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{additional parameters passed to plot_sc_tree()}
 }
 \if{html}{\out{</div>}}
 }

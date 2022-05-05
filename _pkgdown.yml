@@ -15,3 +15,8 @@ reference:
   contents:
   - Numbat
   - starts_with("plot_")
+articles:
+- title: "Interpreting results"
+  navbar: ~
+  contents:
+  - visualization

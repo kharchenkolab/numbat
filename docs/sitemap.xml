@@ -4,6 +4,12 @@
     <loc>/404.html</loc>
   </url>
   <url>
+    <loc>/articles/index.html</loc>
+  </url>
+  <url>
+    <loc>/articles/visualization.html</loc>
+  </url>
+  <url>
     <loc>/authors.html</loc>
   </url>
   <url>
@@ -244,6 +250,9 @@
     <loc>/reference/plot_consensus.html</loc>
   </url>
   <url>
+    <loc>/reference/plot_exp_roll.html</loc>
+  </url>
+  <url>
     <loc>/reference/plot_mut_history.html</loc>
   </url>
   <url>
@@ -254,6 +263,9 @@
   </url>
   <url>
     <loc>/reference/plot_sc_roll.html</loc>
+  </url>
+  <url>
+    <loc>/reference/plot_sc_tree.html</loc>
   </url>
   <url>
     <loc>/reference/pnorm.range.html</loc>
