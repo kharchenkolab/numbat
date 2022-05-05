@@ -28,7 +28,6 @@ run_numbat(
   min_overlap = 0.45,
   ncores = 1,
   ncores_nni = ncores,
-  exp_model = "lnpois",
   random_init = FALSE,
   verbose = TRUE,
   diploid_chroms = NULL,
@@ -37,9 +36,8 @@ run_numbat(
   skip_nj = FALSE,
   multi_allelic = FALSE,
   p_multi = 1 - alpha,
-  hclust_only = FALSE,
   plot = TRUE,
-  check_converge = FALSE
+  check_convergence = FALSE
 )
 }
 \arguments{

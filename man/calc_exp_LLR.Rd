@@ -12,8 +12,7 @@ calc_exp_LLR(
   mu = NULL,
   sig = NULL,
   alpha = NULL,
-  beta = NULL,
-  model = "lnpois"
+  beta = NULL
 )
 }
 \arguments{

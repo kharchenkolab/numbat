@@ -2,16 +2,17 @@
 % Please edit documentation in R/trees.R
 \name{mark_tumor_lineage}
 \alias{mark_tumor_lineage}
-\title{mark the tumor lineage of a phylogeny}
+\title{Mark the tumor lineage of a phylogeny}
 \usage{
 mark_tumor_lineage(gtree)
 }
 \arguments{
-\item{gtree}{a tidygraph tree}
+\item{gtree}{tbl_graph Single-cell phylogeny}
 }
 \value{
-a tidygraph tree
+tbl_graph Phylogeny annotated with tumor versus normal compartment
 }
 \description{
-mark the tumor lineage of a phylogeny
+Mark the tumor lineage of a phylogeny
 }
+\keyword{internal}

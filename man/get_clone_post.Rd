@@ -19,3 +19,4 @@ dataframe Clone posteriors
 \description{
 Map cells to the phylogeny (or genotypes) based on CNV posteriors
 }
+\keyword{internal}

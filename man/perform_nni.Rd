@@ -2,7 +2,7 @@
 % Please edit documentation in R/trees.R
 \name{perform_nni}
 \alias{perform_nni}
-\title{maximum likelihood tree search via NNI}
+\title{Maximum likelihood tree search via NNI}
 \usage{
 perform_nni(
   tree_init,
@@ -14,21 +14,22 @@ perform_nni(
 )
 }
 \arguments{
-\item{tree_init}{iintial tree as phylo object}
+\item{tree_init}{phylo Intial tree}
 
-\item{P}{genotype probability matrix}
+\item{P}{matrix Genotype probability matrix}
 
-\item{max_iter}{maximum number of iterations}
+\item{max_iter}{integer Maximum number of iterations}
 
-\item{eps}{tolerance threshold in likelihood difference for stopping}
+\item{eps}{numeric Tolerance threshold in likelihood difference for stopping}
 
-\item{ncores}{number of cores to use}
+\item{ncores}{integer Number of cores to use}
 
-\item{verbose}{verbosity}
+\item{verbose}{logical Verbosity}
 }
 \value{
-a list of trees corresponding to the rearrangement steps
+multiPhylo List of trees corresponding to the rearrangement steps
 }
 \description{
-maximum likelihood tree search via NNI
+Maximum likelihood tree search via NNI
 }
+\keyword{internal}

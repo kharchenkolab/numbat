@@ -8,14 +8,14 @@ plot_psbulk(
   bulk,
   use_pos = FALSE,
   allele_only = FALSE,
-  min_LLR = 0,
+  min_LLR = 20,
   min_depth = 8,
   exp_limit = 2,
   phi_mle = TRUE,
   theta_roll = FALSE,
   dot_size = 0.8,
   dot_alpha = 0.5,
-  legend = TRUE
+  legend = FALSE
 )
 }
 \arguments{

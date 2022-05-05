@@ -4,48 +4,16 @@
 \alias{plot_bulks}
 \title{plot a group of pseudobulks HMM profile}
 \usage{
-plot_bulks(
-  bulk_all,
-  use_pos = FALSE,
-  allele_only = FALSE,
-  min_LLR = 10,
-  min_depth = 8,
-  exp_limit = 2,
-  phi_mle = TRUE,
-  theta_roll = FALSE,
-  dot_size = 0.8,
-  dot_alpha = 0.5,
-  ncol = 1,
-  legend = FALSE,
-  title = TRUE
-)
+plot_bulks(bulks, ..., ncol = 1, title = TRUE)
 }
 \arguments{
-\item{use_pos}{logical Use marker position instead of index as x coordinate}
+\item{bulks}{dataframe Pseudobulk profiles annotated with "sample" column}
 
-\item{allele_only}{logical Only plot alleles}
-
-\item{min_LLR}{numeric LLR threshold for event filtering}
-
-\item{min_depth}{numeric Minimum coverage depth for a SNP to be plotted}
-
-\item{exp_limit}{numeric Expression logFC axis limit}
-
-\item{phi_mle}{logical Whether to plot estimates of segmental expression fold change}
-
-\item{theta_roll}{logical Whether to plot rolling estimates of allele imbalance}
-
-\item{dot_size}{numeric Size of marker dots}
-
-\item{dot_alpha}{numeric Transparency of the marker dots}
+\item{...}{additional parameters passed to plot_psbulk()}
 
 \item{ncol}{integer Number of columns}
 
-\item{legend}{logical Whether to show legend}
-
 \item{title}{logical Whether to add titles to individual plots}
-
-\item{bulks}{pseudobulks dataframe}
 }
 \value{
 a ggplot object

@@ -2,7 +2,7 @@
 library(numbat)
 
 test_that("dpoilog works", {
-  expect_equal(dpoilog(c(1,11),c(1,1),c(1,1)), c(0.175733342664327, 0.0150105250670325))
+  expect_equal(numbat:::dpoilog(c(1,11),c(1,1),c(1,1)), c(0.175733342664327, 0.0150105250670325))
 })
 
 test_that("HMM works", {
@@ -46,16 +46,14 @@ test_that("logSumExp() works", {
 
 test_that("Check that likelihood_allele() works as expected", {
 
-  LL = likelihood_allele(pre_likelihood_hmm)
+  LL = numbat:::likelihood_allele(pre_likelihood_hmm)
   expect_equal(as.integer(LL), -736)
 
 })
 
-
-
 test_that("Check that forward_backward() works as expected", {
 
-  p_major = forward_back_allele(pre_likelihood_hmm)[,1]
+  p_major = numbat:::forward_back_allele(pre_likelihood_hmm)[,1]
   expect_equal(is.vector(p_major), TRUE)
   expect_equal(length(p_major), 1042)
   expect_equal(round(p_major[1], 3), 0.963)

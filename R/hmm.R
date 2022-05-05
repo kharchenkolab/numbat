@@ -1,5 +1,6 @@
 
 ########## joint HMM ###########
+#' Run joint HMM on a pseudobulk profile
 #' @param pAD integer vector Paternal allele counts
 #' @param DP integer vector Total alelle counts
 #' @param p_s numeric vector Phase switch probabilities
@@ -148,7 +149,7 @@ run_hmm_mv_inhom = function(
 #' Beta-binomial distribution density function
 #' A distribution is beta-binomial if p, the probability of success, 
 #' in a binomial distribution has a beta distribution with shape 
-#' parameters α > 0 and β > 0
+#' parameters alpha > 0 and beta > 0
 #' For more details, see extraDistr::dbbinom
 #'
 #' @param x vector of quantiles
@@ -157,11 +158,7 @@ run_hmm_mv_inhom = function(
 #' @param beta numeric (default=1)
 #' @param log boolean (default=FALSE)
 #' @return density values returned as numeric vector
-#' @examples
-#' xx <- 1:1000
-#' dbbinom(xx, 1000, 5, 13)
-#'
-#' @export
+#' @keywords internal
 dbbinom <- function(x, size, alpha = 1, beta = 1, log = FALSE) {
     cppdbbinom(x, size, alpha, beta, log[1L])
 }

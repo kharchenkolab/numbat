@@ -5,7 +5,7 @@
 #' @param P genotype probability matrix
 #' @param get_l_matrix whether to compute the whole likelihood matrix
 #' @return list Likelihood scores of a tree
-#' @export
+#' @keywords internal
 score_tree = function(tree, P, get_l_matrix = FALSE) {
  
     tree = reorder(tree, order = 'postorder')
@@ -39,15 +39,15 @@ score_tree = function(tree, P, get_l_matrix = FALSE) {
     
 }
 
-#' maximum likelihood tree search via NNI
-#' @param tree_init iintial tree as phylo object
-#' @param P genotype probability matrix
-#' @param max_iter maximum number of iterations
-#' @param eps tolerance threshold in likelihood difference for stopping
-#' @param verbose verbosity
-#' @param ncores number of cores to use
-#' @return a list of trees corresponding to the rearrangement steps
-#' @export
+#' Maximum likelihood tree search via NNI
+#' @param tree_init phylo Intial tree
+#' @param P matrix Genotype probability matrix
+#' @param max_iter integer Maximum number of iterations
+#' @param eps numeric Tolerance threshold in likelihood difference for stopping
+#' @param verbose logical Verbosity
+#' @param ncores integer Number of cores to use
+#' @return multiPhylo List of trees corresponding to the rearrangement steps
+#' @keywords internal
 perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, verbose = TRUE) {
 
     P = as.matrix(P)
@@ -153,13 +153,14 @@ nni <- function(tree, ncores = 1) {
   result <- vector("list", 2 * n)
   l <- 1
   
-  result = mclapply(
+  result = Reduce('c', 
+    mclapply(
           mc.cores = ncores,
           seq(1,n),
           function(i) {
                nnin(tree, i)
           }
-     ) %>% Reduce('c', .)
+     ))
 
   attr(result, "TipLabel") <- tip.label
   class(result) <- "multiPhylo"
@@ -167,19 +168,8 @@ nni <- function(tree, ncores = 1) {
   return(result)
 }
 
-#' from phangorn
-#' @rdname upgma
-#' @export
-"upgma" <- function(D, method = "average", ...) {
-  DD <- as.dist(D)
-  hc <- hclust(DD, method = method, ...)
-  result <- ape::as.phylo(hc)
-  result <- reorder(result, "postorder")
-  result
-}
-
 #' from ape
-#' @export
+#' @keywords internal
 ladderize <- function(phy, right = TRUE) {
     desc_fun <- function(x) {
         parent <- x[, 1]
@@ -233,10 +223,10 @@ ladderize <- function(phy, right = TRUE) {
     phy
 }
 
-#' mark the tumor lineage of a phylogeny
-#' @param gtree a tidygraph tree
-#' @return a tidygraph tree
-#' @export
+#' Mark the tumor lineage of a phylogeny
+#' @param gtree tbl_graph Single-cell phylogeny
+#' @return tbl_graph Phylogeny annotated with tumor versus normal compartment
+#' @keywords internal
 mark_tumor_lineage = function(gtree) {
   
     mut_nodes = gtree %>%
@@ -612,7 +602,7 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
 #' @param G igraph Mutation graph 
 #' @param l_matrix matrix Mutation placement likelihood matrix (node by mutation)
 #' @return igraph Mutation graph
-#' @export
+#' @keywords internal
 simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
 
     # moves = data.frame()
@@ -689,7 +679,7 @@ get_move_opt = function(G, l_matrix) {
 }
 
 #' Annotate superclones on a tree
-#' @export
+#' @keywords internal
 annot_superclones = function(gtree, geno, p_min = 0.95, precision_cutoff = 0.9) {
     
     anchors = score_mut(gtree, geno, p_min = p_min) %>%

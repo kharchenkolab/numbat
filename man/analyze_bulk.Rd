@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{analyze_bulk}
 \alias{analyze_bulk}
-\title{Call CNVs in a pseudobulk}
+\title{Call CNVs in a pseudobulk profile using the Numbat joint HMM}
 \usage{
 analyze_bulk(
   bulk,
@@ -50,5 +50,5 @@ analyze_bulk(
 a dataframe of segments with CNV posterior information
 }
 \description{
-Call CNVs in a pseudobulk
+Call CNVs in a pseudobulk profile using the Numbat joint HMM
 }

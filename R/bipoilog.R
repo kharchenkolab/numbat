@@ -111,7 +111,7 @@ dbipoilog <- function(n1,n2,mu1,mu2,sig1,sig2,rho){
 #' @param sig standard deviation of lognormal distribution
 #' @param log boolean Return the log density if TRUE (default=FALSE)
 #' @return NULL
-#' @export
+#' @keywords internal
 dpoilog <- function(x, mu, sig, log=FALSE){
   if (!(length(x) == length(mu) & length(x) == length(sig))) stop('All parameters must be same length') 
   if (any((x[x!=0]/trunc(x[x!=0]))!=1)) stop('all x must be integers')

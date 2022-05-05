@@ -16,3 +16,6 @@ walkthrough.Rmd
 pileup_and_phase.R
 numbat.png
 logo.png
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

@@ -7,23 +7,24 @@
 preprocess_allele(sample, vcf_pu, vcf_phased, AD, DP, barcodes, gtf_transcript)
 }
 \arguments{
-\item{sample}{sample label}
+\item{sample}{character Sample label}
 
-\item{vcf_pu}{pileup VCF from cell-snp-lite}
+\item{vcf_pu}{dataframe Pileup VCF from cell-snp-lite}
 
-\item{vcf_phased}{phased VCF from eagle2}
+\item{vcf_phased}{dataframe Phased VCF from eagle2}
 
-\item{AD}{alt allele depth matrix from pileup}
+\item{AD}{dgTMatrix Alt allele depth matrix from pileup}
 
-\item{DP}{total allele depth matrix from pileup}
+\item{DP}{dgTMatrix Total allele depth matrix from pileup}
 
-\item{barcodes}{list of barcodes from pileup}
+\item{barcodes}{vector List of barcodes from pileup}
 
-\item{gtf_transcript}{transcript dataframe}
+\item{gtf_transcript}{dataframe Transcript GTF}
 }
 \value{
-a long dataframe with allele counts by cell
+dataframe Allele counts by cell
 }
 \description{
 Preprocess allele data
 }
+\keyword{internal}

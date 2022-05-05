@@ -9,3 +9,4 @@ annot_superclones(gtree, geno, p_min = 0.95, precision_cutoff = 0.9)
 \description{
 Annotate superclones on a tree
 }
+\keyword{internal}

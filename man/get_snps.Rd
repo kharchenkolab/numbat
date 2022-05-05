@@ -9,6 +9,10 @@ get_snps(vcf)
 \arguments{
 \item{vcf}{vcfR object}
 }
+\value{
+dataframe SNP information
+}
 \description{
 process VCFs into SNP dataframe
 }
+\keyword{internal}

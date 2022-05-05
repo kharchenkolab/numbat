@@ -5,47 +5,47 @@
 Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
   public = list(
 
-    #' @field label sample name
+    #' @field label character Sample name
     label = 'sample',
     
-    #' @field gtf transcript annotation
+    #' @field gtf dataframe Transcript annotation
     gtf = NULL,
 
-    #' @field joint_post joint posterior
+    #' @field joint_post dataframe Joint posterior
     joint_post = NULL,
 
-    #' @field exp_post expression posterior
+    #' @field exp_post dataframe Expression posterior
     exp_post = NULL,
 
-    #' @field allele_post allele posetrior
+    #' @field allele_post dataframe Allele posetrior
     allele_post = NULL,
 
-    #' @field bulk_subtrees bulk profiles of lineage subtrees
+    #' @field bulk_subtrees dataframe Bulk profiles of lineage subtrees
     bulk_subtrees = NULL,
 
-    #' @field bulk_clones bulk profiles of clones
+    #' @field bulk_clones dataframe Bulk profiles of clones
     bulk_clones = NULL,
 
-    #' @field segs_consensus consensus segments
+    #' @field segs_consensus dataframe Consensus segments
     segs_consensus = NULL,
 
-    #' @field tree_post tree posterior
+    #' @field tree_post list Tree posterior
     tree_post = NULL,
 
-    #' @field mut_graph mutation history graph
+    #' @field mut_graph igraph Mutation history graph
     mut_graph = NULL,
 
-    #' @field gtree single-cell phylogeny
+    #' @field gtree tbl_graph Single-cell phylogeny
     gtree = NULL,
 
-    #' @field clone_post clone posteriors
+    #' @field clone_post dataframe Clone posteriors
     clone_post = NULL,
 
-    #' @field gexp_roll_wide smoothed expression of single cells
+    #' @field gexp_roll_wide matrix Smoothed expression of single cells
     gexp_roll_wide = NULL,
 
-    #' @field hc hclust object for initial clustering
-    hc = NULL,   
+    #' @field hc hclust Initial hierarchical clustering
+    hc = NULL,
 
     #' @description initialize Numbat class
     #' @param out_dir character string Output directory
@@ -64,58 +64,63 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     },
 
     #' @description Plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
-    #' @param annot named list Cell annotations (default=NULL)
-    #' @param geno_bar logical Whether to show genotype annotation (default=FALSE)
-    #' @param pal_clone named vector Clone color palette (default=NULL)
-    #' @param p_min numeric Minimum probability threshold to filter the calls (default=0.9)
-    #' @param tip_length numeric Tree tip length (default=1)
-    #' @param branch_width numeric Tree branch width (default=0.2)
-    #' @param line_width numeric Heatmap line width (default=0.1)
-    #' @param tree_height numeric Plotting height of the tree (default=1)
-    #' @return ggplot Plot
-    plot_phylo_heatmap = function(annot = NULL, geno_bar = FALSE, pal_clone = NULL, pal_annot = NULL, p_min = 0.9, tip_length = 1, branch_width = 0.2, line_width = 0.1, tree_height = 1) {
+    #' @param ... additional parameters passed to plot_phylo_heatmap()
+    plot_phylo_heatmap = function(...) {
 
         p = plot_phylo_heatmap(  
-            self$gtree,
-            self$joint_post,
-            self$segs_consensus,
-            tip_length = tip_length,
-            branch_width = branch_width,
-            line_width = line_width,
-            p_min = p_min,
-            geno_bar = geno_bar,
-            annot = annot,
-            pal_clone = pal_clone,
-            pal_annot = pal_annot,
-            tree_height = tree_height
+            gtree = self$gtree,
+            joint_post = self$joint_post,
+            segs_consensus = self$segs_consensus,
+            ...
         )
         return(p)
     },
 
     #' @description Plot window-smoothed expression profiles
-    #' @param k integer Number of clusters (default=3)
-    #' @param n_sample integer Number of cells to subsample (default=300)
-    #' @return ggplot Plot
-    plot_exp_roll = function(k = 3, n_sample = 300) {
+    #' @param k integer Number of clusters
+    #' @param n_sample integer Number of cells to subsample
+    #' @param ... additional parameters passed to plot_exp_roll()
+    plot_exp_roll = function(k = 3, n_sample = 300, ...) {
         
-        p = plot_sc_roll(
-            self$gexp_roll_wide,
-            self$hc,
-            self$gtf,
+        p = plot_exp_roll(
+            gexp_roll_wide = self$gexp_roll_wide,
+            hc = self$hc,
+            gtf = self$gtf,
             k = k,
-            n_sample = n_sample
+            n_sample = n_sample,
+            ...
         )
         return(p)
     },
     
     #' @description Plot the mutation history of the tumor
-    #' @param horizontal logical Horizontal layout or vertical
-    #' @param label logical Whether to label the mutations on edges
-    #' @param pal_clone named vector Clone color palette
-    #' @param node_id logical Whether to label nodes with clone id
-    #' @return ggplot Plot
-    plot_mut_history = function(horizontal = TRUE, label = TRUE, pal_clone = NULL, node_id = TRUE) {
-        p = plot_mut_history(self$mut_graph, horizontal = horizontal, label = label, pal_clone = pal_clone, node_id = node_id)
+    #' @param ... additional parameters passed to plot_mut_history()
+    plot_mut_history = function(...) {
+        p = plot_mut_history(
+                G = self$mut_graph,
+                clone_post = self$clone_post,
+                ...
+            )
+        return(p)
+    },
+
+    #' @description Plot the single cell phylogeny
+    #' @param ... additional parameters passed to plot_sc_tree()
+    plot_sc_tree = function(...) {
+        p = plot_sc_tree(
+                gtree = self$gtree,
+                ...
+            )
+        return(p)
+    },
+
+    #' @description Plot consensus segments
+    #' @param ... additional parameters passed to plot_sc_tree()
+    plot_consensus = function(...) {
+        p = plot_consensus(
+                segs = self$segs_consensus,
+                ...
+            )
         return(p)
     }),
 

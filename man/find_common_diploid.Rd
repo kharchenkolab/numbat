@@ -41,3 +41,4 @@ list Ploidy information
 \description{
 Find the common diploid region in a group of pseudobulks
 }
+\keyword{internal}

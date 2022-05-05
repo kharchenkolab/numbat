@@ -1,0 +1,22 @@
+template:
+        bootstrap: 5
+reference:
+- title: "Preparing data"
+  contents: 
+  - aggregate_counts
+- title: "Bulk analysis"
+  contents:
+  - get_bulk
+  - analyze_bulk
+- title: "Single-cell analysis"
+  contents:
+  - run_numbat
+- title: "Visualizing results"
+  contents:
+  - Numbat
+  - starts_with("plot_")
+articles:
+- title: "Interpreting results"
+  navbar: ~
+  contents:
+  - visualization
