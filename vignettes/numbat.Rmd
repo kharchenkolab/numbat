@@ -141,7 +141,7 @@ There are a few parameters you can consider tuning to a specific dataset.
   
 # Understanding results
 A detailed vignette on how to interpret and visualize Numbat results is available:  
-- [Interpreting Numbat results](https://kharchenkolab.github.io/numbat)
+- [Interpreting Numbat results](https://kharchenkolab.github.io/numbat/articles/visualization.html)
   
 Numbat generates a number of files in the output folder. The file names are post-fixed with the `i`th iteration of phylogeny optimization. Here is a detailed list:
 

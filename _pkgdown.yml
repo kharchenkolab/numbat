@@ -1,5 +1,9 @@
 template:
-        bootstrap: 5
+  bootstrap: 5
+home:
+  title: Numbat Guide
+  description: >
+    Haplotype-aware CNV detection and phylogeny reconstruction from single-cell RNA-seq
 reference:
 - title: "Preparing data"
   contents: 
