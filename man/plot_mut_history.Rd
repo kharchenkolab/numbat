@@ -10,7 +10,10 @@ plot_mut_history(
   edge_label_size = 4,
   node_label_size = 6,
   node_size = 10,
+  arrow_size = 2,
   show_clone_size = TRUE,
+  show_distance = TRUE,
+  legend = TRUE,
   edge_label = TRUE,
   node_label = TRUE,
   horizontal = TRUE,
@@ -28,7 +31,11 @@ plot_mut_history(
 
 \item{node_size}{numeric Size of nodes}
 
+\item{arrow_size}{numeric Size of arrows}
+
 \item{show_clone_size}{logical Whether to show clone size}
+
+\item{show_distance}{logical Whether to show evolutionary distance between clones}
 
 \item{edge_label}{logical Whether to label edges}
 

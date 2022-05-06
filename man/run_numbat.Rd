@@ -75,6 +75,8 @@ run_numbat(
 
 \item{max_cost}{numeric Likelihood threshold to collapse internal branches}
 
+\item{min_depth}{integer Minimum allele depth}
+
 \item{common_diploid}{logical Whether to find common diploid regions in a group of peusdobulks}
 
 \item{ncores}{integer Number of threads to use}
@@ -88,8 +90,6 @@ run_numbat(
 \item{skip_nj}{logical Whether to skip NJ tree construction and only use UPGMA}
 
 \item{multi_allelic}{logical Whether to call multi-allelic CNVs}
-
-\item{min_dpeth}{integer Minimum allele depth}
 }
 \value{
 a status code
