@@ -113,7 +113,7 @@ warning = function(w){
 cat('Creating VCFs\n')
 vcfs = lapply(samples, function(sample){vcfR::read.vcfR(glue('{outdir}/pileup/{sample}/cellSNP.base.vcf'), verbose = F)})
 
-genotype(label, samples, vcfs, glue('{outdir}/phasing'))
+numbat::genotype(label, samples, vcfs, glue('{outdir}/phasing'))
 
 ## phasing
 eagle_cmd = function(chr, sample) {

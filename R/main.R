@@ -31,7 +31,7 @@ NULL
 #' @param tau numeric Factor to determine max_cost as a function of the number of cells (0-1)
 #' @param max_iter integer Maximum number of iterations to run the phyologeny optimization
 #' @param max_nni integer Maximum number of iterations to run NNI in the ML phylogeny inference
-#' @param min_dpeth integer Minimum allele depth 
+#' @param min_depth integer Minimum allele depth 
 #' @param common_diploid logical Whether to find common diploid regions in a group of peusdobulks
 #' @param ncores integer Number of threads to use 
 #' @param ncores_nni integer Number of threads to use for NNI
@@ -176,6 +176,20 @@ run_numbat = function(
 
         # extract cell groupings
         nodes = get_nodes_celltree(hc, cutree(hc, k = init_k))
+
+        if (plot) {
+
+            p = plot_exp_roll(
+                gexp_roll_wide = clust$gexp_roll_wide,
+                hc = hc,
+                k = init_k,
+                gtf = gtf,
+                n_sample = 1e4
+            )
+        
+            ggsave(glue('{out_dir}/exp_roll_clust.png'), p, width = 8, height = 4, dpi = 200)
+
+        }
 
     }
 
@@ -421,17 +435,25 @@ run_numbat = function(
 
         if (plot) {
 
-            panel = plot_phylo_heatmap(
-                gtree,
-                joint_post,
-                segs_consensus,
-                tip_length = 0.2,
-                branch_width = 0.2,
-                line_width = 0.1,
-                clone_bar = TRUE
-            )
-        
-            ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 8, height = 3.5, dpi = 200)
+            tryCatch(expr = {
+
+                panel = plot_phylo_heatmap(
+                    gtree,
+                    joint_post,
+                    segs_consensus,
+                    tip_length = 0.2,
+                    branch_width = 0.2,
+                    line_width = 0.1,
+                    clone_bar = TRUE
+                )
+            
+                ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 8, height = 3.5, dpi = 200)
+            
+            },
+            error = function(e) { 
+                log_warn("Plotting phylo-heatmap failed, continuing..")
+            })
+
         }
 
         # form cell groupings using the obtained phylogeny
