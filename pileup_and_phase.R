@@ -113,7 +113,7 @@ warning = function(w){
 cat('Creating VCFs\n')
 vcfs = lapply(samples, function(sample){vcfR::read.vcfR(glue('{outdir}/pileup/{sample}/cellSNP.base.vcf'), verbose = F)})
 
-numbat::genotype(label, samples, vcfs, glue('{outdir}/phasing'))
+numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'))
 
 ## phasing
 eagle_cmd = function(chr, sample) {
@@ -179,7 +179,7 @@ for (sample in samples) {
 
     cell_barcodes = fread(glue('{pu_dir}/cellSNP.samples.tsv'), header = F) %>% pull(V1)
 
-    df = preprocess_allele(
+    df = numbat:::preprocess_allele(
         sample = label,
         vcf_pu = vcf_pu,
         vcf_phased = vcf_phased,

@@ -25,3 +25,4 @@ integer Status code
 \description{
 Genotyping main function
 }
+\keyword{internal}

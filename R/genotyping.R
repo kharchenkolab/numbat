@@ -7,7 +7,7 @@
 #' @param het_only logical Whether to only use heterozygous SNPs
 #' @param chr_prefix logical Whether to add chr prefix
 #' @return integer Status code
-#' @export
+#' @keywords internal
 genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE) {
 
     snps = lapply(
