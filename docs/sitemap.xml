@@ -1,348 +1,348 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>/404.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/404.html</loc>
   </url>
   <url>
-    <loc>/articles/index.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/articles/index.html</loc>
   </url>
   <url>
-    <loc>/articles/numbat.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/articles/numbat.html</loc>
   </url>
   <url>
-    <loc>/articles/visualization.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/articles/visualization.html</loc>
   </url>
   <url>
-    <loc>/authors.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/authors.html</loc>
   </url>
   <url>
-    <loc>/index.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/index.html</loc>
   </url>
   <url>
-    <loc>/reference/Modes.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/Modes.html</loc>
   </url>
   <url>
-    <loc>/reference/Numbat.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/Numbat.html</loc>
   </url>
   <url>
-    <loc>/reference/aggregate_counts.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/aggregate_counts.html</loc>
   </url>
   <url>
-    <loc>/reference/analyze_bulk.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/analyze_bulk.html</loc>
   </url>
   <url>
-    <loc>/reference/annot_cm.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/annot_cm.html</loc>
   </url>
   <url>
-    <loc>/reference/annot_consensus.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/annot_consensus.html</loc>
   </url>
   <url>
-    <loc>/reference/annot_haplo_segs.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/annot_haplo_segs.html</loc>
   </url>
   <url>
-    <loc>/reference/annot_segs.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/annot_segs.html</loc>
   </url>
   <url>
-    <loc>/reference/annot_superclones.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/annot_superclones.html</loc>
   </url>
   <url>
-    <loc>/reference/annot_theta_roll.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/annot_theta_roll.html</loc>
   </url>
   <url>
-    <loc>/reference/approx_phi_post.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/approx_phi_post.html</loc>
   </url>
   <url>
-    <loc>/reference/approx_theta_post.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/approx_theta_post.html</loc>
   </url>
   <url>
-    <loc>/reference/binary_entropy.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/binary_entropy.html</loc>
   </url>
   <url>
-    <loc>/reference/calc_allele_LLR.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/calc_allele_LLR.html</loc>
   </url>
   <url>
-    <loc>/reference/calc_allele_lik.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/calc_allele_lik.html</loc>
   </url>
   <url>
-    <loc>/reference/calc_cluster_dist.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/calc_cluster_dist.html</loc>
   </url>
   <url>
-    <loc>/reference/calc_exp_LLR.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/calc_exp_LLR.html</loc>
   </url>
   <url>
-    <loc>/reference/calc_phi_mle_lnpois.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/calc_phi_mle_lnpois.html</loc>
   </url>
   <url>
-    <loc>/reference/calc_trans_mat.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/calc_trans_mat.html</loc>
   </url>
   <url>
-    <loc>/reference/check_matrix.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/check_matrix.html</loc>
   </url>
   <url>
-    <loc>/reference/choose_ref_cor.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/choose_ref_cor.html</loc>
   </url>
   <url>
-    <loc>/reference/classify_alleles.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/classify_alleles.html</loc>
   </url>
   <url>
-    <loc>/reference/combine_bulk.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/combine_bulk.html</loc>
   </url>
   <url>
-    <loc>/reference/compute_posterior.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/compute_posterior.html</loc>
   </url>
   <url>
-    <loc>/reference/contract_nodes.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/contract_nodes.html</loc>
   </url>
   <url>
-    <loc>/reference/dbbinom.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/dbbinom.html</loc>
   </url>
   <url>
-    <loc>/reference/dpoilog.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/dpoilog.html</loc>
   </url>
   <url>
-    <loc>/reference/exp_hclust.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/exp_hclust.html</loc>
   </url>
   <url>
-    <loc>/reference/expand_states.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/expand_states.html</loc>
   </url>
   <url>
-    <loc>/reference/fill_neu_segs.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/fill_neu_segs.html</loc>
   </url>
   <url>
-    <loc>/reference/filter_genes.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/filter_genes.html</loc>
   </url>
   <url>
-    <loc>/reference/find_common_diploid.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/find_common_diploid.html</loc>
   </url>
   <url>
-    <loc>/reference/fit_bbinom.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/fit_bbinom.html</loc>
   </url>
   <url>
-    <loc>/reference/fit_gamma.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/fit_gamma.html</loc>
   </url>
   <url>
-    <loc>/reference/fit_gpois.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/fit_gpois.html</loc>
   </url>
   <url>
-    <loc>/reference/fit_lnpois.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/fit_lnpois.html</loc>
   </url>
   <url>
-    <loc>/reference/fit_ref_sse.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/fit_ref_sse.html</loc>
   </url>
   <url>
-    <loc>/reference/forward_back_allele.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/forward_back_allele.html</loc>
   </url>
   <url>
-    <loc>/reference/genotype.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/genotype.html</loc>
   </url>
   <url>
-    <loc>/reference/get_allele_bulk.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_allele_bulk.html</loc>
   </url>
   <url>
-    <loc>/reference/get_allele_hmm.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_allele_hmm.html</loc>
   </url>
   <url>
-    <loc>/reference/get_allele_post.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_allele_post.html</loc>
   </url>
   <url>
-    <loc>/reference/get_bulk.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_bulk.html</loc>
   </url>
   <url>
-    <loc>/reference/get_clone_post.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_clone_post.html</loc>
   </url>
   <url>
-    <loc>/reference/get_exp_bulk.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_exp_bulk.html</loc>
   </url>
   <url>
-    <loc>/reference/get_exp_likelihoods.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_exp_likelihoods.html</loc>
   </url>
   <url>
-    <loc>/reference/get_exp_post.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_exp_post.html</loc>
   </url>
   <url>
-    <loc>/reference/get_exp_sc.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_exp_sc.html</loc>
   </url>
   <url>
-    <loc>/reference/get_internal_nodes.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_internal_nodes.html</loc>
   </url>
   <url>
-    <loc>/reference/get_joint_post.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_joint_post.html</loc>
   </url>
   <url>
-    <loc>/reference/get_lambdas_bar.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_lambdas_bar.html</loc>
   </url>
   <url>
-    <loc>/reference/get_move_cost.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_move_cost.html</loc>
   </url>
   <url>
-    <loc>/reference/get_move_opt.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_move_opt.html</loc>
   </url>
   <url>
-    <loc>/reference/get_mut_tree.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_mut_tree.html</loc>
   </url>
   <url>
-    <loc>/reference/get_nodes_celltree.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_nodes_celltree.html</loc>
   </url>
   <url>
-    <loc>/reference/get_segs_consensus.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_segs_consensus.html</loc>
   </url>
   <url>
-    <loc>/reference/get_segs_neu.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_segs_neu.html</loc>
   </url>
   <url>
-    <loc>/reference/get_snps.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_snps.html</loc>
   </url>
   <url>
-    <loc>/reference/get_trans_probs.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_trans_probs.html</loc>
   </url>
   <url>
-    <loc>/reference/get_tree_post.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_tree_post.html</loc>
   </url>
   <url>
-    <loc>/reference/index.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/index.html</loc>
   </url>
   <url>
-    <loc>/reference/l_bbinom.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/l_bbinom.html</loc>
   </url>
   <url>
-    <loc>/reference/l_gpois.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/l_gpois.html</loc>
   </url>
   <url>
-    <loc>/reference/l_lnpois.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/l_lnpois.html</loc>
   </url>
   <url>
-    <loc>/reference/l_s_v.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/l_s_v.html</loc>
   </url>
   <url>
-    <loc>/reference/label_edges.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/label_edges.html</loc>
   </url>
   <url>
-    <loc>/reference/label_genotype.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/label_genotype.html</loc>
   </url>
   <url>
-    <loc>/reference/ladderize.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/ladderize.html</loc>
   </url>
   <url>
-    <loc>/reference/make_group_bulks.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/make_group_bulks.html</loc>
   </url>
   <url>
-    <loc>/reference/mark_tumor_lineage.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/mark_tumor_lineage.html</loc>
   </url>
   <url>
-    <loc>/reference/mut_to_tree.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/mut_to_tree.html</loc>
   </url>
   <url>
-    <loc>/reference/nni.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/nni.html</loc>
   </url>
   <url>
-    <loc>/reference/nnin.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/nnin.html</loc>
   </url>
   <url>
-    <loc>/reference/perform_nni.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/perform_nni.html</loc>
   </url>
   <url>
-    <loc>/reference/phi_hat_roll.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/phi_hat_roll.html</loc>
   </url>
   <url>
-    <loc>/reference/phi_hat_seg.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/phi_hat_seg.html</loc>
   </url>
   <url>
-    <loc>/reference/plot_bulks.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/plot_bulks.html</loc>
   </url>
   <url>
-    <loc>/reference/plot_consensus.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/plot_consensus.html</loc>
   </url>
   <url>
-    <loc>/reference/plot_exp_roll.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/plot_exp_roll.html</loc>
   </url>
   <url>
-    <loc>/reference/plot_mut_history.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/plot_mut_history.html</loc>
   </url>
   <url>
-    <loc>/reference/plot_phylo_heatmap.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/plot_phylo_heatmap.html</loc>
   </url>
   <url>
-    <loc>/reference/plot_psbulk.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/plot_psbulk.html</loc>
   </url>
   <url>
-    <loc>/reference/plot_sc_roll.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/plot_sc_roll.html</loc>
   </url>
   <url>
-    <loc>/reference/plot_sc_tree.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/plot_sc_tree.html</loc>
   </url>
   <url>
-    <loc>/reference/pnorm.range.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/pnorm.range.html</loc>
   </url>
   <url>
-    <loc>/reference/pre_likelihood_hmm.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/pre_likelihood_hmm.html</loc>
   </url>
   <url>
-    <loc>/reference/preprocess_allele.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/preprocess_allele.html</loc>
   </url>
   <url>
-    <loc>/reference/resolve_cnvs.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/resolve_cnvs.html</loc>
   </url>
   <url>
-    <loc>/reference/retest_bulks.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/retest_bulks.html</loc>
   </url>
   <url>
-    <loc>/reference/retest_cnv.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/retest_cnv.html</loc>
   </url>
   <url>
-    <loc>/reference/run_group_hmms.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/run_group_hmms.html</loc>
   </url>
   <url>
-    <loc>/reference/run_hmm_inhom.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/run_hmm_inhom.html</loc>
   </url>
   <url>
-    <loc>/reference/run_hmm_mv_inhom.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/run_hmm_mv_inhom.html</loc>
   </url>
   <url>
-    <loc>/reference/run_numbat.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/run_numbat.html</loc>
   </url>
   <url>
-    <loc>/reference/score_mut.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/score_mut.html</loc>
   </url>
   <url>
-    <loc>/reference/score_mut_helper.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/score_mut_helper.html</loc>
   </url>
   <url>
-    <loc>/reference/score_tree.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/score_tree.html</loc>
   </url>
   <url>
-    <loc>/reference/simes_p.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/simes_p.html</loc>
   </url>
   <url>
-    <loc>/reference/simplify_history.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/simplify_history.html</loc>
   </url>
   <url>
-    <loc>/reference/smooth_expression.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/smooth_expression.html</loc>
   </url>
   <url>
-    <loc>/reference/smooth_segs.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/smooth_segs.html</loc>
   </url>
   <url>
-    <loc>/reference/switch_prob_cm.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/switch_prob_cm.html</loc>
   </url>
   <url>
-    <loc>/reference/test_multi_allelic.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/test_multi_allelic.html</loc>
   </url>
   <url>
-    <loc>/reference/theta_hat_roll.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/theta_hat_roll.html</loc>
   </url>
   <url>
-    <loc>/reference/theta_hat_seg.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/theta_hat_seg.html</loc>
   </url>
   <url>
-    <loc>/reference/to_phylo.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/to_phylo.html</loc>
   </url>
   <url>
-    <loc>/reference/transfer_links.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/transfer_links.html</loc>
   </url>
   <url>
-    <loc>/reference/viterbi_allele.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/viterbi_allele.html</loc>
   </url>
   <url>
-    <loc>/reference/viterbi_joint.html</loc>
+    <loc>https://kharchenkolab.github.io/numbat/reference/viterbi_joint.html</loc>
   </url>
 </urlset>
