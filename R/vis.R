@@ -258,15 +258,19 @@ plot_bulks = function(
 #' @param edge_label_size numeric Size of edge label
 #' @param node_label_size numeric Size of node label
 #' @param node_size numeric Size of nodes
+#' @param arrow_size numeric Size of arrows
 #' @param edge_label logical Whether to label edges
 #' @param node_label logical Whether to label nodes
 #' @param horizontal logical Whether to use horizontal layout 
 #' @param show_clone_size logical Whether to show clone size
+#' @param show_distance logical Whether to show evolutionary distance between clones
 #' @param pal named vector Node colors
 #' @return ggplot object
 #' @export
 plot_mut_history = function(
-        G, clone_post = NULL, edge_label_size = 4, node_label_size = 6, node_size = 10, show_clone_size = TRUE,
+        G, clone_post = NULL, 
+        edge_label_size = 4, node_label_size = 6, node_size = 10, arrow_size = 2,
+        show_clone_size = TRUE, show_distance = TRUE, legend = TRUE,
         edge_label = TRUE, node_label = TRUE, horizontal = TRUE, pal = NULL
     ) {
 
@@ -287,10 +291,19 @@ plot_mut_history = function(
         pal = c('gray', getPalette(length(V(G))))
     }
 
-    G_df = G %>% as_tbl_graph() %>% mutate(clone = factor(clone))
+    G_df = G %>% as_tbl_graph() %>% mutate(clone = factor(clone)) 
     
     if (!'superclone' %in% colnames(as.data.frame(activate(G_df, 'nodes')))) {
         G_df = G_df %>% mutate(superclone = clone)
+    }
+
+    # add edge length
+    if (show_distance) {
+        G_df = G_df %>% activate(edges) %>%
+            mutate(n_mut = unlist(purrr::map(str_split(to_label, ','), length))) %>%
+            mutate(length = n_mut)
+    } else {
+        G_df = G_df %>% activate(edges) %>% mutate(length = 1)
     }
 
     if (!edge_label) {
@@ -298,11 +311,15 @@ plot_mut_history = function(
     }
 
     p = G_df %>% 
-        ggraph(layout = 'tree') + 
-        geom_edge_link(
+        ggraph(
+            layout = 'dendrogram',
+            length = length
+        ) + 
+        geom_edge_elbow(
             aes(label = str_trunc(to_label, 20, side = 'center')),
             vjust = -1,
-            arrow = arrow(length = unit(3, "mm")),
+            hjust = 0,
+            arrow = arrow(length = unit(arrow_size, "mm")),
             end_cap = circle(4, 'mm'),
             start_cap = circle(4, 'mm'),
             label_size = edge_label_size
@@ -312,17 +329,26 @@ plot_mut_history = function(
         scale_color_manual(values = pal, limits = force) +
         guides(color = 'none')
 
+    if (!legend) {
+        p = p + guides(size = 'none')
+    }
+
+    size_max = G_df %>% activate(nodes) %>% pull(size) %>% max
+
     if (show_clone_size) {
         p = p + geom_node_point(
                 aes(color = as.factor(superclone), size = size)
             ) + 
             scale_size_continuous(
                 range = c(0, node_size),
-                name = 'Cells')
+                limits = c(0, size_max),
+                name = 'Cells'
+            )
     } else {
         p = p + geom_node_point(
                 aes(color = as.factor(superclone)),
-                size = node_size)
+                size = node_size
+            )
     }
 
     if (node_label) {
