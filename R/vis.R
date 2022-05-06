@@ -122,6 +122,16 @@ plot_psbulk = function(
             size = dot_size,
             na.rm = TRUE
         ) +
+        geom_hline(
+            data = data.frame(y = c(0,1), variable = 'pHF'),
+            aes(yintercept = y),
+            size = 0
+        ) +
+        geom_hline(
+            data = data.frame(y = c(-exp_limit, exp_limit), variable = 'logFC'),
+            aes(yintercept = y),
+            size = 0
+        ) +
         scale_alpha_discrete(range = c(dot_alpha, 1)) +
         scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 15)) +
         theme_classic() +
