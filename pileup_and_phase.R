@@ -21,6 +21,7 @@ parser$add_argument('--ncores', type = "integer", required = TRUE, help = "Numbe
 parser$add_argument('--UMItag', default = "Auto", required = FALSE, type = "character", help = "UMI tag in bam. Should be Auto for 10x and XM for Slide-seq")
 parser$add_argument('--cellTAG', default = "CB", required = FALSE, type = "character", help = "Cell tag in bam. Should be CB for 10x and XC for Slide-seq")
 parser$add_argument('--smartseq', action = 'store_true', help = "running with smart-seq mode")
+parser$add_argument('--bulk', action = 'store_true', help = "running with bulk mode")
 
 args <- parser$parse_args()
 
@@ -39,6 +40,7 @@ paneldir = args$paneldir
 UMItag = args$UMItag
 cellTAG = args$cellTAG
 smartseq = args$smartseq
+bulk = args$bulk
 genome = ifelse(str_detect(args$gmap, 'hg19'), 'hg19', 'hg38')
 message(paste0('Using genome version: ', genome))
 
@@ -54,7 +56,34 @@ for (sample in samples) {
 
 cmds = c()
 
-if (smartseq) {
+if (bulk) {
+
+    for (i in 1:n_samples) {
+
+        bam_file = glue('{outdir}/pileup/{sample}/bam_path.tsv')
+        sample_file = glue('{outdir}/pileup/{sample}/sample.tsv')
+
+        fwrite(list(bams[i]), bam_file)
+        fwrite(list(barcodes[i]), sample_file)
+        
+        cmd = glue(
+            'cellsnp-lite', 
+            '-S {bam_file}',
+            '-i {sample_file}',
+            '-O {outdir}/pileup/{samples[i]}',
+            '-R {snpvcf}', 
+            '-p {ncores}',
+            '--minMAF 0',
+            '--minCOUNT 2',
+            '--UMItag None',
+            '--cellTAG None',
+            .sep = ' ')
+
+        cmds = c(cmds, cmd)
+
+    }
+
+} else if (smartseq) {
 
     cmd = glue(
             'cellsnp-lite', 

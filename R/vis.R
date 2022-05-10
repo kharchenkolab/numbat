@@ -248,10 +248,14 @@ plot_bulks = function(
                     )
 
                 if (title) {
-                    p = p + ggtitle(glue('{sample} (n={n_cells})'))
+                    if (is.null(n_cells)) {
+                        title_text = sample
+                    } else {
+                        title_text = glue('{sample} (n={n_cells})')
+                    }
+                    p = p + ggtitle(title_text)
                 }
                     
-
                 return(p)
             }
         )

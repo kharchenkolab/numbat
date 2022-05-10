@@ -14,12 +14,12 @@ analyze_bulk(
   min_genes = 10,
   exp_only = FALSE,
   allele_only = FALSE,
+  bal_cnv = TRUE,
   retest = TRUE,
   find_diploid = TRUE,
   diploid_chroms = NULL,
   classify_allele = FALSE,
   run_hmm = TRUE,
-  bal_cnv = TRUE,
   prior = NULL,
   phasing = TRUE,
   verbose = TRUE
@@ -34,11 +34,17 @@ analyze_bulk(
 
 \item{theta_min}{numeric Minimum imbalance threshold}
 
+\item{logphi_min}{numeric Minimum log expression deviation threshold}
+
 \item{lambda}{numeric Phase switch rate}
 
-\item{exp_only}{whether to run expression-only HMM}
+\item{min_genes}{integer Minimum number of genes to call an event}
 
-\item{allele_only}{whether to run allele-only HMM}
+\item{exp_only}{logical Whether to run expression-only HMM}
+
+\item{allele_only}{logical Whether to run allele-only HMM}
+
+\item{bal_cnv}{logical Whether to call balanced amplifications/deletions}
 
 \item{retest}{whether to retest CNVs after Viterbi decoding}
 

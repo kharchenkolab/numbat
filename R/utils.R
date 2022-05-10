@@ -8,6 +8,10 @@
 #' @keywords internal
 choose_ref_cor = function(count_mat, lambdas_ref, gtf) {
 
+    if (any(duplicated(rownames(lambdas_ref)))) {
+        log_err('Duplicated genes in lambdas_ref')
+    }
+
     if (ncol(lambdas_ref) == 1) {
         ref_name = colnames(lambdas_ref)
         cells = colnames(count_mat)
@@ -39,22 +43,23 @@ scale_counts = function(count_mat) {
 }
 
 #' Utility function to make reference gene expression profiles
-#' @param count_mat dgCMatrix Gene expression counts
-#' @param cell_annot dataframe Cell type annotation with columns "cell" and "cell_type"
+#' @param count_mat matrix/dgCMatrix Gene expression counts
+#' @param annot dataframe Cell annotation with columns "cell" and "group"
+#' @param normalized logical Whether to return normalized expression values
 #' @param verbose logical Verbosity
 #' @return matrix Reference gene expression levels
 #' @export
-aggregate_counts = function(count_mat, cell_annot, verbose = T) {
+aggregate_counts = function(count_mat, annot, normalized = TRUE, verbose = TRUE) {
 
-    cell_annot = cell_annot %>% mutate(cell_type = factor(cell_type))
+    annot = annot %>% mutate(group = factor(group))
 
-    cells = intersect(colnames(count_mat), cell_annot$cell)
+    cells = intersect(colnames(count_mat), annot$cell)
     
     count_mat = count_mat[,cells]
 
-    cell_annot = cell_annot %>% filter(cell %in% cells)
+    annot = annot %>% filter(cell %in% cells)
     
-    cell_dict = cell_annot %>% {setNames(.$cell_type, .$cell)} %>% droplevels
+    cell_dict = annot %>% {setNames(.$group, .$cell)} %>% droplevels
 
     cell_dict = cell_dict[cells]
 
@@ -69,9 +74,14 @@ aggregate_counts = function(count_mat, cell_annot, verbose = T) {
         M = model.matrix(~ 0 + cell_dict) %>% magrittr::set_colnames(levels(cell_dict))
         count_mat_clust = count_mat %*% M
         exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% magrittr::set_colnames(colnames(count_mat_clust))
-    }    
-    
-    return(list('exp_mat' = as.matrix(exp_mat_clust), 'count_mat' = as.matrix(count_mat_clust)))
+    }
+
+    if (normalized) {
+        return(exp_mat_clust)
+    } else {
+        return(count_mat_clust)
+    }
+
 }
 
 #' filtering, normalization and capping
@@ -300,10 +310,6 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #' @export
 get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_depth = 0, lambda = 1, verbose = TRUE) {
 
-    if (nrow(df_allele) == 0) {
-        stop('empty allele dataframe - check cell names')
-    }
-
     count_mat = check_matrix(count_mat)
 
     fit = fit_ref_sse(rowSums(count_mat), lambdas_ref, gtf)
@@ -346,6 +352,10 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_dep
 #' @return fitted expression profile
 #' @keywords internal
 fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FALSE) {
+
+    if (any(duplicated(rownames(lambdas_ref)))) {
+        log_err('Duplicated genes in lambdas_ref')
+    }
 
     if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
         return(list('w' = 1, 'lambdas_bar' = lambdas_ref))
@@ -447,12 +457,15 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
 
 #' Call CNVs in a pseudobulk profile using the Numbat joint HMM
 #' @param bulk dataframe Pesudobulk profile
-#' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param t numeric Transition probability
+#' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param theta_min numeric Minimum imbalance threshold
+#' @param logphi_min numeric Minimum log expression deviation threshold
 #' @param lambda numeric Phase switch rate
-#' @param exp_only whether to run expression-only HMM
-#' @param allele_only whether to run allele-only HMM
+#' @param min_genes integer Minimum number of genes to call an event
+#' @param exp_only logical Whether to run expression-only HMM
+#' @param allele_only logical Whether to run allele-only HMM
+#' @param bal_cnv logical Whether to call balanced amplifications/deletions
 #' @param retest whether to retest CNVs after Viterbi decoding
 #' @param find_diploid whether to run diploid region identification routine
 #' @param diploid_chroms user-given chromsomes that are known to be in diploid state
@@ -461,9 +474,9 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
 analyze_bulk = function(
     bulk, t = 1e-5, gamma = 20, theta_min = 0.08, logphi_min = 0.25,
     lambda = 1, min_genes = 10,
-    exp_only = FALSE, allele_only = FALSE, retest = TRUE, 
+    exp_only = FALSE, allele_only = FALSE, bal_cnv = TRUE, retest = TRUE, 
     find_diploid = TRUE, diploid_chroms = NULL,
-    classify_allele = FALSE, run_hmm = TRUE, bal_cnv = TRUE, prior = NULL, 
+    classify_allele = FALSE, run_hmm = TRUE, prior = NULL, 
     phasing = TRUE, verbose = TRUE
 ) {
     
@@ -519,7 +532,7 @@ analyze_bulk = function(
                     gamma = unique(gamma),
                     theta_min = theta_min,
                     prior = prior,
-                    bal_cnv = TRUE,
+                    bal_cnv = bal_cnv,
                     exp_only = exp_only,
                     allele_only = allele_only,
                     classify_allele = classify_allele,
@@ -1547,6 +1560,24 @@ calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, al
 
 ########################### Misc ############################
 
+log_mem = function() {
+    m = pryr::mem_used()
+    msg = paste0('Mem used: ', signif(m/1e9, 3), 'Gb')
+    log_message(msg)
+}
+
+log_message = function(msg, verbose = TRUE) {
+    log_info(msg)
+    if (verbose) {
+        message(msg)
+    }
+}
+
+log_err = function(msg) {
+    log_error(msg)
+    stop(msg)
+}
+
 #' check the format of a count matrix
 #' @keywords internal
 check_matrix = function(count_mat) {
@@ -1554,7 +1585,10 @@ check_matrix = function(count_mat) {
         count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
     }
     if (!('dgCMatrix' %in% class(count_mat))) {
-        stop("count_mat is not of class dgCMatrix or matrix")
+        log_err("count_mat is not of class dgCMatrix or matrix")
+    }
+    if (any(duplicated(rownames(count_mat)))) {
+        log_err("Please remove duplicated genes in count matrix")
     }
     return(count_mat)
 }

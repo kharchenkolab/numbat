@@ -514,19 +514,6 @@ subtrees_equal = function(subtrees_1, subtrees_2) {
     isTRUE(all.equal(subtrees_1, subtrees_2))
 }
 
-log_mem = function() {
-    m = pryr::mem_used()
-    msg = paste0('Mem used: ', signif(m/1e9, 3), 'Gb')
-    log_message(msg)
-}
-
-log_message = function(msg, verbose = TRUE) {
-    log_info(msg)
-    if (verbose) {
-        message(msg)
-    }
-}
-
 #' Run smoothed expression-based hclust
 #' @param count_mat dgCMatrix Gene counts
 #' @param df_allele dataframe Alelle counts
