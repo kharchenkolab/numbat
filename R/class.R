@@ -159,6 +159,8 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             } else {
                 self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i}.tsv'), filetype="tsv")
             }
+
+            self$segs_consensus = self$segs_consensus %>% mutate(CHROM = factor(CHROM))
             
             # tree_post_colnames =  c("mut_nodes", "gtree", "l_matrix")
             self$tree_post = read_file(inputfile=glue('{out_dir}/tree_post_{i}.rds'), filetype="rds")

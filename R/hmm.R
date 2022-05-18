@@ -119,7 +119,7 @@ run_hmm_mv_inhom = function(
             alpha = alpha_states,
             beta = beta_states
         ),
-        pn = list(size = DP),
+        pn = DP,
         discrete = TRUE
     )
 
@@ -142,6 +142,136 @@ run_hmm_mv_inhom = function(
     MPC = viterbi_joint(hmm)
         
     return(states[as.character(MPC$y)])
+}
+
+
+run_hmm_mv_inhom2 = function(
+    pAD_1, pAD_2, DP_1, DP_2, Y_obs_1, Y_obs_2, d_total_1, d_total_2, lambda_ref_1, lambda_ref_2, p_s, theta_min = 0.08, theta_neu = 0,
+    bal_cnv = TRUE, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = phi_amp, phi_bdel = phi_del, 
+    alpha = 1, beta = 1, 
+    mu_1 = 0, sig_1 = 1, mu_2 = 0, sig_2 = 1,
+    t = 1e-5, gamma = 18,
+    prior = NULL, exp_only = FALSE, allele_only = FALSE,
+    classify_allele = FALSE, phasing = TRUE, debug = FALSE
+) {
+
+    # states
+    states = c(
+        "1" = "neu", "2" = "del_1_up", "3" = "del_1_down", "4" = "del_2_up", "5" = "del_2_down",
+        "6" = "loh_1_up", "7" = "loh_1_down", "8" = "loh_2_up", "9" = "loh_2_down", 
+        "10" = "amp_1_up", "11" = "amp_1_down", "12" = "amp_2_up", "13" = "amp_2_down", 
+        "14" = "bamp", "15" = "bdel"
+    )
+
+    states_cn = str_remove(states, '_up|_down')
+    states_phase = str_extract(states, 'up|down')
+
+    # relative abundance of states
+    w = c('neu' = 1, 'del_1' = 1, 'del_2' = 1e-10, 'loh_1' = 1, 'loh_2' = 1e-10, 'amp_1' = 1, 'amp_2' = 1e-10, 'bamp' = 1e-4, 'bdel' = 1e-10)
+        
+    # intitial probabilities
+    if (is.null(prior)) {
+        # encourage CNV from telomeres
+        prior = sapply(1:length(states), function(to){
+                get_trans_probs(
+                    t = min(t * 100, 1), p_s = 0, w,
+                    cn_from = 'neu', phase_from = NA,
+                    cn_to = states_cn[to], phase_to = states_phase[to])
+            })
+    }
+
+    # to do: renormalize the probabilities after deleting states
+    states_index = 1:length(states)
+
+    if (!bal_cnv) {
+        states_index = 1:13
+    }
+        
+    if (exp_only) {
+        pAD = rep(NA, length(pAD))
+        p_s = rep(0, length(p_s))
+    }
+    
+    if (allele_only) {
+        states_index = c(1, 6:9)
+
+        Y_obs = rep(NA, length(Y_obs))
+    }
+
+    if (!phasing) {
+        states_index = c(1, 6)
+        
+        p_s = ifelse(is.na(pAD), p_s, 0)
+        pAD = ifelse(pAD > (DP - pAD), pAD, DP - pAD)
+        theta_neu = 0.1
+        theta_min = 0.45
+    }
+
+    if (classify_allele) {
+        states_index = c(6,7)
+    }
+    
+    # transition matrices
+    As = calc_trans_mat(t, p_s, w, states_cn, states_phase)
+
+    theta_u_1 = 0.5 + theta_min
+    theta_d_1 = 0.5 - theta_min
+
+    theta_u_2 = 0.9
+    theta_d_2 = 0.1
+
+    theta_u_neu = 0.5 + theta_neu
+    theta_d_neu = 0.5 - theta_neu
+
+    # parameters for each state
+    alpha_states = gamma * c(theta_u_neu, rep(c(theta_u_1, theta_d_1, theta_u_2, theta_d_2), 3), theta_u_neu, theta_u_neu)
+    beta_states = gamma * c(theta_d_neu, rep(c(theta_d_1, theta_u_1, theta_d_2, theta_u_2), 3), theta_d_neu, theta_d_neu)
+    phi_states = c(1, rep(phi_del, 2), rep(0.5, 2), rep(1, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
+    
+    # subset for relevant states
+    prior = prior[states_index]
+    As = As[states_index, states_index,]
+    alpha_states = alpha_states[states_index]
+    beta_states = beta_states[states_index]
+    phi_states = phi_states[states_index]
+    states = states[states_index] %>% setNames(1:length(.))
+
+    N = length(Y_obs_1)
+
+    if (length(mu_1) == 1 & length(sig_1) == 1) {
+        mu_1 = rep(mu_1, N)
+        sig_1 = rep(sig_1, N)
+    }
+
+    if (length(mu_2) == 1 & length(sig_2) == 1) {
+        mu_2 = rep(mu_2, N)
+        sig_2 = rep(sig_2, N)
+    }
+
+    if (length(d_total_1) == 1 & length(d_total_2) == 1) {
+        d_total_1 = rep(d_total_1, N)
+        d_total_2 = rep(d_total_2, N)
+    }
+                
+    hmm = list(
+        x = matrix(c(pAD_1, pAD_2), ncol = 2), 
+        d = matrix(c(DP_1, DP_2), ncol = 2),
+        y = matrix(c(Y_obs_1, Y_obs_2), ncol = 2),
+        l = matrix(c(d_total_1, d_total_2), ncol = 2),
+        lambda = matrix(c(lambda_ref_1, lambda_ref_2), ncol = 2),
+        mu = matrix(c(mu_1, mu_2), ncol = 2),
+        sig = matrix(c(sig_1, sig_2), ncol = 2),
+        logPi = log(As) * 2, 
+        phi = matrix(rep(phi_states, 2), ncol = 2),
+        delta = matrix(rep(prior, 2), ncol = 2), 
+        alpha = matrix(rep(alpha_states, 2), ncol = 2),
+        beta = matrix(rep(beta_states, 2), ncol = 2),
+        states = matrix(rep(states, 2), ncol = 2)
+    )
+
+    MPC = viterbi_joint2(hmm)
+        
+    return(tibble(state = states[as.character(MPC$z)], max_LL = MPC$LL))
 }
 
 ############ allele HMM ############
@@ -190,39 +320,40 @@ getj <- function(x, j){
 
 #' Viterbi algorithm for allele HMM
 #' @keywords internal
-viterbi_allele <- function (obj, ...){
-#     print('Solving univariate nonhomogenous markov chain')
-    x <- obj$x
-    dfunc <- makedensity(obj$distn)
-    n <- length(x)
-    m <- nrow(obj$Pi[[1]])
-    nu <- matrix(NA, nrow = n, ncol = m)
-    y <- rep(NA, n)
+viterbi_allele <- function(hmm) {
 
-    nu[1, ] <- log(obj$delta) 
+    N <- length(hmm$x)
+    M <- nrow(hmm$Pi[[1]])
+    nu <- matrix(NA, nrow = N, ncol = M)
+    z <- rep(NA, N)
 
-    if (!is.na(x[1])) {
-        nu[1, ] <- nu[1, ] + dfunc(x=x[1], obj$pm, getj(obj$pn, 1), log=TRUE)
+    logPi <- lapply(hmm$Pi, log)
+
+    logprob = sapply(1:M, function(m) {
+
+        l_x = dbbinom(x = hmm$x, size = hmm$d, alpha = hmm$alpha[m], beta = hmm$beta[m], log = TRUE)
+
+        l_x[is.na(l_x)] = 0
+
+        return(l_x)
+
+    })
+
+    nu[1, ] <- log(hmm$delta) + logprob[1,]
+
+    for (i in 2:N) {
+        matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
+        nu[i, ] = apply(matrixnu + logPi[[i]], 2, max)
+        nu[i, ] = nu[i, ] + logprob[i,]
     }
-    
-    logPi <- lapply(obj$Pi, log)
 
-    for (i in 2:n) {
-        matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
-        nu[i, ] <- apply(matrixnu + logPi[[i]], 2, max)
-        if (!is.na(x[i])) {
-            nu[i, ] <- nu[i, ] + dfunc(x=x[i], obj$pm, getj(obj$pn, i), log=TRUE)
-        }
-    }
-#     if (any(nu[n, ] == -Inf)) 
-#         stop("Problems With Underflow")
-    y[n] <- which.max(nu[n, ])
-    # double check this index of logPi
-    for (i in seq(n - 1, 1, -1)) y[i] <- which.max(logPi[[i + 1]][, y[i + 1]] + nu[i, ])
+    z[N] <- which.max(nu[N, ])
 
-    LL = max(nu[n, ])
+    for (i in seq(N - 1, 1, -1)) z[i] <- which.max(logPi[[i + 1]][, z[i + 1]] + nu[i, ])
+
+    LL = max(nu[N, ])
         
-    return(list(y = y, LL = LL))
+    return(z)
 }
 
 #' allele-only HMM
@@ -244,7 +375,7 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
     
     # states
     states = c("neu", "theta_1_up", "theta_1_down", "theta_2_up", "theta_2_down")
-    
+
     # transition matrices
     calc_trans_mat = function(p_s, t) {
         matrix(
@@ -262,7 +393,7 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
         p_s,
         function(p_s) {calc_trans_mat(p_s, t)}
     )
-    
+
     # intitial probabilities
     if (is.null(prior)) {
         prior = rep(1/5, 5)
@@ -271,22 +402,16 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
     theta_1 = theta_min
     theta_2 = 0.4
             
-    hmm = HiddenMarkov::dthmm(
+    hmm = list(
         x = pAD, 
         Pi = As, 
         delta = prior, 
-        distn = "bbinom",
-        pm = list(
-            alpha = gamma * c(0.5, 0.5 + theta_1, 0.5 - theta_1, 0.5 + theta_2, 0.5 - theta_2),
-            beta = gamma * c(0.5, 0.5 - theta_1, 0.5 + theta_1, 0.5 - theta_2, 0.5 + theta_2)
-        ),
-        pn = list(size = DP),
-        discrete = TRUE
+        alpha = gamma * c(0.5, 0.5 + theta_1, 0.5 - theta_1, 0.5 + theta_2, 0.5 - theta_2),
+        beta = gamma * c(0.5, 0.5 - theta_1, 0.5 + theta_1, 0.5 - theta_2, 0.5 + theta_2),
+        d = DP
     )
-
-    class(hmm) = 'dthmm.inhom'
-        
-    solution = states[viterbi_allele(hmm)$y]
+    
+    solution = states[viterbi_allele(hmm)]
     
     return(solution)
 }
@@ -308,7 +433,7 @@ forward_back_allele = function (obj, ...) {
     
     logprob = sapply(1:m, function(k) {
         
-        l_x = p_x(x = x,  getj(obj$pm, k), obj$pn, log = TRUE)
+        l_x = p_x(x = x,  getj(obj$pm, k), list(size = obj$pn), log = TRUE)
         
         l_x[is.na(l_x)] = 0
         
@@ -339,7 +464,7 @@ likelihood_allele = function (obj, ...) {
     
     logprob = sapply(1:m, function(k) {
         
-        l_x = p_x(x = x,  getj(obj$pm, k), obj$pn, log = TRUE)
+        l_x = p_x(x = x,  getj(obj$pm, k), list(size = obj$pn), log = TRUE)
         
         l_x[is.na(l_x)] = 0
         
@@ -381,7 +506,7 @@ get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
     
     hmm = HiddenMarkov::dthmm(x = pAD, Pi = As, delta = prior, 
         distn = "bbinom", pm = list(alpha = c(alpha_up, alpha_down), 
-            beta = c(beta_up, beta_down)), pn = list(size = DP), 
+            beta = c(beta_up, beta_down)), pn = DP, 
         discrete = TRUE)
 
     hmm$states = states
@@ -426,7 +551,7 @@ viterbi_joint <- function (object, ...){
     
         
     if (!is.na(x[1])) {
-        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, getj(object$pn, 1), log = TRUE)
+        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, object$pn[1], log = TRUE)
     }
     
     if (!is.na(x2[1])) {
@@ -448,7 +573,7 @@ viterbi_joint <- function (object, ...){
         nu[i, ] = apply(matrixnu + logPi[,,i], 2, max)
             
         if (!is.na(x[i])) {
-            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, getj(object$pn, i), log = TRUE)
+            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, object$pn[i], log = TRUE)
         }
         
         if (!is.na(x2[i])) {
@@ -478,9 +603,51 @@ viterbi_joint <- function (object, ...){
     for (i in seq(n - 1, 1, -1)) y[i] <- which.max(logPi[,,i+1][, y[i+1]] + nu[i, ])
 
     LL = max(nu[n, ])
+
+    # print(LL)
         
     return(list(y = y, LL = LL))
 }
+
+#' Viterbi for clonal LOH detection
+#' @keywords internal
+viterbi_loh <- function (hmm, ...){
+
+    n <- length(hmm$x)
+    m <- nrow(hmm$Pi[,,1])
+    nu <- matrix(NA, nrow = n, ncol = m)
+    mu <- matrix(NA, nrow = n, ncol = m + 1)
+    z <- rep(NA, n)
+    
+    nu[1, ] = log(hmm$delta)
+    logPi <- log(hmm$Pi)
+
+    for (i in 1:n) {
+
+        if (i > 1) {
+            matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
+            nu[i, ] = apply(matrixnu + logPi[,,i], 2, max)
+        }
+        
+        nu[i, ] = nu[i, ] + dnbinom(x = hmm$x[i], mu = hmm$pm * hmm$pn[i], size = hmm$snp_sig, log = TRUE)
+
+        nu[i, ] = nu[i, ] + dpoilog(
+            x = rep(hmm$y[i], m),
+            sig = rep(hmm$sig, m),
+            mu = hmm$mu + log(hmm$phi * hmm$d * hmm$lambda_star[i]),
+            log = TRUE
+        )
+    }
+             
+    z[n] <- which.max(nu[n, ])
+
+    for (i in seq(n - 1, 1, -1)) z[i] <- which.max(logPi[,,i+1][, z[i+1]] + nu[i, ])
+
+    LL = max(nu[n, ])
+        
+    return(hmm$states[z])
+}
+
 
 #' Calculate the transition matrix for joint HMM
 #' @keywords internal
@@ -494,6 +661,7 @@ calc_trans_mat = function(t, p_s, w, states_cn, states_phase) {
     array(dim = c(length(states_cn), length(states_cn), length(p_s)))
 
 }
+
 
 #' Helper function to calculate transition porbabilities
 # cn/phase are sclars, only p_s is vectorized
@@ -524,5 +692,390 @@ get_trans_probs = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
     return(p)
 }
 
+get_joint_hmm = function(
+    pAD, DP, p_s, Y_obs = 0, lambda_ref = 0, d_total = 0, theta_min = 0.08, theta_neu = 0,
+    bal_cnv = TRUE, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = phi_amp, phi_bdel = phi_del, 
+    alpha = 1, beta = 1, 
+    mu = 0, sig = 1,
+    t = 1e-5, gamma = 18,
+    prior = NULL, exp_only = FALSE, allele_only = FALSE,
+    classify_allele = FALSE, phasing = TRUE, debug = FALSE
+) {
+
+    # states
+    states = c(
+        "1" = "neu", "2" = "del_1_up", "3" = "del_1_down", "4" = "del_2_up", "5" = "del_2_down",
+        "6" = "loh_1_up", "7" = "loh_1_down", "8" = "loh_2_up", "9" = "loh_2_down", 
+        "10" = "amp_1_up", "11" = "amp_1_down", "12" = "amp_2_up", "13" = "amp_2_down", 
+        "14" = "bamp", "15" = "bdel"
+    )
+
+    states_cn = str_remove(states, '_up|_down')
+    states_phase = str_extract(states, 'up|down')
+
+    # relative abundance of states
+    w = c('neu' = 1, 'del_1' = 1, 'del_2' = 1e-10, 'loh_1' = 1, 'loh_2' = 1e-10, 'amp_1' = 1, 'amp_2' = 1e-10, 'bamp' = 1e-4, 'bdel' = 1e-10)
+        
+    # intitial probabilities
+    if (is.null(prior)) {
+        # encourage CNV from telomeres
+        prior = sapply(1:length(states), function(to){
+                get_trans_probs(
+                    t = min(t * 100, 1), p_s = 0, w,
+                    cn_from = 'neu', phase_from = NA,
+                    cn_to = states_cn[to], phase_to = states_phase[to])
+            })
+    }
+
+    # to do: renormalize the probabilities after deleting states
+    states_index = 1:length(states)
+
+    if (!bal_cnv) {
+        states_index = 1:13
+    }
+        
+    if (exp_only) {
+        pAD = rep(NA, length(pAD))
+        p_s = rep(0, length(p_s))
+    }
+    
+    if (allele_only) {
+        states_index = c(1, 6:9)
+
+        Y_obs = rep(NA, length(Y_obs))
+    }
+
+    if (!phasing) {
+        states_index = c(1, 6)
+        
+        p_s = ifelse(is.na(pAD), p_s, 0)
+        pAD = ifelse(pAD > (DP - pAD), pAD, DP - pAD)
+        theta_neu = 0.1
+        theta_min = 0.45
+    }
+
+    if (classify_allele) {
+        states_index = c(6,7)
+    }
+    
+    # transition matrices
+    logPi_cn = calc_trans_mat2(t, p_s, w, states_cn, states_phase, part = 'cn')
+    logPi_phase = calc_trans_mat2(t, p_s, w, states_cn, states_phase, part = 'phase')
+    logPi = logPi_cn + logPi_phase
+
+    theta_u_1 = 0.5 + theta_min
+    theta_d_1 = 0.5 - theta_min
+
+    theta_u_2 = 0.9
+    theta_d_2 = 0.1
+
+    theta_u_neu = 0.5 + theta_neu
+    theta_d_neu = 0.5 - theta_neu
+
+    # parameters for each state
+    alpha_states = gamma * c(theta_u_neu, rep(c(theta_u_1, theta_d_1, theta_u_2, theta_d_2), 3), theta_u_neu, theta_u_neu)
+    beta_states = gamma * c(theta_d_neu, rep(c(theta_d_1, theta_u_1, theta_d_2, theta_u_2), 3), theta_d_neu, theta_d_neu)
+    phi_states = c(1, rep(phi_del, 2), rep(0.5, 2), rep(1, 4), rep(phi_amp, 2), rep(2.5, 2), phi_bamp, phi_bdel)
+    
+    # subset for relevant states
+    prior = prior[states_index]
+    logPi = logPi[states_index, states_index,]
+    alpha_states = alpha_states[states_index]
+    beta_states = beta_states[states_index]
+    phi_states = phi_states[states_index]
+    states = states[states_index] %>% setNames(1:length(.))
+
+    N = length(Y_obs)
+
+    if (length(mu) == 1) {
+        mu = rep(mu, N)
+        sig = rep(sig, N)
+    }
+
+    if (length(d_total) == 1) {
+        d_total = rep(d_total, N)
+    }
+                
+    hmm = list(
+        x = matrix(pAD), 
+        d = matrix(DP),
+        y = matrix(Y_obs),
+        l = matrix(d_total),
+        lambda = matrix(lambda_ref),
+        mu = matrix(mu),
+        sig = matrix(sig),
+        logPi = logPi, 
+        logPi_cn = logPi_cn, 
+        logPi_phase = logPi_phase, 
+        phi = matrix(phi_states),
+        delta = matrix(prior), 
+        alpha = matrix(alpha_states),
+        beta = matrix(beta_states),
+        states = matrix(states),
+        p_s = p_s
+    )
+
+    return(hmm)
+}
+
+
+#' Viterbi algorithm for joint HMM (PLN expression likelihood)
+#' @keywords internal
+viterbi_joint2 <- function (hmm, ...){
+
+    N <- nrow(hmm$x)
+    M <- nrow(hmm$logPi[,,1])
+    K <- ncol(hmm$x)
+    nu <- matrix(NA, nrow = N, ncol = M)
+    z <- rep(NA, N)
+    
+    nu[1, ] = rowSums(log(hmm$delta))
+
+    logprob = sapply(1:M, function(m) {
+
+        sapply(
+            1:K,
+            function(k) {
+
+                l_x = dbbinom(x = hmm$x[,k], size = hmm$d[,k], alpha = hmm$alpha[m,k], beta = hmm$beta[m,k], log = TRUE)
+
+                l_x[is.na(l_x)] = 0
+
+                l_y = rep(0,N)
+                valid = !is.na(hmm$y[,k])
+
+                l_y[valid] = dpoilog(
+                        x = hmm$y[valid,k],
+                        sig = hmm$sig[valid,k],
+                        mu = hmm$mu[valid,k] + log(hmm$phi[m,k] * hmm$l[valid,k] * hmm$lambda[valid,k]),
+                        log = TRUE
+                    )
+
+                return(l_x + l_y)
+
+            }
+        ) %>% rowSums()
+
+    })
+
+    for (i in 1:N) {
+
+        if (i > 1) {
+            matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
+            nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
+        }
+
+        nu[i, ] = nu[i, ] + logprob[i, ]
+    }
+
+    if (any(is.na(nu))) {
+        stop("NA values in viterbi")
+    }
+    
+    if (all(nu[n, ] == -Inf)) {
+        stop("Problems With Underflow")
+    }
+              
+    z[N] <- which.max(nu[N, ])
+
+    for (i in seq(N - 1, 1, -1)) z[i] <- which.max(hmm$logPi[,,i+1][, z[i+1]] + nu[i, ])
+
+    LL = max(nu[N, ])
+        
+    return(list(z = hmm$states[z,], LL = LL))
+}
+
+#' Forward-backward algorithm for allele HMM
+#' @keywords internal
+likelihood_joint = function(hmm) {
+    
+    M <- nrow(hmm$logPi[,,1])
+    N <- nrow(hmm$x)
+    K = ncol(hmm$x)
+
+    logPi = lapply(1:N, function(i) hmm$logPi[,,i])
+
+    # case of one-data point
+    if (N == 1) {
+        return(NA)
+    }
+    
+    logprob = sapply(1:M, function(m) {
+
+        sapply(
+            1:K,
+            function(k) {
+
+                l_x = dbbinom(x = hmm$x[,k], size = hmm$d[,k], alpha = hmm$alpha[m,k], beta = hmm$beta[m,k], log = TRUE)
+
+                l_x[is.na(l_x)] = 0
+
+                l_y = rep(0,N)
+                valid = !is.na(hmm$y[,k])
+
+                l_y[valid] = dpoilog(
+                        x = hmm$y[valid,k],
+                        sig = hmm$sig[valid,k],
+                        mu = hmm$mu[valid,k] + log(hmm$phi[m,k] * hmm$l[valid,k] * hmm$lambda[valid,k]),
+                        log = TRUE
+                    )
+
+                return(l_x + l_y)
+
+            }
+        ) %>% rowSums()
+
+    })
+        
+    logphi <- rowSums(log(hmm$delta))
+            
+    LL = likelihood_allele_compute(hmm, logphi, logprob, logPi, N, M)
+
+    return(LL)
+}
+
+# bundle two HMMs using different transition kernels
+merge_hmm = function(hmm1, hmm2, kernel = 'indep') {
+    
+    N = dim(hmm1$logPi)[3]
+    M = dim(hmm1$logPi)[2]
+    
+    states = cross(hmm1$states, hmm2$states)
+
+    if (kernel == 'equal') {
+
+        keep = which(states[,1] == states[,2])
+        logPi = hmm1$logPi + hmm2$logPi_cn
+
+    } else if (kernel == 'indep') {
+
+        keep = 1:nrow(states)
+
+        logPi = sapply(
+            1:N,
+            function(n) {
+                cross_trans_indep(hmm1$logPi[,,n], hmm2$logPi_cn[,,n])
+            }
+        ) %>%
+        array(dim = c(M^2, M^2, N))
+
+    } else if (kernel == 'phase') {
+
+        keep = 1:nrow(states)
+
+        # banned = cross(paste(states[,1], states[,2], sep = ','), paste(states[,1], states[,2], sep = ',')) %>%
+        #     as.data.frame() %>%
+        #     tidyr::separate(z1, c('z11', 'z21'), ',') %>%
+        #     tidyr::separate(z2, c('z12', 'z22'), ',') %>%
+        #     mutate(
+        #         phase11 = str_extract(z11, 'up|down'),
+        #         phase12 = str_extract(z12, 'up|down'),
+        #         phase21 = str_extract(z21, 'up|down'),
+        #         phase22 = str_extract(z22, 'up|down'),
+        #         switch1 = phase11 != phase12,
+        #         switch2 = phase21 != phase22,
+        #     ) %>%
+        #     mutate(ban = (switch1 & !switch2) | (!switch1 & switch2)) %>%
+        #     mutate(ban = ifelse(is.na(ban), FALSE, ban)) %>%
+        #     pull(ban)
+            
+        logPi = sapply(
+            1:N,
+            function(n) {
+                logPi = cross_trans_indep(hmm1$logPi_cn[,,n], hmm2$logPi_cn[,,n]) + get_phase_trans(hmm1$p_s[n])
+                # logPi[banned] = -Inf 
+                return(logPi)
+            }
+        ) %>%
+        array(dim = c(M^2, M^2, N))
+
+    }
+    
+    list(
+        states = states[keep,],
+        x = matrix(c(hmm1$x, hmm2$x), ncol = 2),
+        d = matrix(c(hmm1$d, hmm2$d), ncol = 2),
+        y = matrix(c(hmm1$y, hmm2$y), ncol = 2),
+        l = matrix(c(hmm1$l, hmm2$l), ncol = 2),
+        lambda = matrix(c(hmm1$lambda, hmm2$lambda), ncol = 2),
+        mu = matrix(c(hmm1$mu, hmm2$mu), ncol = 2),
+        sig = matrix(c(hmm1$sig, hmm2$sig), ncol = 2),
+        phi = cross(hmm1$phi, hmm2$phi)[keep,],
+        alpha = cross(hmm1$alpha, hmm2$alpha)[keep,],
+        beta = cross(hmm1$beta, hmm2$beta)[keep,],
+        delta = cross(hmm1$delta, hmm2$delta)[keep,],
+        logPi = logPi
+    )
+}
+
+cross = function(x,y) {
+    m = as.matrix(expand.grid(x, y))
+    colnames(m) = c('z1', 'z2')
+    return(m)
+}
+
+cross_trans_indep = function(logA1, logA2) {
+    
+    m = nrow(logA1)
+    array(aperm(outer(logA1, logA2, '+'), c(1,3,2,4)), dim = c(m^2, m^2))
+
+}
+
+renorm = function(logA) {
+    t(apply(logA, 1, function(x){x - logSumExp(x)}))
+}
+
+calc_trans_mat2 = function(t, p_s, w, states_cn, states_phase, part = 'cn') {
+    
+    if (part == 'cn') {
+        get_trans_probs = get_trans_probs_cn
+    } else {
+        get_trans_probs = get_trans_probs_phase
+    }
+
+    sapply(1:length(states_cn), function(from) {
+        sapply(1:length(states_cn), function(to) {
+            log(get_trans_probs(t, p_s, w, states_cn[from], states_phase[from], states_cn[to], states_phase[to]))
+        }) %>% t
+    }) %>% t %>%
+    array(dim = c(length(states_cn), length(states_cn), length(p_s)))
+
+}
+
+get_trans_probs_cn = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
+
+    if (cn_from == cn_to) {
+        p = rep(1-t, length(p_s))
+    } else {
+        p = t * w[[cn_to]]/sum(w[names(w)!=cn_from])
+        if (!is.na(phase_to)) {
+            p = p/2
+        }
+        p = rep(p, length(p_s))
+    }
+    
+    return(p)
+}
+
+get_trans_probs_phase = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
+
+    if (cn_from == 'neu' & cn_to == 'neu') {
+        p_s = rep(0.5, length(p_s))
+    }
+
+    if (cn_from == cn_to) {
+        if (is.na(phase_from) & is.na(phase_to)) {
+            p = rep(1, length(p_s))
+        } else if (phase_from == phase_to) {
+            p = 1-p_s
+        } else {
+            p = p_s
+        }
+    } else {
+        p = rep(1, length(p_s))
+    }
+    
+    return(p)
+}
 
 

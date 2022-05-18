@@ -68,12 +68,18 @@ plot_psbulk = function(
             )
     }
 
+    # filter events by LLR
     if (min_LLR != 0) {
         bulk = bulk %>% mutate(
             LLR = ifelse(is.na(LLR), 0, LLR),
             cnv_state_post = ifelse(LLR < min_LLR, 'neu', cnv_state_post),
             state_post = ifelse(LLR < min_LLR, 'neu', state_post)
         )
+    }
+
+    # mark clonal LOH
+    if ('loh' %in% colnames(bulk)) {
+        bulk = bulk %>% mutate(state_post = ifelse(loh, 'del', state_post))
     }
 
     if (use_pos) {
@@ -313,9 +319,13 @@ plot_mut_history = function(
 
     # add edge length
     if (show_distance) {
-        G_df = G_df %>% activate(edges) %>%
-            mutate(n_mut = unlist(purrr::map(str_split(to_label, ','), length))) %>%
-            mutate(length = n_mut)
+
+        if ((!'length' %in% colnames(as.data.frame(activate(G_df, 'edges'))))) {
+            G_df = G_df %>% activate(edges) %>%
+                mutate(n_mut = unlist(purrr::map(str_split(to_label, ','), length))) %>%
+                mutate(length = n_mut)
+        }
+
     } else {
         G_df = G_df %>% activate(edges) %>% mutate(length = 1)
     }
@@ -404,7 +414,7 @@ plot_phylo_heatmap = function(
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = FALSE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE, 
         p_min = 0.9, line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2, 
-        clone_line = FALSE, superclone = FALSE
+        clone_line = FALSE, superclone = FALSE, segs_loh = NULL
     ) {
     
     # make sure chromosomes are in order
@@ -559,6 +569,25 @@ plot_phylo_heatmap = function(
         ) +
         xlab('Genomic position')
 
+    # excluded regions
+    if (!is.null(segs_loh)) {
+
+        segs_loh = segs_loh %>% mutate(CHROM = as.integer(as.character(CHROM)))
+
+        p_segs = p_segs + 
+            geom_rect(
+                inherit.aes = F,
+                data = segs_loh, 
+                aes(xmin = seg_start,
+                    xmax = seg_end,
+                    ymin = min(joint_post$cell_index),
+                    ymax = max(joint_post$cell_index)
+                ),
+                fill = 'darkblue'
+            )
+
+    }
+
     # clone annotation
     if (is.null(clone_dict)) {
         clone_dict = gtree %>%
@@ -574,8 +603,15 @@ plot_phylo_heatmap = function(
     }
 
     if (is.null(pal_clone)) {
+
         getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 10, 'Spectral'))
-        pal_clone = c('gray', getPalette(length(unique(clone_dict))))
+
+        pal_clone = getPalette(length(unique(clone_dict)))
+
+        if ('1' %in% unique(clone_dict)) {
+            pal_clone = c('gray', pal_clone)
+        }
+        
     }
 
     p_clone = data.frame(
@@ -1392,7 +1428,7 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
     (p_mut / p_clones) + plot_layout(heights = c(ratio, 1)) + plot_title
 }
 
-cnv_heatmap = function(segs) {
+cnv_heatmap = function(segs, var = 'group') {
     
     gaps_hg38_filtered = gaps_hg38 %>% filter(end - start > 1e6)
     
@@ -1436,7 +1472,7 @@ cnv_heatmap = function(segs) {
         axis.title.x = element_blank(),
         axis.ticks.y = element_blank()
     ) +
-    facet_grid(group~CHROM, space = 'free_x', scale = 'free') +
+    facet_grid(get(var)~CHROM, space = 'free_x', scale = 'free', drop = TRUE) +
     scale_fill_manual(
         values = c('neu' = 'white', cnv_colors[names(cnv_colors) != 'neu']),
         na.value = 'white',
