@@ -17,29 +17,6 @@ dbbinom <- function(x, size, alpha = 1, beta = 1, log = FALSE) {
     cppdbbinom(x, size, alpha, beta, log[1L])
 }
 
-#' @keywords internal  
-makedensity <- function(distn){
-    ## https://github.com/cran/HiddenMarkov/blob/master/R/makedensity.R
-    dname <- paste("d", distn[1], sep="")
-    x <- paste("function(x, pm, pn=NULL, log=FALSE)
-         do.call(\"", dname, "\", c(list(x=x), pm, pn,", sep="")
-    if (distn[1]=="glm") x <- paste(x, " list(family=\"", distn[2],
-         "\", link=\"", distn[3], "\"),", sep="")
-    eval(parse(text=paste(x, " list(log=log)))", sep="")))
-}
-
-
-#' @keywords internal
-getj <- function(x, j){
-    ## https://github.com/cran/HiddenMarkov/blob/master/R/getj.R
-    #   get the jth "row" from a list
-    if (is.null(x)) return(NULL)
-    n <- length(x)
-    for (i in 1:n)
-        x[[i]] <- x[[i]][j]
-    return(x)
-}
-
 ############ Allele HMMs ############
 
 
@@ -365,38 +342,37 @@ run_hmm_mv_inhom = function(
     phi_states = phi_states[states_index]
     states = states[states_index] %>% setNames(1:length(.))
                 
-    hmm = HiddenMarkov::dthmm(
-        x = pAD, 
-        Pi = As, 
-        delta = prior, 
-        distn = "bbinom",
-        pm = list(
-            alpha = alpha_states,
-            beta = beta_states
-        ),
-        pn = DP,
-        discrete = TRUE
-    )
+    N = length(Y_obs)
 
-    hmm$x2 = Y_obs
-    hmm$phi = phi_states
-    hmm$lambda_star = lambda_ref
-    hmm$d = d_total
-
-    if (length(mu) == 1 & length(sig) == 1) {
-        mu = rep(mu, length(Y_obs))
-        sig = rep(sig, length(Y_obs))
+    if (length(mu) == 1) {
+        mu = rep(mu, N)
+        sig = rep(sig, N)
     }
 
-    hmm$distn2 = 'poilog'
-    hmm$mu = mu
-    hmm$sig = sig
-    
-    class(hmm) = 'dthmm.mv.inhom.lnpois'
+    if (length(d_total) == 1) {
+        d_total = rep(d_total, N)
+    }
 
-    MPC = viterbi_joint(hmm)
+    hmm = list(
+        x = matrix(pAD), 
+        d = matrix(DP),
+        y = matrix(Y_obs),
+        l = matrix(d_total),
+        lambda = matrix(lambda_ref),
+        mu = matrix(mu),
+        sig = matrix(sig),
+        logPi = log(As), 
+        phi = matrix(phi_states),
+        delta = matrix(prior), 
+        alpha = matrix(alpha_states),
+        beta = matrix(beta_states),
+        states = matrix(states),
+        p_s = p_s
+    )
+
+    MPC = viterbi_joint(hmm)$z
         
-    return(states[as.character(MPC$y)])
+    return(MPC)
 }
 
 
@@ -443,83 +419,66 @@ get_trans_probs = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
     return(p)
 }
 
-
-#' Viterbi algorithm for joint HMM (PLN expression likelihood)
+#' Generalized viterbi algorithm for joint HMM
 #' @keywords internal
-viterbi_joint <- function (object, ...){
+viterbi_joint <- function(hmm) {
 
-    x <- object$x
-    dfunc <- makedensity(object$distn)
+    N <- nrow(hmm$x)
+    M <- nrow(hmm$logPi[,,1])
+    K <- ncol(hmm$x)
+    nu <- matrix(NA, nrow = N, ncol = M)
+    z <- rep(NA, N)
     
-    x2 <- object$x2
-    dfunc2 <- makedensity(object$distn2)
+    logprob = sapply(1:M, function(m) {
 
-    n <- length(x)
-    m <- nrow(object$Pi[,,1])
-    nu <- matrix(NA, nrow = n, ncol = m)
-    mu <- matrix(NA, nrow = n, ncol = m + 1)
-    y <- rep(NA, n)
-    
-    nu[1, ] = log(object$delta)
-    
-        
-    if (!is.na(x[1])) {
-        nu[1, ] = nu[1, ] + dfunc(x=x[1], object$pm, object$pn[1], log = TRUE)
-    }
-    
-    if (!is.na(x2[1])) {
+        sapply(
+            1:K,
+            function(k) {
 
-        nu[1, ] = nu[1, ] + dfunc2(
-            x = rep(x2[1], m),
-            list('sig' = rep(object$sig[1], m)),
-            list('mu' = object$mu[1] + log(object$phi * object$d * object$lambda_star[1])),
-            log = TRUE
-        )
-        
-    }
-            
-    logPi <- log(object$Pi)
+                l_x = dbbinom(x = hmm$x[,k], size = hmm$d[,k], alpha = hmm$alpha[m,k], beta = hmm$beta[m,k], log = TRUE)
 
-    for (i in 2:n) {
-        matrixnu <- matrix(nu[i - 1, ], nrow = m, ncol = m)
-        
-        nu[i, ] = apply(matrixnu + logPi[,,i], 2, max)
-            
-        if (!is.na(x[i])) {
-            nu[i, ] = nu[i, ] + dfunc(x=x[i], object$pm, object$pn[i], log = TRUE)
-        }
-        
-        if (!is.na(x2[i])) {
-            nu[i, ] = nu[i, ] + dfunc2(
-                x = rep(x2[i], m),
-                list('sig' = rep(object$sig[i], m)),
-                list('mu' = object$mu[i] + log(object$phi * object$d * object$lambda_star[i])),
-                log = TRUE
-            )
-        }
+                l_x[is.na(l_x)] = 0
+
+                l_y = rep(0,N)
+                valid = !is.na(hmm$y[,k])
+
+                l_y[valid] = dpoilog(
+                        x = hmm$y[valid,k],
+                        sig = hmm$sig[valid,k],
+                        mu = hmm$mu[valid,k] + log(hmm$phi[m,k] * hmm$l[valid,k] * hmm$lambda[valid,k]),
+                        log = TRUE
+                    )
+
+                return(l_x + l_y)
+
+            }
+        ) %>% rowSums()
+
+    })
+
+    nu[1, ] <- log(hmm$delta) + logprob[1,]
+
+    for (i in 2:N) {
+        matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
+        nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
+        nu[i, ] = nu[i, ] + logprob[i, ]
     }
 
     if (any(is.na(nu))) {
-        # fwrite(nu, '~/debug.txt')
         stop("NA values in viterbi")
     }
     
-    if (all(nu[n, ] == -Inf)) {
-        # fwrite(nu, '~/debug.txt')
+    if (all(nu[N, ] == -Inf)) {
         stop("Problems With Underflow")
     }
-
-    # fwrite(nu, '~/debug.txt')
               
-    y[n] <- which.max(nu[n, ])
+    z[N] <- which.max(nu[N, ])
 
-    for (i in seq(n - 1, 1, -1)) y[i] <- which.max(logPi[,,i+1][, y[i+1]] + nu[i, ])
+    for (i in seq(N - 1, 1, -1)) z[i] <- which.max(hmm$logPi[,,i+1][, z[i+1]] + nu[i, ])
 
-    LL = max(nu[n, ])
-
-    # print(LL)
+    LL = max(nu[N, ])
         
-    return(list(y = y, LL = LL))
+    return(list(z = hmm$states[z,], LL = LL))
 }
 
 ############ Clonal deletion HMM ############
@@ -688,7 +647,7 @@ run_hmm_mv_inhom2 = function(
         states = matrix(rep(states, 2), ncol = 2)
     )
 
-    MPC = viterbi_joint2(hmm)
+    MPC = viterbi_joint(hmm)
         
     return(tibble(state = states[as.character(MPC$z)], max_LL = MPC$LL))
 }
@@ -821,73 +780,6 @@ get_joint_hmm = function(
     return(hmm)
 }
 
-
-#' Viterbi algorithm for joint HMM (PLN expression likelihood)
-#' @keywords internal
-viterbi_joint2 <- function (hmm, ...){
-
-    N <- nrow(hmm$x)
-    M <- nrow(hmm$logPi[,,1])
-    K <- ncol(hmm$x)
-    nu <- matrix(NA, nrow = N, ncol = M)
-    z <- rep(NA, N)
-    
-    nu[1, ] = rowSums(log(hmm$delta))
-
-    logprob = sapply(1:M, function(m) {
-
-        sapply(
-            1:K,
-            function(k) {
-
-                l_x = dbbinom(x = hmm$x[,k], size = hmm$d[,k], alpha = hmm$alpha[m,k], beta = hmm$beta[m,k], log = TRUE)
-
-                l_x[is.na(l_x)] = 0
-
-                l_y = rep(0,N)
-                valid = !is.na(hmm$y[,k])
-
-                l_y[valid] = dpoilog(
-                        x = hmm$y[valid,k],
-                        sig = hmm$sig[valid,k],
-                        mu = hmm$mu[valid,k] + log(hmm$phi[m,k] * hmm$l[valid,k] * hmm$lambda[valid,k]),
-                        log = TRUE
-                    )
-
-                return(l_x + l_y)
-
-            }
-        ) %>% rowSums()
-
-    })
-
-    for (i in 1:N) {
-
-        if (i > 1) {
-            matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
-            nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
-        }
-
-        nu[i, ] = nu[i, ] + logprob[i, ]
-    }
-
-    if (any(is.na(nu))) {
-        stop("NA values in viterbi")
-    }
-    
-    if (all(nu[n, ] == -Inf)) {
-        stop("Problems With Underflow")
-    }
-              
-    z[N] <- which.max(nu[N, ])
-
-    for (i in seq(N - 1, 1, -1)) z[i] <- which.max(hmm$logPi[,,i+1][, z[i+1]] + nu[i, ])
-
-    LL = max(nu[N, ])
-        
-    return(list(z = hmm$states[z,], LL = LL))
-}
-
 #' Forward-backward algorithm for joint HMM
 #' @keywords internal
 likelihood_joint = function(hmm) {
@@ -1011,9 +903,9 @@ renorm = function(logA) {
 
 compare_hmm = function(hmm1, hmm2) {
     hmm_merged = merge_hmm(hmm1, hmm2, kernel = 'phase')
-    L1 = viterbi_joint2(hmm_merged)$LL
+    L1 = viterbi_joint(hmm_merged)$LL
     hmm_merged = merge_hmm(hmm1, hmm2, kernel = 'equal')
-    L0 = viterbi_joint2(hmm_merged)$LL
+    L0 = viterbi_joint(hmm_merged)$LL
     return(L1 - L0)
 }
 
