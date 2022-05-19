@@ -31,12 +31,12 @@ dbbinom <- function(x, size, alpha = 1, beta = 1, log = FALSE) {
 get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
 
     states = c("theta_up", "theta_down")
-    calc_trans_mat = function(p_s) {
-        matrix(c(1 - p_s, p_s, p_s, 1 - p_s), ncol = 2, byrow = TRUE)
-    }
-    As = lapply(p_s, function(p_s) {
-        calc_trans_mat(p_s)
-    })
+
+    N = length(p_s)
+
+    Pi = sapply(p_s, function(p_s) {c(1 - p_s, p_s, p_s, 1 - p_s)}) %>% 
+        array(dim = c(2, 2, N))
+
     prior = c(0.5, 0.5)
     alpha_up = (0.5 + theta) * gamma
     beta_up = (0.5 - theta) * gamma
@@ -45,11 +45,14 @@ get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
     
     hmm = list(
         x = pAD, 
-        Pi = As, 
+        logPi = log(Pi),
         delta = prior, 
         alpha = c(alpha_up, alpha_down), 
         beta = c(beta_up, beta_down),
-        d = DP
+        d = DP,
+        N = N,
+        M = 2,
+        K = 1
     )
 
     hmm$states = states
@@ -63,12 +66,10 @@ get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
 #' @keywords internal
 viterbi_allele <- function(hmm) {
 
-    N <- length(hmm$x)
-    M <- nrow(hmm$Pi[[1]])
+    N <- hmm$N
+    M <- hmm$M
     nu <- matrix(NA, nrow = N, ncol = M)
     z <- rep(NA, N)
-
-    logPi <- lapply(hmm$Pi, log)
 
     logprob = sapply(1:M, function(m) {
 
@@ -84,13 +85,13 @@ viterbi_allele <- function(hmm) {
 
     for (i in 2:N) {
         matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
-        nu[i, ] = apply(matrixnu + logPi[[i]], 2, max)
+        nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
         nu[i, ] = nu[i, ] + logprob[i,]
     }
 
     z[N] <- which.max(nu[N, ])
 
-    for (i in seq(N - 1, 1, -1)) z[i] <- which.max(logPi[[i + 1]][, z[i + 1]] + nu[i, ])
+    for (i in seq(N - 1, 1, -1)) z[i] <- which.max(hmm$logPi[,,i+1][, z[i+1]] + nu[i, ])
 
     LL = max(nu[N, ])
         
@@ -102,12 +103,12 @@ viterbi_allele <- function(hmm) {
 forward_back_allele = function(hmm) {
 
     # case of one-data point
-    if (length(hmm$x) == 1) {
+    if (hmm$N == 1) {
         return(NA)
     }
 
-    N <- length(hmm$x)
-    M <- nrow(hmm$Pi[[1]])
+    N <- hmm$N
+    M <- hmm$M
         
     logprob = sapply(1:M, function(m) {
 
@@ -120,10 +121,8 @@ forward_back_allele = function(hmm) {
     })
         
     logphi <- log(hmm$delta)
-    
-    logPi <- lapply(hmm$Pi, log)
-    
-    marginals = forward_backward_compute(logphi, logprob, logPi, N, M)
+        
+    marginals = forward_backward_compute(logphi, logprob, hmm$logPi, N, M)
 
     colnames(marginals) = hmm$states
 
@@ -134,8 +133,8 @@ forward_back_allele = function(hmm) {
 #' @keywords internal
 likelihood_allele = function(hmm) {
         
-    N <- length(hmm$x)
-    M <- nrow(hmm$Pi[[1]])
+    N <- hmm$N
+    M <- hmm$M
         
     logprob = sapply(1:M, function(m) {
 
@@ -148,10 +147,8 @@ likelihood_allele = function(hmm) {
     })
         
     logphi <- log(hmm$delta)
-    
-    logPi <- lapply(hmm$Pi, log)
         
-    LL <- likelihood_compute(logphi, logprob, logPi, N, M)
+    LL <- likelihood_compute(logphi, logprob, hmm$logPi, N, M)
 
     return(LL)
 }
@@ -172,9 +169,12 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
     if (length(gamma) > 1) {
         stop('More than one gamma parameter')
     }
-    
+
     # states
     states = c("neu", "theta_1_up", "theta_1_down", "theta_2_up", "theta_2_down")
+
+    N = length(pAD)
+    M = 5
 
     # transition matrices
     calc_trans_mat = function(p_s, t) {
@@ -188,11 +188,9 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
             byrow = TRUE
         )
     }
-    
-    As = lapply(
-        p_s,
-        function(p_s) {calc_trans_mat(p_s, t)}
-    )
+
+    Pi = sapply(p_s, function(p_s) {calc_trans_mat(p_s, t)}) %>% 
+        array(dim = c(M, M, N))
 
     # intitial probabilities
     if (is.null(prior)) {
@@ -204,11 +202,13 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
             
     hmm = list(
         x = pAD, 
-        Pi = As, 
+        logPi = log(Pi), 
         delta = prior, 
         alpha = gamma * c(0.5, 0.5 + theta_1, 0.5 - theta_1, 0.5 + theta_2, 0.5 - theta_2),
         beta = gamma * c(0.5, 0.5 - theta_1, 0.5 + theta_1, 0.5 - theta_2, 0.5 + theta_2),
-        d = DP
+        d = DP,
+        N = N,
+        M = M
     )
     
     solution = states[viterbi_allele(hmm)]
@@ -439,15 +439,19 @@ viterbi_joint <- function(hmm) {
 
                 l_x[is.na(l_x)] = 0
 
-                l_y = rep(0,N)
-                valid = !is.na(hmm$y[,k])
+                if (!is.null(hmm$y)) {
+                    l_y = rep(0,N)
+                    valid = !is.na(hmm$y[,k])
 
-                l_y[valid] = dpoilog(
-                        x = hmm$y[valid,k],
-                        sig = hmm$sig[valid,k],
-                        mu = hmm$mu[valid,k] + log(hmm$phi[m,k] * hmm$l[valid,k] * hmm$lambda[valid,k]),
-                        log = TRUE
-                    )
+                    l_y[valid] = dpoilog(
+                            x = hmm$y[valid,k],
+                            sig = hmm$sig[valid,k],
+                            mu = hmm$mu[valid,k] + log(hmm$phi[m,k] * hmm$l[valid,k] * hmm$lambda[valid,k]),
+                            log = TRUE
+                        )
+                } else {
+                    l_y = 0
+                }
 
                 return(l_x + l_y)
 

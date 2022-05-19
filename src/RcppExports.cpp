@@ -81,14 +81,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // likelihood_compute
-double likelihood_compute(Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m);
+double likelihood_compute(Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m);
 RcppExport SEXP _numbat_likelihood_compute(SEXP logphiSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type logphi(logphiSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type logprob(logprobSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type logPi(logPiSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type logPi(logPiSEXP);
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     Rcpp::traits::input_parameter< int >::type m(mSEXP);
     rcpp_result_gen = Rcpp::wrap(likelihood_compute(logphi, logprob, logPi, n, m));
@@ -96,14 +96,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // forward_backward_compute
-Rcpp::NumericMatrix forward_backward_compute(Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m);
+Rcpp::NumericMatrix forward_backward_compute(Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m);
 RcppExport SEXP _numbat_forward_backward_compute(SEXP logphiSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type logphi(logphiSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type logprob(logprobSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type logPi(logPiSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type logPi(logPiSEXP);
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     Rcpp::traits::input_parameter< int >::type m(mSEXP);
     rcpp_result_gen = Rcpp::wrap(forward_backward_compute(logphi, logprob, logPi, n, m));
