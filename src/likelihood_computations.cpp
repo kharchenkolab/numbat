@@ -34,7 +34,7 @@ double logSumExp(const arma::vec& x) {
 // expensive for loops in likelihood_allele() and forward_back_allele)()
 
 // [[Rcpp::export]]
-double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
+double likelihood_compute(Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
 
     double LL = 0.0;
 
@@ -64,7 +64,7 @@ double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcp
 
 
 // [[Rcpp::export]]
-Rcpp::NumericMatrix forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
+Rcpp::NumericMatrix forward_backward_compute(Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m) {
 
     const int nrow = n;
     const int ncol = m;
