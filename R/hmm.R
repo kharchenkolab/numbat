@@ -356,6 +356,72 @@ viterbi_allele <- function(hmm) {
     return(z)
 }
 
+#' Forward-backward algorithm for allele HMM
+#' @keywords internal
+forward_back_allele = function (obj, ...) {
+
+    # case of one-data point
+    if (length(obj$x) == 1) {
+        return(NA)
+    }
+    
+    x <- obj$x
+    p_x <- makedensity(obj$distn)
+    
+    m <- nrow(obj$Pi[[1]])
+    n <- length(x)
+    
+    logprob = sapply(1:m, function(k) {
+        
+        l_x = p_x(x = x,  getj(obj$pm, k), list(size = obj$pn), log = TRUE)
+        
+        l_x[is.na(l_x)] = 0
+        
+        return(l_x)
+        
+    })
+        
+    logphi <- log(as.double(obj$delta))
+    
+    logPi <- lapply(obj$Pi, log)
+        
+    marginals = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
+
+    colnames(marginals) = obj$states
+
+    return(marginals)
+}
+
+
+# Only compute total log likelihood
+#' @keywords internal
+likelihood_allele = function (obj, ...) {
+        
+    x <- obj$x
+    p_x <- makedensity(obj$distn)
+    
+    m <- nrow(obj$Pi[[1]])
+    n <- length(x)
+    
+    logprob = sapply(1:m, function(k) {
+        
+        l_x = p_x(x = x,  getj(obj$pm, k), list(size = obj$pn), log = TRUE)
+        
+        l_x[is.na(l_x)] = 0
+        
+        return(l_x)
+        
+    })
+
+    logphi <- log(as.double(obj$delta))
+    
+    logPi <- lapply(obj$Pi, log)
+        
+    LL <- likelihood_allele_compute(obj, logphi, logprob, logPi, n, m)
+
+    return(LL)
+}
+
 #' allele-only HMM
 #' @param pAD integer vector Paternal allele counts
 #' @param DP integer vector Total alelle counts
@@ -416,70 +482,6 @@ run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, p
     return(solution)
 }
 
-#' Forward-backward algorithm for allele HMM
-#' @keywords internal
-forward_back_allele = function (obj, ...) {
-
-    # case of one-data point
-    if (length(obj$x) == 1) {
-        return(NA)
-    }
-    
-    x <- obj$x
-    p_x <- makedensity(obj$distn)
-    
-    m <- nrow(obj$Pi[[1]])
-    n <- length(x)
-    
-    logprob = sapply(1:m, function(k) {
-        
-        l_x = p_x(x = x,  getj(obj$pm, k), list(size = obj$pn), log = TRUE)
-        
-        l_x[is.na(l_x)] = 0
-        
-        return(l_x)
-        
-    })
-        
-    logphi <- log(as.double(obj$delta))
-    
-    logPi <- lapply(obj$Pi, log)
-        
-    marginals = forward_backward_compute(obj, logphi, logprob, logPi, n, m)
-
-    colnames(marginals) = obj$states
-
-    return(marginals)
-}
-
-# Only compute total log likelihood
-#' @keywords internal
-likelihood_allele = function (obj, ...) {
-        
-    x <- obj$x
-    p_x <- makedensity(obj$distn)
-    
-    m <- nrow(obj$Pi[[1]])
-    n <- length(x)
-    
-    logprob = sapply(1:m, function(k) {
-        
-        l_x = p_x(x = x,  getj(obj$pm, k), list(size = obj$pn), log = TRUE)
-        
-        l_x[is.na(l_x)] = 0
-        
-        return(l_x)
-        
-    })
-
-    logphi <- log(as.double(obj$delta))
-    
-    logPi <- lapply(obj$Pi, log)
-        
-    LL <- likelihood_allele_compute(obj, logphi, logprob, logPi, n, m)
-
-    return(LL)
-}
 
 #' Get an allele HMM
 #' @param pAD integer vector Paternal allele counts
@@ -762,6 +764,7 @@ get_joint_hmm = function(
     logPi_cn = calc_trans_mat2(t, p_s, w, states_cn, states_phase, part = 'cn')
     logPi_phase = calc_trans_mat2(t, p_s, w, states_cn, states_phase, part = 'phase')
     logPi = logPi_cn + logPi_phase
+    # logPi = calc_trans_mat(t, p_s, w, states_cn, states_phase) %>% log
 
     theta_u_1 = 0.5 + theta_min
     theta_d_1 = 0.5 - theta_min
@@ -885,7 +888,7 @@ viterbi_joint2 <- function (hmm, ...){
     return(list(z = hmm$states[z,], LL = LL))
 }
 
-#' Forward-backward algorithm for allele HMM
+#' Forward-backward algorithm for joint HMM
 #' @keywords internal
 likelihood_joint = function(hmm) {
     
@@ -941,11 +944,15 @@ merge_hmm = function(hmm1, hmm2, kernel = 'indep') {
     M = dim(hmm1$logPi)[2]
     
     states = cross(hmm1$states, hmm2$states)
+    
+    states_cn = states %>% str_remove('_up|_down') %>% matrix(ncol = 2)
+    states_ph = states %>% str_extract('up|down') %>% matrix(ncol = 2)
 
     if (kernel == 'equal') {
 
         keep = which(states[,1] == states[,2])
         logPi = hmm1$logPi + hmm2$logPi_cn
+        logPi_ph = hmm1$logPi_ph
 
     } else if (kernel == 'indep') {
 
@@ -954,7 +961,7 @@ merge_hmm = function(hmm1, hmm2, kernel = 'indep') {
         logPi = sapply(
             1:N,
             function(n) {
-                cross_trans_indep(hmm1$logPi[,,n], hmm2$logPi_cn[,,n])
+                cross_trans_indep(hmm1$logPi[,,n], hmm2$logPi[,,n])
             }
         ) %>%
         array(dim = c(M^2, M^2, N))
@@ -962,32 +969,8 @@ merge_hmm = function(hmm1, hmm2, kernel = 'indep') {
     } else if (kernel == 'phase') {
 
         keep = 1:nrow(states)
-
-        # banned = cross(paste(states[,1], states[,2], sep = ','), paste(states[,1], states[,2], sep = ',')) %>%
-        #     as.data.frame() %>%
-        #     tidyr::separate(z1, c('z11', 'z21'), ',') %>%
-        #     tidyr::separate(z2, c('z12', 'z22'), ',') %>%
-        #     mutate(
-        #         phase11 = str_extract(z11, 'up|down'),
-        #         phase12 = str_extract(z12, 'up|down'),
-        #         phase21 = str_extract(z21, 'up|down'),
-        #         phase22 = str_extract(z22, 'up|down'),
-        #         switch1 = phase11 != phase12,
-        #         switch2 = phase21 != phase22,
-        #     ) %>%
-        #     mutate(ban = (switch1 & !switch2) | (!switch1 & switch2)) %>%
-        #     mutate(ban = ifelse(is.na(ban), FALSE, ban)) %>%
-        #     pull(ban)
-            
-        logPi = sapply(
-            1:N,
-            function(n) {
-                logPi = cross_trans_indep(hmm1$logPi_cn[,,n], hmm2$logPi_cn[,,n]) + get_phase_trans(hmm1$p_s[n])
-                # logPi[banned] = -Inf 
-                return(logPi)
-            }
-        ) %>%
-        array(dim = c(M^2, M^2, N))
+        
+        logPi = calc_trans_mat3(t, hmm1$p_s, w, states_cn, states_ph, kernel = 'phase')
 
     }
     
@@ -1004,7 +987,8 @@ merge_hmm = function(hmm1, hmm2, kernel = 'indep') {
         alpha = cross(hmm1$alpha, hmm2$alpha)[keep,],
         beta = cross(hmm1$beta, hmm2$beta)[keep,],
         delta = cross(hmm1$delta, hmm2$delta)[keep,],
-        logPi = logPi
+        logPi = logPi,
+        logPi_ph = logPi_ph
     )
 }
 
@@ -1014,15 +998,23 @@ cross = function(x,y) {
     return(m)
 }
 
-cross_trans_indep = function(logA1, logA2) {
+cross_trans_indep = function(logA1, logA2, opt = '+') {
     
     m = nrow(logA1)
-    array(aperm(outer(logA1, logA2, '+'), c(1,3,2,4)), dim = c(m^2, m^2))
+    array(aperm(outer(logA1, logA2, opt), c(1,3,2,4)), dim = c(m^2, m^2))
 
 }
 
 renorm = function(logA) {
     t(apply(logA, 1, function(x){x - logSumExp(x)}))
+}
+
+compare_hmm = function(hmm1, hmm2) {
+    hmm_merged = merge_hmm(hmm1, hmm2, kernel = 'phase')
+    L1 = viterbi_joint2(hmm_merged)$LL
+    hmm_merged = merge_hmm(hmm1, hmm2, kernel = 'equal')
+    L0 = viterbi_joint2(hmm_merged)$LL
+    return(L1 - L0)
 }
 
 calc_trans_mat2 = function(t, p_s, w, states_cn, states_phase, part = 'cn') {
@@ -1035,7 +1027,7 @@ calc_trans_mat2 = function(t, p_s, w, states_cn, states_phase, part = 'cn') {
 
     sapply(1:length(states_cn), function(from) {
         sapply(1:length(states_cn), function(to) {
-            log(get_trans_probs(t, p_s, w, states_cn[from], states_phase[from], states_cn[to], states_phase[to]))
+            get_trans_probs(t, p_s, w, states_cn[from], states_phase[from], states_cn[to], states_phase[to])
         }) %>% t
     }) %>% t %>%
     array(dim = c(length(states_cn), length(states_cn), length(p_s)))
@@ -1045,37 +1037,105 @@ calc_trans_mat2 = function(t, p_s, w, states_cn, states_phase, part = 'cn') {
 get_trans_probs_cn = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
 
     if (cn_from == cn_to) {
-        p = rep(1-t, length(p_s))
+        logp = rep(log(1-t), length(p_s))
     } else {
-        p = t * w[[cn_to]]/sum(w[names(w)!=cn_from])
+        logp = log(t) + log(w[[cn_to]]/sum(w[names(w)!=cn_from]))
         if (!is.na(phase_to)) {
-            p = p/2
+            logp = logp - log(2)
         }
-        p = rep(p, length(p_s))
+        logp = rep(logp, length(p_s))
     }
     
-    return(p)
+    return(logp)
 }
 
 get_trans_probs_phase = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
 
-    if (cn_from == 'neu' & cn_to == 'neu') {
-        p_s = rep(0.5, length(p_s))
-    }
+    # if (cn_from == cn_to) {
+    #     if (is.na(phase_from) & is.na(phase_to)) {
+    #         logp = rep(0, length(p_s))
+    #     } else if (phase_from == phase_to) {
+    #         logp = log(1-p_s)
+    #     } else {
+    #         logp = log(p_s)
+    #     }
+    # } else {
+    #     logp = rep(0, length(p_s))
+    # }
 
-    if (cn_from == cn_to) {
-        if (is.na(phase_from) & is.na(phase_to)) {
-            p = rep(1, length(p_s))
-        } else if (phase_from == phase_to) {
-            p = 1-p_s
-        } else {
-            p = p_s
-        }
+    if (is.na(phase_from) | is.na(phase_to)) {
+        logp = rep(0, length(p_s))
+    } else if (phase_from == phase_to) {
+        logp = log(1-p_s)
     } else {
-        p = rep(1, length(p_s))
+        logp = log(p_s)
     }
     
-    return(p)
+    return(logp)
+}
+
+calc_trans_mat3 = function(t, p_s, w, states_cn, states_ph, kernel = 'phase') {
+
+    N = length(p_s)
+    M = nrow(states_cn)
+
+    sapply(1:M, function(from) {
+        sapply(1:M, function(to) {
+            get_trans_probs_cn3(t, w, states_cn[from,1], states_cn[to,1], N) +
+            get_trans_probs_cn3(t, w, states_cn[from,2], states_cn[to,2], N) +
+            get_trans_probs_ph3(t, p_s, states_ph[from,], states_ph[to,], N, kernel = kernel)
+        }) %>% t
+    }) %>% t %>%
+    array(dim = c(M, M, N))
+
+}
+
+get_trans_probs_cn3 = function(t, w, cn_from, cn_to, N) {
+
+    if (cn_from == cn_to) {
+        logp = rep(log(1-t), N)
+    } else {
+        logp = log(t) + log(w[[cn_to]]/sum(w[names(w)!=cn_from]))
+        if (!cn_to %in% c('neu', 'bamp', 'bdel')) {
+            logp = logp - log(2)
+        }
+        logp = rep(logp, N)
+    }
+    
+    return(logp)
+}
+
+get_trans_probs_ph3 = function(t, p_s, phase_from, phase_to, N, kernel = 'phase') {
+
+    switch = phase_from != phase_to
+
+    if (is.na(switch[1]) & is.na(switch[2])) {
+        logp = rep(0, N)
+    } else if (is.na(switch[1])) {
+        if (switch[2]) {
+            logp = log(p_s)
+        } else {
+            logp = log(1-p_s)
+        }
+    } else if (is.na(switch[2])) {
+        if (switch[1]) {
+            logp = log(p_s)
+        } else {
+            logp = log(1-p_s)
+        }
+    } else if ((switch[1] & !switch[2]) | (!switch[1] & switch[2])) {
+        if (kernel == 'phase') {
+            logp = rep(-Inf, N)
+        } else {
+            logp = log(p_s)
+        }
+    } else if ((!switch[1]) & (!switch[2])) {
+        logp = log(1-p_s)
+    } else if (switch[1] & switch[2]) {
+        logp = log(p_s)
+    }
+
+    return(logp)
 }
 
 

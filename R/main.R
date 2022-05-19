@@ -98,6 +98,8 @@ run_numbat = function(
     ######### Basic checks #########
 
     count_mat = check_matrix(count_mat)
+    df_allele = check_allele_df(df_allele)
+    lambdas_ref = check_exp_ref(lambdas_ref)
 
     # filter for annotated genes
     genes_annotated = unique(gtf$gene) %>% 
@@ -118,10 +120,6 @@ run_numbat = function(
     df_allele = df_allele %>% filter(cell %in% colnames(count_mat))
     if (nrow(df_allele) == 0){
         stop('No matching cell names between count_mat and df_allele')
-    }
-
-    if (!is.matrix(lambdas_ref)) {
-        lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
     }
 
     ######## Initialization ########

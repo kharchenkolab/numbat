@@ -1620,6 +1620,37 @@ check_matrix = function(count_mat) {
     return(count_mat)
 }
 
+#' check the format of a allele dataframe
+#' @keywords internal
+check_allele_df = function(df) {
+
+    snps = df %>% 
+        filter(GT != '') %>% 
+        group_by(snp_id) %>%
+        summarise(
+            n = length(unique(GT))
+        ) 
+    
+    if (any(snps$n > 1)) {
+        log_err('Inconsistent SNP genotypes; Are cells from two different individuals mixed together?')
+    }
+
+    return(df)
+
+}
+
+#' check the format of lambdas_ref
+#' @keywords internal
+check_exp_ref = function(lambdas_ref) {
+
+    if (!is.matrix(lambdas_ref)) {
+        lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
+    }
+
+    return(lambdas_ref)
+
+}
+
 #' Calculate simes' p
 #' @keywords internal
 simes_p = function(p.vals, n_dim) {
@@ -1966,14 +1997,6 @@ test_branch = function(count_mat, df_allele, gtree, segs_consensus, from_node, t
     ) %>% bind_rows()
     
     return(bulks)
-}
-
-compare_hmm = function(hmm1, hmm2) {
-    hmm_merged = merge_hmm(hmm1, hmm2, kernel = 'phase')
-    L1 = viterbi_joint2(hmm_merged)$LL
-    hmm_merged = merge_hmm(hmm1, hmm2, kernel = 'equal')
-    L0 = viterbi_joint2(hmm_merged)$LL
-    return(L1 - L0)
 }
 
 compare_bulks = function(bulks, segs_consensus, t = 1e-5, gamma = 20, ncores = 1) {
