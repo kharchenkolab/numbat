@@ -25,11 +25,14 @@ library(tidygraph)
 library(patchwork)
 ```
 
+After a Numbat run, we can summarize output files into a Numbat object:
+```{r, eval = FALSE}
+nb = Numbat$new(out_dir = './numbat_out')
+```
+In this tutorial, let's start the analysis with the pre-saved Numbat and pagoda2 objects.
 ```{r}
-# summarize output files into a Numbat object
-nb = Numbat$new(out_dir = '~/paper_data/numbat_out/TNBC1_demo')
-# load pre-saved pagoda2 object
-pagoda = readRDS('~/paper_data/conos_objects/TNBC1.rds')
+nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
+pagoda = readRDS(url('http://pklab.med.harvard.edu/teng/data/con_TNBC1.rds'))
 ```
 
 ## Copy number landscape and single-cell phylogeny
