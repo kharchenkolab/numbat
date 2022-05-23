@@ -519,13 +519,15 @@ analyze_bulk = function(
             {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
             
         bulk = bulk %>% mutate(mu = fit@coef[1], sig = fit@coef[2])
+    } else {
+        bulk = bulk %>% mutate(mu = NA, sig = NA)
     }
 
     if (run_hmm) {
         bulk = bulk %>% 
             group_by(CHROM) %>%
             mutate(state = 
-                run_hmm_mv_inhom(
+                run_joint_hmm(
                     pAD = pAD,
                     DP = DP, 
                     p_s = p_s,
@@ -594,35 +596,39 @@ analyze_bulk = function(
         bulk = bulk %>% mutate(state_post = state, cnv_state_post = cnv_state)
     }
 
-    # annotate phi MLE for all segments
-    bulk = bulk %>%
-        group_by(seg) %>%
-        mutate(
-            approx_phi_post(
-                Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
-                mu = mu[!is.na(Y_obs)],
-                sig = sig[!is.na(Y_obs)]
-            )
+    if (!allele_only) {
+
+        # annotate phi MLE for all segments
+        bulk = bulk %>%
+            group_by(seg) %>%
+            mutate(
+                approx_phi_post(
+                    Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
+                    mu = mu[!is.na(Y_obs)],
+                    sig = sig[!is.na(Y_obs)]
+                )
+            ) %>%
+            ungroup()
+
+        # rolling phi estimates
+        bulk = bulk %>% 
+            select(-any_of('phi_mle_roll')) %>%
+            left_join(
+                bulk %>% 
+                    group_by(CHROM) %>%
+                    filter(!is.na(Y_obs)) %>%
+                    filter(Y_obs > 0) %>%
+                    mutate(
+                        phi_mle_roll = phi_hat_roll(Y_obs, lambda_ref, d_obs, mu, sig, h = 50)
+                    ) %>%
+                    select(phi_mle_roll, CHROM, gene),
+            by = c('CHROM', 'gene')
         ) %>%
+        group_by(CHROM) %>%
+        mutate(phi_mle_roll = zoo::na.locf(phi_mle_roll, na.rm=FALSE)) %>%
         ungroup()
 
-    # rolling phi estimates
-    bulk = bulk %>% 
-        select(-any_of('phi_mle_roll')) %>%
-        left_join(
-            bulk %>% 
-                group_by(CHROM) %>%
-                filter(!is.na(Y_obs)) %>%
-                filter(Y_obs > 0) %>%
-                mutate(
-                    phi_mle_roll = phi_hat_roll(Y_obs, lambda_ref, d_obs, mu, sig, h = 50)
-                ) %>%
-                select(phi_mle_roll, CHROM, gene),
-        by = c('CHROM', 'gene')
-    ) %>%
-    group_by(CHROM) %>%
-    mutate(phi_mle_roll = zoo::na.locf(phi_mle_roll, na.rm=FALSE)) %>%
-    ungroup()
+    }
 
     # store these info here
     bulk$lambda = lambda 
@@ -642,9 +648,6 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     
-    # theta_min = 0.065
-    # delta_phi_min = 0.15
-
     if (allele_only) {
         segs_post = bulk %>% 
             filter(cnv_state != 'neu') %>%
@@ -1017,7 +1020,7 @@ find_common_diploid = function(
             bulk %>% 
                 group_by(CHROM) %>%
                 mutate(state = 
-                    run_hmm_inhom(
+                    run_allele_hmm(
                         pAD = pAD,
                         DP = DP, 
                         p_s = p_s,

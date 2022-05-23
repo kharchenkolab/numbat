@@ -162,7 +162,7 @@ likelihood_allele = function(hmm) {
 #' @param gamma numeric Overdispersion in the allele-specific expression
 #' @return character vector Decoded states
 #' @keywords internal
-run_hmm_inhom = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
+run_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, prior = NULL) {
 
     gamma = unique(gamma)
 
@@ -251,7 +251,7 @@ calc_allele_lik = function (pAD, DP, p_s, theta, gamma = 20) {
 #' @param exp_only logical Whether to only use expression data
 #' @param allele_only logical Whether to only use allele data
 #' @keywords internal
-run_hmm_mv_inhom = function(
+run_joint_hmm = function(
     pAD, DP, p_s, Y_obs = 0, lambda_ref = 0, d_total = 0, theta_min = 0.08, theta_neu = 0,
     bal_cnv = TRUE, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = phi_amp, phi_bdel = phi_del, 
     alpha = 1, beta = 1, 
@@ -527,7 +527,7 @@ viterbi_loh <- function (hmm, ...){
 }
 
 ############ Experimental stuff ############
-run_hmm_mv_inhom2 = function(
+run_joint_hmm2 = function(
     pAD_1, pAD_2, DP_1, DP_2, Y_obs_1, Y_obs_2, d_total_1, d_total_2, lambda_ref_1, lambda_ref_2, p_s, theta_min = 0.08, theta_neu = 0,
     bal_cnv = TRUE, phi_del = 2^(-0.25), phi_amp = 2^(0.25), phi_bamp = phi_amp, phi_bdel = phi_del, 
     alpha = 1, beta = 1, 
