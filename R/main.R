@@ -307,10 +307,15 @@ run_numbat = function(
             gtf = gtf,
             ncores = ncores)
 
-        allele_post = get_allele_post(
+        haplotype_post = get_haplotype_post(
             bulk_subtrees,
-            segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
-            df_allele
+            segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post))
+        )
+
+        allele_post = get_allele_post(
+            df_allele, 
+            haplotype_post, 
+            segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post))
         )
 
         joint_post = get_joint_post(
@@ -700,7 +705,6 @@ run_group_hmms = function(
 #' @keywords internal
 get_segs_consensus = function(bulks, min_LLR = 40, min_overlap = 0.45) {
 
-
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
     }
@@ -950,17 +954,17 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
 }
 
 #' get the single cell expression likelihoods
-#' @param exp_sc dataframe Single-cell expression counts
+#' @param exp_counts dataframe Single-cell expression counts {CHROM, seg, cnv_state, gene, Y_obs, lambda_ref}
 #' @param diploid_chroms character vector Known diploid chromosomes
 #' @param use_loh logical Whether to include CNLOH regions in baseline
 #' @return dataframe Single-cell CNV likelihood scores
 #' @keywords internal
-get_exp_likelihoods = function(exp_sc, diploid_chroms = NULL, use_loh = FALSE, depth_obs = NULL, mu = NULL, sigma = NULL) {
-
-    exp_sc = exp_sc %>% filter(lambda_ref > 0)
+get_exp_likelihoods = function(exp_counts, diploid_chroms = NULL, use_loh = FALSE, depth_obs = NULL, mu = NULL, sigma = NULL) {
+    
+    exp_counts = exp_counts %>% filter(!is.na(Y_obs)) %>% filter(lambda_ref > 0)
     
     if (is.null(depth_obs)){
-        depth_obs = sum(exp_sc$Y_obs)
+        depth_obs = sum(exp_counts$Y_obs)
     }
 
     if (use_loh) {
@@ -972,19 +976,19 @@ get_exp_likelihoods = function(exp_sc, diploid_chroms = NULL, use_loh = FALSE, d
     if (is.null(mu) | is.null(sigma)) {
 
         if (!is.null(diploid_chroms)) {
-            exp_sc_diploid = exp_sc %>% filter(CHROM %in% diploid_chroms)
+            exp_counts_diploid = exp_counts %>% filter(CHROM %in% diploid_chroms)
         } else {
-            exp_sc_diploid = exp_sc %>% filter(cnv_state %in% ref_states)
+            exp_counts_diploid = exp_counts %>% filter(cnv_state %in% ref_states)
         }
 
-        fit = exp_sc_diploid %>% {fit_lnpois(.$Y_obs, .$lambda_ref, depth_obs)}
+        fit = exp_counts_diploid %>% {fit_lnpois(.$Y_obs, .$lambda_ref, depth_obs)}
         mu = fit@coef[1]
         sigma = fit@coef[2]
     }
 
-    res = exp_sc %>% 
+    res = exp_counts %>% 
         filter(cnv_state != 'neu') %>%
-        group_by(seg, cnv_state) %>%
+        group_by(CHROM, seg, cnv_state) %>%
         summarise(
             n = n(),
             phi_mle = calc_phi_mle_lnpois(Y_obs, lambda_ref, depth_obs, mu, sigma, lower = 0.1, upper = 10),
@@ -996,8 +1000,8 @@ get_exp_likelihoods = function(exp_sc, diploid_chroms = NULL, use_loh = FALSE, d
             l22 = l31,
             l32 = l_lnpois(Y_obs, lambda_ref, depth_obs, mu, sigma, phi = 2.5),
             l00 = l_lnpois(Y_obs, lambda_ref, depth_obs, mu, sigma, phi = 0.25),
-            mu = mu,
-            sigma = sigma,
+            mu = UQ(mu),
+            sigma = UQ(sigma),
             .groups = 'drop'
         )
         
@@ -1159,7 +1163,6 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
     exp_post = results[!bad] %>%
         bind_rows() %>%
         mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) %>%
-        rowwise() %>%
         left_join(
             segs_consensus %>% select(
                 CHROM, 
@@ -1168,7 +1171,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
                 seg_end,
                 prior_loh = p_loh, prior_amp = p_amp, prior_del = p_del, prior_bamp = p_bamp, prior_bdel = p_bdel
             ),
-            by = 'seg'
+            by = c('seg', 'CHROM')
         ) %>%
         # if the opposite state has a very small prior, and phi is in the opposite direction, then CNV posterior can still be high which is miselading
         mutate_at(
@@ -1183,11 +1186,11 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
 }
 
 #' Do bayesian averaging to get posteriors
-#' @param sc_post dataframe Likelihoods
+#' @param PL dataframe Likelihoods and priors
 #' @return dataframe Posteriors
 #' @keywords internal
-compute_posterior = function(sc_post) {
-    sc_post %>% 
+compute_posterior = function(PL) {
+    PL %>% 
     rowwise() %>%
     mutate(
         Z_amp = logSumExp(c(l21 + log(prior_amp/4), l31 + log(prior_amp/4))),
@@ -1215,14 +1218,15 @@ compute_posterior = function(sc_post) {
     ungroup()
 }
 
-#' get CNV allele posteriors
+
+#' Get phased haplotypes
 #' @param bulks dataframe Subtree pseudobulk profiles
 #' @param segs_consensus dataframe Consensus CNV segments
-#' @param df_allele dataframe Allele counts
-#' @return dataframe Allele posteriors
+#' @param naive logical Whether to use naive haplotype classification
+#' @return dataframe Posterior haplotypes
 #' @keywords internal
-get_allele_post = function(bulks, segs_consensus, df_allele, naive = FALSE) {
-
+get_haplotype_post = function(bulks, segs_consensus, naive = FALSE) {
+    
     # add sample column if only one sample
     if ((!'sample' %in% colnames(bulks)) | (!'sample' %in% colnames(segs_consensus))) {
         bulks['sample'] = '0'
@@ -1233,27 +1237,37 @@ get_allele_post = function(bulks, segs_consensus, df_allele, naive = FALSE) {
     if (all(segs_consensus$cnv_state_post == 'neu')) {
         stop('No CNVs')
     }
-
+    
     if (naive) {
         bulks = bulks %>% mutate(haplo_post = ifelse(AR >= 0.5, 'major', 'minor'))
     }
     
-    # allele posteriors
-    snp_seg = bulks %>%
+    haplotypes = bulks %>%
         filter(!is.na(pAD)) %>%
-        select(snp_id, snp_index, sample, seg, haplo_post) %>%
+        select(CHROM, seg, snp_id, sample, haplo_post) %>%
         inner_join(
             segs_consensus,
-            by = c('sample', 'seg')
-        )
-
-    allele_sc = df_allele %>%
-        mutate(pAD = ifelse(GT == '1|0', AD, DP - AD)) %>%
-        select(-snp_index) %>% 
-        inner_join(
-            snp_seg %>% select(snp_id, snp_index, haplo_post, seg = seg_cons, cnv_state),
-            by = c('snp_id')
+            by = c('sample', 'CHROM', 'seg')
         ) %>%
+        select(CHROM, seg = seg_cons, cnv_state, snp_id, haplo_post)
+    
+    return(haplotypes)
+}
+
+#' get CNV allele posteriors
+#' @param df_allele dataframe Allele counts
+#' @param segs_consensus dataframe Consensus CNV segments
+#' @param haplotypes dataframe Haplotype classification
+#' @return dataframe Allele posteriors
+#' @keywords internal
+get_allele_post = function(df_allele, haplotypes, segs_consensus) {
+    
+    allele_counts = df_allele %>%
+        mutate(pAD = ifelse(GT == '1|0', AD, DP - AD)) %>%
+        inner_join(
+            haplotypes %>% select(CHROM, seg, cnv_state, snp_id, haplo_post),
+            by = c('CHROM', 'snp_id')
+        )  %>%
         filter(cnv_state != 'neu') %>%
         mutate(
             major_count = ifelse(haplo_post == 'major', AD, DP - AD),
@@ -1269,7 +1283,7 @@ get_allele_post = function(bulks, segs_consensus, df_allele, naive = FALSE) {
         ungroup() %>%
         filter(inter_snp_dist > 250 | is.na(inter_snp_dist))
     
-    allele_post = allele_sc %>%
+    allele_post = allele_counts %>%
         group_by(cell, CHROM, seg, cnv_state) %>%
         summarise(
             major = sum(major_count),

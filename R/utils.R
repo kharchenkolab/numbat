@@ -555,9 +555,6 @@ analyze_bulk = function(
             smooth_segs(min_genes = min_genes) %>%
             annot_segs(var = 'cnv_state')
     }
-
-    # rolling theta estimates
-    bulk = annot_theta_roll(bulk)
     
     # retest CNVs
     if (retest & (!exp_only)) {
@@ -645,6 +642,9 @@ analyze_bulk = function(
 #' @return a dataframe of segments with CNV posterior information
 #' @keywords internal
 retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE) {
+
+    # rolling theta estimates
+    bulk = annot_theta_roll(bulk)
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     

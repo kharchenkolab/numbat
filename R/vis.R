@@ -38,8 +38,8 @@ cnv_labels = names(cnv_colors) %>%
     str_to_upper() %>%
     str_replace('UP', '(major)') %>%
     str_replace('DOWN', '(minor)') %>%
+    str_replace('LOH', 'CNLoH') %>%
     setNames(names(cnv_colors))
-
 
 #' plot a pseudobulk HMM profile
 #' @param bulk dataframe Pseudobulk profile
@@ -1428,58 +1428,71 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
     (p_mut / p_clones) + plot_layout(heights = c(ratio, 1)) + plot_title
 }
 
-cnv_heatmap = function(segs, var = 'group') {
+cnv_heatmap = function(segs, var = 'group', label_group = TRUE) {
     
     gaps_hg38_filtered = gaps_hg38 %>% filter(end - start > 1e6)
+
+    if (!'p_cnv' %in% colnames(segs)) {
+        segs$p_cnv = 1
+    }
     
-    ggplot(
-        segs
-    ) +
-    geom_rect(
-        data = chrom_sizes_hg38,
-        aes(xmin = 0, xmax = size, ymin = -0.5, ymax = 0.5, fill = NA)
-    ) +
-    geom_rect(
-        aes(xmin = seg_start, xmax = seg_end, ymin = -0.5, ymax = 0.5, fill = cnv_state)
-    ) +
-    geom_rect(
-        inherit.aes = F,
-        data = gaps_hg38_filtered,
-        aes(xmin = start, 
-            xmax = end,
-            ymin = -0.5,
-            ymax = 0.5),
-        fill = 'white'
-    ) +
-    geom_rect(
-        inherit.aes = F,
-        data = gaps_hg38_filtered,
-        aes(xmin = start, 
-            xmax = end,
-            ymin = -0.5,
-            ymax = 0.5),
-        fill = 'gray',
-        alpha = 0.5
-    ) +
-    theme_classic() +
-    theme(
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.background = element_blank(),
-        strip.text.y = element_text(angle = 0),
-        axis.text = element_blank(),
-        plot.margin = margin(0, 0, 0, 0),
-        axis.title.x = element_blank(),
-        axis.ticks.y = element_blank()
-    ) +
-    facet_grid(get(var)~CHROM, space = 'free_x', scale = 'free', drop = TRUE) +
-    scale_fill_manual(
-        values = c('neu' = 'white', cnv_colors[names(cnv_colors) != 'neu']),
-        na.value = 'white',
-        limits = force,
-        labels = cnv_labels,
-        na.translate = F,
-        name = 'States'
-    ) +
-    scale_x_continuous(expand = expansion(add = 0))
+    p = ggplot(
+            segs
+        ) +
+        geom_rect(
+            aes(xmin = seg_start, xmax = seg_end, ymin = -0.5, ymax = 0.5, fill = cnv_state, alpha = p_cnv)
+        ) +
+        geom_rect(
+            data = chrom_sizes_hg38,
+            aes(xmin = 0, xmax = size, ymin = -0.5, ymax = 0.5, fill = NA)
+        ) +
+        geom_rect(
+            inherit.aes = F,
+            data = gaps_hg38_filtered,
+            aes(xmin = start, 
+                xmax = end,
+                ymin = -0.5,
+                ymax = 0.5),
+            fill = 'white'
+        ) +
+        geom_rect(
+            inherit.aes = F,
+            data = gaps_hg38_filtered,
+            aes(xmin = start, 
+                xmax = end,
+                ymin = -0.5,
+                ymax = 0.5),
+            fill = 'gray',
+            alpha = 0.5
+        ) +
+        theme_classic() +
+        theme(
+            panel.spacing = unit(0, 'mm'),
+            panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+            strip.background = element_blank(),
+            strip.text.y = element_text(angle = 0),
+            axis.text = element_blank(),
+            plot.margin = margin(0, 0, 0, 0),
+            axis.title.x = element_blank(),
+            axis.ticks.y = element_blank()
+        ) +
+        scale_fill_manual(
+            values = c('neu' = 'white', cnv_colors[names(cnv_colors) != 'neu']),
+            na.value = 'white',
+            limits = force,
+            labels = cnv_labels,
+            na.translate = F,
+            name = 'States'
+        ) +
+        scale_alpha_continuous(range = c(0,1), limits = c(0.5,1), oob = scales::squish) +
+        guides(alpha = 'none') +
+        scale_x_continuous(expand = expansion(add = 0)) +
+        facet_grid(get(var)~CHROM, space = 'free_x', scale = 'free', drop = TRUE)
+
+        if (!label_group) {
+            p = p + theme(strip.text.y = element_blank())
+        }
+
+        return(p)
+
 }
