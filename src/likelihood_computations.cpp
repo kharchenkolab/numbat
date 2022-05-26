@@ -150,13 +150,30 @@ Rcpp::NumericMatrix forward_backward_compute(Rcpp::NumericVector logphi, Rcpp::N
 Rcpp::NumericMatrix viterbi_allele_compute(Rcpp::NumericVector log_delta, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m, Rcpp::NumericMatrix nu) {
 
     const int nrow = n;
-    const int ncol = m;
+    const int ncol = m; // should be always 2
 
-    //nu(0, _) = log_delta + logprob(0, _);  // nu[1, ] <- log(hmm$delta) + logprob[1,]
+    nu(0, _) = log_delta + logprob(0, _);  // nu[1, ] <- log(hmm$delta) + logprob[1,]
+
+    Rcpp::NumericMatrix matrixnu(ncol, ncol);
+    /***
+    for (int i = 1; i < nrow; i++) {
+        // matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M) // always 2 by 2
+        //Rcpp::NumericMatrix matrixnu(ncol, ncol);
+        Rcpp::NumericVector nu_vec = nu(i - 1, _);
+        // rows 
+        for (int j = 0; j < ncol; j++) {
+            matrixnu(j, _) = nu_vec;
+        }
+    }
+    ***/
+    Rcpp::NumericVector nu_vec = nu(0, _);
+    for (int j = 0; j < ncol; j++) {
+        matrixnu(j, _) = rep(nu_vec[j], ncol);
+    }    
 
     /*** 
     for (int i = 1; i < nrow; i++) {
-        // matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
+        // matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)  // always 2 by 2
         double matrixnu[nrow][ncol]; 
         for (int j = 0; j < nrow; j++) {
             for (int k = 0; k < ncol; k++) {
@@ -173,7 +190,7 @@ Rcpp::NumericMatrix viterbi_allele_compute(Rcpp::NumericVector log_delta, Rcpp::
     }
     ***/
 
-    return nu;
+    return matrixnu;
 }
 
 
