@@ -143,3 +143,49 @@ Rcpp::NumericMatrix forward_backward_compute(Rcpp::NumericVector logphi, Rcpp::N
     
     return expoutput;
 }
+
+
+
+// [[Rcpp::export]]
+Rcpp::NumericMatrix viterbi_allele_compute(Rcpp::NumericVector log_delta, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m, Rcpp::NumericMatrix nu) {
+
+    const int nrow = n;
+    const int ncol = m;
+
+    //nu(0, _) = log_delta + logprob(0, _);  // nu[1, ] <- log(hmm$delta) + logprob[1,]
+
+    /*** 
+    for (int i = 1; i < nrow; i++) {
+        // matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
+        double matrixnu[nrow][ncol]; 
+        for (int j = 0; j < nrow; j++) {
+            for (int k = 0; k < ncol; k++) {
+                matrixnu[j][k] = nu(i-1, _);
+            }
+        }
+
+        // nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
+        // Step 1) 
+        //  Add the two matrices matrixnu + hmm$logPi[,,i]
+        // Step 2)
+        // Calculate the 'max' for each column, return a NumericVector with 'max' for each column
+        //Rcpp:NumericMatrix summed_matrices = matrixnu + logPi[,,i]
+    }
+    ***/
+
+    return nu;
+}
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
