@@ -46,15 +46,14 @@ NULL
 #' @export
 run_numbat = function(
         count_mat, lambdas_ref, df_allele, gtf, genetic_map, 
-        out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 10,
+        out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 10, tau = 0.3,
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
-        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 1-alpha, 
+        skip_nj = TRUE, multi_allelic = FALSE, p_multi = 1-alpha, 
         plot = TRUE, check_convergence = FALSE, exclude_neu = TRUE
     ) {
-
 
     ######### Basic checks #########
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
@@ -265,14 +264,17 @@ run_numbat = function(
 
         # find consensus CNVs
         log_message('Finding optimal segmentations .. ')
-        segs_optimal = get_segs_optimal(bulk_subtrees, bulk_clones, min_LLR = min_LLR, t = t, ncores = ncores)
-        
-        fwrite(segs_optimal, glue('{out_dir}/segs_optimal_{i}.tsv.gz'), sep = '\t')
-        
+        out = get_segs_optimal(bulk_subtrees, bulk_clones, min_LLR = min_LLR, t = t, ncores = ncores)
+   
+        fwrite(out$segs_optimal, glue('{out_dir}/segs_optimal_{i}.tsv.gz'), sep = '\t')
+        fwrite(out$scores, glue('{out_dir}/segs_scores_{i}.tsv.gz'), sep = '\t')
+
+        segs_optimal = out$segs_optimal
+
         bulk_subtrees = retest_bulks(
                 bulk_subtrees,
                 segs_optimal, 
-                segs_loh = segs_loh,
+                # segs_loh = segs_loh,
                 diploid_chroms = diploid_chroms, 
                 exclude_neu = FALSE,
                 min_LLR = min_LLR,
@@ -294,7 +296,7 @@ run_numbat = function(
             bulk_clones,
             segs_consensus,
             use_loh = use_loh,
-            segs_loh = segs_loh,
+            # segs_loh = segs_loh,
             exclude_neu = FALSE,
             diploid_chroms = diploid_chroms,
             min_LLR = min_LLR,
@@ -401,34 +403,30 @@ run_numbat = function(
         # contruct initial tree
         dist_mat = parallelDist::parDist(rbind(P, 'outgroup' = 1), threads = ncores)
 
-        treeUPGMA = phangorn::upgma(dist_mat) %>%
-            ape::root(outgroup = 'outgroup') %>%
-            ape::drop.tip('outgroup') %>%
-            reorder(order = 'postorder')
+        if (skip_nj) {
 
-        saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
+            treeUPGMA = phangorn::upgma(dist_mat) %>%
+                ape::root(outgroup = 'outgroup') %>%
+                ape::drop.tip('outgroup') %>%
+                reorder(order = 'postorder')
+            tree_init = treeUPGMA
 
-        UPGMA_score = score_tree(treeUPGMA, as.matrix(P))$l_tree
-        tree_init = treeUPGMA
+            saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
+            log_message('Only computing UPGMA..', verbose = verbose)
+            log_message('Using UPGMA tree as seed..', verbose = verbose)
 
-        # note that dist_mat gets modified by NJ
-        if(!skip_nj){
+        } else {
+
+            # note that dist_mat gets modified by NJ
             treeNJ = ape::nj(dist_mat) %>%
                 ape::root(outgroup = 'outgroup') %>%
                 ape::drop.tip('outgroup') %>%
                 reorder(order = 'postorder')
-            NJ_score = score_tree(treeNJ, as.matrix(P))$l_tree
+            tree_init = treeNJ
 
-            if (UPGMA_score > NJ_score) {
-                log_message('Using UPGMA tree as seed..', verbose = verbose)
-            } else {
-                tree_init = treeNJ
-                log_message('Using NJ tree as seed..', verbose = verbose)
-            }
             saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
-        } else {
-            log_message('Only computing UPGMA..', verbose = verbose)
-            log_message('Using UPGMA tree as seed..', verbose = verbose)
+            log_message('Using NJ tree as seed..', verbose = verbose)
+            
         }
         log_mem()
         
@@ -1428,7 +1426,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
 #' @keywords internal 
 retest_bulks = function(bulks, segs_consensus = NULL,
     t = 1e-5, min_genes = 10, gamma = 20, 
-    use_loh = FALSE, diploid_chroms = NULL, ncores = 1, exclude_neu = TRUE, min_LLR = 40) {
+    segs_loh = NULL, use_loh = FALSE, diploid_chroms = NULL, ncores = 1, exclude_neu = TRUE, min_LLR = 40) {
 
     if (is.null(segs_consensus)) {
         segs_consensus = get_segs_consensus(bulks)

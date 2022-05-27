@@ -702,7 +702,6 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
                         G['00'] * P_x_d * P_y_n),
                 Z = Z_cnv/2 + 0.5 * P_x_n * P_y_n,
                 p_neu = 0.5 * P_x_n * P_y_n/Z,
-                LLR2 = log((1-p_neu)/p_neu),
                 p_loh = (G['20'] * P_x_n * P_y_d)/Z_cnv,
                 p_amp = ((G['31'] + G['21']) * P_x_a * P_y_a)/Z_cnv,
                 p_del = (G['10'] * P_x_d * P_y_d)/Z_cnv,
@@ -717,7 +716,7 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
                     sig = sig[!is.na(Y_obs)]
                 ),
                 LLR_y = calc_allele_LLR(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta_mle, gamma = unique(gamma)),
-                LLR = LLR_x + LLR_y,
+                LLR = log(1-p_neu) - log(p_neu),
                 .groups = 'drop'
             ) %>%
             mutate_at(
@@ -728,14 +727,9 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
             mutate(cnv_state_post = c('loh', 'amp', 'del', 'bamp', 'bdel')[
                 which.max(c(p_loh, p_amp, p_del, p_bamp, p_bdel))
             ]) %>%
-            ungroup() %>%
             mutate(
-                cnv_state_post = ifelse(Z_cnv == 0, 'neu', cnv_state_post),
-                LLR = ifelse(Z_cnv == 0, 0, LLR),
-                LLR_x = ifelse(Z_cnv == 0, 0, LLR_x),
-                LLR_y = ifelse(Z_cnv == 0, 0, LLR_y)
-            ) %>% 
-            mutate(LLR = LLR2)
+                cnv_state_post = ifelse(p_neu >= 0.5, 'neu', cnv_state_post)
+            )
     }
 
     return(segs_post)
@@ -2177,6 +2171,6 @@ get_segs_optimal = function(bulk_subtrees, bulk_clones, t = 1e-5, min_LLR = 10, 
         ungroup() %>%
         mutate(seg = seg_cons)
     
-    return(segs_optimal)
+    return(list(segs_optimal = segs_optimal, scores = scores))
     
 }
