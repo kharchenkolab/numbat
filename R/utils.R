@@ -478,7 +478,7 @@ analyze_bulk = function(
     lambda = 1, min_genes = 10,
     exp_only = FALSE, allele_only = FALSE, bal_cnv = TRUE, retest = TRUE, 
     find_diploid = TRUE, diploid_chroms = NULL, segs_loh = NULL,
-    classify_allele = FALSE, run_hmm = TRUE, prior = NULL, 
+    classify_allele = FALSE, run_hmm = TRUE, prior = NULL, exclude_neu = TRUE,
     phasing = TRUE, verbose = TRUE
 ) {
     
@@ -565,7 +565,7 @@ analyze_bulk = function(
 
         segs_post = retest_cnv(
             bulk, gamma = gamma, theta_min = theta_min,
-            logphi_min = logphi_min,
+            logphi_min = logphi_min, exclude_neu = exclude_neu,
             allele_only = allele_only)
         
         bulk = bulk %>% 
@@ -641,16 +641,19 @@ analyze_bulk = function(
 #' @param allele_only whether to retest only using allele data
 #' @return a dataframe of segments with CNV posterior information
 #' @keywords internal
-retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE) {
+retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE, exclude_neu = TRUE) {
 
     # rolling theta estimates
     bulk = annot_theta_roll(bulk)
+
+    if (exclude_neu) {
+        bulk = bulk %>% filter(cnv_state != 'neu')
+    }
     
     G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
     
     if (allele_only) {
         segs_post = bulk %>% 
-            filter(cnv_state != 'neu') %>%
             group_by(CHROM, seg, cnv_state) %>%
             summarise(
                 n_genes = length(na.omit(unique(gene))),
@@ -672,7 +675,6 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
             ungroup()
     } else {
         segs_post = bulk %>% 
-            filter(cnv_state != 'neu') %>%
             group_by(CHROM, seg, seg_start, seg_end, cnv_state) %>%
             summarise(
                 n_genes = length(na.omit(unique(gene))),
@@ -692,24 +694,25 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
                 P_x_n = pnorm.range(2^(-logphi_min), 2^logphi_min, phi_mle, phi_sigma),
                 P_x_d = pnorm.range(0.1, 2^(-logphi_min), phi_mle, phi_sigma),
                 P_x_a = pnorm.range(2^logphi_min, 3, phi_mle, phi_sigma),
-                Z = sum(G['20'] * P_x_n * P_y_d,
+                Z_cnv = sum(G['20'] * P_x_n * P_y_d,
                         G['10'] * P_x_d * P_y_d,
                         G['21'] * P_x_a * P_y_a,
                         G['31'] * P_x_a * P_y_a,
                         G['22'] * P_x_a * P_y_n, 
                         G['00'] * P_x_d * P_y_n),
-                p_loh = (G['20'] * P_x_n * P_y_d)/Z,
-                p_amp = ((G['31'] + G['21']) * P_x_a * P_y_a)/Z,
-                p_del = (G['10'] * P_x_d * P_y_d)/Z,
-                p_bamp = (G['22'] * P_x_a * P_y_n)/Z,
-                p_bdel = (G['00'] * P_x_d * P_y_n)/Z,
+                Z = Z_cnv/2 + 0.5 * P_x_n * P_y_n,
+                p_neu = 0.5 * P_x_n * P_y_n/Z,
+                LLR2 = log((1-p_neu)/p_neu),
+                p_loh = (G['20'] * P_x_n * P_y_d)/Z_cnv,
+                p_amp = ((G['31'] + G['21']) * P_x_a * P_y_a)/Z_cnv,
+                p_del = (G['10'] * P_x_d * P_y_d)/Z_cnv,
+                p_bamp = (G['22'] * P_x_a * P_y_n)/Z_cnv,
+                p_bdel = (G['00'] * P_x_d * P_y_n)/Z_cnv,
                 LLR_x = calc_exp_LLR(
                     Y_obs[!is.na(Y_obs)],
                     lambda_ref[!is.na(Y_obs)], 
                     unique(na.omit(d_obs)),
                     phi_mle,
-                    alpha = alpha[!is.na(Y_obs)],
-                    beta = beta[!is.na(Y_obs)],
                     mu = mu[!is.na(Y_obs)],
                     sig = sig[!is.na(Y_obs)]
                 ),
@@ -727,11 +730,12 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
             ]) %>%
             ungroup() %>%
             mutate(
-                cnv_state_post = ifelse(Z == 0, 'neu', cnv_state_post),
-                LLR = ifelse(Z == 0, 0, LLR),
-                LLR_x = ifelse(Z == 0, 0, LLR_x),
-                LLR_y = ifelse(Z == 0, 0, LLR_y)
-            )
+                cnv_state_post = ifelse(Z_cnv == 0, 'neu', cnv_state_post),
+                LLR = ifelse(Z_cnv == 0, 0, LLR),
+                LLR_x = ifelse(Z_cnv == 0, 0, LLR_x),
+                LLR_y = ifelse(Z_cnv == 0, 0, LLR_y)
+            ) %>% 
+            mutate(LLR = LLR2)
     }
 
     return(segs_post)
@@ -1948,6 +1952,8 @@ detect_loh = function(bulk, min_depth = 0, t = 1e-5, mu = NULL, sig = NULL) {
     return(segs_loh)
 }
 
+########################### Experimental ############################
+
 test_branch = function(count_mat, df_allele, gtree, segs_consensus, from_node, to_node, ncores, ...) {
     
     segs_consensus = segs_consensus %>% mutate(CHROM = factor(CHROM))
@@ -2076,5 +2082,101 @@ compare_bulks = function(bulks, segs_consensus, t = 1e-5, gamma = 20, ncores = 1
         ) %>% unlist()
     
     return(LLRs)
+    
+}
+
+# evaluate pseduobulks against one set of segmentations
+evaluate_segs = function(bulks, segs, t = 1e-5, ncores = 1) {
+
+    M = length(unique(bulks$sample))
+
+    bulks %>% 
+    annot_consensus(segs) %>%
+    split(droplevels(.$CHROM)) %>%
+    mclapply(
+        mc.cores = ncores,
+        function(bulks){
+            bulks %>%
+            group_by(CHROM, sample, seg) %>%
+            mutate(
+                approx_theta_post(
+                    pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], start = 0.25
+                ),
+                approx_phi_post(
+                    Y_obs[!is.na(Y_obs)], 
+                    lambda_ref[!is.na(Y_obs)],
+                    unique(na.omit(d_obs)),
+                    mu = mu[!is.na(Y_obs)],
+                    sig = sig[!is.na(Y_obs)]
+                )
+            ) %>%
+            ungroup() %>%
+            group_by(CHROM, sample) %>%
+            summarise(
+                l_x = l_lnpois(
+                    Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
+                    mu[!is.na(Y_obs)], sig[!is.na(Y_obs)], phi = phi_mle[!is.na(Y_obs)]
+                ),
+                l_y = calc_allele_lik(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta = theta_mle[!is.na(pAD)]),
+                n_x = sum(!is.na(Y_obs)),
+                n_y = sum(!is.na(pAD)),
+                bkp = length(unique(seg)) - 1,
+                l = l_x + l_y,
+                .groups = 'drop'
+            ) %>%
+            group_by(CHROM) %>%
+            summarise(
+                l = sum(l),
+                l_x = sum(l_x),
+                l_y = sum(l_y),
+                n_x = sum(n_x),
+                n_y = sum(n_y),
+                bkp = min(bkp),
+                l_adj = l + bkp * log(t),
+                .groups = 'drop'
+            )
+    }) %>%
+    bind_rows()
+}
+
+# get optimal segmentation from subtree and clone bulk results
+get_segs_optimal = function(bulk_subtrees, bulk_clones, t = 1e-5, min_LLR = 10, ncores = 1) {
+    
+    samples = unique(bulk_subtrees$sample)
+
+    segs_all = lapply(
+            samples,
+            function(sample) {
+                bulk_subtrees %>% 
+                filter(sample == UQ(sample)) %>%
+                get_segs_consensus(min_LLR = min_LLR) %>%
+                mutate(sample = UQ(sample))
+            }
+        )
+
+    scores = lapply(
+            segs_all,
+            function(segs) {
+                bulk_clones %>% 
+                    evaluate_segs(segs, t = t, ncores = ncores) %>%
+                    mutate(sample = unique(segs$sample))
+            }
+        ) %>% bind_rows()
+
+    segs_optimal = inner_join(
+            bind_rows(segs_all),
+            scores %>%
+                arrange(CHROM, -l_adj) %>%
+                distinct(CHROM, .keep_all = TRUE) %>%
+                select(CHROM, sample),
+            by = c('sample', 'CHROM')
+        ) %>%
+        arrange(CHROM) %>%
+        group_by(CHROM) %>%
+        mutate(seg_cons = paste0(CHROM, letters_all[1:n()])) %>%
+        ungroup() %>%
+        mutate(seg = seg_cons)
+    
+    return(segs_optimal)
     
 }
