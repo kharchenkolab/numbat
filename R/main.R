@@ -51,7 +51,7 @@ run_numbat = function(
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
-        skip_nj = TRUE, multi_allelic = FALSE, p_multi = 1-alpha, 
+        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 1-alpha, 
         plot = TRUE, check_convergence = FALSE, exclude_neu = TRUE
     ) {
 
@@ -198,7 +198,6 @@ run_numbat = function(
     ######## Begin iterations ########
     for (i in 1:max_iter) {
 
-
         log_message(glue('Iteration {i}'), verbose = verbose)
         log_mem()
 
@@ -230,13 +229,38 @@ run_numbat = function(
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
         
         if (plot) {
-            p = plot_bulks(bulk_subtrees)
+            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR)
             ggsave(
                 glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
                 width = 12, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200
             )
         }
 
+        # find consensus CNVs
+        segs_consensus = get_segs_consensus(bulk_subtrees, min_LLR = min_LLR, min_overlap = min_overlap)
+
+        if (all(segs_consensus$cnv_state_post == 'neu')) {
+            msg = 'No CNV remains after filtering - terminating.'
+            log_message(msg)
+            return(msg)
+        }
+
+        # retest all segments on subtrees
+        bulk_subtrees = retest_bulks(
+                bulk_subtrees,
+                segs_consensus, 
+                # segs_loh = segs_loh,
+                diploid_chroms = diploid_chroms, 
+                exclude_neu = FALSE,
+                min_LLR = min_LLR,
+                ncores = ncores
+            )
+
+        fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_retest_{i}.tsv.gz'), sep = '\t')
+        
+        segs_consensus = get_segs_consensus(bulk_subtrees, min_LLR = min_LLR)
+
+        # retest on clones
         bulk_clones = make_group_bulks(
                 groups = clones,
                 count_mat = count_mat,
@@ -259,50 +283,17 @@ run_numbat = function(
                 ncores = ncores,
                 verbose = verbose,
                 retest = FALSE)
-        
-        fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
-        # find consensus CNVs
-        log_message('Finding optimal segmentations .. ')
-        out = get_segs_optimal(bulk_subtrees, bulk_clones, min_LLR = min_LLR, t = t, ncores = ncores)
-   
-        fwrite(out$segs_optimal, glue('{out_dir}/segs_optimal_{i}.tsv.gz'), sep = '\t')
-        fwrite(out$scores, glue('{out_dir}/segs_scores_{i}.tsv.gz'), sep = '\t')
-
-        segs_optimal = out$segs_optimal
-
-        bulk_subtrees = retest_bulks(
-                bulk_subtrees,
-                segs_optimal, 
-                # segs_loh = segs_loh,
-                diploid_chroms = diploid_chroms, 
-                exclude_neu = FALSE,
-                min_LLR = min_LLR,
-                ncores = ncores
-            )
-
-        fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_retest_{i}.tsv.gz'), sep = '\t')
-        
-        segs_consensus = bulk_subtrees %>% get_segs_consensus(min_LLR = min_LLR)
-
-        if (all(segs_consensus$cnv_state_post == 'neu')) {
-            msg = 'No CNV remains after filtering - terminating.'
-            log_message(msg)
-            return(msg)
-        }
-
-        # retest consensus CNVs on clones
         bulk_clones = retest_bulks(
             bulk_clones,
             segs_consensus,
             use_loh = use_loh,
-            # segs_loh = segs_loh,
-            exclude_neu = FALSE,
-            diploid_chroms = diploid_chroms,
             min_LLR = min_LLR,
+            diploid_chroms = diploid_chroms,
+            exclude_neu = FALSE,
             ncores = ncores)
-
-        fwrite(bulk_clones, glue('{out_dir}/bulk_clones_retest_{i}.tsv.gz'), sep = '\t')
+        
+        fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
         if (plot) {
             p = plot_bulks(bulk_clones, min_LLR = min_LLR)
@@ -403,33 +394,36 @@ run_numbat = function(
         # contruct initial tree
         dist_mat = parallelDist::parDist(rbind(P, 'outgroup' = 1), threads = ncores)
 
-        if (skip_nj) {
+        treeUPGMA = phangorn::upgma(dist_mat) %>%
+            ape::root(outgroup = 'outgroup') %>%
+            ape::drop.tip('outgroup') %>%
+            reorder(order = 'postorder')
 
-            treeUPGMA = phangorn::upgma(dist_mat) %>%
-                ape::root(outgroup = 'outgroup') %>%
-                ape::drop.tip('outgroup') %>%
-                reorder(order = 'postorder')
-            tree_init = treeUPGMA
+        saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
 
-            saveRDS(treeUPGMA, glue('{out_dir}/treeUPGMA_{i}.rds'))
-            log_message('Only computing UPGMA..', verbose = verbose)
-            log_message('Using UPGMA tree as seed..', verbose = verbose)
+        UPGMA_score = score_tree(treeUPGMA, as.matrix(P))$l_tree
+        tree_init = treeUPGMA
 
-        } else {
-
-            # note that dist_mat gets modified by NJ
+        # note that dist_mat gets modified by NJ
+        if(!skip_nj){
             treeNJ = ape::nj(dist_mat) %>%
                 ape::root(outgroup = 'outgroup') %>%
                 ape::drop.tip('outgroup') %>%
                 reorder(order = 'postorder')
-            tree_init = treeNJ
+            NJ_score = score_tree(treeNJ, as.matrix(P))$l_tree
 
+            if (UPGMA_score > NJ_score) {
+                log_message('Using UPGMA tree as seed..', verbose = verbose)
+            } else {
+                tree_init = treeNJ
+                log_message('Using NJ tree as seed..', verbose = verbose)
+            }
             saveRDS(treeNJ, glue('{out_dir}/treeNJ_{i}.rds'))
-            log_message('Using NJ tree as seed..', verbose = verbose)
-            
+        } else {
+            log_message('Only computing UPGMA..', verbose = verbose)
+            log_message('Using UPGMA tree as seed..', verbose = verbose)
         }
         log_mem()
-        
 
         # maximum likelihood tree search with NNI
         tree_list = perform_nni(tree_init, P, ncores = ncores_nni, eps = eps, max_iter = max_nni)
@@ -966,7 +960,7 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
     segs_all = segs_all %>% mutate(component = igraph::components(G)$membership)
 
     segs_consensus = segs_all %>% group_by(component, sample) %>%
-        mutate(LLR_sample = max(LLR)) %>%
+        mutate(LLR_sample = max(LLR_x + LLR_y)) %>%
         arrange(CHROM, component, -LLR_sample) %>%
         group_by(component) %>%
         filter(sample == sample[which.max(LLR_sample)])
