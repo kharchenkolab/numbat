@@ -237,7 +237,8 @@ run_numbat = function(
         }
 
         # find consensus CNVs
-        segs_consensus = get_segs_consensus(bulk_subtrees, min_LLR = min_LLR, min_overlap = min_overlap)
+        segs_consensus = bulk_subtrees %>% 
+            get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = TRUE)
 
         if (all(segs_consensus$cnv_state_post == 'neu')) {
             msg = 'No CNV remains after filtering - terminating.'
@@ -251,14 +252,14 @@ run_numbat = function(
                 segs_consensus, 
                 # segs_loh = segs_loh,
                 diploid_chroms = diploid_chroms, 
-                exclude_neu = FALSE,
                 min_LLR = min_LLR,
                 ncores = ncores
             )
 
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_retest_{i}.tsv.gz'), sep = '\t')
         
-        segs_consensus = get_segs_consensus(bulk_subtrees, min_LLR = min_LLR)
+        segs_consensus = bulk_subtrees %>%
+            get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = FALSE)
 
         # retest on clones
         bulk_clones = make_group_bulks(
@@ -290,7 +291,6 @@ run_numbat = function(
             use_loh = use_loh,
             min_LLR = min_LLR,
             diploid_chroms = diploid_chroms,
-            exclude_neu = FALSE,
             ncores = ncores)
         
         fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
@@ -717,7 +717,7 @@ run_group_hmms = function(
 #' @param min_overlap numeric Minimum overlap fraction to determine count two events as as overlapping
 #' @return dataframe Consensus segments
 #' @keywords internal
-get_segs_consensus = function(bulks, min_LLR = 40, min_overlap = 0.45) {
+get_segs_consensus = function(bulks, min_LLR = 5, min_overlap = 0.45, retest = FALSE) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -729,6 +729,7 @@ get_segs_consensus = function(bulks, min_LLR = 40, min_overlap = 0.45) {
             'p_loh', 'p_del', 'p_amp', 'p_bamp', 'p_bdel',
             'LLR', 'LLR_y', 'LLR_x', 'n_genes', 'n_snps')
 
+    # all possible aberrant segments
     segs_all = bulks %>% 
         group_by(sample, seg, CHROM) %>%
         mutate(seg_start = min(POS), seg_end = max(POS)) %>%
@@ -737,7 +738,54 @@ get_segs_consensus = function(bulks, min_LLR = 40, min_overlap = 0.45) {
         distinct() %>%
         mutate(cnv_state = ifelse(LLR < min_LLR | is.na(LLR), 'neu', cnv_state))
 
-    # reduce to unique intervals
+    # confident aberrant segments
+    segs_star = segs_all %>% 
+        filter(cnv_state != 'neu') %>%
+        resolve_cnvs(
+            min_overlap = min_overlap
+        )
+
+    if (retest) {
+
+        # union of all aberrant segs
+        segs_cnv = segs_all %>% 
+            filter(cnv_state != 'neu') %>%
+            arrange(CHROM) %>%
+            {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$seg_start,
+                    end = .$seg_end)
+            )} %>%
+            GenomicRanges::reduce() %>%
+            as.data.frame() %>%
+            select(CHROM = seqnames, seg_start = start, seg_end = end)
+
+        # segs to be retested
+        segs_retest = GenomicRanges::setdiff(
+            segs_cnv %>% 
+                {GenomicRanges::GRanges(
+                    seqnames = .$CHROM,
+                    IRanges::IRanges(start = .$seg_start,
+                        end = .$seg_end)
+            )},
+            segs_star %>% 
+                {GenomicRanges::GRanges(
+                    seqnames = .$CHROM,
+                    IRanges::IRanges(start = .$seg_start,
+                        end = .$seg_end)
+                )},
+            ) %>%
+            suppressWarnings() %>%
+            as.data.frame() %>%
+            select(CHROM = seqnames, seg_start = start, seg_end = end) %>%
+            filter(seg_end - seg_start > 0) %>%
+            mutate(cnv_state = 'retest', cnv_state_post = 'retest')
+
+    } else {
+        segs_retest = data.frame()
+    }
+
+    # union of neutral segments
     segs_neu = segs_all %>%
         filter(cnv_state == 'neu') %>%
         arrange(CHROM) %>%
@@ -764,11 +812,7 @@ get_segs_consensus = function(bulks, min_LLR = 40, min_overlap = 0.45) {
         return(segs_neu)
     }
     
-    segs_consensus = segs_all %>% 
-        filter(cnv_state != 'neu') %>%
-        resolve_cnvs(
-            min_overlap = min_overlap
-        ) %>% 
+    segs_consensus = bind_rows(segs_star, segs_retest) %>%
         fill_neu_segs(segs_neu) %>%
         mutate(cnv_state_post = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post))
 
