@@ -478,7 +478,7 @@ analyze_bulk = function(
     lambda = 1, min_genes = 10,
     exp_only = FALSE, allele_only = FALSE, bal_cnv = TRUE, retest = TRUE, 
     find_diploid = TRUE, diploid_chroms = NULL, segs_loh = NULL,
-    classify_allele = FALSE, run_hmm = TRUE, prior = NULL, 
+    classify_allele = FALSE, run_hmm = TRUE, prior = NULL, exclude_neu = TRUE,
     phasing = TRUE, verbose = TRUE
 ) {
     
@@ -566,7 +566,7 @@ analyze_bulk = function(
         segs_post = retest_cnv(
             bulk, gamma = gamma, theta_min = theta_min,
             logphi_min = logphi_min,
-            allele_only = allele_only)
+            allele_only = allele_only, exclude_neu = exclude_neu)
         
         bulk = bulk %>% 
             select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM', 'seg_start', 'seg_end')])) %>%
@@ -641,16 +641,19 @@ analyze_bulk = function(
 #' @param allele_only whether to retest only using allele data
 #' @return a dataframe of segments with CNV posterior information
 #' @keywords internal
-retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE) {
+retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE, exclude_neu = TRUE) {
 
     # rolling theta estimates
     bulk = annot_theta_roll(bulk)
+
+    if (exclude_neu) {
+        bulk = bulk %>% filter(cnv_state != 'neu')
+    }
     
-    G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
+    G = c('20' = 0.1, '10' = 0.1, '21' = 0.05, '31' = 0.05, '22' = 0.1, '00' = 0.1, '11' = 0.5)
     
     if (allele_only) {
         segs_post = bulk %>% 
-            filter(cnv_state != 'neu') %>%
             group_by(CHROM, seg, cnv_state) %>%
             summarise(
                 n_genes = length(na.omit(unique(gene))),
@@ -672,16 +675,15 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
             ungroup()
     } else {
         segs_post = bulk %>% 
-            filter(cnv_state != 'neu') %>%
             group_by(CHROM, seg, seg_start, seg_end, cnv_state) %>%
             summarise(
                 n_genes = length(na.omit(unique(gene))),
                 n_snps = sum(!is.na(pAD)),
                 theta_hat = theta_hat_seg(major_count[!is.na(major_count)], minor_count[!is.na(minor_count)]),
                 approx_theta_post(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = theta_hat),
-                P_y_n = pnorm.range(0, theta_min, theta_mle, theta_sigma),
-                P_y_d = pnorm.range(theta_min, 0.499, theta_mle, theta_sigma),
-                P_y_a = pnorm.range(theta_min, 0.375, theta_mle, theta_sigma),
+                L_y_n = pnorm.range.log(0, theta_min, theta_mle, theta_sigma),
+                L_y_d = pnorm.range.log(theta_min, 0.499, theta_mle, theta_sigma),
+                L_y_a = pnorm.range.log(theta_min, 0.375, theta_mle, theta_sigma),
                 approx_phi_post(
                     Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
                     alpha = alpha[!is.na(Y_obs)],
@@ -689,20 +691,24 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
                     mu = mu[!is.na(Y_obs)],
                     sig = sig[!is.na(Y_obs)]
                 ),
-                P_x_n = pnorm.range(2^(-logphi_min), 2^logphi_min, phi_mle, phi_sigma),
-                P_x_d = pnorm.range(0.1, 2^(-logphi_min), phi_mle, phi_sigma),
-                P_x_a = pnorm.range(2^logphi_min, 3, phi_mle, phi_sigma),
-                Z = sum(G['20'] * P_x_n * P_y_d,
-                        G['10'] * P_x_d * P_y_d,
-                        G['21'] * P_x_a * P_y_a,
-                        G['31'] * P_x_a * P_y_a,
-                        G['22'] * P_x_a * P_y_n, 
-                        G['00'] * P_x_d * P_y_n),
-                p_loh = (G['20'] * P_x_n * P_y_d)/Z,
-                p_amp = ((G['31'] + G['21']) * P_x_a * P_y_a)/Z,
-                p_del = (G['10'] * P_x_d * P_y_d)/Z,
-                p_bamp = (G['22'] * P_x_a * P_y_n)/Z,
-                p_bdel = (G['00'] * P_x_d * P_y_n)/Z,
+                L_x_n = pnorm.range.log(2^(-logphi_min), 2^logphi_min, phi_mle, phi_sigma),
+                L_x_d = pnorm.range.log(0.1, 2^(-logphi_min), phi_mle, phi_sigma),
+                L_x_a = pnorm.range.log(2^logphi_min, 3, phi_mle, phi_sigma),
+                Z_cnv = logSumExp(c(log(G)['20'] + L_x_n + L_y_d,
+                        log(G)['10'] + L_x_d + L_y_d,
+                        log(G)['21'] + L_x_a + L_y_a,
+                        log(G)['31'] + L_x_a + L_y_a,
+                        log(G)['22'] + L_x_a + L_y_n, 
+                        log(G)['00'] + L_x_d + L_y_n)),
+                Z_n = log(G)['11'] + L_x_n + L_y_n,
+                Z = logSumExp(c(Z_n, Z_cnv)),
+                logBF = Z_cnv - Z_n,
+                p_neu = exp(Z_n - Z),
+                p_loh = exp(log(G)['20'] + L_x_n + L_y_d - Z_cnv),
+                p_amp = exp(log(G['31'] + G['21']) + L_x_a + L_y_a - Z_cnv),
+                p_del = exp(log(G)['10'] + L_x_d + L_y_d - Z_cnv),
+                p_bamp = exp(log(G)['22'] + L_x_a + L_y_n - Z_cnv),
+                p_bdel = exp(log(G)['00'] + L_x_d + L_y_n - Z_cnv),
                 LLR_x = calc_exp_LLR(
                     Y_obs[!is.na(Y_obs)],
                     lambda_ref[!is.na(Y_obs)], 
@@ -715,6 +721,7 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
                 ),
                 LLR_y = calc_allele_LLR(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta_mle, gamma = unique(gamma)),
                 LLR = LLR_x + LLR_y,
+                LLR = logBF,
                 .groups = 'drop'
             ) %>%
             mutate_at(
@@ -1667,6 +1674,13 @@ pnorm.range = function(lower, upper, mu, sd) {
         return(1)
     }
     pnorm(upper, mu, sd) - pnorm(lower, mu, sd)
+}
+
+pnorm.range.log = function(lower, upper, mu, sd) {
+    if (sd == 0) { return(1) }
+    l_upper = pnorm(upper, mu, sd, log.p = TRUE)
+    l_lower = pnorm(lower, mu, sd, log.p = TRUE)
+    return(l_upper + VGAM::log1mexp(l_upper - l_lower))
 }
 
 #' Get the modes of a vector

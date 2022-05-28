@@ -46,7 +46,7 @@ NULL
 #' @export
 run_numbat = function(
         count_mat, lambdas_ref, df_allele, gtf, genetic_map, 
-        out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 40,
+        out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 10, tau = 0.3,
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL,
@@ -230,7 +230,7 @@ run_numbat = function(
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
 
         if (plot) {
-            p = plot_bulks(bulk_subtrees)
+            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR)
             ggsave(
                 glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
                 width = 12, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200
@@ -536,14 +536,11 @@ exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101,
 
     count_mat = check_matrix(count_mat)
 
-    if (is.null(sc_refs)) {
-        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
-    }
-    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs, verbose = FALSE)
+    fit = fit_ref_sse(rowSums(count_mat), lambdas_ref, gtf)
 
     gexp_roll_wide = smooth_expression(
         count_mat,
-        lambdas_bar,
+        fit$lambdas_bar,
         gtf,
         window = window,
         verbose = verbose
