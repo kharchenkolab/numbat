@@ -1004,7 +1004,7 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
     segs_all = segs_all %>% mutate(component = igraph::components(G)$membership)
 
     segs_consensus = segs_all %>% group_by(component, sample) %>%
-        mutate(LLR_sample = max(LLR_x + LLR_y)) %>%
+        mutate(LLR_sample = max(LLR)) %>%
         arrange(CHROM, component, -LLR_sample) %>%
         group_by(component) %>%
         filter(sample == sample[which.max(LLR_sample)])
