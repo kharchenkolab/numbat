@@ -29,8 +29,8 @@ forward_backward_compute <- function(logphi, logprob, logPi, n, m) {
     .Call('_numbat_forward_backward_compute', PACKAGE = 'numbat', logphi, logprob, logPi, n, m)
 }
 
-viterbi_allele_compute <- function(log_delta, logprob, logPi, n, m, nu) {
-    .Call('_numbat_viterbi_allele_compute', PACKAGE = 'numbat', log_delta, logprob, logPi, n, m, nu)
+viterbi_allele_compute <- function(log_delta, logprob, logPi, n, m, nu, z) {
+    .Call('_numbat_viterbi_allele_compute', PACKAGE = 'numbat', log_delta, logprob, logPi, n, m, nu, z)
 }
 
 CgetQ <- function(logQ, children_dict, node_order) {

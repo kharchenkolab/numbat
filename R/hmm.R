@@ -69,10 +69,7 @@ viterbi_allele <- function(hmm) {
     N <- hmm$N
     M <- hmm$M
     nu <- matrix(NA, nrow = N, ncol = M)
-    ## nu <- matrix(NA, nrow = N, ncol = M)
-    ## https://stackoverflow.com/questions/23748572/initializing-a-matrix-to-na-in-rcpp
-
-    ## z <- rep(NA, N)
+    z <- rep(NA, N)
 
     logprob = sapply(1:M, function(m) {
 
@@ -86,26 +83,7 @@ viterbi_allele <- function(hmm) {
 
     log_delta <- log(hmm$delta)
 
-
-    ## 
-    ## 
-    ## nu[1, ] <- log(hmm$delta) + logprob[1,]
-    ## 
-    ## for (i in 2:N) {
-    ##     matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
-    ##     nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
-    ##     nu[i, ] = nu[i, ] + logprob[i,]
-    ## }
-    ## 
-    ## z[N] <- which.max(nu[N, ])
-    ## 
-    ## for (i in seq(N - 1, 1, -1)) z[i] <- which.max(hmm$logPi[,,i+1][, z[i+1]] + nu[i, ])
-    ## 
-    ## LL = max(nu[N, ])
-    ##      
-    ## return(z)
-
-    z = viterbi_allele_compute(log_delta, logprob, hmm$logPi, N, M, nu)
+    z = viterbi_allele_compute(log_delta, logprob, hmm$logPi, N, M, nu, z)
 }
 
 #' Forward-backward algorithm for allele HMM

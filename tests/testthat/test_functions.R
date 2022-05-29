@@ -61,6 +61,7 @@ test_that("Check that viterbi_allele() works as expected", {
 
   states = numbat:::viterbi_allele(pre_likelihood_hmm)
   expect_equal(sum(states == 1), 440)
+  expect_equal(sum(states == 1), 602)
 
 })
 

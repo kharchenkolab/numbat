@@ -111,8 +111,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // viterbi_allele_compute
-Rcpp::NumericMatrix viterbi_allele_compute(Rcpp::NumericVector log_delta, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m, Rcpp::NumericMatrix nu);
-RcppExport SEXP _numbat_viterbi_allele_compute(SEXP log_deltaSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP, SEXP nuSEXP) {
+Rcpp::NumericVector viterbi_allele_compute(Rcpp::NumericVector log_delta, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m, Rcpp::NumericMatrix nu, Rcpp::NumericVector z);
+RcppExport SEXP _numbat_viterbi_allele_compute(SEXP log_deltaSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP, SEXP nuSEXP, SEXP zSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -122,7 +122,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     Rcpp::traits::input_parameter< int >::type m(mSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type nu(nuSEXP);
-    rcpp_result_gen = Rcpp::wrap(viterbi_allele_compute(log_delta, logprob, logPi, n, m, nu));
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type z(zSEXP);
+    rcpp_result_gen = Rcpp::wrap(viterbi_allele_compute(log_delta, logprob, logPi, n, m, nu, z));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -148,7 +149,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_numbat_logSumExp", (DL_FUNC) &_numbat_logSumExp, 1},
     {"_numbat_likelihood_compute", (DL_FUNC) &_numbat_likelihood_compute, 5},
     {"_numbat_forward_backward_compute", (DL_FUNC) &_numbat_forward_backward_compute, 5},
-    {"_numbat_viterbi_allele_compute", (DL_FUNC) &_numbat_viterbi_allele_compute, 6},
+    {"_numbat_viterbi_allele_compute", (DL_FUNC) &_numbat_viterbi_allele_compute, 7},
     {"_numbat_CgetQ", (DL_FUNC) &_numbat_CgetQ, 3},
     {NULL, NULL, 0}
 };
