@@ -222,7 +222,6 @@ run_numbat = function(
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
                 segs_loh = segs_loh,
-                exclude_neu = TRUE,
                 ncores = ncores,
                 verbose = verbose)
 
@@ -1004,7 +1003,7 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
     segs_all = segs_all %>% mutate(component = igraph::components(G)$membership)
 
     segs_consensus = segs_all %>% group_by(component, sample) %>%
-        mutate(LLR_sample = max(LLR)) %>%
+        mutate(LLR_sample = max(LLR_x + LLR_y)) %>%
         arrange(CHROM, component, -LLR_sample) %>%
         group_by(component) %>%
         filter(sample == sample[which.max(LLR_sample)])
