@@ -47,11 +47,11 @@ NULL
 run_numbat = function(
         count_mat, lambdas_ref, df_allele, gtf, genetic_map, 
         out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
-        alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 10, tau = 0.3,
+        alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3,
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
-        skip_nj = FALSE, multi_allelic = FALSE, p_multi = 1-alpha, 
+        skip_nj = FALSE, multi_allelic = TRUE, p_multi = 1-alpha, 
         plot = TRUE, check_convergence = FALSE, exclude_neu = TRUE
     ) {
 
@@ -1463,7 +1463,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
 #' @keywords internal 
 retest_bulks = function(bulks, segs_consensus = NULL,
     t = 1e-5, min_genes = 10, gamma = 20, 
-    segs_loh = NULL, use_loh = FALSE, diploid_chroms = NULL, ncores = 1, exclude_neu = TRUE, min_LLR = 40) {
+    segs_loh = NULL, use_loh = FALSE, diploid_chroms = NULL, ncores = 1, exclude_neu = TRUE, min_LLR = 5) {
 
     if (is.null(segs_consensus)) {
         segs_consensus = get_segs_consensus(bulks)
@@ -1520,7 +1520,7 @@ retest_bulks = function(bulks, segs_consensus = NULL,
 #' @param p_min numeric Probability threshold to call multi-allelic events
 #' @return dataframe Consensus segments annotated with multi-allelic events
 #' @keywords internal 
-test_multi_allelic = function(bulks, segs_consensus, min_LLR = 40, p_min = 0.999) {
+test_multi_allelic = function(bulks, segs_consensus, min_LLR = 5, p_min = 0.999) {
 
     log_message('Testing for multi-allelic CNVs ..')
     

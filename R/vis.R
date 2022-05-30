@@ -521,8 +521,7 @@ plot_phylo_heatmap = function(
     # plot CNVs
     p_segs = ggplot(
             joint_post %>% mutate(
-                cnv_state = ifelse(cnv_state == 'neu', NA, cnv_state),
-                p_cnv = pmax(p_cnv, p_min)
+                cnv_state = ifelse(cnv_state == 'neu', NA, cnv_state)
             )
         ) +
         theme_classic() +
@@ -555,7 +554,7 @@ plot_phylo_heatmap = function(
         scale_x_continuous(expand = expansion(0)) +
         scale_y_continuous(expand = expansion(0)) +
         facet_grid(.~CHROM, space = 'free', scale = 'free', labeller = labeller(CHROM = chrom_labeller)) +
-        scale_alpha_continuous(range = c(0,1)) +
+        scale_alpha_continuous(range = c(0,1), limits = c(p_min, 1), oob = scales::squish) +
         guides(
             alpha = 'none',
             # alpha = guide_legend(),
@@ -1474,7 +1473,8 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE) {
             axis.text = element_blank(),
             plot.margin = margin(0, 0, 0, 0),
             axis.title.x = element_blank(),
-            axis.ticks.y = element_blank()
+            axis.ticks = element_blank(),
+            axis.line.x = element_blank()
         ) +
         scale_fill_manual(
             values = c('neu' = 'white', cnv_colors[names(cnv_colors) != 'neu']),
