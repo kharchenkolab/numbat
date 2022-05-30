@@ -56,7 +56,7 @@ cnv_labels = names(cnv_colors) %>%
 #' @return ggplot Plot of pseudobulk HMM profile
 #' @export
 plot_psbulk = function(
-    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 20, min_depth = 8, exp_limit = 2, 
+    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2, 
     phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = FALSE
     ) {
 

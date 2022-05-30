@@ -56,12 +56,9 @@ get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
         d = DP,
         N = N,
         M = 2,
-        K = 1
+        K = 1,
+        states = states
     )
-
-    hmm$states = states
-
-    class(hmm) = "allele"
 
     return(hmm)
 }
@@ -85,21 +82,9 @@ viterbi_allele <- function(hmm) {
 
     })
 
-    nu[1, ] <- log(hmm$delta) + logprob[1,]
-
-    for (i in 2:N) {
-        matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
-        nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
-        nu[i, ] = nu[i, ] + logprob[i,]
-    }
-
-    z[N] <- which.max(nu[N, ])
-
-    for (i in seq(N - 1, 1, -1)) z[i] <- which.max(hmm$logPi[,,i+1][, z[i+1]] + nu[i, ])
-
-    LL = max(nu[N, ])
+    z = viterbi_compute(log(hmm$delta), logprob, hmm$logPi, N, M, nu, z)
         
-    return(z)
+    return(hmm$states[z])
 }
 
 #' Forward-backward algorithm for allele HMM
@@ -214,12 +199,13 @@ run_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, 
         beta = matrix(rep(betas, N), ncol = M, byrow = TRUE),
         d = DP,
         N = N,
-        M = M
+        M = M,
+        states = states
     )
     
-    solution = states[viterbi_allele(hmm)]
+    mpc = viterbi_allele(hmm)
     
-    return(solution)
+    return(mpc)
 }
 
 #' Calculate allele likelihoods
@@ -376,7 +362,7 @@ run_joint_hmm = function(
         p_s = p_s
     )
 
-    MPC = viterbi_joint(hmm)$z
+    MPC = viterbi_joint(hmm)
         
     return(MPC)
 }
@@ -466,29 +452,9 @@ viterbi_joint <- function(hmm) {
 
     })
 
-    nu[1, ] <- log(hmm$delta) + logprob[1,]
-
-    for (i in 2:N) {
-        matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
-        nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
-        nu[i, ] = nu[i, ] + logprob[i, ]
-    }
-
-    if (any(is.na(nu))) {
-        stop("NA values in viterbi")
-    }
-    
-    if (all(nu[N, ] == -Inf)) {
-        stop("Problems With Underflow")
-    }
-              
-    z[N] <- which.max(nu[N, ])
-
-    for (i in seq(N - 1, 1, -1)) z[i] <- which.max(hmm$logPi[,,i+1][, z[i+1]] + nu[i, ])
-
-    LL = max(nu[N, ])
+    z = viterbi_compute(log(hmm$delta), logprob, hmm$logPi, N, M, nu, z)
         
-    return(list(z = hmm$states[z,], LL = LL))
+    return(hmm$states[z,])
 }
 
 ############ Clonal deletion HMM ############

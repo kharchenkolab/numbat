@@ -29,6 +29,10 @@ forward_backward_compute <- function(logphi, logprob, logPi, n, m) {
     .Call('_numbat_forward_backward_compute', PACKAGE = 'numbat', logphi, logprob, logPi, n, m)
 }
 
+viterbi_compute <- function(log_delta, logprob, logPi, n, m, nu, z) {
+    .Call('_numbat_viterbi_compute', PACKAGE = 'numbat', log_delta, logprob, logPi, n, m, nu, z)
+}
+
 CgetQ <- function(logQ, children_dict, node_order) {
     .Call('_numbat_CgetQ', PACKAGE = 'numbat', logQ, children_dict, node_order)
 }

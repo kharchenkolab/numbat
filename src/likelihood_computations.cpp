@@ -143,3 +143,52 @@ Rcpp::NumericMatrix forward_backward_compute(Rcpp::NumericVector logphi, Rcpp::N
     
     return expoutput;
 }
+
+// [[Rcpp::export]]
+Rcpp::NumericVector viterbi_compute(Rcpp::NumericVector log_delta, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m, Rcpp::NumericMatrix nu, Rcpp::NumericVector z) {
+
+    const int nrow = n;
+    const int ncol = m;
+
+    nu(0, _) = log_delta + logprob(0, _);  // nu[1, ] <- log(hmm$delta) + logprob[1,]
+
+    Rcpp::NumericMatrix matrixnu(ncol, ncol);
+    for (int i = 1; i < nrow; i++) {
+        Rcpp::NumericVector nu_vec = nu(i - 1, _);
+        for (int j = 0; j < ncol; j++) {
+            matrixnu(j, _) = rep(nu_vec[j], ncol);
+        }  
+        // nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
+        // Step 1) 
+        //  Add the two matrices matrixnu + hmm$logPi[,,i]
+        Rcpp::NumericMatrix subset_logPi = wrap(logPi.slice(i));  
+        Rcpp::NumericMatrix sum_matrixnu_logPi(ncol, ncol);
+        for (int ii = 0; ii < ncol; ii++) {
+            for (int jj = 0; jj < ncol; jj++) {
+                sum_matrixnu_logPi(ii, jj) = matrixnu(ii, jj) + subset_logPi(ii, jj);
+            }
+        }
+        // Step 2)
+        // Calculate the 'max' for each column, return a NumericVector with 'max' for each column
+        Rcpp::NumericVector newnu;
+        for (int k = 0; k < ncol; k++) {
+            newnu.push_back(max(sum_matrixnu_logPi(_, k)));
+        }
+        nu(i, _) = newnu; // nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
+
+        nu(i, _) = nu(i, _)  + logprob(i, _); // nu[i, ] = nu[i, ] + logprob[i,]
+     
+    }
+
+    z[n - 1] = which_max(nu(n-1, _)) + 1; // which_max() uses 0-indexing, so add 1
+
+    // for (i in seq(N - 1, 1, -1)) z[i] <- which.max(hmm$logPi[,,i+1][, z[i+1]] + nu[i, ])
+    for (int t = n-2; t>=0; t--) {
+        Rcpp::NumericMatrix subset_logPi = wrap(logPi.slice(t+1)); 
+        // note: 'z[t+1] - 1' as we convert R 1-indexing to C++ 0-indexing
+        Rcpp::NumericVector logPi_nu = subset_logPi(_, z[t+1] - 1) + nu(t, _);
+        z[t] = which_max(logPi_nu) + 1; // which_max() uses 0-indexing, so add 1
+    }
+
+    return z;
+}
