@@ -30,7 +30,7 @@ dbbinom <- function(x, size, alpha = 1, beta = 1, log = FALSE) {
 #' @keywords internal
 get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
 
-    states = c("theta_up", "theta_down")
+    states = c("up", "down")
 
     N = length(p_s)
 
@@ -84,7 +84,7 @@ viterbi_allele <- function(hmm) {
 
     z = viterbi_compute(log(hmm$delta), logprob, hmm$logPi, N, M, nu, z)
         
-    return(hmm$states[z])
+    return(z)
 }
 
 #' Forward-backward algorithm for allele HMM
@@ -203,7 +203,7 @@ run_allele_hmm = function(pAD, DP, p_s, t = 1e-5, theta_min = 0.08, gamma = 20, 
         states = states
     )
     
-    mpc = viterbi_allele(hmm)
+    mpc = states[viterbi_allele(hmm)]
     
     return(mpc)
 }
@@ -362,7 +362,7 @@ run_joint_hmm = function(
         p_s = p_s
     )
 
-    MPC = viterbi_joint(hmm)
+    MPC = states[viterbi_joint(hmm)]
         
     return(MPC)
 }
@@ -454,7 +454,7 @@ viterbi_joint <- function(hmm) {
 
     z = viterbi_compute(log(hmm$delta), logprob, hmm$logPi, N, M, nu, z)
         
-    return(hmm$states[z,])
+    return(z)
 }
 
 ############ Clonal deletion HMM ############
