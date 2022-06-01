@@ -30,7 +30,7 @@ dbbinom <- function(x, size, alpha = 1, beta = 1, log = FALSE) {
 #' @keywords internal
 get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
 
-    states = c("up", "down")
+    states = c("theta_up", "theta_down")
 
     N = length(p_s)
 

@@ -4,7 +4,7 @@
 \alias{forward_back_allele}
 \title{Forward-backward algorithm for allele HMM}
 \usage{
-forward_back_allele(obj, ...)
+forward_back_allele(hmm)
 }
 \description{
 Forward-backward algorithm for allele HMM

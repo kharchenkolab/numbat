@@ -650,7 +650,7 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
         bulk = bulk %>% filter(cnv_state != 'neu')
     }
     
-    G = c('20' = 0.1, '10' = 0.1, '21' = 0.05, '31' = 0.05, '22' = 0.1, '00' = 0.1, '11' = 0.5)
+    G = c('11' = 0.5, '20' = 0.1, '10' = 0.1, '21' = 0.05, '31' = 0.05, '22' = 0.1, '00' = 0.1)
     
     if (allele_only) {
         segs_post = bulk %>% 
@@ -787,6 +787,7 @@ classify_alleles = function(bulk) {
 #' @keywords internal
 annot_theta_roll = function(bulk) {
 
+    # if viterbi was run, use the decoded states
     bulk = bulk %>% 
         mutate(haplo_theta_min = case_when(
             str_detect(state, 'up') ~ 'major',
@@ -798,6 +799,7 @@ annot_theta_roll = function(bulk) {
             minor_count = DP - major_count
         )
 
+    # if no viterbi, use rolling average
     bulk = bulk %>%
         select(-any_of('theta_hat_roll')) %>%
         left_join(
@@ -1955,6 +1957,27 @@ detect_loh = function(bulk, min_depth = 0, t = 1e-5, mu = NULL, sig = NULL) {
 }
 
 ########################### Experimental ############################
+
+# this is actually slower and doesn't give same answer as optim
+theta_hat_EM = function(pAD, DP, p_s, start = 0.08, gamma = 20) {
+    
+    theta = start
+    
+    converge = FALSE
+    
+    while (!converge) {
+        
+        hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma = gamma)
+        theta_new = sum(forward_back_allele(hmm)[,1] * hmm$x + forward_back_allele(hmm)[,2] * (hmm$d - hmm$x))/sum(hmm$d) - 0.5
+
+        converge = (theta_new - theta) < 1e-10
+
+        theta = theta_new
+
+    }
+    
+    return(theta)
+}
 
 test_branch = function(count_mat, df_allele, gtree, segs_consensus, from_node, to_node, ncores, ...) {
     

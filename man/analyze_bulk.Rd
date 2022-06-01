@@ -18,9 +18,11 @@ analyze_bulk(
   retest = TRUE,
   find_diploid = TRUE,
   diploid_chroms = NULL,
+  segs_loh = NULL,
   classify_allele = FALSE,
   run_hmm = TRUE,
   prior = NULL,
+  exclude_neu = TRUE,
   phasing = TRUE,
   verbose = TRUE
 )

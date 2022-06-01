@@ -23,7 +23,8 @@ plot_phylo_heatmap(
   branch_width = 0.2,
   tip_length = 0.2,
   clone_line = FALSE,
-  superclone = FALSE
+  superclone = FALSE,
+  segs_exclude = NULL
 )
 }
 \arguments{

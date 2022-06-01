@@ -4,7 +4,7 @@
 \alias{filter_genes}
 \title{filter for mutually expressed genes}
 \usage{
-filter_genes(count_mat, lambdas_ref, gtf, verbose = T)
+filter_genes(count_mat, lambdas_ref, gtf, verbose = FALSE)
 }
 \arguments{
 \item{count_mat}{dgCMatrix Gene expression counts}
