@@ -4,12 +4,14 @@
 \alias{aggregate_counts}
 \title{Utility function to make reference gene expression profiles}
 \usage{
-aggregate_counts(count_mat, cell_annot, verbose = T)
+aggregate_counts(count_mat, annot, normalized = TRUE, verbose = TRUE)
 }
 \arguments{
-\item{count_mat}{dgCMatrix Gene expression counts}
+\item{count_mat}{matrix/dgCMatrix Gene expression counts}
 
-\item{cell_annot}{dataframe Cell type annotation with columns "cell" and "cell_type"}
+\item{annot}{dataframe Cell annotation with columns "cell" and "group"}
+
+\item{normalized}{logical Whether to return normalized expression values}
 
 \item{verbose}{logical Verbosity}
 }

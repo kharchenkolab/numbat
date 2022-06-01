@@ -56,7 +56,7 @@ cnv_labels = names(cnv_colors) %>%
 #' @return ggplot Plot of pseudobulk HMM profile
 #' @export
 plot_psbulk = function(
-    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 20, min_depth = 8, exp_limit = 2, 
+    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2, 
     phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = FALSE
     ) {
 
@@ -195,6 +195,24 @@ plot_psbulk = function(
             size = 0.35
         ) +
         geom_hline(data = data.frame(variable = 'logFC'), aes(yintercept = 0), color = 'gray30', linetype = 'dashed')
+    }
+
+    if (use_pos) {
+
+        segs_exclude = gaps_hg38 %>% filter(end - start > 1e6) %>%
+            rename(seg_start = start, seg_end = end)
+
+        p = p + 
+            geom_rect(
+                inherit.aes = F,
+                data = segs_exclude, 
+                aes(xmin = seg_start,
+                    xmax = seg_end,
+                    ymin = -Inf,
+                    ymax = Inf
+                ),
+                fill = 'gray95'
+            )
     }
 
     if (theta_roll) {
@@ -414,7 +432,7 @@ plot_phylo_heatmap = function(
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = FALSE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE, 
         p_min = 0.9, line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2, 
-        clone_line = FALSE, superclone = FALSE, segs_loh = NULL
+        clone_line = FALSE, superclone = FALSE, segs_exclude = NULL
     ) {
     
     # make sure chromosomes are in order
@@ -449,12 +467,12 @@ plot_phylo_heatmap = function(
 
     gtree = mark_tumor_lineage(gtree)
 
-    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, pmax(length, tip_length), length))
+    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, tip_length, length))
 
     # plot phylogeny 
     p_tree = gtree %>% 
             to_phylo() %>%
-            ggtree(ladderize = T, size = branch_width) +
+            ggtree(ladderize = TRUE, size = branch_width) +
             # geom_rootedge(size = branch_width) +
             theme(
                 plot.margin = margin(0,1,0,0, unit = 'mm'),
@@ -477,33 +495,6 @@ plot_phylo_heatmap = function(
         mutate(cell = factor(cell, cell_order)) %>%
         mutate(cell_index = as.integer(droplevels(cell))) 
 
-    # add clone lines
-    if (clone_line) {
-
-        leafs = res[[sample]]$gtree %>% 
-                activate(nodes) %>% 
-                filter(leaf) %>%
-                as.data.frame()
-
-        clones = unique(leafs$clone)
-        clones = clones[clones != 1]
-
-        clone_indices = sapply(
-            clones,
-            function(c) {                
-                
-                clone_cells = leafs %>% filter(clone == c) %>% pull(name)
-                
-                first_clone_index = which(cell_order %in% clone_cells)[1]
-
-                return(first_clone_index)
-                
-            }
-        )
-    } else {
-        clone_indices = c()
-    }
-
     # add tumor vs normal line
     tumor_cells = gtree %>% 
         activate(nodes) %>% filter(leaf) %>%
@@ -513,7 +504,7 @@ plot_phylo_heatmap = function(
 
     first_tumor_index = which(cell_order %in% tumor_cells)[1]
 
-    chrom_labeller <- function(chr){
+    chrom_labeller <- function(chr) {
         chr[chr %in% c(19, 21, 22)] = ''
         return(chr)
     }
@@ -521,8 +512,7 @@ plot_phylo_heatmap = function(
     # plot CNVs
     p_segs = ggplot(
             joint_post %>% mutate(
-                cnv_state = ifelse(cnv_state == 'neu', NA, cnv_state),
-                p_cnv = pmax(p_cnv, p_min)
+                cnv_state = ifelse(cnv_state == 'neu', NA, cnv_state)
             )
         ) +
         theme_classic() +
@@ -535,17 +525,17 @@ plot_phylo_heatmap = function(
             aes(x = seg_start, xend = seg_end, y = 1, yend = 1),
             data = segs_consensus, size = 0, color = 'white', alpha = 0
         ) +
-        geom_hline(yintercept = c(first_tumor_index, clone_indices), color = 'royalblue', size = 0.5, linetype = 'dashed') +
-        # geom_hline(yintercept = c(first_tumor_index, clone_indices), color = 'gray', size = 0.5, linetype = 'solid') +
+        geom_hline(yintercept = first_tumor_index, color = 'royalblue', size = 0.5, linetype = 'dashed') +
         theme(
             panel.spacing = unit(0, 'mm'),
             panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
             strip.background = element_blank(),
+            strip.text.y = element_blank(),
             axis.text = element_blank(),
             axis.title.y = element_blank(),
             axis.title.x = element_text(size = 10),
             axis.ticks = element_blank(),
-            plot.margin = margin(0,0,5,0, unit = 'mm'),
+            plot.margin = margin(0,0,0,0, unit = 'mm'),
             axis.line = element_blank(),
             legend.box.background = element_blank(),
             legend.background = element_blank(),
@@ -555,7 +545,7 @@ plot_phylo_heatmap = function(
         scale_x_continuous(expand = expansion(0)) +
         scale_y_continuous(expand = expansion(0)) +
         facet_grid(.~CHROM, space = 'free', scale = 'free', labeller = labeller(CHROM = chrom_labeller)) +
-        scale_alpha_continuous(range = c(0,1)) +
+        scale_alpha_continuous(range = c(0,1), limits = c(p_min, 1), oob = scales::squish) +
         guides(
             alpha = 'none',
             # alpha = guide_legend(),
@@ -570,23 +560,23 @@ plot_phylo_heatmap = function(
         xlab('Genomic position')
 
     # excluded regions
-    if (!is.null(segs_loh)) {
-
-        segs_loh = segs_loh %>% mutate(CHROM = as.integer(as.character(CHROM)))
-
-        p_segs = p_segs + 
-            geom_rect(
-                inherit.aes = F,
-                data = segs_loh, 
-                aes(xmin = seg_start,
-                    xmax = seg_end,
-                    ymin = min(joint_post$cell_index),
-                    ymax = max(joint_post$cell_index)
-                ),
-                fill = 'darkblue'
-            )
-
+    if (is.null(segs_exclude)) {
+        segs_exclude = gaps_hg38 %>% filter(end - start > 1e6) %>%
+            mutate(CHROM = as.integer(as.character(CHROM))) %>%
+            rename(seg_start = start, seg_end = end)
     }
+
+    p_segs = p_segs + 
+        geom_rect(
+            inherit.aes = F,
+            data = segs_exclude %>% mutate(CHROM = as.integer(as.character(CHROM))), 
+            aes(xmin = seg_start,
+                xmax = seg_end,
+                ymin = -Inf,
+                ymax = Inf
+            ),
+            fill = 'gray95'
+        )
 
     # clone annotation
     if (is.null(clone_dict)) {
@@ -622,6 +612,33 @@ plot_phylo_heatmap = function(
         filter(!is.na(cell)) %>%
         annot_bar(transpose = TRUE, legend = clone_legend, pal_annot = pal_clone, legend_title = clone_title, size = size)
     
+    # add clone lines
+    if (clone_line) {
+
+        leafs = gtree %>% 
+                activate(nodes) %>% 
+                filter(leaf) %>%
+                as.data.frame()
+
+        clones = unique(leafs$clone)
+        clones = clones[clones != 1]
+
+        clone_indices = sapply(
+            clones,
+            function(c) {                
+                
+                clone_cells = leafs %>% filter(clone == c) %>% pull(name)
+                
+                first_clone_index = which(cell_order %in% clone_cells)[1]
+
+                return(first_clone_index)
+                
+            }
+        )
+
+        p_segs = p_segs + geom_hline(yintercept = clone_indices, color = 'darkslategray', size = 0.5, linetype = 'dashed')
+    }
+
     # external annotation
     if (!is.null(annot)) {
         
@@ -1039,7 +1056,7 @@ do_plot = function(p, f, w, h, out_dir = '~/figures') {
     print(p)
 }
 
-
+# expect columns cell and annot
 annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL, annot_scale = NULL) {
 
     D = D %>% mutate(cell_index = as.integer(cell))
@@ -1428,7 +1445,7 @@ plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint'
     (p_mut / p_clones) + plot_layout(heights = c(ratio, 1)) + plot_title
 }
 
-cnv_heatmap = function(segs, var = 'group', label_group = TRUE) {
+cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE) {
     
     gaps_hg38_filtered = gaps_hg38 %>% filter(end - start > 1e6)
 
@@ -1451,8 +1468,8 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE) {
             data = gaps_hg38_filtered,
             aes(xmin = start, 
                 xmax = end,
-                ymin = -0.5,
-                ymax = 0.5),
+                ymin = -Inf,
+                ymax = Inf),
             fill = 'white'
         ) +
         geom_rect(
@@ -1460,8 +1477,8 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE) {
             data = gaps_hg38_filtered,
             aes(xmin = start, 
                 xmax = end,
-                ymin = -0.5,
-                ymax = 0.5),
+                ymin = -Inf,
+                ymax = Inf),
             fill = 'gray',
             alpha = 0.5
         ) +
@@ -1474,7 +1491,8 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE) {
             axis.text = element_blank(),
             plot.margin = margin(0, 0, 0, 0),
             axis.title.x = element_blank(),
-            axis.ticks.y = element_blank()
+            axis.ticks = element_blank(),
+            axis.line.x = element_blank()
         ) +
         scale_fill_manual(
             values = c('neu' = 'white', cnv_colors[names(cnv_colors) != 'neu']),
@@ -1488,6 +1506,10 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE) {
         guides(alpha = 'none') +
         scale_x_continuous(expand = expansion(add = 0)) +
         facet_grid(get(var)~CHROM, space = 'free_x', scale = 'free', drop = TRUE)
+
+        if (!legend) {
+            p = p + theme(legend.position = 'none')
+        }
 
         if (!label_group) {
             p = p + theme(strip.text.y = element_blank())

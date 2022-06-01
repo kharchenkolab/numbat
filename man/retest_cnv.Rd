@@ -9,7 +9,8 @@ retest_cnv(
   theta_min = 0.08,
   logphi_min = 0.25,
   gamma = 20,
-  allele_only = FALSE
+  allele_only = FALSE,
+  exclude_neu = TRUE
 )
 }
 \arguments{

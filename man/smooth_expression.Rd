@@ -4,7 +4,7 @@
 \alias{smooth_expression}
 \title{filtering, normalization and capping}
 \usage{
-smooth_expression(count_mat, lambdas_ref, gtf, window = 101, verbose = T)
+smooth_expression(count_mat, lambdas_ref, gtf, window = 101, verbose = FALSE)
 }
 \arguments{
 \item{count_mat}{dgCMatrix Gene expression counts}

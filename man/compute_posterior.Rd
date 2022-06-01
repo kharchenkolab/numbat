@@ -4,10 +4,10 @@
 \alias{compute_posterior}
 \title{Do bayesian averaging to get posteriors}
 \usage{
-compute_posterior(sc_post)
+compute_posterior(PL)
 }
 \arguments{
-\item{sc_post}{dataframe Likelihoods}
+\item{PL}{dataframe Likelihoods and priors}
 }
 \value{
 dataframe Posteriors

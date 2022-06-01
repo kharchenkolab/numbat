@@ -144,13 +144,11 @@ Rcpp::NumericMatrix forward_backward_compute(Rcpp::NumericVector logphi, Rcpp::N
     return expoutput;
 }
 
-
-
 // [[Rcpp::export]]
-Rcpp::NumericVector viterbi_allele_compute(Rcpp::NumericVector log_delta, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m, Rcpp::NumericMatrix nu, Rcpp::NumericVector z) {
+Rcpp::NumericVector viterbi_compute(Rcpp::NumericVector log_delta, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m, Rcpp::NumericMatrix nu, Rcpp::NumericVector z) {
 
     const int nrow = n;
-    const int ncol = m; // should be always 2
+    const int ncol = m;
 
     nu(0, _) = log_delta + logprob(0, _);  // nu[1, ] <- log(hmm$delta) + logprob[1,]
 
@@ -164,7 +162,7 @@ Rcpp::NumericVector viterbi_allele_compute(Rcpp::NumericVector log_delta, Rcpp::
         // Step 1) 
         //  Add the two matrices matrixnu + hmm$logPi[,,i]
         Rcpp::NumericMatrix subset_logPi = wrap(logPi.slice(i));  
-        Rcpp::NumericMatrix sum_matrixnu_logPi(ncol, ncol);   // always 2 by 2
+        Rcpp::NumericMatrix sum_matrixnu_logPi(ncol, ncol);
         for (int ii = 0; ii < ncol; ii++) {
             for (int jj = 0; jj < ncol; jj++) {
                 sum_matrixnu_logPi(ii, jj) = matrixnu(ii, jj) + subset_logPi(ii, jj);
@@ -194,10 +192,3 @@ Rcpp::NumericVector viterbi_allele_compute(Rcpp::NumericVector log_delta, Rcpp::
 
     return z;
 }
-
-
-
-
-
-
-

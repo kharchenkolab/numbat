@@ -4,7 +4,7 @@
 \alias{get_exp_sc}
 \title{get the single cell expression dataframe}
 \usage{
-get_exp_sc(segs_consensus, count_mat, gtf)
+get_exp_sc(segs_consensus, count_mat, gtf, segs_loh = NULL)
 }
 \arguments{
 \item{segs_consensus}{dataframe Consensus segments}

@@ -12,6 +12,7 @@ get_exp_post(
   sc_refs = NULL,
   diploid_chroms = NULL,
   use_loh = NULL,
+  segs_loh = NULL,
   ncores = 30,
   verbose = TRUE,
   debug = F

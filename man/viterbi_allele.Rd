@@ -4,7 +4,7 @@
 \alias{viterbi_allele}
 \title{Viterbi algorithm for allele HMM}
 \usage{
-viterbi_allele(obj, ...)
+viterbi_allele(hmm)
 }
 \description{
 Viterbi algorithm for allele HMM

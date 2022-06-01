@@ -4,7 +4,7 @@
 \alias{get_exp_bulk}
 \title{Aggregate into bulk expression profile}
 \usage{
-get_exp_bulk(count_mat, lambdas_ref, gtf, verbose = TRUE)
+get_exp_bulk(count_mat, lambdas_ref, gtf, verbose = FALSE)
 }
 \arguments{
 \item{count_mat}{dgCMatrix Gene expression counts}

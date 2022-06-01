@@ -10,8 +10,12 @@ retest_bulks(
   t = 1e-05,
   min_genes = 10,
   gamma = 20,
+  segs_loh = NULL,
   use_loh = FALSE,
-  diploid_chroms = NULL
+  diploid_chroms = NULL,
+  ncores = 1,
+  exclude_neu = TRUE,
+  min_LLR = 5
 )
 }
 \arguments{

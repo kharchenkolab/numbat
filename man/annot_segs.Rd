@@ -4,7 +4,7 @@
 \alias{annot_segs}
 \title{Annotate copy number segments after HMM decoding}
 \usage{
-annot_segs(bulk)
+annot_segs(bulk, var = "cnv_state")
 }
 \arguments{
 \item{bulk}{dataframe Pseudobulk profile}
