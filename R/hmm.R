@@ -82,15 +82,9 @@ viterbi_allele <- function(hmm) {
 
     })
 
-<<<<<<< HEAD
-    log_delta <- log(hmm$delta)
-
-    z = viterbi_allele_compute(log_delta, logprob, hmm$logPi, N, M, nu, z)
-=======
     z = viterbi_compute(log(hmm$delta), logprob, hmm$logPi, N, M, nu, z)
         
     return(z)
->>>>>>> experiment
 }
 
 #' Forward-backward algorithm for allele HMM
