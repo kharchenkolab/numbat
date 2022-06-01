@@ -81,21 +81,9 @@ viterbi_allele <- function(hmm) {
 
     })
 
-    nu[1, ] <- log(hmm$delta) + logprob[1,]
+    log_delta <- log(hmm$delta)
 
-    for (i in 2:N) {
-        matrixnu <- matrix(nu[i - 1, ], nrow = M, ncol = M)
-        nu[i, ] = apply(matrixnu + hmm$logPi[,,i], 2, max)
-        nu[i, ] = nu[i, ] + logprob[i,]
-    }
-
-    z[N] <- which.max(nu[N, ])
-
-    for (i in seq(N - 1, 1, -1)) z[i] <- which.max(hmm$logPi[,,i+1][, z[i+1]] + nu[i, ])
-
-    LL = max(nu[N, ])
-        
-    return(z)
+    z = viterbi_allele_compute(log_delta, logprob, hmm$logPi, N, M, nu, z)
 }
 
 #' Forward-backward algorithm for allele HMM
