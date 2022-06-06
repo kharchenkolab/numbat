@@ -1,17 +1,12 @@
-library(glue, quietly = T)
-library(stringr, quietly = T)
-library(argparse, quietly = T)
-library(data.table, quietly = T)
-library(dplyr, quietly = T)
-library(vcfR, quietly = T)
-library(Matrix, quietly = T)
-library(numbat, quietly = T)
+#!/usr/bin/env Rscript
+
+library(argparse)
 
 parser <- ArgumentParser(description='Run SNP pileup and phasing with 1000G')
 parser$add_argument('--label', type = "character", required = TRUE, help = "Individual label")
 parser$add_argument('--samples', type = "character", required = TRUE, help = "Sample names, comma delimited")
 parser$add_argument('--bams', type = "character", required = TRUE, help = "BAM files, one per sample, comma delimited")
-parser$add_argument('--barcodes', type = "character", required = TRUE, help = "Cell barcode files, one per sample, comma delimited")
+parser$add_argument('--barcodes', type = "character", required = FALSE, help = "Cell barcode files, one per sample, comma delimited")
 parser$add_argument('--gmap', type = "character", required = TRUE, help = "Path to genetic map provided by Eagle2 (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)")
 parser$add_argument('--eagle', type = "character", required = FALSE, default = 'eagle', help = "Path to Eagle2 binary file")
 parser$add_argument('--snpvcf', type = "character", required = TRUE, help = "SNP VCF for pileup")
@@ -20,17 +15,28 @@ parser$add_argument('--outdir', type = "character", required = TRUE, help = "Out
 parser$add_argument('--ncores', type = "integer", required = TRUE, help = "Number of cores")
 parser$add_argument('--UMItag', default = "Auto", required = FALSE, type = "character", help = "UMI tag in bam. Should be Auto for 10x and XM for Slide-seq")
 parser$add_argument('--cellTAG', default = "CB", required = FALSE, type = "character", help = "Cell tag in bam. Should be CB for 10x and XC for Slide-seq")
-parser$add_argument('--smartseq', action = 'store_true', help = "running with smart-seq mode")
-
+parser$add_argument('--smartseq', action = 'store_true', help = "running with SMART-seq mode")
+parser$add_argument('--bulk', action = 'store_true', help = "running with bulk RNA-seq mode")
 args <- parser$parse_args()
+
+suppressPackageStartupMessages({
+    library(glue)
+    library(stringr)
+    library(data.table)
+    library(dplyr)
+    library(vcfR)
+    library(Matrix)
+    library(numbat)
+})
 
 label = args$label
 samples = str_split(args$samples, ',')[[1]]
 outdir = args$outdir
 bams = str_split(args$bams, ',')[[1]]
-barcodes = str_split(args$barcodes, ',')[[1]]
+if (!is.null(args$barcodes)) {
+    barcodes = str_split(args$barcodes, ',')[[1]]
+}
 n_samples = length(samples)
-label = args$label
 ncores = args$ncores
 gmap = args$gmap
 eagle = args$eagle
@@ -39,14 +45,14 @@ paneldir = args$paneldir
 UMItag = args$UMItag
 cellTAG = args$cellTAG
 smartseq = args$smartseq
+bulk = args$bulk
 genome = ifelse(str_detect(args$gmap, 'hg19'), 'hg19', 'hg38')
 message(paste0('Using genome version: ', genome))
 
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
-
+dir.create(glue('{outdir}/pileup'), showWarnings = FALSE)
+dir.create(glue('{outdir}/phasing'), showWarnings = FALSE)
 for (sample in samples) {
-    dir.create(glue('{outdir}/pileup'), showWarnings = FALSE)
-    dir.create(glue('{outdir}/phasing'), showWarnings = FALSE)
     dir.create(glue('{outdir}/pileup/{sample}'), showWarnings = FALSE)
 }
 
@@ -54,7 +60,34 @@ for (sample in samples) {
 
 cmds = c()
 
-if (smartseq) {
+if (bulk) {
+
+    for (i in 1:n_samples) {
+
+        bam_file = glue('{outdir}/pileup/{sample}/bam_path.tsv')
+        sample_file = glue('{outdir}/pileup/{sample}/sample.tsv')
+
+        fwrite(list(bams[i]), bam_file)
+        fwrite(list(samples[i]), sample_file)
+        
+        cmd = glue(
+            'cellsnp-lite', 
+            '-S {bam_file}',
+            '-i {sample_file}',
+            '-O {outdir}/pileup/{samples[i]}',
+            '-R {snpvcf}', 
+            '-p {ncores}',
+            '--minMAF 0',
+            '--minCOUNT 2',
+            '--UMItag None',
+            '--cellTAG None',
+            .sep = ' ')
+
+        cmds = c(cmds, cmd)
+
+    }
+
+} else if (smartseq) {
 
     cmd = glue(
             'cellsnp-lite', 

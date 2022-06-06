@@ -15,12 +15,12 @@ run_numbat(
   max_nni = 100,
   t = 1e-05,
   gamma = 20,
-  min_LLR = 40,
+  min_LLR = 5,
   alpha = 1e-04,
   eps = 1e-05,
   max_entropy = 0.5,
   init_k = 3,
-  min_cells = 10,
+  min_cells = 50,
   tau = 0.3,
   max_cost = ncol(count_mat) * tau,
   min_depth = 0,
@@ -29,15 +29,17 @@ run_numbat(
   ncores = 1,
   ncores_nni = ncores,
   random_init = FALSE,
+  segs_loh = NULL,
   verbose = TRUE,
   diploid_chroms = NULL,
   use_loh = NULL,
   min_genes = 10,
   skip_nj = FALSE,
-  multi_allelic = FALSE,
+  multi_allelic = TRUE,
   p_multi = 1 - alpha,
   plot = TRUE,
-  check_convergence = FALSE
+  check_convergence = FALSE,
+  exclude_neu = TRUE
 )
 }
 \arguments{

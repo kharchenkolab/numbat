@@ -2,11 +2,11 @@
 % Please edit documentation in R/hmm.R
 \name{viterbi_joint}
 \alias{viterbi_joint}
-\title{Viterbi algorithm for joint HMM (PLN expression likelihood)}
+\title{Generalized viterbi algorithm for joint HMM}
 \usage{
-viterbi_joint(object, ...)
+viterbi_joint(hmm)
 }
 \description{
-Viterbi algorithm for joint HMM (PLN expression likelihood)
+Generalized viterbi algorithm for joint HMM
 }
 \keyword{internal}

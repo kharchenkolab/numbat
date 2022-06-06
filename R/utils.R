@@ -8,6 +8,10 @@
 #' @keywords internal
 choose_ref_cor = function(count_mat, lambdas_ref, gtf) {
 
+    if (any(duplicated(rownames(lambdas_ref)))) {
+        log_err('Duplicated genes in lambdas_ref')
+    }
+
     if (ncol(lambdas_ref) == 1) {
         ref_name = colnames(lambdas_ref)
         cells = colnames(count_mat)
@@ -39,22 +43,23 @@ scale_counts = function(count_mat) {
 }
 
 #' Utility function to make reference gene expression profiles
-#' @param count_mat dgCMatrix Gene expression counts
-#' @param cell_annot dataframe Cell type annotation with columns "cell" and "cell_type"
+#' @param count_mat matrix/dgCMatrix Gene expression counts
+#' @param annot dataframe Cell annotation with columns "cell" and "group"
+#' @param normalized logical Whether to return normalized expression values
 #' @param verbose logical Verbosity
 #' @return matrix Reference gene expression levels
 #' @export
-aggregate_counts = function(count_mat, cell_annot, verbose = T) {
+aggregate_counts = function(count_mat, annot, normalized = TRUE, verbose = TRUE) {
 
-    cell_annot = cell_annot %>% mutate(cell_type = factor(cell_type))
+    annot = annot %>% mutate(group = factor(group))
 
-    cells = intersect(colnames(count_mat), cell_annot$cell)
+    cells = intersect(colnames(count_mat), annot$cell)
     
     count_mat = count_mat[,cells]
 
-    cell_annot = cell_annot %>% filter(cell %in% cells)
+    annot = annot %>% filter(cell %in% cells)
     
-    cell_dict = cell_annot %>% {setNames(.$cell_type, .$cell)} %>% droplevels
+    cell_dict = annot %>% {setNames(.$group, .$cell)} %>% droplevels
 
     cell_dict = cell_dict[cells]
 
@@ -69,9 +74,14 @@ aggregate_counts = function(count_mat, cell_annot, verbose = T) {
         M = model.matrix(~ 0 + cell_dict) %>% magrittr::set_colnames(levels(cell_dict))
         count_mat_clust = count_mat %*% M
         exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% magrittr::set_colnames(colnames(count_mat_clust))
-    }    
-    
-    return(list('exp_mat' = as.matrix(exp_mat_clust), 'count_mat' = as.matrix(count_mat_clust)))
+    }
+
+    if (normalized) {
+        return(exp_mat_clust)
+    } else {
+        return(count_mat_clust)
+    }
+
 }
 
 #' filtering, normalization and capping
@@ -80,7 +90,7 @@ aggregate_counts = function(count_mat, cell_annot, verbose = T) {
 #' @param gtf dataframe Transcript gtf
 #' @return dataframe Log(x+1) transformed normalized expression values for single cells
 #' @keywords internal
-smooth_expression = function(count_mat, lambdas_ref, gtf, window = 101, verbose = T) {
+smooth_expression = function(count_mat, lambdas_ref, gtf, window = 101, verbose = FALSE) {
 
     mut_expressed = filter_genes(count_mat, lambdas_ref, gtf, verbose = verbose)
     count_mat = count_mat[mut_expressed,,drop=FALSE]
@@ -114,7 +124,7 @@ smooth_expression = function(count_mat, lambdas_ref, gtf, window = 101, verbose 
 #' @param gtf dataframe Transcript gtf
 #' @return vector Genes that are kept after filtering
 #' @keywords internal
-filter_genes = function(count_mat, lambdas_ref, gtf, verbose = T) {
+filter_genes = function(count_mat, lambdas_ref, gtf, verbose = FALSE) {
 
     genes_keep = gtf$gene %>% 
         intersect(rownames(count_mat)) %>%
@@ -152,11 +162,11 @@ filter_genes = function(count_mat, lambdas_ref, gtf, verbose = T) {
 #' @param gtf dataframe Transcript gtf
 #' @return dataframe Pseudobulk gene expression profile
 #' @keywords internal
-get_exp_bulk = function(count_mat, lambdas_ref, gtf, verbose = TRUE) {
+get_exp_bulk = function(count_mat, lambdas_ref, gtf, verbose = FALSE) {
 
     depth_obs = sum(count_mat)
     
-    mut_expressed = filter_genes(count_mat, lambdas_ref, gtf, verbose = verbose)
+    mut_expressed = filter_genes(count_mat, lambdas_ref, gtf)
     count_mat = count_mat[mut_expressed,,drop=FALSE]
     lambdas_ref = lambdas_ref[mut_expressed]
 
@@ -205,6 +215,7 @@ get_allele_bulk = function(df_allele, genetic_map, lambda = 1, min_depth = 0) {
             .groups = 'drop'
         ) %>%
         arrange(CHROM, POS) %>%
+        group_by(CHROM) %>%
         mutate(snp_index = as.integer(factor(snp_id, unique(snp_id)))) %>%
         ungroup() %>%
         filter(DP >= min_depth) %>%
@@ -300,10 +311,6 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #' @export
 get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_depth = 0, lambda = 1, verbose = TRUE) {
 
-    if (nrow(df_allele) == 0) {
-        stop('empty allele dataframe - check cell names')
-    }
-
     count_mat = check_matrix(count_mat)
 
     fit = fit_ref_sse(rowSums(count_mat), lambdas_ref, gtf)
@@ -314,7 +321,8 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_dep
             gtf,
             verbose = verbose
         ) %>%
-        filter((logFC < 5 & logFC > -5) | Y_obs == 0)
+        filter((logFC < 5 & logFC > -5) | Y_obs == 0) %>%
+        mutate(sse = fit$sse)
 
     allele_bulk = get_allele_bulk(
         df_allele,
@@ -346,6 +354,10 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_dep
 #' @return fitted expression profile
 #' @keywords internal
 fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FALSE) {
+
+    if (any(duplicated(rownames(lambdas_ref)))) {
+        log_err('Duplicated genes in lambdas_ref')
+    }
 
     if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
         return(list('w' = 1, 'lambdas_bar' = lambdas_ref))
@@ -384,7 +396,7 @@ fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FAL
 
     lambdas_bar = lambdas_ref %*% w %>% {setNames(as.vector(.), rownames(.))}
 
-    return(list('w' = w, 'lambdas_bar' = lambdas_bar))
+    return(list('w' = w, 'lambdas_bar' = lambdas_bar, 'sse' = fit$value/length(Y_obs)))
 }
 
 #' Annotate genetic distance between markers
@@ -447,12 +459,15 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
 
 #' Call CNVs in a pseudobulk profile using the Numbat joint HMM
 #' @param bulk dataframe Pesudobulk profile
-#' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param t numeric Transition probability
+#' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param theta_min numeric Minimum imbalance threshold
+#' @param logphi_min numeric Minimum log expression deviation threshold
 #' @param lambda numeric Phase switch rate
-#' @param exp_only whether to run expression-only HMM
-#' @param allele_only whether to run allele-only HMM
+#' @param min_genes integer Minimum number of genes to call an event
+#' @param exp_only logical Whether to run expression-only HMM
+#' @param allele_only logical Whether to run allele-only HMM
+#' @param bal_cnv logical Whether to call balanced amplifications/deletions
 #' @param retest whether to retest CNVs after Viterbi decoding
 #' @param find_diploid whether to run diploid region identification routine
 #' @param diploid_chroms user-given chromsomes that are known to be in diploid state
@@ -461,9 +476,9 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
 analyze_bulk = function(
     bulk, t = 1e-5, gamma = 20, theta_min = 0.08, logphi_min = 0.25,
     lambda = 1, min_genes = 10,
-    exp_only = FALSE, allele_only = FALSE, retest = TRUE, 
-    find_diploid = TRUE, diploid_chroms = NULL,
-    classify_allele = FALSE, run_hmm = TRUE, bal_cnv = TRUE, prior = NULL, 
+    exp_only = FALSE, allele_only = FALSE, bal_cnv = TRUE, retest = TRUE, 
+    find_diploid = TRUE, diploid_chroms = NULL, segs_loh = NULL,
+    classify_allele = FALSE, run_hmm = TRUE, prior = NULL, exclude_neu = TRUE,
     phasing = TRUE, verbose = TRUE
 ) {
     
@@ -486,25 +501,33 @@ analyze_bulk = function(
     } else if (find_diploid) {
         bulk = find_common_diploid(
             bulk, gamma = gamma, t = t, theta_min = theta_min, 
-            min_genes = min_genes, fc_min = 2^logphi_min)
+            min_genes = min_genes, fc_min = 2^logphi_min, segs_loh = segs_loh)
     } else if (!'diploid' %in% colnames(bulk)) {
         stop('Must define diploid region if not given')
     }
 
-    # fit expression baseline
-    fit = bulk %>%
-        filter(!is.na(Y_obs)) %>%
-        filter(logFC < 8 & logFC > -8) %>%
-        filter(diploid) %>%
-        {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
-        
-    bulk = bulk %>% mutate(mu = fit@coef[1], sig = fit@coef[2])
+    if (is.null(segs_loh)) {
+        bulk = bulk %>% mutate(loh = FALSE)
+    }
+
+    if (!allele_only) {
+        # fit expression baseline
+        fit = bulk %>%
+            filter(!is.na(Y_obs)) %>%
+            filter(logFC < 8 & logFC > -8) %>%
+            filter(diploid) %>%
+            {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+            
+        bulk = bulk %>% mutate(mu = fit@coef[1], sig = fit@coef[2])
+    } else {
+        bulk = bulk %>% mutate(mu = NA, sig = NA)
+    }
 
     if (run_hmm) {
         bulk = bulk %>% 
             group_by(CHROM) %>%
             mutate(state = 
-                run_hmm_mv_inhom(
+                run_joint_hmm(
                     pAD = pAD,
                     DP = DP, 
                     p_s = p_s,
@@ -519,21 +542,19 @@ analyze_bulk = function(
                     gamma = unique(gamma),
                     theta_min = theta_min,
                     prior = prior,
-                    bal_cnv = TRUE,
+                    bal_cnv = bal_cnv,
                     exp_only = exp_only,
                     allele_only = allele_only,
                     classify_allele = classify_allele,
                     phasing = phasing
                 )
             ) %>% 
+            mutate(state = ifelse(loh, 'del_2_up', state)) %>%
             mutate(cnv_state = str_remove(state, '_down|_up')) %>%
-            annot_segs() %>%
+            annot_segs(var = 'cnv_state') %>%
             smooth_segs(min_genes = min_genes) %>%
-            annot_segs()
+            annot_segs(var = 'cnv_state')
     }
-
-    # rolling theta estimates
-    bulk = annot_theta_roll(bulk)
     
     # retest CNVs
     if (retest & (!exp_only)) {
@@ -544,7 +565,7 @@ analyze_bulk = function(
 
         segs_post = retest_cnv(
             bulk, gamma = gamma, theta_min = theta_min,
-            logphi_min = logphi_min,
+            logphi_min = logphi_min, exclude_neu = exclude_neu,
             allele_only = allele_only)
         
         bulk = bulk %>% 
@@ -571,40 +592,40 @@ analyze_bulk = function(
     } else {
         bulk = bulk %>% mutate(state_post = state, cnv_state_post = cnv_state)
     }
-    
-    if (verbose) {
-        message('Finishing..')
-    }
 
-    # annotate phi MLE for all segments
-    bulk = bulk %>%
-        group_by(seg) %>%
-        mutate(
-            approx_phi_post(
-                Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
-                mu = mu[!is.na(Y_obs)],
-                sig = sig[!is.na(Y_obs)]
-            )
+    if (!allele_only) {
+
+        # annotate phi MLE for all segments
+        bulk = bulk %>%
+            group_by(seg) %>%
+            mutate(
+                approx_phi_post(
+                    Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
+                    mu = mu[!is.na(Y_obs)],
+                    sig = sig[!is.na(Y_obs)]
+                )
+            ) %>%
+            ungroup()
+
+        # rolling phi estimates
+        bulk = bulk %>% 
+            select(-any_of('phi_mle_roll')) %>%
+            left_join(
+                bulk %>% 
+                    group_by(CHROM) %>%
+                    filter(!is.na(Y_obs)) %>%
+                    filter(Y_obs > 0) %>%
+                    mutate(
+                        phi_mle_roll = phi_hat_roll(Y_obs, lambda_ref, d_obs, mu, sig, h = 50)
+                    ) %>%
+                    select(phi_mle_roll, CHROM, gene),
+            by = c('CHROM', 'gene')
         ) %>%
+        group_by(CHROM) %>%
+        mutate(phi_mle_roll = zoo::na.locf(phi_mle_roll, na.rm=FALSE)) %>%
         ungroup()
 
-    # rolling phi estimates
-    bulk = bulk %>% 
-        select(-any_of('phi_mle_roll')) %>%
-        left_join(
-            bulk %>% 
-                group_by(CHROM) %>%
-                filter(!is.na(Y_obs)) %>%
-                filter(Y_obs > 0) %>%
-                mutate(
-                    phi_mle_roll = phi_hat_roll(Y_obs, lambda_ref, d_obs, mu, sig, h = 50)
-                ) %>%
-                select(phi_mle_roll, CHROM, gene),
-        by = c('CHROM', 'gene')
-    ) %>%
-    group_by(CHROM) %>%
-    mutate(phi_mle_roll = zoo::na.locf(phi_mle_roll, na.rm=FALSE)) %>%
-    ungroup()
+    }
 
     # store these info here
     bulk$lambda = lambda 
@@ -620,16 +641,19 @@ analyze_bulk = function(
 #' @param allele_only whether to retest only using allele data
 #' @return a dataframe of segments with CNV posterior information
 #' @keywords internal
-retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE) {
-    
-    G = c('20' = 1/5, '10' = 1/5, '21' = 1/10, '31' = 1/10, '22' = 1/5, '00' = 1/5)
-    
-    # theta_min = 0.065
-    # delta_phi_min = 0.15
+retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, allele_only = FALSE, exclude_neu = TRUE) {
 
+    # rolling theta estimates
+    bulk = annot_theta_roll(bulk)
+
+    if (exclude_neu) {
+        bulk = bulk %>% filter(cnv_state != 'neu')
+    }
+    
+    G = c('11' = 0.5, '20' = 0.1, '10' = 0.1, '21' = 0.05, '31' = 0.05, '22' = 0.1, '00' = 0.1)
+    
     if (allele_only) {
         segs_post = bulk %>% 
-            filter(cnv_state != 'neu') %>%
             group_by(CHROM, seg, cnv_state) %>%
             summarise(
                 n_genes = length(na.omit(unique(gene))),
@@ -651,16 +675,15 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
             ungroup()
     } else {
         segs_post = bulk %>% 
-            filter(cnv_state != 'neu') %>%
             group_by(CHROM, seg, seg_start, seg_end, cnv_state) %>%
             summarise(
                 n_genes = length(na.omit(unique(gene))),
                 n_snps = sum(!is.na(pAD)),
                 theta_hat = theta_hat_seg(major_count[!is.na(major_count)], minor_count[!is.na(minor_count)]),
                 approx_theta_post(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = unique(gamma), start = theta_hat),
-                P_y_n = pnorm.range(0, theta_min, theta_mle, theta_sigma),
-                P_y_d = pnorm.range(theta_min, 0.499, theta_mle, theta_sigma),
-                P_y_a = pnorm.range(theta_min, 0.375, theta_mle, theta_sigma),
+                L_y_n = pnorm.range.log(0, theta_min, theta_mle, theta_sigma),
+                L_y_d = pnorm.range.log(theta_min, 0.499, theta_mle, theta_sigma),
+                L_y_a = pnorm.range.log(theta_min, 0.375, theta_mle, theta_sigma),
                 approx_phi_post(
                     Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
                     alpha = alpha[!is.na(Y_obs)],
@@ -668,20 +691,24 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
                     mu = mu[!is.na(Y_obs)],
                     sig = sig[!is.na(Y_obs)]
                 ),
-                P_x_n = pnorm.range(2^(-logphi_min), 2^logphi_min, phi_mle, phi_sigma),
-                P_x_d = pnorm.range(0.1, 2^(-logphi_min), phi_mle, phi_sigma),
-                P_x_a = pnorm.range(2^logphi_min, 3, phi_mle, phi_sigma),
-                Z = sum(G['20'] * P_x_n * P_y_d,
-                        G['10'] * P_x_d * P_y_d,
-                        G['21'] * P_x_a * P_y_a,
-                        G['31'] * P_x_a * P_y_a,
-                        G['22'] * P_x_a * P_y_n, 
-                        G['00'] * P_x_d * P_y_n),
-                p_loh = (G['20'] * P_x_n * P_y_d)/Z,
-                p_amp = ((G['31'] + G['21']) * P_x_a * P_y_a)/Z,
-                p_del = (G['10'] * P_x_d * P_y_d)/Z,
-                p_bamp = (G['22'] * P_x_a * P_y_n)/Z,
-                p_bdel = (G['00'] * P_x_d * P_y_n)/Z,
+                L_x_n = pnorm.range.log(2^(-logphi_min), 2^logphi_min, phi_mle, phi_sigma),
+                L_x_d = pnorm.range.log(0.1, 2^(-logphi_min), phi_mle, phi_sigma),
+                L_x_a = pnorm.range.log(2^logphi_min, 3, phi_mle, phi_sigma),
+                Z_cnv = logSumExp(c(log(G)['20'] + L_x_n + L_y_d,
+                        log(G)['10'] + L_x_d + L_y_d,
+                        log(G)['21'] + L_x_a + L_y_a,
+                        log(G)['31'] + L_x_a + L_y_a,
+                        log(G)['22'] + L_x_a + L_y_n, 
+                        log(G)['00'] + L_x_d + L_y_n)),
+                Z_n = log(G)['11'] + L_x_n + L_y_n,
+                Z = logSumExp(c(Z_n, Z_cnv)),
+                logBF = Z_cnv - Z_n,
+                p_neu = exp(Z_n - Z),
+                p_loh = exp(log(G)['20'] + L_x_n + L_y_d - Z_cnv),
+                p_amp = exp(log(G['31'] + G['21']) + L_x_a + L_y_a - Z_cnv),
+                p_del = exp(log(G)['10'] + L_x_d + L_y_d - Z_cnv),
+                p_bamp = exp(log(G)['22'] + L_x_a + L_y_n - Z_cnv),
+                p_bdel = exp(log(G)['00'] + L_x_d + L_y_n - Z_cnv),
                 LLR_x = calc_exp_LLR(
                     Y_obs[!is.na(Y_obs)],
                     lambda_ref[!is.na(Y_obs)], 
@@ -694,6 +721,7 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
                 ),
                 LLR_y = calc_allele_LLR(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta_mle, gamma = unique(gamma)),
                 LLR = LLR_x + LLR_y,
+                LLR = logBF,
                 .groups = 'drop'
             ) %>%
             mutate_at(
@@ -704,12 +732,8 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
             mutate(cnv_state_post = c('loh', 'amp', 'del', 'bamp', 'bdel')[
                 which.max(c(p_loh, p_amp, p_del, p_bamp, p_bdel))
             ]) %>%
-            ungroup() %>%
             mutate(
-                cnv_state_post = ifelse(Z == 0, 'neu', cnv_state_post),
-                LLR = ifelse(Z == 0, 0, LLR),
-                LLR_x = ifelse(Z == 0, 0, LLR_x),
-                LLR_y = ifelse(Z == 0, 0, LLR_y)
+                cnv_state_post = ifelse(p_neu >= 0.5, 'neu', cnv_state_post)
             )
     }
 
@@ -722,15 +746,18 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
 #' @keywords internal
 classify_alleles = function(bulk) {
 
-    if (all(bulk$cnv_state_post %in% c('neu'))) {
+    allele_bulk = bulk %>%
+        filter(!cnv_state_post %in% c('neu')) %>%
+        filter(!is.na(AD)) %>% 
+        group_by(CHROM, seg) %>%
+        filter(n() > 1)
+
+    if (nrow(allele_bulk) == 0) {
         return(bulk)
     }
     
-    allele_post = bulk %>%
-        filter(!cnv_state_post %in% c('neu')) %>%
-        filter(!is.na(AD)) %>%
+    allele_post = allele_bulk %>%
         group_by(CHROM, seg) %>%
-        filter(n() > 1) %>%
         mutate(
             p_up = forward_back_allele(get_allele_hmm(pAD, DP, p_s, theta = unique(theta_mle), gamma = 20))[,1],
             haplo_post = case_when(
@@ -748,8 +775,8 @@ classify_alleles = function(bulk) {
             select(-any_of(colnames(allele_post)[!colnames(allele_post) %in% c('snp_id')])) %>%
             left_join(
                 allele_post,
-            by = c('snp_id')
-        )
+                by = c('snp_id')
+            )
 
     return(bulk)
 }
@@ -758,8 +785,9 @@ classify_alleles = function(bulk) {
 #' @param bulk a pseudobulk dataframe
 #' @return a pseudobulk dataframe
 #' @keywords internal
-annot_theta_roll = function(bulk) {   
+annot_theta_roll = function(bulk) {
 
+    # if viterbi was run, use the decoded states
     bulk = bulk %>% 
         mutate(haplo_theta_min = case_when(
             str_detect(state, 'up') ~ 'major',
@@ -771,6 +799,7 @@ annot_theta_roll = function(bulk) {
             minor_count = DP - major_count
         )
 
+    # if no viterbi, use rolling average
     bulk = bulk %>%
         select(-any_of('theta_hat_roll')) %>%
         left_join(
@@ -850,12 +879,12 @@ letters_all = c(letters, paste0(letters, letters), paste0(letters, letters, lett
 #' @param bulk dataframe Pseudobulk profile
 #' @return a pseudobulk dataframe
 #' @keywords internal
-annot_segs = function(bulk) {
+annot_segs = function(bulk, var = 'cnv_state') {
 
     bulk = bulk %>% 
             group_by(CHROM) %>%
             arrange(CHROM, snp_index) %>%
-            mutate(boundary = c(0, cnv_state[2:length(cnv_state)] != cnv_state[1:(length(cnv_state)-1)])) %>%
+            mutate(boundary = c(0, get(var)[2:length(get(var))] != get(var)[1:(length(get(var))-1)])) %>%
             group_by(CHROM) %>%
             mutate(seg = paste0(CHROM, letters_all[cumsum(boundary)+1])) %>%
             arrange(CHROM) %>%
@@ -922,7 +951,17 @@ smooth_segs = function(bulk, min_genes = 10) {
 #' @param segs_consensus datatframe Consensus segment dataframe
 #' @return dataframe Pseudobulk profile
 #' @keywords internal
-annot_consensus = function(bulk, segs_consensus) {
+annot_consensus = function(bulk, segs_consensus, join_mode = 'inner') {
+
+    if (join_mode == 'inner') {
+        join = inner_join
+    } else {
+        join = left_join
+    }
+
+    if (!'seg_cons' %in% colnames(segs_consensus)) {
+        segs_consensus = segs_consensus %>% mutate(seg_cons = seg)
+    }
 
     bulk = bulk %>% ungroup()
     
@@ -950,11 +989,11 @@ annot_consensus = function(bulk, segs_consensus) {
             by = c('seg_index')
         ) %>%
         distinct(snp_id, `.keep_all` = TRUE) %>%
-        select(-any_of(c('sample')))
+        select(-any_of(c('sample', 'marker_index', 'seg_index')))
     
     bulk = bulk %>% 
-        select(-any_of(colnames(marker_seg)[!colnames(marker_seg) %in% c('snp_id')])) %>% 
-        inner_join(marker_seg, by = c('snp_id'))  %>%
+        select(-any_of(colnames(marker_seg)[!colnames(marker_seg) %in% c('snp_id', 'CHROM')])) %>% 
+        join(marker_seg, by = c('snp_id', 'CHROM'))  %>%
         mutate(seg = seg_cons) %>%
         mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) 
 
@@ -974,11 +1013,12 @@ annot_consensus = function(bulk, segs_consensus) {
 #' @keywords internal
 find_common_diploid = function(
     bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 2^0.25, alpha = 1e-4, min_genes = 10, 
-    ncores = 1, debug = FALSE, verbose = TRUE) {
+    ncores = 1, segs_loh = NULL, debug = FALSE, verbose = TRUE) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = '1'
     }
+
     # define balanced regions in each sample
     bulks = mclapply(
         bulks %>% split(.$sample),
@@ -988,7 +1028,7 @@ find_common_diploid = function(
             bulk %>% 
                 group_by(CHROM) %>%
                 mutate(state = 
-                    run_hmm_inhom(
+                    run_allele_hmm(
                         pAD = pAD,
                         DP = DP, 
                         p_s = p_s,
@@ -1004,6 +1044,17 @@ find_common_diploid = function(
 
         }) %>%
         bind_rows()
+
+    # annotate clonal LOH regions
+    if (!is.null(segs_loh)) {
+        bulks = bulks %>% 
+            annot_consensus(segs_loh, join_mode = 'left') %>%
+            mutate(loh = ifelse(is.na(loh), FALSE, TRUE)) %>%
+            mutate(cnv_state = ifelse(loh, 'loh', cnv_state)) %>%
+            annot_segs(var = 'cnv_state')
+    } else {
+        bulks = bulks %>% mutate(loh = FALSE)
+    }
 
     # unionize imbalanced segs
     segs_imbal = bulks %>% 
@@ -1371,6 +1422,20 @@ approx_theta_post = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start =
     return(tibble('theta_mle' = mu, 'theta_sigma' = sigma))
 }
 
+# naive HMM allelic imbalance MLE
+theta_mle_naive = function(MAD, DP, lower = 0.0001, upper = 0.4999, start = 0.25, gamma = 20) {
+
+    fit = optim(
+        start, 
+        function(theta) {-l_bbinom(MAD, DP, gamma*(0.5+theta), gamma*(0.5-theta))},
+        method = 'L-BFGS-B',
+        lower = lower,
+        upper = upper
+    )
+    
+    return(tibble('theta_mle' = fit$par))
+}
+
 #' Laplace approximation of the posterior of expression fold change phi
 #' @keywords internal
 approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, lower = 0.2, upper = 10, start = 1) {
@@ -1547,6 +1612,24 @@ calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, al
 
 ########################### Misc ############################
 
+log_mem = function() {
+    m = pryr::mem_used()
+    msg = paste0('Mem used: ', signif(m/1e9, 3), 'Gb')
+    log_message(msg)
+}
+
+log_message = function(msg, verbose = TRUE) {
+    log_info(msg)
+    if (verbose) {
+        message(msg)
+    }
+}
+
+log_err = function(msg) {
+    log_error(msg)
+    stop(msg)
+}
+
 #' check the format of a count matrix
 #' @keywords internal
 check_matrix = function(count_mat) {
@@ -1554,9 +1637,43 @@ check_matrix = function(count_mat) {
         count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
     }
     if (!('dgCMatrix' %in% class(count_mat))) {
-        stop("count_mat is not of class dgCMatrix or matrix")
+        log_err("count_mat is not of class dgCMatrix or matrix")
+    }
+    if (any(duplicated(rownames(count_mat)))) {
+        log_err("Please remove duplicated genes in count matrix")
     }
     return(count_mat)
+}
+
+#' check the format of a allele dataframe
+#' @keywords internal
+check_allele_df = function(df) {
+
+    snps = df %>% 
+        filter(GT != '') %>% 
+        group_by(snp_id) %>%
+        summarise(
+            n = length(unique(GT))
+        ) 
+    
+    if (any(snps$n > 1)) {
+        log_err('Inconsistent SNP genotypes; Are cells from two different individuals mixed together?')
+    }
+
+    return(df)
+
+}
+
+#' check the format of lambdas_ref
+#' @keywords internal
+check_exp_ref = function(lambdas_ref) {
+
+    if (!is.matrix(lambdas_ref)) {
+        lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
+    }
+
+    return(lambdas_ref)
+
 }
 
 #' Calculate simes' p
@@ -1567,11 +1684,18 @@ simes_p = function(p.vals, n_dim) {
 
 #' Get the total probability from a region of a normal pdf
 #' @keywords internal
-pnorm.range = function(lower, upper, mu, sd) {
-    if (sd == 0) {
-        return(1)
-    }
-    pnorm(upper, mu, sd) - pnorm(lower, mu, sd)
+pnorm.range.log = function(lower, upper, mu, sd) {
+    if (sd == 0) { return(1) }
+    l_upper = pnorm(upper, mu, sd, log.p = TRUE)
+    l_lower = pnorm(lower, mu, sd, log.p = TRUE)
+    return(l_upper + VGAM::log1mexp(l_upper - l_lower))
+}
+
+pnorm.range.log = function(lower, upper, mu, sd) {
+    if (sd == 0) { return(1) }
+    l_upper = pnorm(upper, mu, sd, log.p = TRUE)
+    l_lower = pnorm(lower, mu, sd, log.p = TRUE)
+    return(l_upper + VGAM::log1mexp(l_upper - l_lower))
 }
 
 #' Get the modes of a vector
@@ -1707,4 +1831,465 @@ logphi_f = function(f, m = 0, p = 1) {
 theta_f = function(f, m = 0, p = 1) {
     baf = (m * f + 1 - f)/((m * f + 1 - f) + (p * f + 1 - f))
     baf
+}
+
+snp_rate_roll = function(gene_snps, gene_length, h) {
+    n = length(gene_snps)
+    sapply(
+        1:n,
+        function(c) {
+            slice = max(c - h - 1, 1):min(c + h, n)
+            fit_snp_rate(gene_snps[slice], gene_length[slice])[1]
+        }
+    )
+}
+
+fit_snp_rate_pois = function(gene_snps, gene_length) {
+    
+    fit = optim(
+        par = 1,
+        fn = function(lambda) {
+            -sum(dpois(x = gene_snps, lambda = lambda * gene_length/1e6, log = TRUE))
+        },
+        method = 'L-BFGS-B',
+        lower = 1e-10
+    )
+    
+    return(fit$par)
+}
+
+fit_snp_rate_poilog = function(gene_snps, gene_length) {
+    
+    n = length(gene_snps)
+
+    fit = optim(
+        par = c(30, 1),
+        fn = function(params) {
+            lambda = params[1]
+            sig = params[2]
+            -sum(dpoilog(x = gene_snps, mu = log(lambda * gene_length/1e6), sig = rep(sig, n), log = TRUE))
+        },
+        method = 'L-BFGS-B',
+        lower = c(1e-10, 1e-10)
+    )
+    
+    return(fit$par)
+}
+
+# negative binomial model
+fit_snp_rate = function(gene_snps, gene_length) {
+    
+    n = length(gene_snps)
+
+    fit = optim(
+        par = c(10, 1),
+        fn = function(params) {
+            lambda = params[1]
+            sig = params[2]
+            
+            -sum(dnbinom(x = gene_snps, mu = lambda * gene_length/1e6, size = sig, log = TRUE))
+        },
+        method = 'L-BFGS-B',
+        lower = c(1e-10, 1e-10)
+    )
+    
+    return(fit$par)
+}
+
+# detect clonal LOH
+detect_loh = function(bulk, min_depth = 0, t = 1e-5, mu = NULL, sig = NULL) {
+
+    bulk_snps = bulk %>% 
+        filter(!is.na(gene)) %>%
+        group_by(CHROM, gene, gene_start, gene_end) %>%
+        summarise(
+            gene_snps = sum(!is.na(AD[DP > min_depth]), na.rm = TRUE),
+            Y_obs = unique(na.omit(Y_obs)),
+            lambda_ref = unique(na.omit(lambda_ref)),
+            logFC = unique(na.omit(logFC)),
+            d_obs = unique(na.omit(d_obs)),
+            .groups = 'drop'
+        ) %>%
+        mutate(gene_length = gene_end - gene_start)
+
+    if (is.null(mu) | is.null(sig)) {
+
+        fit = bulk_snps %>%
+            filter(logFC < 8 & logFC > -8) %>%
+            {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+
+        mu = fit@coef[1]
+        sig = fit@coef[2]
+
+    }
+
+    snp_fit = fit_snp_rate(bulk_snps$gene_snps, bulk_snps$gene_length)
+    snp_ref = snp_fit[1]
+    snp_sig = snp_fit[2]
+
+    n = nrow(bulk_snps)
+    A = matrix(c(1-t, t, t, 1-t), nrow = 2)
+    As = array(rep(A,n), dim = c(2,2,n))
+
+    hmm = list(
+        x = bulk_snps$gene_snps, 
+        Pi = As, 
+        delta = c(1-t,t), 
+        pm = c(snp_ref, 5),
+        pn = bulk_snps$gene_length/1e6,
+        snp_sig = snp_sig,
+        y = bulk_snps$Y_obs,
+        phi = c(1, 0.5),
+        lambda_star = bulk_snps$lambda_ref,
+        d = unique(bulk_snps$d_obs),
+        mu = mu,
+        sig = sig,
+        states = c('neu', 'loh')
+    )
+
+    bulk_snps = bulk_snps %>% mutate(cnv_state = viterbi_loh(hmm))
+
+    segs_loh = bulk_snps %>%
+        mutate(snp_index = 1:n(), POS = gene_start, pAD = 1) %>%
+        annot_segs() %>%
+        group_by(CHROM, seg, seg_start, seg_end, cnv_state) %>%
+        summarise(
+            snp_rate = fit_snp_rate(gene_snps, gene_length)[1],
+            .groups = 'drop'
+        ) %>%
+        ungroup() %>%
+        filter(cnv_state == 'loh') %>%
+        mutate(loh = TRUE) %>% 
+        select(CHROM, seg, seg_start, seg_end, snp_rate, loh)
+
+    if (nrow(segs_loh) == 0) {
+        segs_loh = data.frame()
+    }
+    
+    return(segs_loh)
+}
+
+
+########################### Benchmarking ############################
+
+subtract_ranges = function(gr1, gr2) {
+    overlap = GenomicRanges::intersect(gr1, gr2)
+    GenomicRanges::setdiff(gr1, overlap)
+}
+
+compare_segs = function(segs_x, segs_y, gaps = gaps_hg38) {
+    
+    ranges_x = segs_x %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )}
+    
+    ranges_y = segs_y %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )}
+    
+    ranges_gap = gaps %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$start,
+                end = .$end)
+        )}
+    
+    ranges_x = subtract_ranges(ranges_x, ranges_gap)
+    ranges_y = subtract_ranges(ranges_y, ranges_gap)
+    
+    overlap_total = GenomicRanges::intersect(ranges_x, ranges_y) %>%
+        as.data.frame() %>% pull(width) %>% sum
+    
+    union_total = GenomicRanges::reduce(c(ranges_x, ranges_y)) %>%
+        as.data.frame() %>% pull(width) %>% sum
+    
+    return(overlap_total/union_total)
+}
+
+evaluate_calls = function(cnvs_dna, cnvs_call, gaps = gaps_hg38) {
+    
+    ranges_dna = cnvs_dna %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )}
+    
+    ranges_call = cnvs_call %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )}
+    
+    ranges_gap = gaps %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$start,
+                end = .$end)
+        )}
+    
+    ranges_dna = subtract_ranges(ranges_dna, ranges_gap)
+    ranges_call = subtract_ranges(ranges_call, ranges_gap)
+    
+    overlap_total = GenomicRanges::intersect(ranges_dna, ranges_call) %>%
+        as.data.frame() %>% pull(width) %>% sum
+    
+    dna_total = ranges_dna %>% as.data.frame() %>% pull(width) %>% sum
+    call_total = ranges_call %>% as.data.frame() %>% pull(width) %>% sum
+    
+    pre = overlap_total/call_total
+    rec = overlap_total/dna_total
+    
+    return(c('precision' = pre, 'recall' = rec))
+}
+
+########################### Experimental ############################
+
+# this is actually slower and doesn't give same answer as optim
+theta_hat_EM = function(pAD, DP, p_s, start = 0.08, gamma = 20) {
+    
+    theta = start
+    
+    converge = FALSE
+    
+    while (!converge) {
+        
+        hmm = get_allele_hmm(pAD, DP, p_s, theta, gamma = gamma)
+        theta_new = sum(forward_back_allele(hmm)[,1] * hmm$x + forward_back_allele(hmm)[,2] * (hmm$d - hmm$x))/sum(hmm$d) - 0.5
+
+        converge = (theta_new - theta) < 1e-10
+
+        theta = theta_new
+
+    }
+    
+    return(theta)
+}
+
+test_branch = function(count_mat, df_allele, gtree, segs_consensus, from_node, to_node, ncores, ...) {
+    
+    segs_consensus = segs_consensus %>% mutate(CHROM = factor(CHROM))
+    
+    gtree = gtree %>% activate(nodes)
+    
+    # from root
+    if (is.na(from_node)) {
+        from_node = gtree %>% filter(root) %>% pull(name)
+    }
+    
+    from_node = gtree %>% filter(name == from_node) %>% pull(id)
+    to_node = gtree %>% filter(name == to_node) %>% pull(id)
+    
+    cells_1 = get_desc(gtree, from_node)
+    cells_2 = get_desc(gtree, to_node)
+
+    cells_1 = cells_1[!cells_1 %in% cells_2]
+    
+    groups = list(
+        list(sample = '1', cells = cells_1, size = length(cells_1)), 
+        list(sample = '2', cells = cells_2, size = length(cells_2))
+    )
+    
+    bulks = make_group_bulks(
+        groups = groups,
+        count_mat = count_mat,
+        df_allele = df_allele, 
+        lambdas_ref = lambdas_ref,
+        gtf = gtf,
+        genetic_map = genetic_map,
+        min_depth = min_depth,
+        ncores = ncores
+    ) %>%
+    annot_consensus(segs_consensus)
+        
+    bulks = lapply(
+        bulks %>% split(.$sample),
+        function(bulk) {
+
+            fit = bulk %>%
+                filter(cnv_state == 'neu') %>%
+                filter(!is.na(Y_obs)) %>%
+                filter(logFC < 8 & logFC > -8) %>%
+                {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+
+            bulk %>% mutate(mu = fit@coef[1], sig = fit@coef[2])
+
+        }
+    ) %>% bind_rows()
+    
+    return(bulks)
+}
+
+compare_bulks = function(bulks, segs_consensus, t = 1e-5, gamma = 20, ncores = 1) {
+    
+    segs_consensus = segs_consensus %>% mutate(CHROM = factor(CHROM))
+    
+    bulks = bulks %>%
+        arrange(sample) %>%
+        mutate(sample = as.integer(factor(sample, unique(sample)))) %>%
+        select(-phi_mle) %>%
+        arrange(CHROM, POS) %>%
+        mutate(snp_index = as.integer(factor(snp_id, unique(snp_id)))) %>%
+        group_by(CHROM) %>%
+        ungroup()
+
+    bulks_unified = bulks %>% select(sample, CHROM, POS, snp_id, snp_index, cM, pAD, DP, Y_obs, p_s, mu, sig, d_obs, lambda_ref) %>%
+        tidyr::pivot_wider(names_from = "sample", "values_from" = c("pAD", "DP", "Y_obs", "mu", "sig", "d_obs", "lambda_ref")) %>%
+        mutate(
+            inter_snp_cm = c(NA, cM[2:length(cM)] - cM[1:(length(cM)-1)]),
+            p_s = switch_prob_cm(inter_snp_cm)
+        )
+    
+    bulks_unified = bulks_unified %>% annot_consensus(segs_consensus)
+    
+    LLRs = mclapply(
+            mc.cores = ncores,
+            bulks_unified %>%
+                filter(cnv_state != 'neu') %>%
+                split(droplevels(.$seg)),
+            function(bulks) {
+
+                logphi_min = log(unique(bulks$phi_mle))
+                theta_min = unique(bulks$theta_mle)
+
+                hmm1 = bulks %>%
+                    {get_joint_hmm(
+                        pAD = .$pAD_1,
+                        DP = .$DP_1, 
+                        Y_obs = .$Y_obs_1, 
+                        d_total = na.omit(unique(.$d_obs_1)),
+                        p_s = .$p_s,
+                        lambda_ref = .$lambda_ref_1, 
+                        phi_amp = 2^(logphi_min),
+                        phi_del = 2^(-logphi_min),
+                        mu = .$mu_1,
+                        sig = .$sig_1,
+                        t = t,
+                        gamma = gamma,
+                        theta_min = theta_min
+                    )}
+
+                hmm2 = bulks %>%
+                    {get_joint_hmm(
+                        pAD = .$pAD_2,
+                        DP = .$DP_2, 
+                        Y_obs = .$Y_obs_2, 
+                        d_total = na.omit(unique(.$d_obs_2)),
+                        p_s = .$p_s,
+                        lambda_ref = .$lambda_ref_2, 
+                        phi_amp = 2^(logphi_min),
+                        phi_del = 2^(-logphi_min),
+                        mu = .$mu_2,
+                        sig = .$sig_2,
+                        t = t,
+                        gamma = gamma,
+                        theta_min = theta_min
+                    )}
+
+                LL = compare_hmm(hmm1, hmm2)
+
+                return(LL)
+
+            }
+        ) %>% unlist()
+    
+    return(LLRs)
+    
+}
+
+# evaluate pseduobulks against one set of segmentations
+evaluate_segs = function(bulks, segs, t = 1e-5, ncores = 1) {
+
+    M = length(unique(bulks$sample))
+
+    bulks %>% 
+    annot_consensus(segs) %>%
+    split(droplevels(.$CHROM)) %>%
+    mclapply(
+        mc.cores = ncores,
+        function(bulks){
+            bulks %>%
+            group_by(CHROM, sample, seg) %>%
+            mutate(
+                approx_theta_post(
+                    pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], start = 0.25
+                ),
+                approx_phi_post(
+                    Y_obs[!is.na(Y_obs)], 
+                    lambda_ref[!is.na(Y_obs)],
+                    unique(na.omit(d_obs)),
+                    mu = mu[!is.na(Y_obs)],
+                    sig = sig[!is.na(Y_obs)]
+                )
+            ) %>%
+            ungroup() %>%
+            group_by(CHROM, sample) %>%
+            summarise(
+                l_x = l_lnpois(
+                    Y_obs[!is.na(Y_obs)], lambda_ref[!is.na(Y_obs)], unique(na.omit(d_obs)),
+                    mu[!is.na(Y_obs)], sig[!is.na(Y_obs)], phi = phi_mle[!is.na(Y_obs)]
+                ),
+                l_y = calc_allele_lik(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], theta = theta_mle[!is.na(pAD)]),
+                n_x = sum(!is.na(Y_obs)),
+                n_y = sum(!is.na(pAD)),
+                bkp = length(unique(seg)) - 1,
+                l = l_x + l_y,
+                .groups = 'drop'
+            ) %>%
+            group_by(CHROM) %>%
+            summarise(
+                l = sum(l),
+                l_x = sum(l_x),
+                l_y = sum(l_y),
+                n_x = sum(n_x),
+                n_y = sum(n_y),
+                bkp = min(bkp),
+                l_adj = l + bkp * log(t),
+                .groups = 'drop'
+            )
+    }) %>%
+    bind_rows()
+}
+
+# get optimal segmentation from subtree and clone bulk results
+get_segs_optimal = function(bulk_subtrees, bulk_clones, t = 1e-5, min_LLR = 10, ncores = 1) {
+    
+    samples = unique(bulk_subtrees$sample)
+
+    segs_all = lapply(
+            samples,
+            function(sample) {
+                bulk_subtrees %>% 
+                filter(sample == UQ(sample)) %>%
+                get_segs_consensus(min_LLR = min_LLR) %>%
+                mutate(sample = UQ(sample))
+            }
+        )
+
+    scores = lapply(
+            segs_all,
+            function(segs) {
+                bulk_clones %>% 
+                    evaluate_segs(segs, t = t, ncores = ncores) %>%
+                    mutate(sample = unique(segs$sample))
+            }
+        ) %>% bind_rows()
+
+    segs_optimal = inner_join(
+            bind_rows(segs_all),
+            scores %>%
+                arrange(CHROM, -l_adj) %>%
+                distinct(CHROM, .keep_all = TRUE) %>%
+                select(CHROM, sample),
+            by = c('sample', 'CHROM')
+        ) %>%
+        arrange(CHROM) %>%
+        group_by(CHROM) %>%
+        mutate(seg_cons = paste0(CHROM, letters_all[1:n()])) %>%
+        ungroup() %>%
+        mutate(seg = seg_cons)
+    
+    return(list(segs_optimal = segs_optimal, scores = scores))
+    
 }

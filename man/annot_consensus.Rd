@@ -4,7 +4,7 @@
 \alias{annot_consensus}
 \title{Annotate a consensus segments on a pseudobulk dataframe}
 \usage{
-annot_consensus(bulk, segs_consensus)
+annot_consensus(bulk, segs_consensus, join_mode = "inner")
 }
 \arguments{
 \item{bulk}{dataframe Pseudobulk profile}

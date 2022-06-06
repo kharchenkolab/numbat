@@ -80,35 +80,50 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// likelihood_allele_compute
-double likelihood_allele_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m);
-RcppExport SEXP _numbat_likelihood_allele_compute(SEXP objSEXP, SEXP logphiSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP) {
+// likelihood_compute
+double likelihood_compute(Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m);
+RcppExport SEXP _numbat_likelihood_compute(SEXP logphiSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type obj(objSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type logphi(logphiSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type logprob(logprobSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type logPi(logPiSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type logPi(logPiSEXP);
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     Rcpp::traits::input_parameter< int >::type m(mSEXP);
-    rcpp_result_gen = Rcpp::wrap(likelihood_allele_compute(obj, logphi, logprob, logPi, n, m));
+    rcpp_result_gen = Rcpp::wrap(likelihood_compute(logphi, logprob, logPi, n, m));
     return rcpp_result_gen;
 END_RCPP
 }
 // forward_backward_compute
-Rcpp::NumericMatrix forward_backward_compute(Rcpp::List obj, Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, Rcpp::List logPi, int n, int m);
-RcppExport SEXP _numbat_forward_backward_compute(SEXP objSEXP, SEXP logphiSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP) {
+Rcpp::NumericMatrix forward_backward_compute(Rcpp::NumericVector logphi, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m);
+RcppExport SEXP _numbat_forward_backward_compute(SEXP logphiSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type obj(objSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type logphi(logphiSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type logprob(logprobSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type logPi(logPiSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type logPi(logPiSEXP);
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     Rcpp::traits::input_parameter< int >::type m(mSEXP);
-    rcpp_result_gen = Rcpp::wrap(forward_backward_compute(obj, logphi, logprob, logPi, n, m));
+    rcpp_result_gen = Rcpp::wrap(forward_backward_compute(logphi, logprob, logPi, n, m));
+    return rcpp_result_gen;
+END_RCPP
+}
+// viterbi_compute
+Rcpp::NumericVector viterbi_compute(Rcpp::NumericVector log_delta, Rcpp::NumericMatrix logprob, arma::cube logPi, int n, int m, Rcpp::NumericMatrix nu, Rcpp::NumericVector z);
+RcppExport SEXP _numbat_viterbi_compute(SEXP log_deltaSEXP, SEXP logprobSEXP, SEXP logPiSEXP, SEXP nSEXP, SEXP mSEXP, SEXP nuSEXP, SEXP zSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type log_delta(log_deltaSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type logprob(logprobSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type logPi(logPiSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type nu(nuSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type z(zSEXP);
+    rcpp_result_gen = Rcpp::wrap(viterbi_compute(log_delta, logprob, logPi, n, m, nu, z));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -132,8 +147,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_numbat_poilog2", (DL_FUNC) &_numbat_poilog2, 8},
     {"_numbat_poilog1", (DL_FUNC) &_numbat_poilog1, 4},
     {"_numbat_logSumExp", (DL_FUNC) &_numbat_logSumExp, 1},
-    {"_numbat_likelihood_allele_compute", (DL_FUNC) &_numbat_likelihood_allele_compute, 6},
-    {"_numbat_forward_backward_compute", (DL_FUNC) &_numbat_forward_backward_compute, 6},
+    {"_numbat_likelihood_compute", (DL_FUNC) &_numbat_likelihood_compute, 5},
+    {"_numbat_forward_backward_compute", (DL_FUNC) &_numbat_forward_backward_compute, 5},
+    {"_numbat_viterbi_compute", (DL_FUNC) &_numbat_viterbi_compute, 7},
     {"_numbat_CgetQ", (DL_FUNC) &_numbat_CgetQ, 3},
     {NULL, NULL, 0}
 };

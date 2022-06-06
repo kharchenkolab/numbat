@@ -1,0 +1,55 @@
+---
+title: "Numbat haplotype-aware HMM"
+description: "Detecting CNVs using Numbat haplotype-aware HMM from bulk and single-cell RNA-seq data"
+documentclass: book
+output:
+  bookdown::gitbook:
+    split_by: rmd
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+The Numbat haplotype-aware HMM leverages [population-based phasing](https://en.wikipedia.org/wiki/Haplotype_estimation) to sensitively detect CNVs from gene expression data. It can be used to analyze scRNA-seq (after aggregating cells into "pseudobulks") as well as bulk RNA-seq data. In this tutorial, we will walk through some examples of both use cases.
+
+```{r}
+library(numbat)
+library(dplyr)
+library(glue)
+library(stringr)
+library(data.table)
+```
+
+# Analyzing scRNA-seq data
+```{r}
+
+```
+
+# Analyzing bulk RNA-seq data
+The Numbat HMM can also be used to detect CNVs from bulk RNA-seq data. 
+```{r}
+allele_counts = fread('http://pklab.med.harvard.edu/teng/data/bulk_example/MN-5_TUMOR_allele_counts.tsv.gz')
+gene_counts = readRDS(url('http://pklab.med.harvard.edu/teng/data/bulk_example/gene_counts.rds'))
+```
+Sample MN-1037 has a diploid genome so we can use it to create a reference expression profile.
+```{r}
+ref_internal = gene_counts[,'MN-1037_TUMOR',drop=F] %>% {./sum(.)}
+head(ref_internal)
+```
+We can now analyze samples using the Numbat HMM.
+```{r, fig.width = 12, fig.height=2, dpi=300}
+sample = 'MN-5_TUMOR'
+
+bulk = get_bulk(
+        count_mat = gene_counts[,sample,drop=F],
+        df_allele = allele_counts,
+        lambdas_ref = ref_internal,
+        genetic_map = genetic_map_hg38,
+        gtf = gtf_hg38
+    ) %>% 
+    analyze_bulk()
+
+bulk %>% plot_psbulk(min_depth = 15)
+```
+

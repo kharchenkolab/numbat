@@ -21,12 +21,16 @@ logSumExp <- function(x) {
     .Call('_numbat_logSumExp', PACKAGE = 'numbat', x)
 }
 
-likelihood_allele_compute <- function(obj, logphi, logprob, logPi, n, m) {
-    .Call('_numbat_likelihood_allele_compute', PACKAGE = 'numbat', obj, logphi, logprob, logPi, n, m)
+likelihood_compute <- function(logphi, logprob, logPi, n, m) {
+    .Call('_numbat_likelihood_compute', PACKAGE = 'numbat', logphi, logprob, logPi, n, m)
 }
 
-forward_backward_compute <- function(obj, logphi, logprob, logPi, n, m) {
-    .Call('_numbat_forward_backward_compute', PACKAGE = 'numbat', obj, logphi, logprob, logPi, n, m)
+forward_backward_compute <- function(logphi, logprob, logPi, n, m) {
+    .Call('_numbat_forward_backward_compute', PACKAGE = 'numbat', logphi, logprob, logPi, n, m)
+}
+
+viterbi_compute <- function(log_delta, logprob, logPi, n, m, nu, z) {
+    .Call('_numbat_viterbi_compute', PACKAGE = 'numbat', log_delta, logprob, logPi, n, m, nu, z)
 }
 
 CgetQ <- function(logQ, children_dict, node_order) {

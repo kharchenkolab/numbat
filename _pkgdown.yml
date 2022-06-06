@@ -23,7 +23,8 @@ reference:
   - Numbat
   - starts_with("plot_")
 articles:
-- title: "Interpreting results"
+- title: "Tutorials"
   navbar: ~
   contents:
-  - visualization
+  - results
+  - hmm
