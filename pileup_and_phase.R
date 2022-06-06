@@ -1,11 +1,6 @@
-library(glue, quietly = T)
-library(stringr, quietly = T)
-library(argparse, quietly = T)
-library(data.table, quietly = T)
-library(dplyr, quietly = T)
-library(vcfR, quietly = T)
-library(Matrix, quietly = T)
-library(numbat, quietly = T)
+#!/usr/bin/env Rscript
+
+library(argparse)
 
 parser <- ArgumentParser(description='Run SNP pileup and phasing with 1000G')
 parser$add_argument('--label', type = "character", required = TRUE, help = "Individual label")
@@ -22,8 +17,17 @@ parser$add_argument('--UMItag', default = "Auto", required = FALSE, type = "char
 parser$add_argument('--cellTAG', default = "CB", required = FALSE, type = "character", help = "Cell tag in bam. Should be CB for 10x and XC for Slide-seq")
 parser$add_argument('--smartseq', action = 'store_true', help = "running with smart-seq mode")
 parser$add_argument('--bulk', action = 'store_true', help = "running with bulk mode")
-
 args <- parser$parse_args()
+
+suppressPackageStartupMessages({
+    library(glue)
+    library(stringr)
+    library(data.table)
+    library(dplyr)
+    library(vcfR)
+    library(Matrix)
+    library(numbat)
+})
 
 label = args$label
 samples = str_split(args$samples, ',')[[1]]
@@ -31,7 +35,6 @@ outdir = args$outdir
 bams = str_split(args$bams, ',')[[1]]
 barcodes = str_split(args$barcodes, ',')[[1]]
 n_samples = length(samples)
-label = args$label
 ncores = args$ncores
 gmap = args$gmap
 eagle = args$eagle
@@ -45,10 +48,9 @@ genome = ifelse(str_detect(args$gmap, 'hg19'), 'hg19', 'hg38')
 message(paste0('Using genome version: ', genome))
 
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
-
+dir.create(glue('{outdir}/pileup'), showWarnings = FALSE)
+dir.create(glue('{outdir}/phasing'), showWarnings = FALSE)
 for (sample in samples) {
-    dir.create(glue('{outdir}/pileup'), showWarnings = FALSE)
-    dir.create(glue('{outdir}/phasing'), showWarnings = FALSE)
     dir.create(glue('{outdir}/pileup/{sample}'), showWarnings = FALSE)
 }
 
