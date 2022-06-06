@@ -56,8 +56,9 @@ cnv_labels = names(cnv_colors) %>%
 #' @return ggplot Plot of pseudobulk HMM profile
 #' @export
 plot_psbulk = function(
-    bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2, 
-    phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = FALSE
+        bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2, 
+        phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = FALSE, 
+        exclude_gap = TRUE
     ) {
 
     if (!all(c('state_post', 'cnv_state_post') %in% colnames(bulk))) {
@@ -164,6 +165,14 @@ plot_psbulk = function(
         p = p + guides(color = 'none', fill = 'none', alpha = 'none', shape = 'none')
     }
 
+    if (use_pos & exclude_gap) {
+        segs_exclude = gaps_hg38 %>% filter(end - start > 1e+06) %>% 
+            rename(seg_start = start, seg_end = end)
+        p = p + geom_rect(inherit.aes = F, data = segs_exclude, 
+            aes(xmin = seg_start, xmax = seg_end, ymin = -Inf, 
+                ymax = Inf), fill = "gray95")
+    }
+
     if (phi_mle) {
         segs = bulk %>% 
             distinct(CHROM, seg, seg_start, seg_start_index, seg_end, seg_end_index, phi_mle) %>%
@@ -195,24 +204,6 @@ plot_psbulk = function(
             size = 0.35
         ) +
         geom_hline(data = data.frame(variable = 'logFC'), aes(yintercept = 0), color = 'gray30', linetype = 'dashed')
-    }
-
-    if (use_pos) {
-
-        segs_exclude = gaps_hg38 %>% filter(end - start > 1e6) %>%
-            rename(seg_start = start, seg_end = end)
-
-        p = p + 
-            geom_rect(
-                inherit.aes = F,
-                data = segs_exclude, 
-                aes(xmin = seg_start,
-                    xmax = seg_end,
-                    ymin = -Inf,
-                    ymax = Inf
-                ),
-                fill = 'gray95'
-            )
     }
 
     if (theta_roll) {
@@ -394,7 +385,11 @@ plot_mut_history = function(
     }
 
     if (node_label) {
-        p = p + geom_node_text(aes(label = clone), size = node_label_size)
+        if (show_clone_size) {
+            p = p + geom_node_text(aes(label = clone, size = size/2))
+        } else {
+            p = p + geom_node_text(aes(label = clone), size = node_label_size)
+        }        
     }
 
     if (horizontal) {
@@ -432,7 +427,7 @@ plot_phylo_heatmap = function(
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = FALSE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE, 
         p_min = 0.9, line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2, 
-        clone_line = FALSE, superclone = FALSE, segs_exclude = NULL
+        clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE
     ) {
     
     # make sure chromosomes are in order
@@ -515,7 +510,28 @@ plot_phylo_heatmap = function(
                 cnv_state = ifelse(cnv_state == 'neu', NA, cnv_state)
             )
         ) +
-        theme_classic() +
+        theme_classic()
+
+    if (exclude_gap) {
+
+        segs_exclude = gaps_hg38 %>% filter(end - start > 1e6) %>%
+            mutate(CHROM = as.integer(as.character(CHROM))) %>%
+            rename(seg_start = start, seg_end = end)
+
+        p_segs = p_segs + 
+            geom_rect(
+                inherit.aes = F,
+                data = segs_exclude, 
+                aes(xmin = seg_start,
+                    xmax = seg_end,
+                    ymin = -Inf,
+                    ymax = Inf
+                ),
+                fill = 'gray95'
+            )
+    }
+        
+    p_segs = p_segs +
         geom_segment(
             aes(x = seg_start, xend = seg_end, y = cell_index, yend = cell_index, color = cnv_state, alpha = p_cnv),
             size = line_width
@@ -558,25 +574,6 @@ plot_phylo_heatmap = function(
             na.translate = F
         ) +
         xlab('Genomic position')
-
-    # excluded regions
-    if (is.null(segs_exclude)) {
-        segs_exclude = gaps_hg38 %>% filter(end - start > 1e6) %>%
-            mutate(CHROM = as.integer(as.character(CHROM))) %>%
-            rename(seg_start = start, seg_end = end)
-    }
-
-    p_segs = p_segs + 
-        geom_rect(
-            inherit.aes = F,
-            data = segs_exclude %>% mutate(CHROM = as.integer(as.character(CHROM))), 
-            aes(xmin = seg_start,
-                xmax = seg_end,
-                ymin = -Inf,
-                ymax = Inf
-            ),
-            fill = 'gray95'
-        )
 
     # clone annotation
     if (is.null(clone_dict)) {

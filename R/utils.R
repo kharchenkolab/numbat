@@ -1422,6 +1422,20 @@ approx_theta_post = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start =
     return(tibble('theta_mle' = mu, 'theta_sigma' = sigma))
 }
 
+# naive HMM allelic imbalance MLE
+theta_mle_naive = function(MAD, DP, lower = 0.0001, upper = 0.4999, start = 0.25, gamma = 20) {
+
+    fit = optim(
+        start, 
+        function(theta) {-l_bbinom(MAD, DP, gamma*(0.5+theta), gamma*(0.5-theta))},
+        method = 'L-BFGS-B',
+        lower = lower,
+        upper = upper
+    )
+    
+    return(tibble('theta_mle' = fit$par))
+}
+
 #' Laplace approximation of the posterior of expression fold change phi
 #' @keywords internal
 approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, lower = 0.2, upper = 10, start = 1) {
@@ -1885,14 +1899,6 @@ fit_snp_rate = function(gene_snps, gene_length) {
 # detect clonal LOH
 detect_loh = function(bulk, min_depth = 0, t = 1e-5, mu = NULL, sig = NULL) {
 
-    # bulk = find_common_diploid(bulk)
-
-    # fit = bulk %>%
-    #     filter(!is.na(Y_obs)) %>%
-    #     filter(logFC < 8 & logFC > -8) %>%
-    #     filter(diploid) %>%
-    #     {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
-
     bulk_snps = bulk %>% 
         filter(!is.na(gene)) %>%
         group_by(CHROM, gene, gene_start, gene_end) %>%
@@ -1957,10 +1963,85 @@ detect_loh = function(bulk, min_depth = 0, t = 1e-5, mu = NULL, sig = NULL) {
         select(CHROM, seg, seg_start, seg_end, snp_rate, loh)
 
     if (nrow(segs_loh) == 0) {
-        segs_loh = NULL
+        segs_loh = data.frame()
     }
     
     return(segs_loh)
+}
+
+
+########################### Benchmarking ############################
+
+subtract_ranges = function(gr1, gr2) {
+    overlap = GenomicRanges::intersect(gr1, gr2)
+    GenomicRanges::setdiff(gr1, overlap)
+}
+
+compare_segs = function(segs_x, segs_y, gaps = gaps_hg38) {
+    
+    ranges_x = segs_x %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )}
+    
+    ranges_y = segs_y %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )}
+    
+    ranges_gap = gaps %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$start,
+                end = .$end)
+        )}
+    
+    ranges_x = subtract_ranges(ranges_x, ranges_gap)
+    ranges_y = subtract_ranges(ranges_y, ranges_gap)
+    
+    overlap_total = GenomicRanges::intersect(ranges_x, ranges_y) %>%
+        as.data.frame() %>% pull(width) %>% sum
+    
+    union_total = GenomicRanges::reduce(c(ranges_x, ranges_y)) %>%
+        as.data.frame() %>% pull(width) %>% sum
+    
+    return(overlap_total/union_total)
+}
+
+evaluate_calls = function(cnvs_dna, cnvs_call, gaps = gaps_hg38) {
+    
+    ranges_dna = cnvs_dna %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )}
+    
+    ranges_call = cnvs_call %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$seg_start,
+                end = .$seg_end)
+        )}
+    
+    ranges_gap = gaps %>% {GenomicRanges::GRanges(
+            seqnames = .$CHROM,
+            IRanges::IRanges(start = .$start,
+                end = .$end)
+        )}
+    
+    ranges_dna = subtract_ranges(ranges_dna, ranges_gap)
+    ranges_call = subtract_ranges(ranges_call, ranges_gap)
+    
+    overlap_total = GenomicRanges::intersect(ranges_dna, ranges_call) %>%
+        as.data.frame() %>% pull(width) %>% sum
+    
+    dna_total = ranges_dna %>% as.data.frame() %>% pull(width) %>% sum
+    call_total = ranges_call %>% as.data.frame() %>% pull(width) %>% sum
+    
+    pre = overlap_total/call_total
+    rec = overlap_total/dna_total
+    
+    return(c('precision' = pre, 'recall' = rec))
 }
 
 ########################### Experimental ############################
