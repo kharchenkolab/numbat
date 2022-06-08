@@ -89,7 +89,7 @@
 <p>In this tutorial, we will illustrate how to visualize and interpret Numbat output, using a triple-negative breast cancer dataset (TNBC1) from <a href="https://www.nature.com/articles/s41587-020-00795-2" class="external-link">Gao et al</a>. We will use <a href="https://github.com/kharchenkolab/pagoda2" class="external-link">pagoda2</a> for visualizing cells in low-dimensional expression space.</p>
 <div class="sourceCode"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span>
-<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/kharchenkolab/numbat" class="external-link">numbat</a></span><span class="op">)</span>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">numbat</span><span class="op">)</span>
 <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span>
 <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidyverse/glue" class="external-link">glue</a></span><span class="op">)</span>
 <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span>
@@ -133,7 +133,7 @@
 <div class="sourceCode"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">nb</span><span class="op">$</span><span class="va">bulk_clones</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> 
   <span class="fu"><a href="../reference/plot_bulks.html">plot_bulks</a></span><span class="op">(</span>
-    min_LLR <span class="op">=</span> <span class="fl">50</span>, <span class="co"># filtering CNVs by evidence</span>
+    min_LLR <span class="op">=</span> <span class="fl">5</span>, <span class="co"># filtering CNVs by evidence</span>
     legend <span class="op">=</span> <span class="cn">FALSE</span>
   <span class="op">)</span></code></pre></div>
 <p><img src="results_files/figure-html/unnamed-chunk-7-1.png" width="3600"></p>
@@ -144,20 +144,20 @@
 <p>Numbat probabilistically evaluates the presence/absence of CNVs in single cells. The cell-level CNV posteriors are stored in the <code>nb$joint_post</code> dataframe:</p>
 <div class="sourceCode"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">nb</span><span class="op">$</span><span class="va">joint_post</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">cell</span>, <span class="va">CHROM</span>, <span class="va">seg</span>, <span class="va">cnv_state</span>, <span class="va">p_cnv</span>, <span class="va">p_cnv_x</span>, <span class="va">p_cnv_y</span><span class="op">)</span></code></pre></div>
-<pre><code><span class="co">##                        cell CHROM     seg cnv_state     p_cnv   p_cnv_x</span>
-<span class="co">## 1: TNBC1_AAACCTGCACCTTGTC-1    10     10a       amp 0.4316952 0.8213868</span>
-<span class="co">## 2: TNBC1_AAACCTGCACCTTGTC-1    11     11c       amp 0.8805083 0.8409645</span>
-<span class="co">## 3: TNBC1_AAACCTGCACCTTGTC-1    15     15b       amp 0.6784848 0.6735659</span>
-<span class="co">## 4: TNBC1_AAACCTGCACCTTGTC-1    16 16a_amp       amp 0.3294931 0.9999968</span>
-<span class="co">## 5: TNBC1_AAACCTGCACCTTGTC-1    18     18b       amp 0.9111163 0.4631554</span>
-<span class="co">## 6: TNBC1_AAACCTGCACCTTGTC-1     1      1a       amp 0.3727175 0.3722562</span>
-<span class="co">##      p_cnv_y</span>
-<span class="co">## 1: 0.1392836</span>
-<span class="co">## 2: 0.5810528</span>
-<span class="co">## 3: 0.4253511</span>
-<span class="co">## 4: 0.4226886</span>
-<span class="co">## 5: 0.9346981</span>
-<span class="co">## 6: 0.5000000</span></code></pre>
+<pre><code><span class="co">##                        cell CHROM seg cnv_state        p_cnv     p_cnv_x</span>
+<span class="co">## 1: TNBC1_AAACCTGCACCTTGTC-1     1  1b       amp 0.9999999997 1.000000000</span>
+<span class="co">## 2: TNBC1_AAACCTGCACCTTGTC-1     2  2a       amp 0.0002288397 0.001172894</span>
+<span class="co">## 3: TNBC1_AAACCTGCACCTTGTC-1     3  3a       amp 0.0522751360 0.052273344</span>
+<span class="co">## 4: TNBC1_AAACCTGCACCTTGTC-1     3  3c       amp 0.9147696619 0.982278728</span>
+<span class="co">## 5: TNBC1_AAACCTGCACCTTGTC-1     4  4b       amp 0.8999658266 0.845619643</span>
+<span class="co">## 6: TNBC1_AAACCTGCACCTTGTC-1     5  5a       amp 0.8070027728 0.778074329</span>
+<span class="co">##       p_cnv_y</span>
+<span class="co">## 1: 0.03844235</span>
+<span class="co">## 2: 0.09821435</span>
+<span class="co">## 3: 0.50000000</span>
+<span class="co">## 4: 0.10246769</span>
+<span class="co">## 5: 0.61862288</span>
+<span class="co">## 6: 0.53344303</span></code></pre>
 <p>which contains cell-level information on specific CNV segments (<code>seg</code>), their alteration type (<code>cnv_state</code>), the joint posterior probability of the CNV (<code>p_cnv</code>), the expression-based posterior (<code>p_cnv_x</code>), and the allele-based posterior (<code>p_cnv_y</code>). We can visualize the event-specific posteriors in a expression-based tSNE embedding:</p>
 <div class="sourceCode"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">plist</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>
@@ -188,20 +188,20 @@
 <p>Numbat aggregates signals across subclone-specific CNVs to probabilistically assign cells to subclones. The information regarding clonal assignments are contained in the <code>nb$clone_post</code> dataframe.</p>
 <div class="sourceCode"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">nb</span><span class="op">$</span><span class="va">clone_post</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">cell</span>, <span class="va">clone_opt</span>, <span class="va">p_1</span>, <span class="va">p_2</span>, <span class="va">p_3</span>, <span class="va">p_4</span><span class="op">)</span></code></pre></div>
-<pre><code><span class="co">##                        cell clone_opt          p_1          p_2          p_3</span>
-<span class="co">## 1: TNBC1_AAACCTGCACCTTGTC-1         4 5.081008e-57 2.300414e-16 7.396132e-27</span>
-<span class="co">## 2: TNBC1_AAACGGGAGTCCTCCT-1         1 1.000000e+00 2.232812e-51 1.591547e-84</span>
-<span class="co">## 3: TNBC1_AAACGGGTCCAGAGGA-1         4 1.427456e-81 5.475283e-09 3.109571e-26</span>
-<span class="co">## 4: TNBC1_AAAGATGCAGTTTACG-1         3 2.141061e-18 2.950639e-04 6.176669e-01</span>
-<span class="co">## 5: TNBC1_AAAGCAACAGGAATGC-1         4 1.704233e-51 8.305804e-09 3.074182e-30</span>
-<span class="co">## 6: TNBC1_AAAGCAATCGGAATCT-1         3 3.121428e-84 1.001983e-25 1.000000e+00</span>
+<pre><code><span class="co">##                        cell clone_opt           p_1          p_2          p_3</span>
+<span class="co">## 1: TNBC1_AAACCTGCACCTTGTC-1         4  1.162495e-72 2.105425e-20 3.478936e-29</span>
+<span class="co">## 2: TNBC1_AAACGGGAGTCCTCCT-1         1  1.000000e+00 5.814741e-51 5.920463e-95</span>
+<span class="co">## 3: TNBC1_AAACGGGTCCAGAGGA-1         4 2.434561e-100 2.175022e-14 2.085718e-30</span>
+<span class="co">## 4: TNBC1_AAAGATGCAGTTTACG-1         3  2.020088e-23 8.164920e-04 9.913458e-01</span>
+<span class="co">## 5: TNBC1_AAAGCAACAGGAATGC-1         4  9.546322e-64 4.989037e-11 1.657378e-31</span>
+<span class="co">## 6: TNBC1_AAAGCAATCGGAATCT-1         3  1.516589e-99 8.466806e-33 1.000000e+00</span>
 <span class="co">##             p_4</span>
 <span class="co">## 1: 1.000000e+00</span>
-<span class="co">## 2: 1.744050e-65</span>
+<span class="co">## 2: 8.821035e-66</span>
 <span class="co">## 3: 1.000000e+00</span>
-<span class="co">## 4: 3.820380e-01</span>
+<span class="co">## 4: 7.837745e-03</span>
 <span class="co">## 5: 1.000000e+00</span>
-<span class="co">## 6: 9.979171e-24</span></code></pre>
+<span class="co">## 6: 2.457592e-29</span></code></pre>
 <p>Here <code>clone_opt</code> denotes the maximum likelihood assignment of a cell to a specific clone. <code>p_{1..4}</code> are the detailed breakdown of the posterior probability that the cell belongs to each clone, respectively. Let's visualize the clonal decomposition in a tSNE embedding. Note that clone 1 is always the normal cells.</p>
 <div class="sourceCode"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">pagoda</span><span class="op">$</span><span class="fu">plotEmbedding</span><span class="op">(</span>
