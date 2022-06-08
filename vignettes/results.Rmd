@@ -59,7 +59,7 @@ We can also visualize these CNV events in pseudobulks where the data is more ric
 ```{r, fig.width = 12, fig.height=6, dpi=300}
 nb$bulk_clones %>% 
   plot_bulks(
-    min_LLR = 5, # filtering CNVs by evidence
+    min_LLR = 10, # filtering CNVs by evidence
     legend = FALSE
   )
 ```

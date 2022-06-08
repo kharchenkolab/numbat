@@ -88,7 +88,7 @@
     
 <p>The Numbat haplotype-aware HMM leverages <a href="https://en.wikipedia.org/wiki/Haplotype_estimation" class="external-link">population-based phasing</a> to sensitively detect CNVs from gene expression data. It can be used to analyze scRNA-seq (after aggregating cells into "pseudobulks") as well as bulk RNA-seq data. In this tutorial, we will walk through some examples of both use cases.</p>
 <div class="sourceCode"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/kharchenkolab/numbat" class="external-link">numbat</a></span><span class="op">)</span>
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">numbat</span><span class="op">)</span>
 <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span>
 <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/tidyverse/glue" class="external-link">glue</a></span><span class="op">)</span>
 <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://stringr.tidyverse.org" class="external-link">stringr</a></span><span class="op">)</span>
@@ -96,14 +96,46 @@
 <div class="section level2">
 <h2 id="analyzing-scrna-seq-data">Analyzing scRNA-seq data<a class="anchor" aria-label="anchor" href="#analyzing-scrna-seq-data"></a>
 </h2>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">allele_counts</span> <span class="op">=</span> <span class="fu"><a href="https://Rdatatable.gitlab.io/data.table/reference/fread.html" class="external-link">fread</a></span><span class="op">(</span><span class="st">'http://pklab.med.harvard.edu/teng/data/hmm_example/TNBC1_allele_counts.tsv.gz'</span><span class="op">)</span>
+<span class="va">gene_counts</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/connections.html" class="external-link">url</a></span><span class="op">(</span><span class="st">'http://pklab.med.harvard.edu/teng/data/hmm_example/TNBC1_gene_counts.rds'</span><span class="op">)</span><span class="op">)</span>
+<span class="va">pagoda</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/connections.html" class="external-link">url</a></span><span class="op">(</span><span class="st">'http://pklab.med.harvard.edu/teng/data/con_TNBC1.rds'</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+<p>In scRNA-seq data, say we have some a priori knowledge of cell groupings.</p>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">pagoda</span><span class="op">$</span><span class="fu">plotEmbedding</span><span class="op">(</span><span class="op">)</span></code></pre></div>
+<p><img src="hmm_files/figure-html/unnamed-chunk-4-1.png" width="900"> We can then aggregate cells by cluster and run HMM on each cell population to discover CNVs.</p>
+<div class="sourceCode"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">clusters</span> <span class="op">=</span> <span class="va">pagoda</span><span class="op">$</span><span class="va">clusters</span><span class="op">$</span><span class="va">PCA</span><span class="op">$</span><span class="va">multilevel</span>
+
+<span class="va">bulks</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>
+
+<span class="kw">for</span> <span class="op">(</span><span class="va">cluster</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'1'</span>,<span class="st">'3'</span>,<span class="st">'5'</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span>
+  
+    <span class="va">cells</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">clusters</span><span class="op">[</span><span class="va">clusters</span> <span class="op">==</span> <span class="va">cluster</span><span class="op">]</span><span class="op">)</span>
+   
+    <span class="va">bulks</span><span class="op">[[</span><span class="va">cluster</span><span class="op">]</span><span class="op">]</span> <span class="op">=</span> <span class="fu"><a href="../reference/get_bulk.html">get_bulk</a></span><span class="op">(</span>
+        <span class="va">gene_counts</span><span class="op">[</span>,<span class="va">cells</span><span class="op">]</span>,
+        <span class="va">ref_hca</span>,
+        <span class="va">allele_counts</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">cell</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="va">cells</span><span class="op">)</span>,
+        <span class="va">gtf_hg38</span>,
+        <span class="va">genetic_map_hg38</span>
+    <span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span>
+    <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>sample <span class="op">=</span> <span class="va">cluster</span><span class="op">)</span>
+  
+    <span class="va">bulks</span><span class="op">[[</span><span class="va">cluster</span><span class="op">]</span><span class="op">]</span> <span class="op">=</span> <span class="va">bulks</span><span class="op">[[</span><span class="va">cluster</span><span class="op">]</span><span class="op">]</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="../reference/analyze_bulk.html">analyze_bulk</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-5</span><span class="op">)</span>
+  
+<span class="op">}</span>
+
+<span class="fu"><a href="https://dplyr.tidyverse.org/reference/bind.html" class="external-link">bind_rows</a></span><span class="op">(</span><span class="va">bulks</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="../reference/plot_bulks.html">plot_bulks</a></span><span class="op">(</span><span class="op">)</span></code></pre></div>
+<p><img src="hmm_files/figure-html/unnamed-chunk-5-1.png" width="3600"></p>
 </div>
 <div class="section level2">
 <h2 id="analyzing-bulk-rna-seq-data">Analyzing bulk RNA-seq data<a class="anchor" aria-label="anchor" href="#analyzing-bulk-rna-seq-data"></a>
 </h2>
 <p>The Numbat HMM can also be used to detect CNVs from bulk RNA-seq data.</p>
 <div class="sourceCode"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">allele_counts</span> <span class="op">=</span> <span class="fu"><a href="https://Rdatatable.gitlab.io/data.table/reference/fread.html" class="external-link">fread</a></span><span class="op">(</span><span class="st">'http://pklab.med.harvard.edu/teng/data/bulk_example/MN-5_TUMOR_allele_counts.tsv.gz'</span><span class="op">)</span>
-<span class="va">gene_counts</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/connections.html" class="external-link">url</a></span><span class="op">(</span><span class="st">'http://pklab.med.harvard.edu/teng/data/bulk_example/gene_counts.rds'</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span class="va">allele_counts</span> <span class="op">=</span> <span class="fu"><a href="https://Rdatatable.gitlab.io/data.table/reference/fread.html" class="external-link">fread</a></span><span class="op">(</span><span class="st">'http://pklab.med.harvard.edu/teng/data/hmm_example/MN-5_TUMOR_allele_counts.tsv.gz'</span><span class="op">)</span>
+<span class="va">gene_counts</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/connections.html" class="external-link">url</a></span><span class="op">(</span><span class="st">'http://pklab.med.harvard.edu/teng/data/hmm_example/MN_gene_counts.rds'</span><span class="op">)</span><span class="op">)</span></code></pre></div>
 <p>Sample MN-1037 has a diploid genome so we can use it to create a reference expression profile.</p>
 <div class="sourceCode"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="va">ref_internal</span> <span class="op">=</span> <span class="va">gene_counts</span><span class="op">[</span>,<span class="st">'MN-1037_TUMOR'</span>,drop<span class="op">=</span><span class="cn">F</span><span class="op">]</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="op">{</span><span class="va">.</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">.</span><span class="op">)</span><span class="op">}</span>
@@ -129,7 +161,7 @@
     <span class="fu"><a href="../reference/analyze_bulk.html">analyze_bulk</a></span><span class="op">(</span><span class="op">)</span>
 
 <span class="va">bulk</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="../reference/plot_psbulk.html">plot_psbulk</a></span><span class="op">(</span>min_depth <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></code></pre></div>
-<p><img src="hmm_files/figure-html/unnamed-chunk-6-1.png" width="3600"></p>
+<p><img src="hmm_files/figure-html/unnamed-chunk-8-1.png" width="3600"></p>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>
