@@ -1634,13 +1634,13 @@ log_err = function(msg) {
 #' @keywords internal
 check_matrix = function(count_mat) {
     if ('matrix' %in% class(count_mat)) {
-        if (!is.integer(count_mat)) {
-            log_err("count_mat is not of integer type")
-        }
         count_mat <- as(Matrix(count_mat, sparse = TRUE), "dgCMatrix")
     }
     if (!('dgCMatrix' %in% class(count_mat))) {
         log_err("count_mat is not of class dgCMatrix or matrix")
+    }
+    if (all(count_mat == round(count_mat, 0))) {
+        log_err("count_mat is not integers")
     }
     if (any(duplicated(rownames(count_mat)))) {
         log_err("Please remove duplicated genes in count matrix")
