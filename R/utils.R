@@ -1634,7 +1634,7 @@ log_err = function(msg) {
 #' @keywords internal
 check_matrix = function(count_mat) {
     if ('matrix' %in% class(count_mat)) {
-        if (typeof(count_mat) != 'integer') {
+        if (!is.integer(count_mat)) {
             log_err("count_mat is not of integer type")
         }
         count_mat <- as(Matrix(count_mat, sparse = TRUE), "dgCMatrix")
