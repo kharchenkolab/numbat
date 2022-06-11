@@ -230,7 +230,8 @@ get_allele_bulk = function(df_allele, genetic_map, lambda = 1, min_depth = 0) {
             inter_snp_cm = c(NA, cM[2:length(cM)] - cM[1:(length(cM)-1)]),
             p_s = switch_prob_cm(inter_snp_cm, lambda = lambda)
         ) %>%
-        ungroup()
+        ungroup() %>%
+        mutate(gene = ifelse(gene == '', NA, gene))
 }
 
 
@@ -339,6 +340,7 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_dep
     }
 
     # doesn't work with 0s in the ref
+    # TODO: should just make gene NA so we don't miss SNPs in that gene
     bulk = bulk %>% filter(lambda_ref != 0 | is.na(gene))
 
     bulk = bulk %>%

@@ -511,25 +511,6 @@ plot_phylo_heatmap = function(
             )
         ) +
         theme_classic()
-
-    if (exclude_gap) {
-
-        segs_exclude = gaps_hg38 %>% filter(end - start > 1e6) %>%
-            mutate(CHROM = as.integer(as.character(CHROM))) %>%
-            rename(seg_start = start, seg_end = end)
-
-        p_segs = p_segs + 
-            geom_rect(
-                inherit.aes = F,
-                data = segs_exclude, 
-                aes(xmin = seg_start,
-                    xmax = seg_end,
-                    ymin = -Inf,
-                    ymax = Inf
-                ),
-                fill = 'gray95'
-            )
-    }
         
     p_segs = p_segs +
         geom_segment(
@@ -555,8 +536,7 @@ plot_phylo_heatmap = function(
             axis.line = element_blank(),
             legend.box.background = element_blank(),
             legend.background = element_blank(),
-            # panel.background = element_rect(fill = "transparent",colour = NA),
-            # plot.background = element_rect(fill = "transparent", color = NA)
+            legend.margin = margin(0,0,0,0)
         ) +
         scale_x_continuous(expand = expansion(0)) +
         scale_y_continuous(expand = expansion(0)) +
@@ -574,6 +554,26 @@ plot_phylo_heatmap = function(
             na.translate = F
         ) +
         xlab('Genomic position')
+
+
+    if (exclude_gap) {
+
+        segs_exclude = gaps_hg38 %>% filter(end - start > 1e6) %>%
+            mutate(CHROM = as.integer(as.character(CHROM))) %>%
+            rename(seg_start = start, seg_end = end)
+
+        p_segs = p_segs + 
+            geom_rect(
+                inherit.aes = F,
+                data = segs_exclude, 
+                aes(xmin = seg_start,
+                    xmax = seg_end,
+                    ymin = -Inf,
+                    ymax = Inf
+                ),
+                fill = 'gray95'
+            )
+    }
 
     # clone annotation
     if (is.null(clone_dict)) {
