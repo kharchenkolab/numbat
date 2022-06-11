@@ -800,7 +800,7 @@ likelihood_joint = function(hmm) {
         
     logphi <- rowSums(log(hmm$delta))
             
-    LL = likelihood_compute(hmm, logphi, logprob, logPi, N, M)
+    LL = likelihood_compute(logphi, logprob, logPi, N, M)
 
     return(LL)
 }

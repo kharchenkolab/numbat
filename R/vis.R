@@ -536,8 +536,7 @@ plot_phylo_heatmap = function(
             axis.line = element_blank(),
             legend.box.background = element_blank(),
             legend.background = element_blank(),
-            # panel.background = element_rect(fill = "transparent",colour = NA),
-            # plot.background = element_rect(fill = "transparent", color = NA)
+            legend.margin = margin(0,0,0,0)
         ) +
         scale_x_continuous(expand = expansion(0)) +
         scale_y_continuous(expand = expansion(0)) +
@@ -555,6 +554,7 @@ plot_phylo_heatmap = function(
             na.translate = F
         ) +
         xlab('Genomic position')
+
 
     if (exclude_gap) {
 
