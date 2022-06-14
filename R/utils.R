@@ -1641,6 +1641,12 @@ check_matrix = function(count_mat) {
     if (!('dgCMatrix' %in% class(count_mat))) {
         log_err("count_mat is not of class dgCMatrix or matrix")
     }
+    if (!is.numeric(count_mat@x)) {
+        log_err("The parameter 'count_mat' in the function check_matrix() must be of type 'integer'. Please fix.")
+    }
+    if (all(count_mat@x != as.integer(count_mat@x))) {
+        log_err("The parameter 'count_mat' in the function check_matrix() must be of type 'integer'. Please fix.")
+    }
     if (any(duplicated(rownames(count_mat)))) {
         log_err("Please remove duplicated genes in count matrix")
     }
