@@ -1620,15 +1620,6 @@ calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, al
 #' @param min_depth integer Minimum coverage to filter SNPs
 #' @return dataframe LOH segments
 #' @export
-#' @examples
-#' bulk = get_bulk(
-#'    count_mat,
-#'    ref_hca,
-#'    df_allele,
-#'    gtf_hg38,
-#'    genetic_map_hg38
-#' )
-#' segs_loh = bulk %>% detect_loh(t = 1e-5)
 detect_clonal_loh = function(bulk, t = 1e-5, min_depth = 0) {
 
     bulk_snps = bulk %>% 

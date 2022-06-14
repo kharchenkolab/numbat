@@ -81,20 +81,6 @@ Rcommended for cell lines or tumor samples with no normal cells.</p>
     <p>dataframe LOH segments</p>
     </div>
 
-    <div class="section level2">
-    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="va">bulk</span> <span class="op">=</span> <span class="fu"><a href="get_bulk.html">get_bulk</a></span><span class="op">(</span></span>
-<span class="r-in">   <span class="va">count_mat</span>,</span>
-<span class="r-in">   <span class="va">ref_hca</span>,</span>
-<span class="r-in">   <span class="va">df_allele</span>,</span>
-<span class="r-in">   <span class="va">gtf_hg38</span>,</span>
-<span class="r-in">   <span class="va">genetic_map_hg38</span></span>
-<span class="r-in"><span class="op">)</span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in "matrix" %in% class(count_mat):</span> object 'count_mat' not found</span>
-<span class="r-in"><span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op">%&gt;%</span> <span class="fu">detect_loh</span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-5</span><span class="op">)</span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in detect_loh(., t = 1e-05):</span> could not find function "detect_loh"</span>
-</code></pre></div>
-    </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside></div>
 

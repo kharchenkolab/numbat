@@ -21,13 +21,3 @@ dataframe LOH segments
 Call clonal LOH using SNP density. 
 Rcommended for cell lines or tumor samples with no normal cells.
 }
-\examples{
-bulk = get_bulk(
-   count_mat,
-   ref_hca,
-   df_allele,
-   gtf_hg38,
-   genetic_map_hg38
-)
-segs_loh = bulk \%>\% detect_loh(t = 1e-5)
-}
