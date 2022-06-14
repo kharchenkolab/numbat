@@ -514,6 +514,48 @@ run_numbat = function(
         }
     }
 
+    # Output final subclone bulk profiles
+    bulk_clones = make_group_bulks(
+        groups = clones,
+        count_mat = count_mat,
+        df_allele = df_allele, 
+        lambdas_ref = lambdas_ref,
+        gtf = gtf,
+        genetic_map = genetic_map,
+        min_depth = min_depth,
+        ncores = ncores)
+
+    bulk_clones = bulk_clones %>% 
+        run_group_hmms(
+            t = t,
+            gamma = gamma,
+            alpha = alpha,
+            min_genes = min_genes,
+            common_diploid = common_diploid,
+            diploid_chroms = diploid_chroms,
+            segs_loh = segs_loh,
+            ncores = ncores,
+            verbose = verbose,
+            retest = FALSE)
+
+    bulk_clones = retest_bulks(
+        bulk_clones,
+        segs_consensus,
+        use_loh = use_loh,
+        min_LLR = min_LLR,
+        diploid_chroms = diploid_chroms,
+        ncores = ncores)
+    
+    fwrite(bulk_clones, glue('{out_dir}/bulk_clones_final.tsv.gz'), sep = '\t')
+
+    if (plot) {
+        p = plot_bulks(bulk_clones, min_LLR = min_LLR)
+        ggsave(
+            glue('{out_dir}/bulk_clones_final.png'), p, 
+            width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 200
+        )
+    }
+    
     log_message('All done!')
 
     return('Success')
