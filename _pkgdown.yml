@@ -11,11 +11,12 @@ reference:
 - title: "Preparing data"
   contents: 
   - aggregate_counts
-- title: "Bulk analysis"
+- title: "CNV detection"
   contents:
   - get_bulk
   - analyze_bulk
-- title: "Single-cell analysis"
+  - detect_clonal_loh
+- title: "Single-cell clonal decomposition"
   contents:
   - run_numbat
 - title: "Visualizing results"
