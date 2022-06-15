@@ -228,7 +228,7 @@ run_numbat = function(
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
         
         if (plot) {
-            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR)
+            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR, use_pos = TRUE)
             ggsave(
                 glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
                 width = 12, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200
@@ -295,7 +295,7 @@ run_numbat = function(
         fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
         if (plot) {
-            p = plot_bulks(bulk_clones, min_LLR = min_LLR)
+            p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE)
             ggsave(
                 glue('{out_dir}/bulk_clones_{i}.png'), p, 
                 width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 200
@@ -549,7 +549,7 @@ run_numbat = function(
     fwrite(bulk_clones, glue('{out_dir}/bulk_clones_final.tsv.gz'), sep = '\t')
 
     if (plot) {
-        p = plot_bulks(bulk_clones, min_LLR = min_LLR)
+        p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE)
         ggsave(
             glue('{out_dir}/bulk_clones_final.png'), p, 
             width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 200

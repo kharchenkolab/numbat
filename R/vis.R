@@ -56,7 +56,7 @@ cnv_labels = names(cnv_colors) %>%
 #' @return ggplot Plot of pseudobulk HMM profile
 #' @export
 plot_psbulk = function(
-        bulk, use_pos = FALSE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2, 
+        bulk, use_pos = TRUE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2, 
         phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = FALSE, 
         exclude_gap = TRUE
     ) {
@@ -427,7 +427,7 @@ plot_phylo_heatmap = function(
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = FALSE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE, 
         p_min = 0.9, line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2, 
-        clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE
+        clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE
     ) {
     
     # make sure chromosomes are in order
@@ -466,22 +466,25 @@ plot_phylo_heatmap = function(
 
     # plot phylogeny 
     p_tree = gtree %>% 
-            to_phylo() %>%
-            ggtree(ladderize = TRUE, size = branch_width) +
-            # geom_rootedge(size = branch_width) +
-            theme(
-                plot.margin = margin(0,1,0,0, unit = 'mm'),
-                axis.title.x = element_blank(),
-                axis.ticks.x = element_blank(),
-                axis.text.x = element_blank(),
-                axis.line.y = element_blank(),
-                axis.ticks.y = element_blank(),
-                # axis.text.y = element_text(size = 5)
-                axis.text.y = element_blank(),
-                panel.background = element_rect(fill = "transparent",colour = NA),
-                plot.background = element_rect(fill = "transparent", color = NA)
-            ) +
-            guides(color = 'none')
+        to_phylo() %>%
+        ggtree(ladderize = TRUE, size = branch_width) +
+        theme(
+            plot.margin = margin(0,1,0,0, unit = 'mm'),
+            axis.title.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.text.x = element_blank(),
+            axis.line.y = element_blank(),
+            axis.ticks.y = element_blank(),
+            # axis.text.y = element_text(size = 5)
+            axis.text.y = element_blank(),
+            panel.background = element_rect(fill = "transparent",colour = NA),
+            plot.background = element_rect(fill = "transparent", color = NA)
+        ) +
+        guides(color = 'none')
+
+    if (root_edge) {
+        p_tree = p_tree + geom_rootedge(size = branch_width)
+    }
 
     # order the cells
     cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
@@ -584,7 +587,7 @@ plot_phylo_heatmap = function(
                 GT = ifelse(compartment == 'normal', '', GT),
                 GT = factor(GT),
                 clone = ifelse(compartment == 'normal', 1, clone),
-                clone = as.factor(clone)
+                clone = factor(clone)
             ) %>%
             {setNames(.$clone, .$name)}
     }
