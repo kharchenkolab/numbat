@@ -42,6 +42,7 @@ NULL
 #' @param use_loh logical Whether to include LOH regions in the expression baseline
 #' @param skip_nj logical Whether to skip NJ tree construction and only use UPGMA
 #' @param diploid_chroms vector Known diploid chromosomes
+#' @param segs_loh dataframe Segments of clonal LOH to be excluded
 #' @return a status code
 #' @export
 run_numbat = function(
