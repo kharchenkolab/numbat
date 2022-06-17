@@ -241,7 +241,7 @@ optional arguments:
 <div class="section level3">
 <h3 id="detecting-clonal-loh">Detecting clonal LOH<a class="anchor" aria-label="anchor" href="#detecting-clonal-loh"></a>
 </h3>
-<p>For cell line data and high-purity tumors, we recommend running the SNP-density HMM to identify and exclude regions of clonal deletions/LOH before running Numbat.</p>
+<p>For cell line data and high-purity tumors, we recommend running the below procedure to identify and exclude regions of clonal deletions/LOH before running Numbat. To do so, aggregate all cells into a pseudobulk, and run the SNP-density HMM:</p>
 <pre><code><span class="va">bulk</span> <span class="op">=</span> <span class="fu"><a href="../reference/get_bulk.html">get_bulk</a></span><span class="op">(</span>
     count_mat <span class="op">=</span> <span class="va">count_mat</span>,
     lambdas_ref <span class="op">=</span> <span class="va">ref_hca</span>,
@@ -251,7 +251,7 @@ optional arguments:
 <span class="op">)</span>
 
 <span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op">%&gt;%</span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></code></pre>
-<p>We can then pass <code>segs_loh</code> to Numbat for those regions to be excluded from baseline during analysis.</p>
+<p>Then pass <code>segs_loh</code> to the Numbat run for those regions to be excluded from baseline during analysis.</p>
 <pre><code><span class="va">out</span> <span class="op">=</span> <span class="fu"><a href="../reference/run_numbat.html">run_numbat</a></span><span class="op">(</span>
     <span class="va">....</span>,
     segs_loh <span class="op">=</span> <span class="va">segs_loh</span>

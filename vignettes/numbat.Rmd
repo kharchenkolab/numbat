@@ -137,8 +137,7 @@ There are a few parameters you can consider tuning to a specific dataset.
 - `ncores_nni`: number of cores to use for phylogeny inference
   
 ## Detecting clonal LOH
-For cell line data and high-purity tumors, we recommend running the SNP-density HMM to identify and exclude regions of clonal deletions/LOH before running Numbat.
-
+For cell line data and high-purity tumors, we recommend running the below procedure to identify and exclude regions of clonal deletions/LOH before running Numbat. To do so, aggregate all cells into a pseudobulk, and run the SNP-density HMM:
 ```
 bulk = get_bulk(
     count_mat = count_mat,
@@ -151,7 +150,7 @@ bulk = get_bulk(
 segs_loh = bulk %>% detect_clonal_loh(t = 1e-4)
 ```
 
-We can then pass `segs_loh` to Numbat for those regions to be excluded from baseline during analysis.
+Then pass `segs_loh` to the Numbat run for those regions to be excluded from baseline during analysis.
 
 ```
 out = run_numbat(
