@@ -138,14 +138,14 @@ run_numbat = function(
         saveRDS(hc, glue('{out_dir}/hc.rds'))
 
         # extract cell groupings
-        nodes = get_nodes_celltree(hc, cutree(hc, k = init_k))
+        subtrees = get_nodes_celltree(hc, cutree(hc, k = init_k))
 
     } else if (init_k == 1) {
 
         log_message('Initializing with all-cell pseudobulk ..', verbose = verbose)
         log_mem()
 
-        nodes = list(list('cells' = colnames(count_mat), 'size' = ncol(count_mat), 'sample' = 1))
+        subtrees = list(list('cells' = colnames(count_mat), 'size' = ncol(count_mat), 'sample' = 1))
 
     } else {
 
@@ -172,7 +172,7 @@ run_numbat = function(
         saveRDS(hc, glue('{out_dir}/hc.rds'))
 
         # extract cell groupings
-        nodes = get_nodes_celltree(hc, cutree(hc, k = init_k))
+        subtrees = get_nodes_celltree(hc, cutree(hc, k = init_k))
 
         if (plot) {
 
@@ -190,7 +190,6 @@ run_numbat = function(
 
     }
 
-    subtrees = purrr::keep(nodes, function(x) x$size > min_cells)
     clones = purrr::keep(subtrees, function(x) x$sample %in% 1:init_k)
 
     normal_cells = c()
@@ -203,6 +202,8 @@ run_numbat = function(
         log_mem()
 
         ######## Run HMMs ########
+
+        subtrees = purrr::keep(subtrees, function(x) x$size > min_cells)
 
         bulk_subtrees = make_group_bulks(
                 groups = subtrees,
@@ -229,7 +230,7 @@ run_numbat = function(
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
         
         if (plot) {
-            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR)
+            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR, use_pos = TRUE)
             ggsave(
                 glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
                 width = 12, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200
@@ -262,6 +263,8 @@ run_numbat = function(
             get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = FALSE)
 
         # retest on clones
+        clones = purrr::keep(clones, function(x) x$size > min_cells)
+        
         bulk_clones = make_group_bulks(
                 groups = clones,
                 count_mat = count_mat,
@@ -296,7 +299,7 @@ run_numbat = function(
         fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
         if (plot) {
-            p = plot_bulks(bulk_clones, min_LLR = min_LLR)
+            p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE)
             ggsave(
                 glue('{out_dir}/bulk_clones_{i}.png'), p, 
                 width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 200
@@ -492,13 +495,11 @@ run_numbat = function(
         })
 
         saveRDS(subtrees, glue('{out_dir}/subtrees_{i}.rds'))
-        subtrees = purrr::keep(subtrees, function(x) x$size > min_cells)
 
         clones = clone_post %>% split(.$clone_opt) %>%
             purrr::map(function(c){list(sample = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
 
         saveRDS(clones, glue('{out_dir}/clones_{i}.rds'))
-        clones = purrr::keep(clones, function(x) x$size > min_cells)
 
         #### check convergence ####
         if (check_convergence) {
@@ -515,6 +516,48 @@ run_numbat = function(
         }
     }
 
+    # Output final subclone bulk profiles
+    bulk_clones = make_group_bulks(
+        groups = clones,
+        count_mat = count_mat,
+        df_allele = df_allele, 
+        lambdas_ref = lambdas_ref,
+        gtf = gtf,
+        genetic_map = genetic_map,
+        min_depth = min_depth,
+        ncores = ncores)
+
+    bulk_clones = bulk_clones %>% 
+        run_group_hmms(
+            t = t,
+            gamma = gamma,
+            alpha = alpha,
+            min_genes = min_genes,
+            common_diploid = common_diploid,
+            diploid_chroms = diploid_chroms,
+            segs_loh = segs_loh,
+            ncores = ncores,
+            verbose = verbose,
+            retest = FALSE)
+
+    bulk_clones = retest_bulks(
+        bulk_clones,
+        segs_consensus,
+        use_loh = use_loh,
+        min_LLR = min_LLR,
+        diploid_chroms = diploid_chroms,
+        ncores = ncores)
+    
+    fwrite(bulk_clones, glue('{out_dir}/bulk_clones_final.tsv.gz'), sep = '\t')
+
+    if (plot) {
+        p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE)
+        ggsave(
+            glue('{out_dir}/bulk_clones_final.png'), p, 
+            width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 200
+        )
+    }
+    
     log_message('All done!')
 
     return('Success')

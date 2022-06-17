@@ -260,7 +260,7 @@ preprocess_allele = function(
             by = c('snp_id')
         )
 
-    # add annotation to cell counts and pseudobulk
+    # add annotation to cell counts 
     df = df %>% left_join(vcf_phased %>% select(snp_id, gene, gene_start, gene_end, GT), by = 'snp_id') 
     df = df %>% mutate(CHROM = factor(CHROM, unique(CHROM)))
     

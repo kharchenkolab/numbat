@@ -6,7 +6,7 @@
 \usage{
 plot_psbulk(
   bulk,
-  use_pos = FALSE,
+  use_pos = TRUE,
   allele_only = FALSE,
   min_LLR = 5,
   min_depth = 8,

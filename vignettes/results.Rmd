@@ -38,7 +38,7 @@ pagoda = readRDS(url('http://pklab.med.harvard.edu/teng/data/con_TNBC1.rds'))
 ## Copy number landscape and single-cell phylogeny
 As an overview, we can visualize the CNV calls in single-cells and their evolutionary relationships in an integrated plot panel:
 ```{r, fig.width = 8, fig.height=3.5, dpi=300}
-mypal = c('gray', "#377EB8", "#4DAF4A", "#984EA3")
+mypal = c('1' = 'gray', '2' = "#377EB8", '3' = "#4DAF4A", '4' = "#984EA3")
   
 nb$plot_phylo_heatmap(
   clone_bar = TRUE, 
@@ -58,6 +58,7 @@ nb$plot_consensus()
 We can also visualize these CNV events in pseudobulks where the data is more rich, aggregating cells by clone:
 ```{r, fig.width = 12, fig.height=6, dpi=300}
 nb$bulk_clones %>% 
+  filter(n_cells > 50) %>%
   plot_bulks(
     min_LLR = 10, # filtering CNVs by evidence
     legend = FALSE
@@ -86,7 +87,7 @@ for (mut in muts) {
         show.legend = T,
         mark.groups = F,
         plot.theme = theme_bw(),
-        title = paste0(mut, '(', cnv_type, ')')
+        title = paste0(mut, '(', cnv_type[muts], ')')
     ) +
     scale_color_gradient2(low = 'royalblue', mid = 'white', high = 'red3', midpoint = 0.5, limits = c(0,1), name = 'Posterior')
 }

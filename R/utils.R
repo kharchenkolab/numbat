@@ -1337,7 +1337,7 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
     return(fit)
 }
 
-#' ccalculate joint likelihood of a PLN model
+#' calculate joint likelihood of a PLN model
 #' @param Y_obs numeric vector Gene expression counts
 #' @param lambda_ref numeric vector Reference expression levels
 #' @param d numeric Total library size
@@ -1686,6 +1686,22 @@ detect_clonal_loh = function(bulk, t = 1e-5, min_depth = 0) {
     }
     
     return(segs_loh)
+
+}
+
+get_clone_profile = function(joint_post, clone_post) {
+    joint_post %>%
+    inner_join(
+        clone_post %>% select(cell, clone = clone_opt),
+        by = 'cell'
+    ) %>%
+    group_by(clone, CHROM, seg, seg_start, seg_end, cnv_state) %>%
+    summarise(
+        p_cnv = mean(p_cnv),
+        size = n(),
+        .groups = 'drop'
+    ) %>%
+    mutate(CHROM = factor(CHROM, 1:22))
 }
 
 ########################### Misc ############################
@@ -1716,6 +1732,12 @@ check_matrix = function(count_mat) {
     }
     if (!('dgCMatrix' %in% class(count_mat))) {
         log_err("count_mat is not of class dgCMatrix or matrix")
+    }
+    if (!is.numeric(count_mat@x)) {
+        log_err("The parameter 'count_mat' must be of type 'integer'. Please fix.")
+    }
+    if (all(count_mat@x != as.integer(count_mat@x))) {
+        log_err("The parameter 'count_mat' must be of type 'integer'. Please fix.")
     }
     if (any(duplicated(rownames(count_mat)))) {
         log_err("Please remove duplicated genes in count matrix")

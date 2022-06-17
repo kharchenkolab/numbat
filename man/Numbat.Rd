@@ -48,6 +48,7 @@ Used to allow users to plot results
 \item \href{#method-plot_mut_history}{\code{Numbat$plot_mut_history()}}
 \item \href{#method-plot_sc_tree}{\code{Numbat$plot_sc_tree()}}
 \item \href{#method-plot_consensus}{\code{Numbat$plot_consensus()}}
+\item \href{#method-plot_clone_profile}{\code{Numbat$plot_clone_profile()}}
 \item \href{#method-clone}{\code{Numbat$clone()}}
 }
 }
@@ -57,7 +58,7 @@ Used to allow users to plot results
 \subsection{Method \code{new()}}{
 initialize Numbat class
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Numbat$new(out_dir, i = 2, gtf = gtf_hg38, verbose = TRUE, old_index = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$new(out_dir, i = 2, gtf = gtf_hg38, verbose = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -162,6 +163,23 @@ Plot consensus segments
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{...}}{additional parameters passed to plot_sc_tree()}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-plot_clone_profile"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_clone_profile}{}}}
+\subsection{Method \code{plot_clone_profile()}}{
+Plot clone cnv profiles
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$plot_clone_profile(...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{additional parameters passed to plot_clone_profile()}
 }
 \if{html}{\out{</div>}}
 }
