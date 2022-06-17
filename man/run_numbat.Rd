@@ -85,6 +85,8 @@ run_numbat(
 
 \item{ncores_nni}{integer Number of threads to use for NNI}
 
+\item{segs_loh}{dataframe Segments of clonal LOH to be excluded}
+
 \item{diploid_chroms}{vector Known diploid chromosomes}
 
 \item{use_loh}{logical Whether to include LOH regions in the expression baseline}
