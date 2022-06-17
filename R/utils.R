@@ -1337,7 +1337,7 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
     return(fit)
 }
 
-#' ccalculate joint likelihood of a PLN model
+#' calculate joint likelihood of a PLN model
 #' @param Y_obs numeric vector Gene expression counts
 #' @param lambda_ref numeric vector Reference expression levels
 #' @param d numeric Total library size
@@ -1610,6 +1610,21 @@ calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, al
     l_0 = l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = 1)
     
     return(l_1 - l_0)
+}
+
+get_clone_profile = function(joint_post, clone_post) {
+    joint_post %>%
+    inner_join(
+        clone_post %>% select(cell, clone = clone_opt),
+        by = 'cell'
+    ) %>%
+    group_by(clone, CHROM, seg, seg_start, seg_end, cnv_state) %>%
+    summarise(
+        p_cnv = mean(p_cnv),
+        size = n(),
+        .groups = 'drop'
+    ) %>%
+    mutate(CHROM = factor(CHROM, 1:22))
 }
 
 ########################### Misc ############################

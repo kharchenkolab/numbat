@@ -53,11 +53,11 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @param gtf dataframe Transcript gtf (default=gtf_hg38)
     #' @param verbose logical Whether to output verbose results (default=TRUE)
     #' @return a new 'Numbat' object
-    initialize = function(out_dir, i = 2, gtf = gtf_hg38, verbose=TRUE, old_index = FALSE) {
+    initialize = function(out_dir, i = 2, gtf = gtf_hg38, verbose=TRUE) {
 
         self$out_dir = out_dir
 
-        private$fetch_results(out_dir, i = i, old_index = old_index)
+        private$fetch_results(out_dir, i = i)
 
         self$gtf = gtf
 
@@ -122,6 +122,17 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
                 ...
             )
         return(p)
+    },
+
+    #' @description Plot clone cnv profiles
+    #' @param ... additional parameters passed to plot_clone_profile()
+    plot_clone_profile = function(...) {
+        p = plot_clone_profile(
+                joint_post = self$joint_post,
+                clone_post = self$clone_post,
+                ...
+            )
+        return(p)
     }),
 
     ## Private functions
@@ -135,7 +146,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
         #  param: i get results from which iteration
         #  return: NULL
 
-        fetch_results = function(out_dir, i = 2, old_index = FALSE) {
+        fetch_results = function(out_dir, i = 2) {
  
             self$joint_post = read_file(inputfile=glue('{out_dir}/joint_post_{i}.tsv'), filetype="tsv")
 
@@ -143,25 +154,14 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
 
             self$allele_post = read_file(inputfile=glue('{out_dir}/allele_post_{i}.tsv'), filetype="tsv")
 
-            if (old_index) {
-                self$bulk_subtrees = read_file(inputfile=glue('{out_dir}/bulk_subtrees_{i-1}.tsv.gz'), filetype="tsv")
-            } else {
-                self$bulk_subtrees = read_file(inputfile=glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), filetype="tsv")
-            }
-
-            self$bulk_clones = read_file(inputfile=glue('{out_dir}/bulk_clones_{i}.tsv.gz'), filetype="tsv")
-        
-            if (old_index) {
-                self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i-1}.tsv'), filetype="tsv")
-            } else {
-                self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i}.tsv'), filetype="tsv")
-            }
+            self$bulk_clones = read_file(inputfile=glue('{out_dir}/bulk_clones_final.tsv.gz'), filetype="tsv")
+  
+            self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i}.tsv'), filetype="tsv")
 
             self$segs_consensus = self$segs_consensus %>% relevel_chrom()
             self$joint_post = self$joint_post %>% relevel_chrom()
             self$exp_post = self$exp_post %>% relevel_chrom()
             self$allele_post = self$allele_post %>% relevel_chrom()
-            self$bulk_subtrees = self$bulk_subtrees %>% relevel_chrom()
             self$bulk_clones = self$bulk_clones %>% relevel_chrom()
             
             self$tree_post = read_file(inputfile=glue('{out_dir}/tree_post_{i}.rds'), filetype="rds")
@@ -178,19 +178,14 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             }
             
             self$hc = read_hc_rds(inputfile=glue('{out_dir}/hc.rds'))
-            self$geno = read_file(inputfile=glue('{out_dir}/geno_{i}.tsv'), filetype="tsv")
-                
-            if (!is.null(self$geno)) {
-                if ('V1' %in% colnames(self$geno)) {
-                    self$geno = self$geno %>% rename(cell = V1)
-                }
-                self$geno = self$geno %>% tibble::column_to_rownames('cell') %>% as.matrix
-            }
+            
     })
 )
 
 relevel_chrom = function(df) {
-    df = df %>% mutate(CHROM = factor(CHROM, 1:22))
+    if (!is.null(df)) {
+        df = df %>% mutate(CHROM = factor(CHROM, 1:22))
+    }
 }
 
 #' @keywords internal

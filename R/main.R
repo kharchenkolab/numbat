@@ -137,14 +137,14 @@ run_numbat = function(
         saveRDS(hc, glue('{out_dir}/hc.rds'))
 
         # extract cell groupings
-        nodes = get_nodes_celltree(hc, cutree(hc, k = init_k))
+        subtrees = get_nodes_celltree(hc, cutree(hc, k = init_k))
 
     } else if (init_k == 1) {
 
         log_message('Initializing with all-cell pseudobulk ..', verbose = verbose)
         log_mem()
 
-        nodes = list(list('cells' = colnames(count_mat), 'size' = ncol(count_mat), 'sample' = 1))
+        subtrees = list(list('cells' = colnames(count_mat), 'size' = ncol(count_mat), 'sample' = 1))
 
     } else {
 
@@ -171,7 +171,7 @@ run_numbat = function(
         saveRDS(hc, glue('{out_dir}/hc.rds'))
 
         # extract cell groupings
-        nodes = get_nodes_celltree(hc, cutree(hc, k = init_k))
+        subtrees = get_nodes_celltree(hc, cutree(hc, k = init_k))
 
         if (plot) {
 
@@ -189,7 +189,6 @@ run_numbat = function(
 
     }
 
-    subtrees = purrr::keep(nodes, function(x) x$size > min_cells)
     clones = purrr::keep(subtrees, function(x) x$sample %in% 1:init_k)
 
     normal_cells = c()
@@ -202,6 +201,8 @@ run_numbat = function(
         log_mem()
 
         ######## Run HMMs ########
+
+        subtrees = purrr::keep(subtrees, function(x) x$size > min_cells)
 
         bulk_subtrees = make_group_bulks(
                 groups = subtrees,
@@ -261,6 +262,8 @@ run_numbat = function(
             get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = FALSE)
 
         # retest on clones
+        clones = purrr::keep(clones, function(x) x$size > min_cells)
+        
         bulk_clones = make_group_bulks(
                 groups = clones,
                 count_mat = count_mat,
@@ -491,13 +494,11 @@ run_numbat = function(
         })
 
         saveRDS(subtrees, glue('{out_dir}/subtrees_{i}.rds'))
-        subtrees = purrr::keep(subtrees, function(x) x$size > min_cells)
 
         clones = clone_post %>% split(.$clone_opt) %>%
             purrr::map(function(c){list(sample = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
 
         saveRDS(clones, glue('{out_dir}/clones_{i}.rds'))
-        clones = purrr::keep(clones, function(x) x$size > min_cells)
 
         #### check convergence ####
         if (check_convergence) {

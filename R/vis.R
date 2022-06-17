@@ -1188,43 +1188,6 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
     (p1 / p2) + plot_layout(guides = 'auto')
 }
 
-plot_exp = function(gexp_bulk, exp_limit = 3) {
-    ggplot(
-        gexp_bulk,
-        aes(x = gene_index, y = logFC)
-    ) +
-    theme_classic() +
-    geom_point(size = 1, color = 'gray', alpha = 0.8, pch = 16) +
-    theme(
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.background = element_blank()
-    ) +
-    facet_grid(~CHROM, space = 'free_x', scale = 'free_x') +
-    geom_hline(yintercept = 0, color = 'gray30', linetype = 'dashed') +
-    geom_line(
-        inherit.aes = FALSE,
-        aes(x = gene_index, y = log2(phi_hat_roll), group = '1'),
-        color = 'darkred',
-        size = 0.35
-    ) +
-    ylim(-exp_limit, exp_limit)
-}
-
-plot_segs_post = function(segs_consensus) {
-    segs_consensus %>% 
-        filter(cnv_state != 'neu') %>%
-        mutate(seg_label = paste0(seg_cons, '_', cnv_state_post)) %>%
-        mutate(seg_label = factor(seg_label, unique(seg_label))) %>%
-        reshape2::melt(measure.vars = c('p_loh', 'p_amp', 'p_del', 'p_bamp', 'p_bdel'), value.name = 'p') %>%
-        ggplot(
-            aes(x = seg_label, y = variable, fill = p, label = round(p, 2))
-        ) +
-        theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
-        geom_tile() +
-        geom_text(color = 'white')
-}
-
 # model diagnostics
 plot_exp_post = function(exp_post, jitter = TRUE) {
     if (!'annot' %in% colnames(exp_post)) {
@@ -1251,198 +1214,6 @@ plot_exp_post = function(exp_post, jitter = TRUE) {
     }
 
     return(p)
-}
-
-plot_clones = function(p_matrix, gtree, annot = TRUE, n_sample = 1e4, bar_ratio = 0.1, pal_clone = NULL, pal_annot = NULL) {
-
-    if (is.null(pal_clone)) {
-        pal_clone = c('gray', RColorBrewer::brewer.pal(n = 8, 'Set1'))
-    }
-
-    if (is.null(pal_annot)) {
-        pal_annot = c('gray', RColorBrewer::brewer.pal(n = 8, 'Set1'))
-    }
-
-    p_matrix = p_matrix %>% 
-        group_by(group) %>%
-        filter(cell %in% sample(unique(cell), min(n_sample, length(unique(cell))))) %>%
-        ungroup() %>%
-        filter(cnv_state != 'neu')
-
-    # ordering cells
-    if (annot) {
-        p_matrix = p_matrix %>% 
-            arrange(group, annot) %>%
-            mutate(cell = factor(cell, unique(cell)))
-    } else {
-        set.seed(0)
-        p_matrix = p_matrix %>% 
-            group_by(group) %>%
-            sample_frac(1) %>%
-            ungroup() %>%
-            mutate(cell = factor(cell, unique(cell)))
-    }
-    
-    # ordering cnvs
-    cnv_order = gtree %>% 
-            activate(nodes) %>%
-            mutate(rank = dfs_rank(root = node_is_root())) %>%
-            data.frame() %>%
-            filter(!is.na(site)) %>%
-            arrange(-rank) %>%
-            pull(site) %>%
-            map(function(x){rev(unlist(str_split(x, ',')))}) %>%
-            unlist
-
-    p_matrix = p_matrix %>%
-        mutate(seg = factor(seg, cnv_order)) %>%
-        arrange(seg) %>%
-        mutate(seg_label = factor(seg_label, unique(seg_label)))  %>%
-        mutate(group = factor(group))
-    
-    p = ggplot(
-            p_matrix,
-            aes(x = cell, y = seg_label, fill = logBF)
-        ) +
-        geom_tile(width=0.1, height=0.9) +
-        theme_classic() +
-        scale_y_discrete(expand = expansion(0)) +
-        scale_x_discrete(expand = expansion(0)) +
-        theme(
-            panel.spacing = unit(0.1, 'mm'),
-            panel.border = element_rect(size = 0.2, color = 'black', fill = NA),
-            panel.background = element_rect(fill = 'white'),
-            axis.line.x = element_blank(),
-            axis.line.y = element_blank(),
-            strip.background = element_blank(),
-            strip.text = element_blank(),
-            axis.text.x = element_blank(),
-            axis.ticks.x = element_blank(),
-            axis.title.x = element_blank(),
-            plot.margin = margin(3,0,0,0, unit = 'pt')
-            # strip.text = element_text(angle = 0, size = 8, vjust = 0.5)
-        ) +
-        facet_grid(.~group, scale = 'free', space = 'free') +
-        scale_fill_gradient2(low = pal[2], high = pal[1], midpoint = 0, limits = c(-5, 5), oob = scales::oob_squish) +
-        xlab('') +
-        ylab('') +
-        guides(fill = guide_colorbar(barwidth = unit(3, 'mm'), barheight = unit(15, 'mm')))
-
-    p_clones = ggplot(
-            p_matrix %>% distinct(cell, group),
-            aes(x = cell, y = 'clone', fill = group)
-        ) +
-        geom_tile(width=1, height=0.9) +
-        theme_void() +
-        scale_y_discrete(expand = expansion(0)) +
-        scale_x_discrete(expand = expansion(0)) +
-        theme(
-            panel.spacing = unit(0.1, 'mm'),
-            panel.border = element_rect(size = 0, color = 'black', fill = NA),
-            panel.background = element_rect(fill = 'white'),
-            strip.background = element_blank(),
-            strip.text = element_text(angle = 0, size = 10, vjust = 0.5),
-            axis.text.y = element_text(size = 8)
-        ) +
-        facet_grid(.~group, scale = 'free', space = 'free') +
-        xlab('') +
-        ylab('') + 
-        scale_fill_manual(values = pal_clone) +
-        guides(fill = 'none')
-
-    if (annot) {
-
-        p_annot = ggplot(
-                p_matrix %>% distinct(cell, group, annot),
-                aes(x = cell, y = '', fill = annot)
-            ) +
-            geom_tile(width=1, height=0.9) +
-            theme_void() +
-            scale_y_discrete(expand = expansion(0)) +
-            scale_x_discrete(expand = expansion(0)) +
-            theme(
-                panel.spacing = unit(0.1, 'mm'),
-                panel.border = element_rect(size = 0, color = 'black', fill = NA),
-                panel.background = element_rect(fill = 'white'),
-                strip.background = element_blank(),
-                strip.text = element_blank(),
-                axis.text.y = element_text(size = 8),
-                plot.margin = margin(3,0,0,0, unit = 'pt')
-            ) +
-            facet_grid(.~group, scale = 'free', space = 'free') +
-            xlab('') +
-            ylab('') +
-            scale_fill_manual(values = pal_annot) +
-            guides(fill = guide_legend(keywidth = unit(2, 'mm'), keyheight = unit(2, 'mm'), title = ''))
-
-        return((p_clones / p_annot / p) + plot_layout(height = c(bar_ratio, bar_ratio, 1), guides = 'collect'))
-        
-    } else {
-        return((p_clones / p) + plot_layout(height = c(1,10)))
-    }
-    
-}
-
-plot_clone_panel = function(res, label = NULL, cell_annot = NULL, type = 'joint', ratio = 1, tvn = FALSE, tree = TRUE, p_min = 0.5, bar_ratio = 0.1, pal_clone = NULL, pal_annot = NULL) {
-
-    if (is.null(pal_clone)) {
-        n_clones = length(unique(res$clone_post$clone_opt))
-        pal_clone = getPalette(max(V(res$G_m)-1, 8)) %>% c('gray', .) %>% setNames(1:n_clones)
-    } 
-    
-    if (is.null(pal_annot) & !is.null(cell_annot)) {
-        pal_annot = getPalette(length(unique(cell_annot$annot)))
-    }
-    
-
-    if (type == 'joint') {
-        p_matrix = res$joint_post
-    } else if (type == 'allele') {
-        p_matrix = res$allele_post
-    } else {
-        p_matrix = res$exp_post
-    }
-
-    if (!is.null(cell_annot)) {
-        p_matrix = p_matrix %>% left_join(cell_annot, by = 'cell')
-        annot = TRUE
-    } else {
-        annot = FALSE
-    }
-
-    if (!'p_opt' %in% colnames(res$clone_post)) {
-        res$clone_post = res$clone_post %>% 
-            rowwise() %>%
-            mutate(p_opt = get(paste0('p_', clone_opt))) %>%
-            ungroup()
-    }
-
-    if (tvn) {
-        res$clone_post = res$clone_post %>%
-            mutate(
-                clone_opt = ifelse(clone_opt == 1, 'normal', 'tumor'),
-                p_opt = ifelse(clone_opt == 'normal', p_1, 1-p_1)
-            )
-    }
-
-    p_clones = p_matrix %>% 
-        filter(seg %in% colnames(res$geno)) %>%
-        inner_join(
-            res$clone_post %>% filter(p_opt > p_min),
-            by = 'cell'
-        ) %>%
-        mutate(group = clone_opt) %>%
-        plot_clones(res$gtree, pal_clone = pal_clone, pal_annot = pal_annot, annot = annot, bar_ratio = bar_ratio)
-
-    plot_title = plot_annotation(title = label, theme = theme(plot.title = element_text(hjust = 0.1)))
-
-    if (tvn | (!tree)) {
-        return(p_clones + plot_title)
-    }
-
-    p_mut = res$G_m %>% plot_mut_history(pal = pal_clone) 
-
-    (p_mut / p_clones) + plot_layout(heights = c(ratio, 1)) + plot_title
 }
 
 cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE) {
@@ -1517,4 +1288,31 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE) {
 
         return(p)
 
+}
+
+plot_clone_profile = function(joint_post, clone_post) {
+    
+    clone_profile = get_clone_profile(joint_post, clone_post)
+    
+    p_heatmap = clone_profile %>% cnv_heatmap(var = 'clone', label_group = FALSE)
+    
+    p_bubble = clone_profile %>% 
+        ggplot(
+            aes(x = 0, y = clone, size = size)
+        ) +
+        geom_point() +
+        guides(size = 'none') +
+        theme_void() +
+        theme(
+            plot.margin = margin(0, 0, 0, 0)
+        ) +
+        facet_grid(clone~., scale = 'free') +
+        scale_size_continuous(
+            range = c(0, 5),
+            name = 'Cells'
+        )
+    
+    panel = (p_bubble | p_heatmap) + plot_layout(widths = c(0.5,20))
+    
+    return(panel)
 }
