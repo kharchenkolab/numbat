@@ -136,6 +136,30 @@ There are a few parameters you can consider tuning to a specific dataset.
 - `ncores`: number of cores to use for single-cell CNV testing
 - `ncores_nni`: number of cores to use for phylogeny inference
   
+## Detecting clonal LOH
+For cell line data and high-purity tumors, we recommend running the SNP-density HMM to identify and exclude regions of clonal deletions/LOH before running Numbat.
+
+```
+bulk = get_bulk(
+    count_mat = count_mat,
+    lambdas_ref = ref_hca,
+    df_allele = df_allele,
+    gtf = gtf_hg38,
+    genetic_map = genetic_map_hg38
+)
+
+segs_loh = bulk %>% detect_clonal_loh(t = 1e-4)
+```
+
+We can then pass `segs_loh` to Numbat for those regions to be excluded from baseline during analysis.
+
+```
+out = run_numbat(
+    ....,
+    segs_loh = segs_loh
+)
+```
+
 # Understanding results
 A detailed vignette on how to interpret and visualize Numbat results is available:  
 - [Interpreting Numbat results](https://kharchenkolab.github.io/numbat/articles/results.html)

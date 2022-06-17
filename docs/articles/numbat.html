@@ -238,6 +238,25 @@ optional arguments:
 <code>ncores_nni</code>: number of cores to use for phylogeny inference</li>
 </ul>
 </div>
+<div class="section level3">
+<h3 id="detecting-clonal-loh">Detecting clonal LOH<a class="anchor" aria-label="anchor" href="#detecting-clonal-loh"></a>
+</h3>
+<p>For cell line data and high-purity tumors, we recommend running the SNP-density HMM to identify and exclude regions of clonal deletions/LOH before running Numbat.</p>
+<pre><code><span class="va">bulk</span> <span class="op">=</span> <span class="fu"><a href="../reference/get_bulk.html">get_bulk</a></span><span class="op">(</span>
+    count_mat <span class="op">=</span> <span class="va">count_mat</span>,
+    lambdas_ref <span class="op">=</span> <span class="va">ref_hca</span>,
+    df_allele <span class="op">=</span> <span class="va">df_allele</span>,
+    gtf <span class="op">=</span> <span class="va">gtf_hg38</span>,
+    genetic_map <span class="op">=</span> <span class="va">genetic_map_hg38</span>
+<span class="op">)</span>
+
+<span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op">%&gt;%</span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></code></pre>
+<p>We can then pass <code>segs_loh</code> to Numbat for those regions to be excluded from baseline during analysis.</p>
+<pre><code><span class="va">out</span> <span class="op">=</span> <span class="fu"><a href="../reference/run_numbat.html">run_numbat</a></span><span class="op">(</span>
+    <span class="va">....</span>,
+    segs_loh <span class="op">=</span> <span class="va">segs_loh</span>
+<span class="op">)</span></code></pre>
+</div>
 </div>
 <div class="section level2">
 <h2 id="understanding-results">Understanding results<a class="anchor" aria-label="anchor" href="#understanding-results"></a>
