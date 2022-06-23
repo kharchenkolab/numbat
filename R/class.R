@@ -186,6 +186,7 @@ relevel_chrom = function(df) {
     if (!is.null(df)) {
         df = df %>% mutate(CHROM = factor(CHROM, 1:22))
     }
+    return(df)
 }
 
 #' @keywords internal
