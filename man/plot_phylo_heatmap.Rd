@@ -24,7 +24,9 @@ plot_phylo_heatmap(
   tip_length = 0.2,
   clone_line = FALSE,
   superclone = FALSE,
-  segs_exclude = NULL
+  exclude_gap = FALSE,
+  root_edge = TRUE,
+  snvs = NULL
 )
 }
 \arguments{

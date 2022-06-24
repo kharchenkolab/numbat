@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{l_lnpois}
 \alias{l_lnpois}
-\title{ccalculate joint likelihood of a PLN model}
+\title{calculate joint likelihood of a PLN model}
 \usage{
 l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = 1)
 }
@@ -17,6 +17,6 @@ l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi = 1)
 numeric Joint log likelihood
 }
 \description{
-ccalculate joint likelihood of a PLN model
+calculate joint likelihood of a PLN model
 }
 \keyword{internal}

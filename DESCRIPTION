@@ -50,7 +50,7 @@ Suggests:
     matrixStats,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-LinkingTo: Rcpp, RcppArmadillo
+LinkingTo: Rcpp, RcppArmadillo, RcppParallel
 NeedsCompilation: yes
 SystemRequirements: C++11
 Author: Teng Gao [cre, aut], Hirak Sarkar [aut], Evan Biederstedt [aut], Peter Kharchenko [aut]

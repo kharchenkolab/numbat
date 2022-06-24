@@ -6,7 +6,7 @@
 \usage{
 plot_psbulk(
   bulk,
-  use_pos = FALSE,
+  use_pos = TRUE,
   allele_only = FALSE,
   min_LLR = 5,
   min_depth = 8,
@@ -15,7 +15,8 @@ plot_psbulk(
   theta_roll = FALSE,
   dot_size = 0.8,
   dot_alpha = 0.5,
-  legend = FALSE
+  legend = FALSE,
+  exclude_gap = TRUE
 )
 }
 \arguments{
