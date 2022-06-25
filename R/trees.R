@@ -68,6 +68,8 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, ver
 
         neighbours = nni(tree_current, ncores = ncores)
 
+        RcppParallel::setThreadOptions(numThreads = ncores)
+
         scores = score_nni_parallel(neighbours, P)
 
         if (max(scores) > max_current + eps) {

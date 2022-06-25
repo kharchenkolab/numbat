@@ -12,6 +12,7 @@
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
 #' @importFrom extraDistr dgpois
+#' @importFrom RcppParallel RcppParallelLibs
 #' @useDynLib numbat
 NULL
 

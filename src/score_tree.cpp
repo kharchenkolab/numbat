@@ -1,6 +1,5 @@
-// #include<Rcpp.h>
-// [[Rcpp::depends(RcppParallel)]]
 #include <RcppParallel.h>
+// [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 using namespace RcppParallel;
@@ -108,13 +107,6 @@ NumericVector score_nni_parallel(List trees, arma::mat P) {
     score_nni score_nni(trees_vec, P, scores);
 
     parallelFor(0, n, score_nni);
-
-    // for (int i = 0; i < n; ++i) {
-    //     // List tree = trees[i];
-    //     // arma::mat E = tree["edge"];
-    //     scores[i] = score_tree_cpp(trees_vec[i], P);
-    //     // scores[i] = n;
-    // }
 
     return scores;
 }
