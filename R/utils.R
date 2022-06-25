@@ -1920,7 +1920,7 @@ fit_snp_rate = function(gene_snps, gene_length) {
 }
 
 # detect clonal LOH
-detect_loh = function(bulk, min_depth = 0, t = 1e-5, mu = NULL, sig = NULL) {
+detect_clonal_loh = function(bulk, min_depth = 0, t = 1e-5, mu = NULL, sig = NULL) {
 
     bulk_snps = bulk %>% 
         filter(!is.na(gene)) %>%
