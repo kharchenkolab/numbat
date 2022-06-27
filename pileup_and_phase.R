@@ -220,7 +220,8 @@ for (sample in samples) {
         DP = DP,
         barcodes = cell_barcodes,
         gtf_transcript = gtf_transcript
-    )
+    ) %>%
+    filter(GT %in% c('1|0', '0|1'))
     
     fwrite(df, glue('{outdir}/{sample}_allele_counts.tsv.gz'), sep = '\t')
     
