@@ -1754,11 +1754,13 @@ check_allele_df = function(df) {
         group_by(snp_id) %>%
         summarise(
             n = length(unique(GT))
-        ) 
+        )
     
     if (any(snps$n > 1)) {
         log_err('Inconsistent SNP genotypes; Are cells from two different individuals mixed together?')
     }
+
+    df = df %>% mutate(CHROM = factor(CHROM, 1:22))
 
     return(df)
 

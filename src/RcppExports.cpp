@@ -11,17 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// allChildrenCPP
-List allChildrenCPP(const IntegerMatrix orig);
-RcppExport SEXP _numbat_allChildrenCPP(SEXP origSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const IntegerMatrix >::type orig(origSEXP);
-    rcpp_result_gen = Rcpp::wrap(allChildrenCPP(orig));
-    return rcpp_result_gen;
-END_RCPP
-}
 // cppdbbinom
 NumericVector cppdbbinom(const NumericVector& x, const NumericVector& size, const NumericVector& alpha, const NumericVector& beta, const bool& log_prob);
 RcppExport SEXP _numbat_cppdbbinom(SEXP xSEXP, SEXP sizeSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP log_probSEXP) {
@@ -127,22 +116,56 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// allChildrenCPP
+std::vector<std::vector<int>> allChildrenCPP(const arma::Mat<int> E);
+RcppExport SEXP _numbat_allChildrenCPP(SEXP ESEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::Mat<int> >::type E(ESEXP);
+    rcpp_result_gen = Rcpp::wrap(allChildrenCPP(E));
+    return rcpp_result_gen;
+END_RCPP
+}
 // CgetQ
-NumericMatrix CgetQ(NumericMatrix logQ, List children_dict, IntegerVector node_order);
+arma::mat CgetQ(arma::mat logQ, std::vector<std::vector<int>> children_dict, arma::Col<int> node_order);
 RcppExport SEXP _numbat_CgetQ(SEXP logQSEXP, SEXP children_dictSEXP, SEXP node_orderSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericMatrix >::type logQ(logQSEXP);
-    Rcpp::traits::input_parameter< List >::type children_dict(children_dictSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type node_order(node_orderSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type logQ(logQSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<int>> >::type children_dict(children_dictSEXP);
+    Rcpp::traits::input_parameter< arma::Col<int> >::type node_order(node_orderSEXP);
     rcpp_result_gen = Rcpp::wrap(CgetQ(logQ, children_dict, node_order));
+    return rcpp_result_gen;
+END_RCPP
+}
+// score_tree_cpp
+double score_tree_cpp(const arma::Mat<int> E, const arma::mat P);
+RcppExport SEXP _numbat_score_tree_cpp(SEXP ESEXP, SEXP PSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::Mat<int> >::type E(ESEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type P(PSEXP);
+    rcpp_result_gen = Rcpp::wrap(score_tree_cpp(E, P));
+    return rcpp_result_gen;
+END_RCPP
+}
+// score_nni_parallel
+NumericVector score_nni_parallel(List trees, arma::mat P);
+RcppExport SEXP _numbat_score_nni_parallel(SEXP treesSEXP, SEXP PSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type trees(treesSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type P(PSEXP);
+    rcpp_result_gen = Rcpp::wrap(score_nni_parallel(trees, P));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_numbat_allChildrenCPP", (DL_FUNC) &_numbat_allChildrenCPP, 1},
     {"_numbat_cppdbbinom", (DL_FUNC) &_numbat_cppdbbinom, 5},
     {"_numbat_poilog2", (DL_FUNC) &_numbat_poilog2, 8},
     {"_numbat_poilog1", (DL_FUNC) &_numbat_poilog1, 4},
@@ -150,7 +173,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_numbat_likelihood_compute", (DL_FUNC) &_numbat_likelihood_compute, 5},
     {"_numbat_forward_backward_compute", (DL_FUNC) &_numbat_forward_backward_compute, 5},
     {"_numbat_viterbi_compute", (DL_FUNC) &_numbat_viterbi_compute, 7},
+    {"_numbat_allChildrenCPP", (DL_FUNC) &_numbat_allChildrenCPP, 1},
     {"_numbat_CgetQ", (DL_FUNC) &_numbat_CgetQ, 3},
+    {"_numbat_score_tree_cpp", (DL_FUNC) &_numbat_score_tree_cpp, 2},
+    {"_numbat_score_nni_parallel", (DL_FUNC) &_numbat_score_nni_parallel, 2},
     {NULL, NULL, 0}
 };
 

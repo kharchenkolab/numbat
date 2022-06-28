@@ -12,6 +12,7 @@
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
 #' @importFrom extraDistr dgpois
+#' @importFrom RcppParallel RcppParallelLibs
 #' @useDynLib numbat
 NULL
 
@@ -594,12 +595,16 @@ subtrees_equal = function(subtrees_1, subtrees_2) {
 exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101, ncores = 1, verbose = TRUE) {
 
     count_mat = check_matrix(count_mat)
+    
+    if (is.null(sc_refs)) {
+        sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
+    }
 
-    fit = fit_ref_sse(rowSums(count_mat), lambdas_ref, gtf)
+    lambdas_bar = get_lambdas_bar(lambdas_ref, sc_refs, verbose = FALSE)
 
     gexp_roll_wide = smooth_expression(
         count_mat,
-        fit$lambdas_bar,
+        lambdas_bar,
         gtf,
         window = window,
         verbose = verbose

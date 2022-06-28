@@ -427,7 +427,7 @@ plot_phylo_heatmap = function(
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = FALSE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE, 
         p_min = 0.9, line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2, 
-        clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE
+        clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, snvs = NULL
     ) {
     
     # make sure chromosomes are in order
@@ -513,6 +513,7 @@ plot_phylo_heatmap = function(
                 cnv_state = ifelse(cnv_state == 'neu', NA, cnv_state)
             )
         ) +
+        geom_blank() +
         theme_classic()
         
     p_segs = p_segs +
@@ -558,6 +559,17 @@ plot_phylo_heatmap = function(
         ) +
         xlab('Genomic position')
 
+    if (!is.null(snvs)) {
+        p_segs = p_segs + 
+            geom_point(
+                data = snvs %>% 
+                    mutate(cell = factor(cell, cell_order)) %>%
+                    mutate(cell_index = as.integer(cell)),
+                aes(x = POS, y = cell_index),
+                pch = 4,
+                size = 1
+            )
+    }
 
     if (exclude_gap) {
 
