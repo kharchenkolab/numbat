@@ -1612,6 +1612,83 @@ calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, al
     return(l_1 - l_0)
 }
 
+
+#' Call clonal LOH using SNP density. 
+#' Rcommended for cell lines or tumor samples with no normal cells.
+#' @param bulk dataframe Pseudobulk profile
+#' @param t numeric Transition probability
+#' @param min_depth integer Minimum coverage to filter SNPs
+#' @return dataframe LOH segments
+#' @export
+detect_clonal_loh = function(bulk, t = 1e-5, min_depth = 0) {
+
+    bulk_snps = bulk %>% 
+        filter(!is.na(gene)) %>%
+        group_by(CHROM, gene, gene_start, gene_end) %>%
+        summarise(
+            gene_snps = sum(!is.na(AD[DP > min_depth]), na.rm = TRUE),
+            Y_obs = unique(na.omit(Y_obs)),
+            lambda_ref = unique(na.omit(lambda_ref)),
+            logFC = unique(na.omit(logFC)),
+            d_obs = unique(na.omit(d_obs)),
+            .groups = 'drop'
+        ) %>%
+        mutate(gene_length = gene_end - gene_start)
+
+    fit = bulk_snps %>%
+        filter(logFC < 8 & logFC > -8) %>%
+        {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+
+    mu = fit@coef[1]
+    sig = fit@coef[2]
+
+    snp_fit = fit_snp_rate(bulk_snps$gene_snps, bulk_snps$gene_length)
+    snp_ref = snp_fit[1]
+    snp_sig = snp_fit[2]
+
+    n = nrow(bulk_snps)
+    A = matrix(c(1-t, t, t, 1-t), nrow = 2)
+    As = array(rep(A,n), dim = c(2,2,n))
+
+    hmm = list(
+        x = bulk_snps$gene_snps, 
+        Pi = As, 
+        delta = c(1-t,t), 
+        pm = c(snp_ref, 5),
+        pn = bulk_snps$gene_length/1e6,
+        snp_sig = snp_sig,
+        y = bulk_snps$Y_obs,
+        phi = c(1, 0.5),
+        lambda_star = bulk_snps$lambda_ref,
+        d = unique(bulk_snps$d_obs),
+        mu = mu,
+        sig = sig,
+        states = c('neu', 'loh')
+    )
+
+    bulk_snps = bulk_snps %>% mutate(cnv_state = viterbi_loh(hmm))
+
+    segs_loh = bulk_snps %>%
+        mutate(snp_index = 1:n(), POS = gene_start, pAD = 1) %>%
+        annot_segs() %>%
+        group_by(CHROM, seg, seg_start, seg_end, cnv_state) %>%
+        summarise(
+            snp_rate = fit_snp_rate(gene_snps, gene_length)[1],
+            .groups = 'drop'
+        ) %>%
+        ungroup() %>%
+        filter(cnv_state == 'loh') %>%
+        mutate(loh = TRUE) %>% 
+        select(CHROM, seg, seg_start, seg_end, snp_rate, loh)
+
+    if (nrow(segs_loh) == 0) {
+        segs_loh = data.frame()
+    }
+    
+    return(segs_loh)
+
+}
+
 get_clone_profile = function(joint_post, clone_post) {
     joint_post %>%
     inner_join(
@@ -1919,79 +1996,6 @@ fit_snp_rate = function(gene_snps, gene_length) {
     )
     
     return(fit$par)
-}
-
-# detect clonal LOH
-detect_clonal_loh = function(bulk, min_depth = 0, t = 1e-5, mu = NULL, sig = NULL) {
-
-    bulk_snps = bulk %>% 
-        filter(!is.na(gene)) %>%
-        group_by(CHROM, gene, gene_start, gene_end) %>%
-        summarise(
-            gene_snps = sum(!is.na(AD[DP > min_depth]), na.rm = TRUE),
-            Y_obs = unique(na.omit(Y_obs)),
-            lambda_ref = unique(na.omit(lambda_ref)),
-            logFC = unique(na.omit(logFC)),
-            d_obs = unique(na.omit(d_obs)),
-            .groups = 'drop'
-        ) %>%
-        mutate(gene_length = gene_end - gene_start)
-
-    if (is.null(mu) | is.null(sig)) {
-
-        fit = bulk_snps %>%
-            filter(logFC < 8 & logFC > -8) %>%
-            {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
-
-        mu = fit@coef[1]
-        sig = fit@coef[2]
-
-    }
-
-    snp_fit = fit_snp_rate(bulk_snps$gene_snps, bulk_snps$gene_length)
-    snp_ref = snp_fit[1]
-    snp_sig = snp_fit[2]
-
-    n = nrow(bulk_snps)
-    A = matrix(c(1-t, t, t, 1-t), nrow = 2)
-    As = array(rep(A,n), dim = c(2,2,n))
-
-    hmm = list(
-        x = bulk_snps$gene_snps, 
-        Pi = As, 
-        delta = c(1-t,t), 
-        pm = c(snp_ref, 5),
-        pn = bulk_snps$gene_length/1e6,
-        snp_sig = snp_sig,
-        y = bulk_snps$Y_obs,
-        phi = c(1, 0.5),
-        lambda_star = bulk_snps$lambda_ref,
-        d = unique(bulk_snps$d_obs),
-        mu = mu,
-        sig = sig,
-        states = c('neu', 'loh')
-    )
-
-    bulk_snps = bulk_snps %>% mutate(cnv_state = viterbi_loh(hmm))
-
-    segs_loh = bulk_snps %>%
-        mutate(snp_index = 1:n(), POS = gene_start, pAD = 1) %>%
-        annot_segs() %>%
-        group_by(CHROM, seg, seg_start, seg_end, cnv_state) %>%
-        summarise(
-            snp_rate = fit_snp_rate(gene_snps, gene_length)[1],
-            .groups = 'drop'
-        ) %>%
-        ungroup() %>%
-        filter(cnv_state == 'loh') %>%
-        mutate(loh = TRUE) %>% 
-        select(CHROM, seg, seg_start, seg_end, snp_rate, loh)
-
-    if (nrow(segs_loh) == 0) {
-        segs_loh = data.frame()
-    }
-    
-    return(segs_loh)
 }
 
 
