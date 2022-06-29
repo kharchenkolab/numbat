@@ -5,14 +5,6 @@ cppdbbinom <- function(x, size, alpha, beta, log_prob = FALSE) {
     .Call('_numbat_cppdbbinom', PACKAGE = 'numbat', x, size, alpha, beta, log_prob)
 }
 
-poilog2 <- function(x, y, my1, my2, sig1, sig2, ro, nrN) {
-    .Call('_numbat_poilog2', PACKAGE = 'numbat', x, y, my1, my2, sig1, sig2, ro, nrN)
-}
-
-poilog1 <- function(x, my, sig, nrN) {
-    .Call('_numbat_poilog1', PACKAGE = 'numbat', x, my, sig, nrN)
-}
-
 logSumExp <- function(x) {
     .Call('_numbat_logSumExp', PACKAGE = 'numbat', x)
 }
@@ -27,6 +19,10 @@ forward_backward_compute <- function(logphi, logprob, logPi, n, m) {
 
 viterbi_compute <- function(log_delta, logprob, logPi, n, m, nu, z) {
     .Call('_numbat_viterbi_compute', PACKAGE = 'numbat', log_delta, logprob, logPi, n, m, nu, z)
+}
+
+poilog1 <- function(x, my, sig) {
+    .Call('_numbat_poilog1', PACKAGE = 'numbat', x, my, sig)
 }
 
 allChildrenCPP <- function(E) {

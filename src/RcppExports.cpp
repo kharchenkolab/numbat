@@ -26,38 +26,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// poilog2
-NumericVector poilog2(NumericVector x, NumericVector y, double my1, double my2, double sig1, double sig2, double ro, int nrN);
-RcppExport SEXP _numbat_poilog2(SEXP xSEXP, SEXP ySEXP, SEXP my1SEXP, SEXP my2SEXP, SEXP sig1SEXP, SEXP sig2SEXP, SEXP roSEXP, SEXP nrNSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
-    Rcpp::traits::input_parameter< double >::type my1(my1SEXP);
-    Rcpp::traits::input_parameter< double >::type my2(my2SEXP);
-    Rcpp::traits::input_parameter< double >::type sig1(sig1SEXP);
-    Rcpp::traits::input_parameter< double >::type sig2(sig2SEXP);
-    Rcpp::traits::input_parameter< double >::type ro(roSEXP);
-    Rcpp::traits::input_parameter< int >::type nrN(nrNSEXP);
-    rcpp_result_gen = Rcpp::wrap(poilog2(x, y, my1, my2, sig1, sig2, ro, nrN));
-    return rcpp_result_gen;
-END_RCPP
-}
-// poilog1
-NumericVector poilog1(NumericVector x, NumericVector my, NumericVector sig, int nrN);
-RcppExport SEXP _numbat_poilog1(SEXP xSEXP, SEXP mySEXP, SEXP sigSEXP, SEXP nrNSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type my(mySEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type sig(sigSEXP);
-    Rcpp::traits::input_parameter< int >::type nrN(nrNSEXP);
-    rcpp_result_gen = Rcpp::wrap(poilog1(x, my, sig, nrN));
-    return rcpp_result_gen;
-END_RCPP
-}
 // logSumExp
 double logSumExp(const arma::vec& x);
 RcppExport SEXP _numbat_logSumExp(SEXP xSEXP) {
@@ -116,6 +84,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// poilog1
+std::vector<double> poilog1(std::vector<int> x, std::vector<double> my, std::vector<double> sig);
+RcppExport SEXP _numbat_poilog1(SEXP xSEXP, SEXP mySEXP, SEXP sigSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<int> >::type x(xSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type my(mySEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type sig(sigSEXP);
+    rcpp_result_gen = Rcpp::wrap(poilog1(x, my, sig));
+    return rcpp_result_gen;
+END_RCPP
+}
 // allChildrenCPP
 std::vector<std::vector<int>> allChildrenCPP(const arma::Mat<int> E);
 RcppExport SEXP _numbat_allChildrenCPP(SEXP ESEXP) {
@@ -167,12 +148,11 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_numbat_cppdbbinom", (DL_FUNC) &_numbat_cppdbbinom, 5},
-    {"_numbat_poilog2", (DL_FUNC) &_numbat_poilog2, 8},
-    {"_numbat_poilog1", (DL_FUNC) &_numbat_poilog1, 4},
     {"_numbat_logSumExp", (DL_FUNC) &_numbat_logSumExp, 1},
     {"_numbat_likelihood_compute", (DL_FUNC) &_numbat_likelihood_compute, 5},
     {"_numbat_forward_backward_compute", (DL_FUNC) &_numbat_forward_backward_compute, 5},
     {"_numbat_viterbi_compute", (DL_FUNC) &_numbat_viterbi_compute, 7},
+    {"_numbat_poilog1", (DL_FUNC) &_numbat_poilog1, 3},
     {"_numbat_allChildrenCPP", (DL_FUNC) &_numbat_allChildrenCPP, 1},
     {"_numbat_CgetQ", (DL_FUNC) &_numbat_CgetQ, 3},
     {"_numbat_score_tree_cpp", (DL_FUNC) &_numbat_score_tree_cpp, 2},
