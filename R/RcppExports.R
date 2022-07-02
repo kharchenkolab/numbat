@@ -5,14 +5,6 @@ cppdbbinom <- function(x, size, alpha, beta, log_prob = FALSE) {
     .Call('_numbat_cppdbbinom', PACKAGE = 'numbat', x, size, alpha, beta, log_prob)
 }
 
-poilog2 <- function(x, y, my1, my2, sig1, sig2, ro, nrN) {
-    .Call('_numbat_poilog2', PACKAGE = 'numbat', x, y, my1, my2, sig1, sig2, ro, nrN)
-}
-
-poilog1 <- function(x, my, sig, nrN) {
-    .Call('_numbat_poilog1', PACKAGE = 'numbat', x, my, sig, nrN)
-}
-
 logSumExp <- function(x) {
     .Call('_numbat_logSumExp', PACKAGE = 'numbat', x)
 }
@@ -43,5 +35,29 @@ score_tree_cpp <- function(E, P) {
 
 score_nni_parallel <- function(trees, P) {
     .Call('_numbat_score_nni_parallel', PACKAGE = 'numbat', trees, P)
+}
+
+reorder_rows <- function(x, y) {
+    .Call('_numbat_reorder_rows', PACKAGE = 'numbat', x, y)
+}
+
+reorderRcpp <- function(E) {
+    .Call('_numbat_reorderRcpp', PACKAGE = 'numbat', E)
+}
+
+nnin_cpp <- function(E, n) {
+    .Call('_numbat_nnin_cpp', PACKAGE = 'numbat', E, n)
+}
+
+nni_cpp <- function(tree) {
+    .Call('_numbat_nni_cpp', PACKAGE = 'numbat', tree)
+}
+
+nni_cpp_parallel <- function(tree, P) {
+    .Call('_numbat_nni_cpp_parallel', PACKAGE = 'numbat', tree, P)
+}
+
+poilog1 <- function(x, my, sig) {
+    .Call('_numbat_poilog1', PACKAGE = 'numbat', x, my, sig)
 }
 

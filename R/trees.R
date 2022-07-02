@@ -49,31 +49,32 @@ score_tree = function(tree, P, get_l_matrix = FALSE) {
 #' @return multiPhylo List of trees corresponding to the rearrangement steps
 #' @keywords internal
 perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, verbose = TRUE) {
-
+    
     P = as.matrix(P)
     
     converge = FALSE
-
+    
     i = 1
     max_current = score_tree(tree_init, P)$l_tree
     tree_current = tree_init
     tree_list = list()
     tree_list[[1]] = tree_current
-
+    
     while (!converge & i <= max_iter) {
         
         i = i + 1
         
         ptm = proc.time()
-
-        neighbours = nni(tree_current, ncores = ncores)
-
+        
         RcppParallel::setThreadOptions(numThreads = ncores)
-
-        scores = score_nni_parallel(neighbours, P)
-
+        
+        scores = nni_cpp_parallel(tree_current, P)
+        
         if (max(scores) > max_current + eps) {
-            tree_list[[i]] = tree_current = neighbours[[which.max(scores)]]
+            max_id = which.max(scores)
+            if (max_id %% 2 == 0) {pair_id = 2} else {pair_id = 1}
+            tree_current$edge = matrix(nnin_cpp(tree_current$edge, ceiling(max_id/2))[[pair_id]], ncol = 2)
+            tree_list[[i]] = tree_current
             tree_list[[i]]$likelihood = max_current = max(scores)
             converge = FALSE
         } else {
@@ -88,9 +89,9 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, ver
             log_info(msg)
         }
     }
-
+    
     class(tree_list) = 'multiPhylo'
-
+    
     return(tree_list)
 }
 

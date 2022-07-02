@@ -41,11 +41,11 @@ double likelihood_compute(Rcpp::NumericVector logphi, Rcpp::NumericMatrix logpro
     for (int i = 0; i < n; i++) {
 
         if (i > 0) {
-            Rcpp::NumericVector logphi_new; 
+            Rcpp::NumericVector logphi_new(m); 
             for (int j = 0; j < m; j++) {
                 Rcpp::NumericMatrix subset_logPi = wrap(logPi.slice(i));    
                 Rcpp::NumericVector logphi_logPi = logphi + subset_logPi(_, j);
-                logphi_new.push_back(logSumExp(logphi_logPi));
+                logphi_new[j] = logSumExp(logphi_logPi);
             }
             logphi = logphi_new;
         }
@@ -76,11 +76,11 @@ Rcpp::NumericMatrix forward_backward_compute(Rcpp::NumericVector logphi, Rcpp::N
     for (int t = 0; t < n; t++) {
 
         if (t > 0) {
-            Rcpp::NumericVector logphi_new; 
+            Rcpp::NumericVector logphi_new(m); 
             for (int j = 0; j < m; j++) {
                 Rcpp::NumericMatrix subset_logPi = wrap(logPi.slice(t));    
                 Rcpp::NumericVector logphi_logPi = logphi + subset_logPi(_, j);
-                logphi_new.push_back(logSumExp(logphi_logPi));
+                logphi_new[j] = logSumExp(logphi_logPi);
             }
             logphi = logphi_new;
         }
@@ -112,11 +112,11 @@ Rcpp::NumericMatrix forward_backward_compute(Rcpp::NumericVector logphi, Rcpp::N
 
         // logphi = sapply(1:m, function(i) matrixStats::logSumExp(logphi + logprob[t+1,] + logPi[[t+1]][i,]))
 
-        Rcpp::NumericVector logphinew;
-        for (int i = 0; i < m; i++) {  
+        Rcpp::NumericVector logphinew(m);
+        for (int j = 0; j < m; j++) {  
             Rcpp::NumericMatrix subset_logPi = wrap(logPi.slice(t+1));   
-            Rcpp::NumericVector logphi_logprob_logPi = logphi_ + logprob(t+1, _) + subset_logPi(i, _);
-            logphinew.push_back(logSumExp(logphi_logprob_logPi));
+            Rcpp::NumericVector logphi_logprob_logPi = logphi_ + logprob(t+1, _) + subset_logPi(j, _);
+            logphinew[j] = logSumExp(logphi_logprob_logPi);
         }
         logphi_ = logphinew;
 

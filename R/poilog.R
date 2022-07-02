@@ -24,7 +24,7 @@ dpoilog <- function(x, mu, sig, log=FALSE){
       stop(c('sig is not larger than 0', unique(sig)))
   }
 
-  p = poilog1(x=as.integer(x), my=as.double(mu), sig=as.double(sig^2), nrN=as.integer(length(x)))
+  p = poilog1(x=as.integer(x), my=as.double(mu), sig=as.double(sig^2))
 
   p[p == 0] = 1e-15
 
