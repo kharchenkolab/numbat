@@ -22,6 +22,9 @@
     <loc>https://kharchenkolab.github.io/numbat/index.html</loc>
   </url>
   <url>
+    <loc>https://kharchenkolab.github.io/numbat/news/index.html</loc>
+  </url>
+  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/Modes.html</loc>
   </url>
   <url>
@@ -104,6 +107,9 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/dbbinom.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/detect_clonal_loh.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/dpoilog.html</loc>
