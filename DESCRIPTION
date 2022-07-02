@@ -1,6 +1,6 @@
 Package: numbat
 Title: Accurate reconstruction of copy number profiles in scRNAseq data using population haplotype phasing
-Version: 0.1.2
+Version: 0.1.3
 Authors@R: c(person("Teng","Gao", email="tgao@g.harvard.edu", role=c("cre", "aut")), person("Hirak", "Sarkar", email="hirak_sarkar@hms.harvard.edu", role="aut"), person("Evan", "Biederstedt", email="evan.biederstedt@gmail.com", role="aut"), person("Peter", "Kharchenko", email = "peter_kharchenko@hms.harvard.edu", role = "aut"))
 Description: Numbat is a computational method that infers copy number variations (CNVs) in cancer scRNA-Seq data and reconstructs the tumor phylogeny. The R package integrates signals from gene expression, allelic ratio, and population haplotype structures to accurately infer allele-specific CNVs in single cells and reconstruct their lineage relationship. Numbat can be used to: 1. detect allele-specific copy number variations from single-cells; 2. differentiate tumor versus normal cells in the tumor microenvironment; 3. infer the clonal architecture and evolutionary history of profiled tumors. Numbat does not require tumor/normal-paired DNA or genotype data, but operates solely on the donor scRNA-data data (for example, 10x Cell Ranger output).
 License: MIT
