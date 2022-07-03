@@ -25,6 +25,10 @@ fit_lnpois_cpp <- function(Y_obs, lambda_ref, d) {
     .Call('_numbat_fit_lnpois_cpp', PACKAGE = 'numbat', Y_obs, lambda_ref, d)
 }
 
+fit_phi_cpp <- function(Y_obs, lambda_ref, d, mu, sig) {
+    .Call('_numbat_fit_phi_cpp', PACKAGE = 'numbat', Y_obs, lambda_ref, d, mu, sig)
+}
+
 allChildrenCPP <- function(E) {
     .Call('_numbat_allChildrenCPP', PACKAGE = 'numbat', E)
 }
@@ -65,7 +69,7 @@ poilog1 <- function(x, my, sig) {
     .Call('_numbat_poilog1', PACKAGE = 'numbat', x, my, sig)
 }
 
-l_lnpois_cpp <- function(Y_obs, lambda_ref, d, mu, sig) {
-    .Call('_numbat_l_lnpois_cpp', PACKAGE = 'numbat', Y_obs, lambda_ref, d, mu, sig)
+l_lnpois_cpp <- function(Y_obs, lambda_ref, d, mu, sig, phi = 1.0) {
+    .Call('_numbat_l_lnpois_cpp', PACKAGE = 'numbat', Y_obs, lambda_ref, d, mu, sig, phi)
 }
 

@@ -5,7 +5,7 @@
 // [[Rcpp::depends(roptim)]]
 using namespace roptim;
 
-double l_lnpois_cpp(std::vector<int> Y_obs, std::vector<double> lambda_ref, int d, double mu, double sig);
+double l_lnpois_cpp(std::vector<int> Y_obs, std::vector<double> lambda_ref, int d, double mu, double sig, double phi = 1.0);
 
 class fit_lnpois : public Functor {
 
@@ -42,3 +42,4 @@ arma::rowvec fit_lnpois_cpp(std::vector<int> Y_obs, std::vector<double> lambda_r
 
   return opt.par().t();
 }
+
