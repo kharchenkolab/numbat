@@ -84,6 +84,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// fit_lnpois_cpp
+arma::rowvec fit_lnpois_cpp(std::vector<int> Y_obs, std::vector<double> lambda_ref, int d);
+RcppExport SEXP _numbat_fit_lnpois_cpp(SEXP Y_obsSEXP, SEXP lambda_refSEXP, SEXP dSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<int> >::type Y_obs(Y_obsSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type lambda_ref(lambda_refSEXP);
+    Rcpp::traits::input_parameter< int >::type d(dSEXP);
+    rcpp_result_gen = Rcpp::wrap(fit_lnpois_cpp(Y_obs, lambda_ref, d));
+    return rcpp_result_gen;
+END_RCPP
+}
 // allChildrenCPP
 std::vector<std::vector<int>> allChildrenCPP(const arma::Mat<int> E);
 RcppExport SEXP _numbat_allChildrenCPP(SEXP ESEXP) {
@@ -203,6 +216,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// l_lnpois_cpp
+double l_lnpois_cpp(std::vector<int> Y_obs, std::vector<double> lambda_ref, int d, double mu, double sig, double phi);
+RcppExport SEXP _numbat_l_lnpois_cpp(SEXP Y_obsSEXP, SEXP lambda_refSEXP, SEXP dSEXP, SEXP muSEXP, SEXP sigSEXP, SEXP phiSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<int> >::type Y_obs(Y_obsSEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type lambda_ref(lambda_refSEXP);
+    Rcpp::traits::input_parameter< int >::type d(dSEXP);
+    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< double >::type sig(sigSEXP);
+    Rcpp::traits::input_parameter< double >::type phi(phiSEXP);
+    rcpp_result_gen = Rcpp::wrap(l_lnpois_cpp(Y_obs, lambda_ref, d, mu, sig, phi));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_numbat_cppdbbinom", (DL_FUNC) &_numbat_cppdbbinom, 5},
@@ -210,6 +239,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_numbat_likelihood_compute", (DL_FUNC) &_numbat_likelihood_compute, 5},
     {"_numbat_forward_backward_compute", (DL_FUNC) &_numbat_forward_backward_compute, 5},
     {"_numbat_viterbi_compute", (DL_FUNC) &_numbat_viterbi_compute, 7},
+    {"_numbat_fit_lnpois_cpp", (DL_FUNC) &_numbat_fit_lnpois_cpp, 3},
     {"_numbat_allChildrenCPP", (DL_FUNC) &_numbat_allChildrenCPP, 1},
     {"_numbat_CgetQ", (DL_FUNC) &_numbat_CgetQ, 3},
     {"_numbat_score_tree_cpp", (DL_FUNC) &_numbat_score_tree_cpp, 2},
@@ -220,6 +250,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_numbat_nni_cpp", (DL_FUNC) &_numbat_nni_cpp, 1},
     {"_numbat_nni_cpp_parallel", (DL_FUNC) &_numbat_nni_cpp_parallel, 2},
     {"_numbat_poilog1", (DL_FUNC) &_numbat_poilog1, 3},
+    {"_numbat_l_lnpois_cpp", (DL_FUNC) &_numbat_l_lnpois_cpp, 6},
     {NULL, NULL, 0}
 };
 

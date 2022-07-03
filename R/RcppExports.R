@@ -21,6 +21,10 @@ viterbi_compute <- function(log_delta, logprob, logPi, n, m, nu, z) {
     .Call('_numbat_viterbi_compute', PACKAGE = 'numbat', log_delta, logprob, logPi, n, m, nu, z)
 }
 
+fit_lnpois_cpp <- function(Y_obs, lambda_ref, d) {
+    .Call('_numbat_fit_lnpois_cpp', PACKAGE = 'numbat', Y_obs, lambda_ref, d)
+}
+
 allChildrenCPP <- function(E) {
     .Call('_numbat_allChildrenCPP', PACKAGE = 'numbat', E)
 }
@@ -59,5 +63,9 @@ nni_cpp_parallel <- function(tree, P) {
 
 poilog1 <- function(x, my, sig) {
     .Call('_numbat_poilog1', PACKAGE = 'numbat', x, my, sig)
+}
+
+l_lnpois_cpp <- function(Y_obs, lambda_ref, d, mu, sig, phi = 1.0) {
+    .Call('_numbat_l_lnpois_cpp', PACKAGE = 'numbat', Y_obs, lambda_ref, d, mu, sig, phi)
 }
 

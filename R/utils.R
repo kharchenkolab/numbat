@@ -518,9 +518,9 @@ analyze_bulk = function(
             filter(!is.na(Y_obs)) %>%
             filter(logFC < 8 & logFC > -8) %>%
             filter(diploid) %>%
-            {fit_lnpois(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+            {fit_lnpois_cpp(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
             
-        bulk = bulk %>% mutate(mu = fit@coef[1], sig = fit@coef[2])
+        bulk = bulk %>% mutate(mu = fit[1], sig = fit[2])
     } else {
         bulk = bulk %>% mutate(mu = NA, sig = NA)
     }

@@ -1093,9 +1093,9 @@ get_exp_likelihoods = function(exp_counts, diploid_chroms = NULL, use_loh = FALS
             exp_counts_diploid = exp_counts %>% filter(cnv_state %in% ref_states)
         }
 
-        fit = exp_counts_diploid %>% {fit_lnpois(.$Y_obs, .$lambda_ref, depth_obs)}
-        mu = fit@coef[1]
-        sigma = fit@coef[2]
+        fit = exp_counts_diploid %>% {fit_lnpois_cpp(.$Y_obs, .$lambda_ref, depth_obs)}
+        mu = fit[1]
+        sigma = fit[2]
     }
 
     res = exp_counts %>% 
