@@ -38,6 +38,7 @@ Imports:
     R.utils,
     Rcpp,
     RcppParallel,
+    roptim,
     reshape2,
     RhpcBLASctl,
     Rsamtools,
@@ -51,7 +52,7 @@ Suggests:
     matrixStats,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-LinkingTo: Rcpp, RcppArmadillo, RcppParallel
+LinkingTo: Rcpp, RcppArmadillo, RcppParallel, roptim
 NeedsCompilation: yes
 SystemRequirements: C++11, GNU make
 Author: Teng Gao [cre, aut], Hirak Sarkar [aut], Evan Biederstedt [aut], Peter Kharchenko [aut]
