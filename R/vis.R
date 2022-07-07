@@ -134,11 +134,6 @@ plot_psbulk = function(
             aes(yintercept = y),
             size = 0
         ) +
-        geom_hline(
-            data = data.frame(y = c(-exp_limit, exp_limit), variable = 'logFC'),
-            aes(yintercept = y),
-            size = 0
-        ) +
         scale_alpha_discrete(range = c(dot_alpha, 1)) +
         scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 15)) +
         theme_classic() +
@@ -161,19 +156,31 @@ plot_psbulk = function(
         xlab(marker) +
         ylab('')
 
+    if (!allele_only) {
+        p = p + geom_hline(
+                data = data.frame(y = c(-exp_limit, exp_limit), variable = 'logFC'),
+                aes(yintercept = y),
+                size = 0)
+    }
+
     if (!legend) {
         p = p + guides(color = 'none', fill = 'none', alpha = 'none', shape = 'none')
     }
 
     if (use_pos & exclude_gap) {
+        
         segs_exclude = gaps_hg38 %>% filter(end - start > 1e+06) %>% 
-            rename(seg_start = start, seg_end = end)
-        p = p + geom_rect(inherit.aes = F, data = segs_exclude, 
-            aes(xmin = seg_start, xmax = seg_end, ymin = -Inf, 
-                ymax = Inf), fill = "gray95")
+            rename(seg_start = start, seg_end = end) %>%
+            filter(CHROM %in% bulk$CHROM)
+
+        if (nrow(segs_exclude) > 0) {
+            p = p + geom_rect(inherit.aes = F, data = segs_exclude, 
+                aes(xmin = seg_start, xmax = seg_end, ymin = -Inf, ymax = Inf), 
+                fill = "gray95")
+        }
     }
 
-    if (phi_mle) {
+    if (phi_mle & (!allele_only)) {
         segs = bulk %>% 
             distinct(CHROM, seg, seg_start, seg_start_index, seg_end, seg_end_index, phi_mle) %>%
             mutate(variable = 'logFC') %>%

@@ -763,7 +763,7 @@ run_group_hmms = function(
 #' @param min_overlap numeric Minimum overlap fraction to determine count two events as as overlapping
 #' @return dataframe Consensus segments
 #' @keywords internal
-get_segs_consensus = function(bulks, min_LLR = 5, min_overlap = 0.45, retest = FALSE) {
+get_segs_consensus = function(bulks, min_LLR = 5, min_overlap = 0.45, retest = TRUE) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -1009,6 +1009,10 @@ get_clone_post = function(gtree, exp_post, allele_post) {
 #' @return dataframe Consensus CNV segments
 #' @keywords internal 
 resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
+
+    if (nrow(segs_all) == 0) {
+        return(segs_all)
+    }
             
     V = segs_all %>% ungroup() %>% mutate(vertex = 1:n(), .before = 1)
 
