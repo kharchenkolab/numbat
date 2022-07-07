@@ -164,9 +164,8 @@ optional arguments:
                        Slide-seq
   --cellTAG CELLTAG    Cell tag in bam. Should be CB for 10x and XC for Slide-
                        seq
-  --smartseq           running with SMART-seq mode
-  --bulk               running with bulk RNA-seq mode</code></pre>
-<p>Note: If running with SMART-seq mode, you may provide a file containing a list of bams (each as its own line) to <code>--bams</code> and a file containing a list of cell names (each as its own line) to <code>--barcodes</code>. When running with bulk RNA-seq mode, the <code>--barcodes</code> argument does not need to be provided.</p>
+  --smartseq           running with SMART-seq mode</code></pre>
+<p>Note: If running with SMART-seq mode, you may provide a file containing a list of bams (each as its own line) to <code>--bams</code> and a file containing a list of cell names (each as its own line) to <code>--barcodes</code>.</p>
 <p>This will produce a file named <code>{sample}_allele_counts.tsv.gz</code> under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under <code>phasing/</code> folder and raw pileup counts under <code>pileup/</code>.</p>
 <ol start="2" style="list-style-type: decimal">
 <li><p>Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.</p></li>
@@ -252,7 +251,7 @@ optional arguments:
     genetic_map <span class="op">=</span> <span class="va">genetic_map_hg38</span>
 <span class="op">)</span>
 
-<span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></code></pre>
+<span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op">%&gt;%</span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></code></pre>
 <p>Then pass <code>segs_loh</code> to the Numbat run for those regions to be excluded from baseline during analysis.</p>
 <pre><code><span class="va">out</span> <span class="op">=</span> <span class="fu"><a href="../reference/run_numbat.html">run_numbat</a></span><span class="op">(</span>
     <span class="va">....</span>,

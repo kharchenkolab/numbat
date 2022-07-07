@@ -68,10 +68,9 @@ optional arguments:
   --cellTAG CELLTAG    Cell tag in bam. Should be CB for 10x and XC for Slide-
                        seq
   --smartseq           running with SMART-seq mode
-  --bulk               running with bulk RNA-seq mode
 ```
 
-Note: If running with SMART-seq mode, you may provide a file containing a list of bams (each as its own line) to `--bams` and a file containing a list of cell names (each as its own line) to `--barcodes`. When running with bulk RNA-seq mode, the `--barcodes` argument does not need to be provided.
+Note: If running with SMART-seq mode, you may provide a file containing a list of bams (each as its own line) to `--bams` and a file containing a list of cell names (each as its own line) to `--barcodes`. 
 
 This will produce a file named `{sample}_allele_counts.tsv.gz` under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under `phasing/` folder and raw pileup counts under `pileup/`.
 
