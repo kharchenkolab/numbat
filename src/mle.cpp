@@ -96,7 +96,7 @@ struct fit_worker : public Worker {
 Rcpp::NumericMatrix fit_lnpois_parallel(Rcpp::NumericMatrix count_mat, Rcpp::NumericVector lambda_ref) {
     
     //int n = count_mat.n_cols;
-    int n = 3;
+    int n = 2;
 
     Rcpp::NumericMatrix params(n,2);
 
