@@ -7,6 +7,12 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 using namespace roptim;
 using namespace RcppParallel;
+//using namespace Rcpp;
+
+
+#include <Rcpp.h>
+
+using namespace Rcpp;
 
 double l_lnpois_cpp(std::vector<int> Y_obs, std::vector<double> lambda_ref, int d, double mu, double sig, double phi = 1.0);
 
@@ -48,19 +54,37 @@ arma::rowvec fit_lnpois_cpp(std::vector<int> Y_obs, std::vector<double> lambda_r
 
 struct fit_worker : public Worker {
 
-    const arma::Mat<int> count_mat;
-    const std::vector<double> lambda_ref;
+    //const arma::Mat<int> count_mat;
+    //const std::vector<double> lambda_ref;
+
+    // input
+    RMatrix<int> count_mat;
+    RVector<double> lambda_ref;
+    //std::vector<double> lambda_ref;
+
+    // output matrix
     RMatrix<double> params;
 
-    fit_worker(const arma::Mat<int> count_mat, std::vector<double> lambda_ref, Rcpp::NumericMatrix params): 
+    fit_worker(const Rcpp::NumericMatrix count_mat, Rcpp::NumericVector lambda_ref, Rcpp::NumericMatrix params): 
         count_mat(count_mat), lambda_ref(lambda_ref), params(params) {}
 
     void operator()(std::size_t begin, std::size_t end) {
         for (std::size_t i = begin; i < end; i++) {
-            arma::Col<int> counts = count_mat.col(i);
-            int d = sum(counts);
-            std::vector<int> counts_vec = arma::conv_to< std::vector<int> >::from(counts);
-            arma::rowvec res = fit_lnpois_cpp(counts_vec, lambda_ref, d);
+            //std::vector<int> counts = count_mat.column(i);
+            //RcppParallel::RMatrix<int>::Column counts = count_mat.column(i);
+            RcppParallel::RMatrix<int>::Column counts = count_mat.column(i);
+            int d = std::accumulate(counts.begin(), counts.end(), 0);
+            //std::vector<int> counts_vec = static_cast<std::vector<int>>(counts);
+            //std::vector<int> counts_vec = arma::conv_to< std::vector<int> >::from(counts);
+            std::vector<int> counts_vec;
+            for (int i = 0; i < counts.size(); i++) {
+                counts_vec.push_back(counts[i]);
+            }
+            std::vector<double> lambdaRef;
+             for (int i = 0; i < lambda_ref.size(); i++) {
+                lambdaRef.push_back(lambda_ref[i]);
+            }           
+            arma::rowvec res = fit_lnpois_cpp(counts_vec, lambdaRef, d);
             params(i,0) = res(0);
             params(i,1) = res(1);
         }
@@ -68,9 +92,10 @@ struct fit_worker : public Worker {
 };
 
 // [[Rcpp::export]]
-Rcpp::NumericMatrix fit_lnpois_parallel(arma::Mat<int> count_mat, std::vector<double> lambda_ref) {
+Rcpp::NumericMatrix fit_lnpois_parallel(const Rcpp::NumericMatrix count_mat, Rcpp::NumericVector lambda_ref) {
     
-    int n = count_mat.n_cols;
+    //int n = count_mat.n_cols;
+    int n = 3;
 
     Rcpp::NumericMatrix params(n,2);
 
