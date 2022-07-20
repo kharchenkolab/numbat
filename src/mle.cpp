@@ -58,7 +58,7 @@ struct fit_worker : public Worker {
     //const std::vector<double> lambda_ref;
 
     // input
-    RMatrix<int> count_mat;
+    RMatrix<double> count_mat;
     RVector<double> lambda_ref;
     //std::vector<double> lambda_ref;
 
@@ -72,8 +72,9 @@ struct fit_worker : public Worker {
         for (std::size_t i = begin; i < end; i++) {
             //std::vector<int> counts = count_mat.column(i);
             //RcppParallel::RMatrix<int>::Column counts = count_mat.column(i);
-            RcppParallel::RMatrix<int>::Column counts = count_mat.column(i);
-            int d = std::accumulate(counts.begin(), counts.end(), 0);
+            RcppParallel::RMatrix<double>::Column counts = count_mat.column(i);
+            //int d = std::accumulate(counts.begin(), counts.end(), 0);
+            int d = 2;
             //std::vector<int> counts_vec = static_cast<std::vector<int>>(counts);
             //std::vector<int> counts_vec = arma::conv_to< std::vector<int> >::from(counts);
             std::vector<int> counts_vec;
