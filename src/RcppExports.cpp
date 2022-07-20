@@ -98,13 +98,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // fit_lnpois_parallel
-Rcpp::NumericMatrix fit_lnpois_parallel(arma::Mat<int> count_mat, std::vector<double> lambda_ref);
+Rcpp::NumericMatrix fit_lnpois_parallel(const Rcpp::NumericMatrix count_mat, Rcpp::NumericVector lambda_ref);
 RcppExport SEXP _numbat_fit_lnpois_parallel(SEXP count_matSEXP, SEXP lambda_refSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::Mat<int> >::type count_mat(count_matSEXP);
-    Rcpp::traits::input_parameter< std::vector<double> >::type lambda_ref(lambda_refSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix >::type count_mat(count_matSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type lambda_ref(lambda_refSEXP);
     rcpp_result_gen = Rcpp::wrap(fit_lnpois_parallel(count_mat, lambda_ref));
     return rcpp_result_gen;
 END_RCPP
