@@ -8,6 +8,10 @@
 using namespace roptim;
 using namespace RcppParallel;
 
+#include <numeric>
+
+
+
 double l_lnpois_cpp(std::vector<int> Y_obs, std::vector<double> lambda_ref, int d, double mu, double sig, double phi = 1.0);
 
 class fit_lnpois : public Functor {
@@ -58,9 +62,12 @@ struct fit_worker : public Worker {
     void operator()(std::size_t begin, std::size_t end) {
         for (std::size_t i = begin; i < end; i++) {
             arma::Col<int> counts = count_mat.col(i);
-            int d = sum(counts);
+            // int d = sum(counts);
+            int d = std::accumulate(count_mat.begin(), count_mat.end(), 0);
+            Rcpp::Rcout << d << ' ';
             std::vector<int> counts_vec = arma::conv_to< std::vector<int> >::from(counts);
             arma::rowvec res = fit_lnpois_cpp(counts_vec, lambda_ref, d);
+            Rcpp::Rcout << res << ' ';
             params(i,0) = res(0);
             params(i,1) = res(1);
         }
@@ -70,7 +77,8 @@ struct fit_worker : public Worker {
 // [[Rcpp::export]]
 Rcpp::NumericMatrix fit_lnpois_parallel(arma::Mat<int> count_mat, std::vector<double> lambda_ref) {
     
-    int n = count_mat.n_cols;
+    //int n = count_mat.n_cols;
+    int n = 2;
 
     Rcpp::NumericMatrix params(n,2);
 
