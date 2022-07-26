@@ -24,5 +24,54 @@ Numbat does not require paired DNA or genotype data and operates solely on the d
 # User Guide
 For a complete guide, please see [Numbat User Guide](https://kharchenkolab.github.io/numbat/).
 
+# Running numbat via Docker
+
+We've provided Dockerfiles for both base R and RStudio. 
+
+## Ready-to-run Docker image
+
+To start a docker container for numbat, first install docker on your platform and then start the numbat for RStudio  with the following command in the shell:
+
+```
+docker run -p 8080:8080 -e PASSWORD=pass pkharchenkolab/numbat-rstudio:latest
+```
+
+The first time you run this command, it will download several large images so make sure that you have fast internet access setup. You can then point your browser to http://localhost:8080/ to get an Rstudio environment with `numbat` installed (please log in using credentials username=`rstudio`, password=`pass`). Explore the [docker --mount option](https://docs.docker.com/storage/volumes/) to allow access of the docker image to your local files.
+
+The base R image can be run as follows:
+
+```
+docker run -it pkharchenkolab/numbat-rbase:latest /bin/bash
+```
+
+**Note:** If you already downloaded the docker image and want to update it, please pull the latest image with: 
+```
+docker pull pkharchenkolab/numbat-rbase:latest
+```
+or 
+```
+docker pull pkharchenkolab/numbat-rstudio:latest
+```
+
+
+
+#### Building Docker image from the Dockerfile
+
+The Dockerfiles are located in the subfolder `/docker`
+
+For R studio, the command is:
+
+```
+docker build -f Dockerfile.rstudio -t numbat-rstudio .
+```
+
+For base R, the command is:
+
+
+```
+docker build -f Dockerfile.rbase -t numbat-rbase .
+```
+
+
 # Questions?
 We appreciate your feedback! Please raise a github issue or [email](mailto:tgaoteng@gmail.com) us.

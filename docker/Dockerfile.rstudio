@@ -1,34 +1,31 @@
-FROM rocker/tidyverse:4.2
+FROM rocker/rstudio:4.2.1
 
 LABEL authors="Evan Biederstedt <evan.biederstedt@gmail.com>, Teng Gao <tgao@g.harvard.edu>" \
     version.image="0.1.3" \
     version.pagoda2="0.1.3" \
-    description="tidyverse image R 4.2 to run numbat with Rstudio"
+    description="rstudio image R 4.2 to run numbat with Rstudio"
 
 
-RUN apt-get update --yes && apt-get install --no-install-recommends --yes \
-  build-essential \
-  cmake \
-  git \
-  less \
-  libcurl4-openssl-dev \
-  libssl-dev \
-  libgsl0-dev \
-  libeigen3-dev \
-  libssl-dev \
-  libcurl4-openssl-dev \
-  libssl-dev \
-  libcairo2-dev \
-  libxt-dev \
-  libgtk2.0-dev \
-  libcairo2-dev \
-  xvfb  \
-  xauth \
-  xfonts-base \
-  libz-dev \
-  libhdf5-dev \
-  libxml2-dev 
+RUN apt-get update --yes && apt-get install --yes build-essential \
+  libcurl4-gnutls-dev libxml2-dev libssl-dev libbz2-dev zlib1g-dev \
+  libfontconfig1-dev libharfbuzz-dev libfribidi-dev \
+  libncurses5-dev libncursesw5-dev liblzma-dev \
+  libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
+  libglpk-dev \
+  samtools
 
 
-RUN R -e 'devtools::install_github("kharchenkolab/numbat")'
+
+
+RUN R -e 'chooseCRANmirror(ind=52); install.packages("BiocManager")'
+RUN R -e 'BiocManager::install(c("Rsamtools"))'
+
+RUN R -e 'chooseCRANmirror(ind=42); install.packages("ragg")'
+
+RUN R -e 'chooseCRANmirror(ind=42); install.packages("pkgdown")'
+
+RUN R -e 'chooseCRANmirror(ind=42); install.packages("devtools")'
+
+
+RUN R -e 'devtools::install_github("kharchenkolab/numbat", dependencies=TRUE)'
 
