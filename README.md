@@ -53,19 +53,20 @@ or
 docker pull pkharchenkolab/numbat-rstudio:latest
 ```
 
+The docker images can be found on Dockerhub for [R Studio here](https://hub.docker.com/r/pkharchenkolab/numbat-rstudio) and [base R here](https://hub.docker.com/r/pkharchenkolab/numbat-rbase).
 
 
 #### Building Docker image from the Dockerfile
 
 The Dockerfiles are located in the subfolder `/docker`
 
-For R studio, the command is:
+For R studio, the command to build the Docker image from scratch is:
 
 ```
 docker build -f Dockerfile.rstudio -t numbat-rstudio .
 ```
 
-For base R, the command is:
+For base R, the analogous command is:
 
 
 ```
