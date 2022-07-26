@@ -24,7 +24,7 @@ Numbat does not require paired DNA or genotype data and operates solely on the d
 # User Guide
 For a complete guide, please see [Numbat User Guide](https://kharchenkolab.github.io/numbat/).
 
-# Running numbat via Docker
+# Docker
 
 We've provided Dockerfiles for both base R and RStudio. 
 
@@ -56,7 +56,7 @@ docker pull pkharchenkolab/numbat-rstudio:latest
 The docker images can be found on Dockerhub for [R Studio here](https://hub.docker.com/r/pkharchenkolab/numbat-rstudio) and [base R here](https://hub.docker.com/r/pkharchenkolab/numbat-rbase).
 
 
-#### Building Docker image from the Dockerfile
+## Building Docker image from the Dockerfile
 
 The Dockerfiles are located in the subfolder `/docker`
 

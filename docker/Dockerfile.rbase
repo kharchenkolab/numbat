@@ -14,7 +14,9 @@ RUN apt-get update --yes && apt-get install --yes build-essential \
   libglpk-dev \
   samtools
 
-RUN R -e 'chooseCRANmirror(ind=32); install.packages("BiocManager")'
+
+
+RUN R -e 'chooseCRANmirror(ind=42); install.packages("BiocManager")'
 RUN R -e 'BiocManager::install(c("Rsamtools"))'
 
 RUN R -e 'chooseCRANmirror(ind=42); install.packages("ragg")'
