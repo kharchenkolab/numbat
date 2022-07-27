@@ -149,7 +149,7 @@ vcfs = lapply(samples, function(sample){vcfR::read.vcfR(glue('{outdir}/pileup/{s
 numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'))
 
 ## phasing
-eagle_cmd = function(chr, sample) {
+eagle_cmd = function(chr) {
     paste(eagle, 
         glue('--numThreads {ncores}'), 
         glue('--vcfTarget {outdir}/phasing/{label}_chr{chr}.vcf.gz'), 
@@ -159,11 +159,7 @@ eagle_cmd = function(chr, sample) {
     sep = ' ')
 }
 
-cmds = c()
-
-for (sample in samples) {
-    cmds = c(cmds, lapply(1:22, function(chr){eagle_cmd(chr, sample)}))
-}
+cmds = lapply(1:22, function(chr){eagle_cmd(chr)})
 
 script = glue('{outdir}/run_phasing.sh')
 
