@@ -518,7 +518,7 @@ run_numbat = function(
         }
     }
 
-    # Output final subclone bulk profiles
+    # Output final subclone bulk profiles - logic can be simplified
     bulk_clones = make_group_bulks(
         groups = clones,
         count_mat = count_mat,
@@ -535,7 +535,7 @@ run_numbat = function(
             gamma = gamma,
             alpha = alpha,
             min_genes = min_genes,
-            common_diploid = common_diploid,
+            common_diploid = FALSE,
             diploid_chroms = diploid_chroms,
             segs_loh = segs_loh,
             ncores = ncores,

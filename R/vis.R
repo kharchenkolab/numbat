@@ -58,7 +58,7 @@ cnv_labels = names(cnv_colors) %>%
 plot_psbulk = function(
         bulk, use_pos = TRUE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2, 
         phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = FALSE, 
-        exclude_gap = TRUE
+        exclude_gap = TRUE, raster = FALSE
     ) {
 
     if (!all(c('state_post', 'cnv_state_post') %in% colnames(bulk))) {
@@ -120,19 +120,31 @@ plot_psbulk = function(
             D,
             aes(x = get(marker), y = value, color = state_post),
             na.rm=TRUE
-        ) +
-        geom_point(
-            aes(
-                shape = str_detect(state_post, '_2'),
-                alpha = str_detect(state_post, '_2')
-            ),
+        )
+
+    if (use_pos & exclude_gap) {
+        
+        segs_exclude = gaps_hg38 %>% filter(end - start > 1e+06) %>% 
+            rename(seg_start = start, seg_end = end) %>%
+            rbind(acen) %>%
+            filter(CHROM %in% bulk$CHROM)
+
+        if (nrow(segs_exclude) > 0) {
+            p = p + geom_rect(inherit.aes = F, data = segs_exclude, 
+                aes(xmin = seg_start, xmax = seg_end, ymin = -Inf, ymax = Inf), 
+                fill = "gray95")
+        }
+    }
+
+    p = p + geom_point(
+            aes(shape = str_detect(state_post, '_2'), alpha = str_detect(state_post, '_2')),
             size = dot_size,
             na.rm = TRUE
         ) +
         geom_hline(
             data = data.frame(y = c(0,1), variable = 'pHF'),
             aes(yintercept = y),
-            size = 0
+            size = 0, alpha = 0
         ) +
         scale_alpha_discrete(range = c(dot_alpha, 1)) +
         scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 15)) +
@@ -160,24 +172,11 @@ plot_psbulk = function(
         p = p + geom_hline(
                 data = data.frame(y = c(-exp_limit, exp_limit), variable = 'logFC'),
                 aes(yintercept = y),
-                size = 0)
+                size = 0, alpha = 0)
     }
 
     if (!legend) {
         p = p + guides(color = 'none', fill = 'none', alpha = 'none', shape = 'none')
-    }
-
-    if (use_pos & exclude_gap) {
-        
-        segs_exclude = gaps_hg38 %>% filter(end - start > 1e+06) %>% 
-            rename(seg_start = start, seg_end = end) %>%
-            filter(CHROM %in% bulk$CHROM)
-
-        if (nrow(segs_exclude) > 0) {
-            p = p + geom_rect(inherit.aes = F, data = segs_exclude, 
-                aes(xmin = seg_start, xmax = seg_end, ymin = -Inf, ymax = Inf), 
-                fill = "gray95")
-        }
     }
 
     if (phi_mle & (!allele_only)) {
@@ -232,6 +231,10 @@ plot_psbulk = function(
     } 
 
     p = p + xlab(marker_label)
+
+    if (raster) {
+        p = ggrastr::rasterize(p, layers = 'Point', dpi = 300)
+    }
     
     return(p)
 }
@@ -434,7 +437,7 @@ plot_phylo_heatmap = function(
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = FALSE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE, 
         p_min = 0.9, line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2, 
-        clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, snvs = NULL
+        clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, snvs = NULL, raster = FALSE
     ) {
     
     # make sure chromosomes are in order
@@ -629,7 +632,7 @@ plot_phylo_heatmap = function(
         ) %>%
         mutate(cell = factor(cell, cell_order)) %>%
         filter(!is.na(cell)) %>%
-        annot_bar(transpose = TRUE, legend = clone_legend, pal_annot = pal_clone, legend_title = clone_title, size = size)
+        annot_bar(transpose = TRUE, legend = clone_legend, pal_annot = pal_clone, legend_title = clone_title, size = size, raster = raster)
     
     # add clone lines
     if (clone_line) {
@@ -658,6 +661,10 @@ plot_phylo_heatmap = function(
         p_segs = p_segs + geom_hline(yintercept = clone_indices, color = 'darkslategray', size = 0.5, linetype = 'dashed')
     }
 
+    if (raster) {
+        p_segs = ggrastr::rasterize(p_segs, layers = 'Segment', dpi = 300)
+    }
+
     # external annotation
     if (!is.null(annot)) {
         
@@ -667,7 +674,7 @@ plot_phylo_heatmap = function(
             ) %>%
             filter(cell %in% cell_order) %>%
             mutate(cell = factor(cell, cell_order)) %>%
-            annot_bar(transpose = T, pal_annot = pal_annot, legend_title = annot_title, size = size, annot_scale = annot_scale)
+            annot_bar(transpose = T, pal_annot = pal_annot, legend_title = annot_title, size = size, annot_scale = annot_scale, raster = raster)
 
         if (clone_bar) {
             (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')
@@ -879,6 +886,86 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
     
 }
 
+#' Plot CNV heatmap
+#' @param segs dataframe Segments to plot. Need columns "seg_start", "seg_end", "cnv_state"
+#' @param var character Column to facet by
+#' @param label_group logical Label the groups
+#' @param legend logical Display the legend
+#' @export
+cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE) {
+    
+    gaps_hg38_filtered = gaps_hg38 %>% filter(end - start > 1e6)
+
+    if (!'p_cnv' %in% colnames(segs)) {
+        segs$p_cnv = 1
+    }
+    
+    p = ggplot(
+            segs
+        ) +
+        geom_rect(
+            aes(xmin = seg_start, xmax = seg_end, ymin = -0.5, ymax = 0.5, fill = cnv_state, alpha = p_cnv)
+        ) +
+        geom_rect(
+            data = chrom_sizes_hg38,
+            aes(xmin = 0, xmax = size, ymin = -0.5, ymax = 0.5, fill = NA)
+        ) +
+        geom_rect(
+            inherit.aes = F,
+            data = gaps_hg38_filtered,
+            aes(xmin = start, 
+                xmax = end,
+                ymin = -Inf,
+                ymax = Inf),
+            fill = 'white'
+        ) +
+        geom_rect(
+            inherit.aes = F,
+            data = gaps_hg38_filtered,
+            aes(xmin = start, 
+                xmax = end,
+                ymin = -Inf,
+                ymax = Inf),
+            fill = 'gray',
+            alpha = 0.5
+        ) +
+        theme_classic() +
+        theme(
+            panel.spacing = unit(0, 'mm'),
+            panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+            strip.background = element_blank(),
+            strip.text.y = element_text(angle = 0),
+            axis.text = element_blank(),
+            plot.margin = margin(0, 0, 0, 0),
+            axis.title.x = element_blank(),
+            axis.ticks = element_blank(),
+            axis.line.x = element_blank()
+        ) +
+        scale_fill_manual(
+            values = c('neu' = 'white', cnv_colors[names(cnv_colors) != 'neu']),
+            na.value = 'white',
+            limits = force,
+            labels = cnv_labels,
+            na.translate = F,
+            name = 'States'
+        ) +
+        scale_alpha_continuous(range = c(0,1), limits = c(0.5,1), oob = scales::squish) +
+        guides(alpha = 'none') +
+        scale_x_continuous(expand = expansion(add = 0)) +
+        facet_grid(get(var)~CHROM, space = 'free_x', scale = 'free', drop = TRUE)
+
+        if (!legend) {
+            p = p + theme(legend.position = 'none')
+        }
+
+        if (!label_group) {
+            p = p + theme(strip.text.y = element_blank())
+        }
+
+        return(p)
+
+}
+
 
 ########################### Functions for internal use ############################
 
@@ -1069,14 +1156,14 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
     
 }
 
-do_plot = function(p, f, w, h, out_dir = '~/figures') {
-    ggsave(filename = paste0(out_dir, '/', f, '.png'), plot = p, width = w, height = h, device = 'png', dpi = 300)
+do_plot = function(p, f, w, h, out_dir = '~/figures', device = 'pdf') {
+    ggsave(filename = paste0(out_dir, '/', f, '.', device), plot = p, width = w, height = h, device = device, dpi = 300)
     options(repr.plot.width = w, repr.plot.height = h, repr.plot.res = 300)
     print(p)
 }
 
 # expect columns cell and annot
-annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL, annot_scale = NULL) {
+annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL, annot_scale = NULL, raster = FALSE) {
 
     D = D %>% mutate(cell_index = as.integer(cell))
 
@@ -1123,6 +1210,10 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', siz
         p = p + guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = legend_title))
     } else {
         p = p + guides(fill = 'none')
+    }
+
+    if (raster) {
+        p = ggrastr::rasterize(p, layers = 'Tile', dpi = 300)
     }
 
     return(p)
@@ -1233,80 +1324,6 @@ plot_exp_post = function(exp_post, jitter = TRUE) {
     }
 
     return(p)
-}
-
-cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE) {
-    
-    gaps_hg38_filtered = gaps_hg38 %>% filter(end - start > 1e6)
-
-    if (!'p_cnv' %in% colnames(segs)) {
-        segs$p_cnv = 1
-    }
-    
-    p = ggplot(
-            segs
-        ) +
-        geom_rect(
-            aes(xmin = seg_start, xmax = seg_end, ymin = -0.5, ymax = 0.5, fill = cnv_state, alpha = p_cnv)
-        ) +
-        geom_rect(
-            data = chrom_sizes_hg38,
-            aes(xmin = 0, xmax = size, ymin = -0.5, ymax = 0.5, fill = NA)
-        ) +
-        geom_rect(
-            inherit.aes = F,
-            data = gaps_hg38_filtered,
-            aes(xmin = start, 
-                xmax = end,
-                ymin = -Inf,
-                ymax = Inf),
-            fill = 'white'
-        ) +
-        geom_rect(
-            inherit.aes = F,
-            data = gaps_hg38_filtered,
-            aes(xmin = start, 
-                xmax = end,
-                ymin = -Inf,
-                ymax = Inf),
-            fill = 'gray',
-            alpha = 0.5
-        ) +
-        theme_classic() +
-        theme(
-            panel.spacing = unit(0, 'mm'),
-            panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-            strip.background = element_blank(),
-            strip.text.y = element_text(angle = 0),
-            axis.text = element_blank(),
-            plot.margin = margin(0, 0, 0, 0),
-            axis.title.x = element_blank(),
-            axis.ticks = element_blank(),
-            axis.line.x = element_blank()
-        ) +
-        scale_fill_manual(
-            values = c('neu' = 'white', cnv_colors[names(cnv_colors) != 'neu']),
-            na.value = 'white',
-            limits = force,
-            labels = cnv_labels,
-            na.translate = F,
-            name = 'States'
-        ) +
-        scale_alpha_continuous(range = c(0,1), limits = c(0.5,1), oob = scales::squish) +
-        guides(alpha = 'none') +
-        scale_x_continuous(expand = expansion(add = 0)) +
-        facet_grid(get(var)~CHROM, space = 'free_x', scale = 'free', drop = TRUE)
-
-        if (!legend) {
-            p = p + theme(legend.position = 'none')
-        }
-
-        if (!label_group) {
-            p = p + theme(strip.text.y = element_blank())
-        }
-
-        return(p)
-
 }
 
 plot_clone_profile = function(joint_post, clone_post) {
