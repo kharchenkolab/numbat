@@ -20,18 +20,22 @@ RUN cd /usr/bin && \
   tar -vxjf htslib-1.15.1.tar.bz2 && cd htslib-1.15.1 && make && sudo make install
 
 
+RUN mkdir data
 
 # hg 38
 RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz && gzip -d genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz 
 
 
 # hg19
-RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz && cp genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz /data&& gzip -d genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
+RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz && gzip -d genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
 
+
+## 
 # hg38
-RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip && unzip 1000G_hg38.zip 
+##RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip && unzip 1000G_hg38.zip 
+
 # hg19
-RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip && unzip 1000G_hg19.zip
+##RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip && unzip 1000G_hg19.zip
 
 
 
@@ -55,6 +59,8 @@ RUN R -e 'chooseCRANmirror(ind=42); install.packages("devtools")'
 RUN R -e 'devtools::install_github("kharchenkolab/numbat", dependencies=TRUE)'
 
 RUN git clone https://github.com/kharchenkolab/numbat.git
+
+RUN mdkir /tmp && chmod 777 /tmp
 
 
 WORKDIR /data
