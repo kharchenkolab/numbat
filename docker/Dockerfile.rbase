@@ -11,8 +11,34 @@ RUN apt-get update --yes && apt-get install --yes build-essential \
   libfontconfig1-dev libharfbuzz-dev libfribidi-dev \
   libncurses5-dev libncursesw5-dev liblzma-dev \
   libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
-  libglpk-dev \
-  samtools
+  libglpk-dev git autoconf gettext libtool automake  \
+  samtools sudo
+
+
+RUN cd /usr/bin && \
+  wget https://github.com/samtools/htslib/releases/download/1.15.1/htslib-1.15.1.tar.bz2 && \
+  tar -vxjf htslib-1.15.1.tar.bz2 && cd htslib-1.15.1 && make && sudo make install
+
+
+
+# hg 38
+RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz && gzip -d genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz 
+
+
+# hg19
+RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz && cp genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz /data&& gzip -d genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
+
+# hg38
+RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip && unzip 1000G_hg38.zip 
+# hg19
+RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip && unzip 1000G_hg19.zip
+
+
+
+RUN git clone https://github.com/single-cell-genetics/cellsnp-lite.git && cd cellsnp-lite && \
+  autoreconf -iv && ./configure && make && sudo make install    
+
+RUN wget https://storage.googleapis.com/broad-alkesgroup-public/Eagle/downloads/Eagle_v2.4.1.tar.gz && cd .. && tar -xvzf Eagle_v2.4.1.tar.gz && cd /Eagle_v2.4.1 && cp eagle /usr/bin
 
 
 
@@ -27,4 +53,11 @@ RUN R -e 'chooseCRANmirror(ind=42); install.packages("devtools")'
 
 
 RUN R -e 'devtools::install_github("kharchenkolab/numbat", dependencies=TRUE)'
+
+RUN git clone https://github.com/kharchenkolab/numbat.git
+
+
+WORKDIR /data
+
+
 

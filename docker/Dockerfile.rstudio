@@ -28,3 +28,5 @@ RUN R -e 'chooseCRANmirror(ind=42); install.packages("devtools")'
 
 RUN R -e 'devtools::install_github("kharchenkolab/numbat", dependencies=TRUE)'
 
+
+
