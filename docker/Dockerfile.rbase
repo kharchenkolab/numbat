@@ -60,10 +60,12 @@ RUN R -e 'devtools::install_github("kharchenkolab/numbat", dependencies=TRUE)'
 
 RUN git clone https://github.com/kharchenkolab/numbat.git
 
-RUN mdkir /tmp && chmod 777 /tmp
+RUN mkdir -p /tmp && chmod 777 /tmp
+
+RUN chmod 777 /numbat/pileup_and_phase.R 
 
 
-WORKDIR /data
+WORKDIR /numbat
 
 
 
