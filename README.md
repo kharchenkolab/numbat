@@ -43,19 +43,7 @@ Normally, users will want to process data with the script `pileup_and_phase.R` a
 
 A recommended workflow is the following:
 
-(1) Download a 1000G Reference Panel in a suitable folder `/work`
-
-```
-cd /work
-
-# hg38
-wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
-
-# hg19
-wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
-```
-
-(2) Run docker and use "bind mounts" to mount to this local folder `/work` so that you'll be able to access and write to these local files. You can now (interatively) run `Rscript pileup_and_phase.R ` 
+Run docker and use "bind mounts" to mount to this local folder `/work` so that you'll be able to access and write to these local files. You can now (interatively) run `Rscript pileup_and_phase.R ` 
 
 
 ```
@@ -63,6 +51,14 @@ docker run -v /work:/mnt/mydata  -it pkharchenkolab/numbat-rbase:latest /bin/bas
 
 Rscript pileup_and_phase.R --label, --samples, --bams, --gmap, --snpvcf, --paneldir, --outdir, --ncores
 
+```
+
+Files in `/data`:
+
+```
+1000G_hg19.zip  
+1000G_hg38.zip  
+genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf  genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf
 ```
 
 **Note:** In the above command, we are using the `-v` flag to mount a host folder to the container, which is detailed [here](https://docs.docker.com/storage/). 
