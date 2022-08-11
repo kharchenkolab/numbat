@@ -69,16 +69,17 @@ WORKDIR /numbat
 
 
 ## NOTE: 
-## Added 1000G Reference Panels for hg38 and hg19 as follows:
-## (1) Downloaded the files via wget in a Docker container
+## Added 1000G Reference Panels for hg38  as follows:
+## (1) Downloaded the file via wget in a Docker container
 ## # hg38
 ## wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
-## # hg19
-## wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
-## 
+##
 ## (2) Then I save this container as an image using `docker container commit`
 ## cf https://docs.docker.com/engine/reference/commandline/push/
 ## i.e. `docker container commit c16378f943fe pkharchenkolab`
 ##
-
+## Note: I didn't include hg19, though the procedure is the same using
+## # hg19
+## wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
+## 
 
