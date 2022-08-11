@@ -124,9 +124,10 @@ plot_psbulk = function(
 
     if (use_pos & exclude_gap) {
         
-        segs_exclude = gaps_hg38 %>% filter(end - start > 1e+06) %>% 
+        segs_exclude = gaps_hg38 %>% 
+            filter(end - start > 1e+06) %>% 
+            rbind(acen_hg38) %>%
             rename(seg_start = start, seg_end = end) %>%
-            rbind(acen) %>%
             filter(CHROM %in% bulk$CHROM)
 
         if (nrow(segs_exclude) > 0) {
@@ -154,7 +155,8 @@ plot_psbulk = function(
             panel.spacing.y = unit(1, 'mm'),
             panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
             strip.background = element_blank(),
-            axis.text.x = element_blank()
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank()
         ) +
         facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
         # scale_x_continuous(expand = expansion(add = 5)) +
@@ -583,9 +585,11 @@ plot_phylo_heatmap = function(
 
     if (exclude_gap) {
 
-        segs_exclude = gaps_hg38 %>% filter(end - start > 1e6) %>%
-            mutate(CHROM = as.integer(as.character(CHROM))) %>%
-            rename(seg_start = start, seg_end = end)
+        segs_exclude = gaps_hg38 %>% 
+            filter(end - start > 1e+06) %>% 
+            # bind_rows(acen_hg38) %>%
+            rename(seg_start = start, seg_end = end) %>%
+            mutate(CHROM = as.integer(CHROM))
 
         p_segs = p_segs + 
             geom_rect(
@@ -892,9 +896,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 #' @param label_group logical Label the groups
 #' @param legend logical Display the legend
 #' @export
-cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE) {
-    
-    gaps_hg38_filtered = gaps_hg38 %>% filter(end - start > 1e6)
+cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, exclude_gap = TRUE) {
 
     if (!'p_cnv' %in% colnames(segs)) {
         segs$p_cnv = 1
@@ -909,26 +911,37 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE) {
         geom_rect(
             data = chrom_sizes_hg38,
             aes(xmin = 0, xmax = size, ymin = -0.5, ymax = 0.5, fill = NA)
-        ) +
-        geom_rect(
-            inherit.aes = F,
-            data = gaps_hg38_filtered,
-            aes(xmin = start, 
-                xmax = end,
-                ymin = -Inf,
-                ymax = Inf),
-            fill = 'white'
-        ) +
-        geom_rect(
-            inherit.aes = F,
-            data = gaps_hg38_filtered,
-            aes(xmin = start, 
-                xmax = end,
-                ymin = -Inf,
-                ymax = Inf),
-            fill = 'gray',
-            alpha = 0.5
-        ) +
+        )
+
+    if (exclude_gap) {
+
+        segs_exclude = gaps_hg38 %>% 
+            filter(end - start > 1e+06) %>% 
+            rename(seg_start = start, seg_end = end) 
+
+        p = p +
+            geom_rect(
+                inherit.aes = F,
+                data = segs_exclude,
+                aes(xmin = seg_start, 
+                    xmax = seg_end,
+                    ymin = -Inf,
+                    ymax = Inf),
+                fill = 'white'
+            ) +
+            geom_rect(
+                inherit.aes = F,
+                data = segs_exclude,
+                aes(xmin = seg_start, 
+                    xmax = seg_end,
+                    ymin = -Inf,
+                    ymax = Inf),
+                fill = 'gray',
+                alpha = 0.5
+            )
+    }
+        
+    p = p +
         theme_classic() +
         theme(
             panel.spacing = unit(0, 'mm'),
