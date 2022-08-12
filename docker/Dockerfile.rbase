@@ -77,7 +77,7 @@ WORKDIR /numbat
 ##
 ## (2) Then I save this container as an image using `docker container commit`
 ## cf https://docs.docker.com/engine/reference/commandline/push/
-## i.e. `docker container commit c16378f943fe pkharchenkolab`
+## i.e. `docker container commit c16378f943fe  pkharchenkolab/numbat-rbase:latest`
 ##
 ## Note: I didn't include hg19, though the procedure is the same using
 ## # hg19
