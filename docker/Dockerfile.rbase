@@ -26,8 +26,9 @@ RUN mkdir data
 RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz && gzip -d genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz 
 
 
+## Note: not run; the user can follow these commands if they want hg19
 # hg19
-RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz && gzip -d genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
+## RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz && gzip -d genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
 
 
 ## 
@@ -72,7 +73,7 @@ WORKDIR /numbat
 ## Added 1000G Reference Panels for hg38  as follows:
 ## (1) Downloaded the file via wget in a Docker container
 ## # hg38
-## wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
+## wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip && unzip 1000G_hg38.zip
 ##
 ## (2) Then I save this container as an image using `docker container commit`
 ## cf https://docs.docker.com/engine/reference/commandline/push/
