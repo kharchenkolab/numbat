@@ -12,9 +12,9 @@
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
 #' @importFrom extraDistr dgpois
+#' @importFrom methods as is
 #' @importFrom RcppParallel RcppParallelLibs
 #' @importFrom grDevices colorRampPalette
-#' @importFrom methods as is
 #' @importFrom stats as.dendrogram as.dist cor cutree dbinom dnbinom dnorm dpois end hclust integrate model.matrix na.omit optim p.adjust pnorm reorder rnorm setNames start t.test
 #' @importFrom utils combn
 #' @useDynLib numbat
@@ -1224,7 +1224,11 @@ exclude_loh = function(exp_sc, segs_loh) {
 #' @param lambdas_ref matrix Reference expression profiles
 #' @return dataframe Expression posteriors
 #' @keywords internal
-get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = NULL, diploid_chroms = NULL, use_loh = NULL, segs_loh = NULL, ncores = 30, verbose = TRUE, debug = F) {
+get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = NULL, diploid_chroms = NULL, use_loh = NULL, segs_loh = NULL, ncores = 30, verbose = TRUE, debug = FALSE) {
+
+    if (!requireNamespace("gtools", quietly = TRUE)) {
+        stop("Package \"gtools\" needed for this function to work. Please install it.", call. = FALSE)
+    }
 
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf, segs_loh)
 
@@ -1449,6 +1453,10 @@ get_allele_post = function(df_allele, haplotypes, segs_consensus) {
 #' @return dataframe Joint single-cell CNV posteriors
 #' @keywords internal
 get_joint_post = function(exp_post, allele_post, segs_consensus) {
+
+    if (!requireNamespace("gtools", quietly = TRUE)) {
+        stop("Package \"gtools\" needed for this function to work. Please install it.", call. = FALSE)
+    }
     
     joint_post = full_join(
             exp_post %>%

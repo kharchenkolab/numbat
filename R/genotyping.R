@@ -10,6 +10,9 @@
 #' @keywords internal
 genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE) {
 
+    if (!requireNamespace("vcfR", quietly = TRUE)) {
+        stop("Package \"vcfR\" needed for this function to work. Please install it.", call. = FALSE)
+    }
     snps = lapply(
             vcfs, function(vcf){get_snps(vcf)}
         ) %>%
@@ -47,6 +50,9 @@ genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix =
 #' @keywords internal 
 get_snps = function(vcf) {
 
+    if (!requireNamespace("vcfR", quietly = TRUE)) {
+        stop("Package \"vcfR\" needed for this function to work. Please install it.", call. = FALSE)
+    }
     snps = as.data.frame(vcf@fix) %>%
         mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
         tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
@@ -66,7 +72,10 @@ get_snps = function(vcf) {
 ## per chrom function
 #' @keywords internal 
 make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE, chr_prefix = TRUE) {
-    
+   
+    if (!requireNamespace("vcfR", quietly = TRUE)) {
+        stop("Package \"vcfR\" needed for this function to work. Please install it.", call. = FALSE)
+    } 
     chr_snps = snps %>%
         filter(CHROM == chr | CHROM == paste0('chr', chr)) %>%
         mutate(
@@ -142,6 +151,15 @@ make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE
 #' @keywords internal 
 vcfR_file_fix <- function(file) {
 
+    if (!requireNamespace("vcfR", quietly = TRUE)) {
+        stop("Package \"vcfR\" needed for this function to work. Please install it.", call. = FALSE)
+    }
+    if (!requireNamespace("Rsamtools", quietly = TRUE)) {
+        stop("Package \"Rsamtools\" needed for this function to work. Please install it.", call. = FALSE)
+    }
+    if (!requireNamespace("R.utils", quietly = TRUE)) {
+        stop("Package \"R.utils\" needed for this function to work. Please install it.", call. = FALSE)
+    }
     out <- R.utils::gunzip(file, overwrite = TRUE)
     out2 <- Rsamtools::bgzip(out, dest=sprintf("%s.gz", sub("\\.gz$", "", out)), overwrite = TRUE)
     file.remove(out)

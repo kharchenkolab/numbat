@@ -61,6 +61,12 @@ plot_psbulk = function(
         exclude_gap = TRUE, raster = FALSE
     ) {
 
+    if (raster) {
+        if (!requireNamespace("ggrastr", quietly = TRUE)) {
+            stop("Package \"ggrastr\" needed for this function to work with 'raster=TRUE'. Please install it.", call. = FALSE)
+        }
+    }
+
     if (!all(c('state_post', 'cnv_state_post') %in% colnames(bulk))) {
         bulk = bulk %>%
             mutate(
@@ -441,7 +447,12 @@ plot_phylo_heatmap = function(
         p_min = 0.9, line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2, 
         clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, snvs = NULL, raster = FALSE
     ) {
-    
+
+    if (raster) {
+        if (!requireNamespace("ggrastr", quietly = TRUE)) {
+            stop("Package \"ggrastr\" needed for this function to work with 'raster=TRUE'. Please install it.", call. = FALSE)
+        }
+    }    
     # make sure chromosomes are in order
     joint_post = joint_post %>% mutate(CHROM = as.integer(as.character(CHROM)))
     segs_consensus = segs_consensus %>% mutate(CHROM = as.integer(as.character(CHROM)))
@@ -699,6 +710,10 @@ plot_phylo_heatmap = function(
 #' @export
 plot_consensus = function(segs) {
   
+    if (!requireNamespace("ggrepel", quietly = TRUE)) {
+        stop("Package \"ggrastr\" needed for this function to work. Please install it.", call. = FALSE)
+    }
+
     chrom_labeller <- function(chr){
         chr[chr %in% c(19, 21, 22)] = ''
         return(chr)
@@ -1178,6 +1193,13 @@ do_plot = function(p, f, w, h, out_dir = '~/figures', device = 'pdf') {
 # expect columns cell and annot
 annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL, annot_scale = NULL, raster = FALSE) {
 
+
+    if (raster) {
+        if (!requireNamespace("ggrastr", quietly = TRUE)) {
+            stop("Package \"ggrastr\" needed for this function to work with 'raster=TRUE'. Please install it.", call. = FALSE)
+        }
+    }
+
     D = D %>% mutate(cell_index = as.integer(cell))
 
     index_max = length(levels(D$cell))
@@ -1235,6 +1257,9 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', siz
 #' @keywords internal
 show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 
+    if (!requireNamespace("caTools", quietly = TRUE)) {
+        stop("Package \"caTools\" needed for this function to work. Please install it.", call. = FALSE)
+    }
     D = bulk %>% 
         filter(!is.na(pAD)) %>%
         group_by(CHROM) %>%
@@ -1313,6 +1338,10 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 
 # model diagnostics
 plot_exp_post = function(exp_post, jitter = TRUE) {
+ 
+    if (!requireNamespace("gtools", quietly = TRUE)) {
+        stop("Package \"gtools\" needed for this function to work. Please install it.", call. = FALSE)
+    } 
     if (!'annot' %in% colnames(exp_post)) {
         exp_post$annot = '0'
     }

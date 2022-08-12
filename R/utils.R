@@ -92,6 +92,9 @@ aggregate_counts = function(count_mat, annot, normalized = TRUE, verbose = TRUE)
 #' @keywords internal
 smooth_expression = function(count_mat, lambdas_ref, gtf, window = 101, verbose = FALSE) {
 
+    if (!requireNamespace("caTools", quietly = TRUE)) {
+        stop("Package \"caTools\" needed for this function to work. Please install it.", call. = FALSE)
+    }
     mut_expressed = filter_genes(count_mat, lambdas_ref, gtf, verbose = verbose)
     count_mat = count_mat[mut_expressed,,drop=FALSE]
     lambdas_ref = lambdas_ref[mut_expressed]
@@ -955,6 +958,11 @@ smooth_segs = function(bulk, min_genes = 10) {
 #' @keywords internal
 annot_consensus = function(bulk, segs_consensus, join_mode = 'inner') {
 
+
+    if (!requireNamespace("gtools", quietly = TRUE)) {
+        stop("Package \"gtools\" needed for this function to work. Please install it.", call. = FALSE)
+    }
+
     if (join_mode == 'inner') {
         join = inner_join
     } else {
@@ -1017,6 +1025,10 @@ find_common_diploid = function(
     bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 2^0.25, alpha = 1e-4, min_genes = 10, 
     ncores = 1, segs_loh = NULL, debug = FALSE, verbose = TRUE) {
 
+
+    if (!requireNamespace("gtools", quietly = TRUE)) {
+        stop("Package \"gtools\" needed for this function to work. Please install it.", call. = FALSE)
+    }
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = '1'
     }
@@ -1476,6 +1488,9 @@ approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu =
 #' @keywords internal
 get_internal_nodes = function(den, node, labels) {
 
+    if (!requireNamespace("dendextend", quietly = TRUE)) {
+        stop("Package \"dendextend\" needed for this function to work. Please install it.", call. = FALSE)
+    }
     membership = data.frame(
         cell = dendextend::get_leaves_attr(den, attribute = 'label'),
         node = node
@@ -1787,6 +1802,9 @@ simes_p = function(p.vals, n_dim) {
 #' Get the total probability from a region of a normal pdf
 #' @keywords internal
 pnorm.range.log = function(lower, upper, mu, sd) {
+    if (!requireNamespace("VGAM", quietly = TRUE)) {
+        stop("Package \"VGAM\" needed for this function to work. Please install it.", call. = FALSE)
+    }
     if (sd == 0) { return(1) }
     l_upper = pnorm(upper, mu, sd, log.p = TRUE)
     l_lower = pnorm(lower, mu, sd, log.p = TRUE)
@@ -1794,6 +1812,9 @@ pnorm.range.log = function(lower, upper, mu, sd) {
 }
 
 pnorm.range.log = function(lower, upper, mu, sd) {
+    if (!requireNamespace("VGAM", quietly = TRUE)) {
+        stop("Package \"VGAM\" needed for this function to work. Please install it.", call. = FALSE)
+    }
     if (sd == 0) { return(1) }
     l_upper = pnorm(upper, mu, sd, log.p = TRUE)
     l_lower = pnorm(lower, mu, sd, log.p = TRUE)
