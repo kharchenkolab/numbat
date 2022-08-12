@@ -235,7 +235,7 @@ run_numbat = function(
             p = plot_bulks(bulk_subtrees, min_LLR = min_LLR, use_pos = TRUE)
             ggsave(
                 glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
-                width = 12, height = 2*length(unique(bulk_subtrees$sample)), dpi = 200
+                width = 12, height = 2*length(unique(bulk_subtrees$sample)), dpi = 250
             )
         }
 
@@ -253,7 +253,6 @@ run_numbat = function(
         bulk_subtrees = retest_bulks(
                 bulk_subtrees,
                 segs_consensus, 
-                # segs_loh = segs_loh,
                 diploid_chroms = diploid_chroms, 
                 min_LLR = min_LLR,
                 ncores = ncores
@@ -304,7 +303,7 @@ run_numbat = function(
             p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE)
             ggsave(
                 glue('{out_dir}/bulk_clones_{i}.png'), p, 
-                width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 200
+                width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 250
             )
         }
 
@@ -474,7 +473,7 @@ run_numbat = function(
                     clone_bar = TRUE
                 )
             
-                ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 8, height = 3.5, dpi = 200)
+                ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 8, height = 3.5, dpi = 250)
             
             },
             error = function(e) { 
@@ -518,7 +517,7 @@ run_numbat = function(
         }
     }
 
-    # Output final subclone bulk profiles
+    # Output final subclone bulk profiles - logic can be simplified
     bulk_clones = make_group_bulks(
         groups = clones,
         count_mat = count_mat,
@@ -535,7 +534,7 @@ run_numbat = function(
             gamma = gamma,
             alpha = alpha,
             min_genes = min_genes,
-            common_diploid = common_diploid,
+            common_diploid = FALSE,
             diploid_chroms = diploid_chroms,
             segs_loh = segs_loh,
             ncores = ncores,
@@ -556,7 +555,7 @@ run_numbat = function(
         p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE)
         ggsave(
             glue('{out_dir}/bulk_clones_final.png'), p, 
-            width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 200
+            width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 250
         )
     }
     
@@ -763,7 +762,7 @@ run_group_hmms = function(
 #' @param min_overlap numeric Minimum overlap fraction to determine count two events as as overlapping
 #' @return dataframe Consensus segments
 #' @keywords internal
-get_segs_consensus = function(bulks, min_LLR = 5, min_overlap = 0.45, retest = FALSE) {
+get_segs_consensus = function(bulks, min_LLR = 5, min_overlap = 0.45, retest = TRUE) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = 1
@@ -1009,6 +1008,10 @@ get_clone_post = function(gtree, exp_post, allele_post) {
 #' @return dataframe Consensus CNV segments
 #' @keywords internal 
 resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
+
+    if (nrow(segs_all) == 0) {
+        return(segs_all)
+    }
             
     V = segs_all %>% ungroup() %>% mutate(vertex = 1:n(), .before = 1)
 

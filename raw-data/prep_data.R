@@ -71,12 +71,24 @@ chrom_sizes_hg38 = fread('~/ref/hg38.chrom.sizes.txt') %>%
     mutate(CHROM = factor(as.integer(CHROM)))
 
 ## gaps_hg38.rda ##
+# https://github.com/hartwigmedical/hmftools/blob/master/purple/src/main/resources/circos/gaps.38.txt
 gaps_hg38 = fread('~/ref/gaps.38.txt') %>%
         setNames(c('CHROM', 'start', 'end')) %>%
         mutate(CHROM = str_remove(CHROM, 'hs')) %>%
         filter(CHROM %in% 1:22) %>%
         mutate(CHROM = as.factor(as.integer(CHROM))) %>%
         arrange(CHROM)
+
+## acen_hg38.rda ##
+acen_hg38 = fread('~/ref/chromosome.band.hg38.txt') %>%
+    rename(CHROM = `#chrom`) %>%
+    filter(gieStain == 'acen') %>%
+    mutate(start = chromStart, end = chromEnd) %>%
+    mutate(CHROM = str_remove(CHROM, 'chr')) %>%
+    filter(CHROM %in% 1:22) %>%
+    mutate(CHROM = factor(CHROM, 1:22)) %>%
+    group_by(CHROM) %>%
+    summarise(start = min(start), end = max(end))
 
 ## vcf_meta.rda ##
 # wget ftp://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz
