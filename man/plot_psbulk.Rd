@@ -16,7 +16,8 @@ plot_psbulk(
   dot_size = 0.8,
   dot_alpha = 0.5,
   legend = FALSE,
-  exclude_gap = TRUE
+  exclude_gap = TRUE,
+  raster = FALSE
 )
 }
 \arguments{

@@ -26,7 +26,8 @@ plot_phylo_heatmap(
   superclone = FALSE,
   exclude_gap = FALSE,
   root_edge = TRUE,
-  snvs = NULL
+  snvs = NULL,
+  raster = FALSE
 )
 }
 \arguments{

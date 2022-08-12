@@ -13,8 +13,13 @@
 #' @import patchwork
 #' @importFrom extraDistr dgpois
 #' @importFrom RcppParallel RcppParallelLibs
+#' @importFrom grDevices colorRampPalette
+#' @importFrom methods as is
+#' @importFrom stats as.dendrogram as.dist cor cutree dbinom dnbinom dnorm dpois end hclust integrate model.matrix na.omit optim p.adjust pnorm reorder rnorm setNames start t.test
+#' @importFrom utils combn
 #' @useDynLib numbat
 NULL
+
 
 #' Run workflow to decompose tumor subclones
 #'
