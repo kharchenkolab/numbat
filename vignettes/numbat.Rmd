@@ -2,7 +2,6 @@
   
 - [Installation](#installation)
 - [Preparing data](#preparing-data)
-- [Docker](#docker)
 - [Running Numbat](#running-numbat)
 - [Understanding results](#understanding-results)
 
@@ -32,7 +31,6 @@ wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
 # hg19
 wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
 ```
-Currently Numbat only supports human hg19 and hg38 reference.
 
 You can install the numbat R package via:
 ```
@@ -43,7 +41,7 @@ To get the most recent updates, you can install the development version:
 devtools::install_github("https://github.com/kharchenkolab/Numbat/tree/devel")
 ```
 
-# Docker
+## Docker
 We provide a ready-to-run Docker container that includes the Numbat R package and all of its dependencies. You can launch it as follows:
 ```
 docker run -v /work:/mnt/mydata -it pkharchenkolab/numbat-rbase:latest /bin/bash
@@ -55,38 +53,36 @@ where `/work` is a local data folder you would like to access and write to. With
 
 ```
 usage: pileup_and_phase.R [-h] --label LABEL --samples SAMPLES --bams BAMS
-                          --barcodes BARCODES --gmap GMAP [--eagle EAGLE]
+                          [--barcodes BARCODES] --gmap GMAP [--eagle EAGLE]
                           --snpvcf SNPVCF --paneldir PANELDIR --outdir OUTDIR
                           --ncores NCORES [--UMItag UMITAG]
-                          [--cellTAG CELLTAG] [--smartseq]
+                          [--cellTAG CELLTAG] [--smartseq] [--bulk]
 
 Run SNP pileup and phasing with 1000G
 
-optional arguments:
+Arguments:
   -h, --help           show this help message and exit
   --label LABEL        Individual label
   --samples SAMPLES    Sample names, comma delimited
   --bams BAMS          BAM files, one per sample, comma delimited
   --barcodes BARCODES  Cell barcode files, one per sample, comma delimited
-  --gmap GMAP          Path to genetic map provided by Eagle2 (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)
+  --gmap GMAP          Path to genetic map provided by Eagle2 (e.g.
+                       Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)
+  --eagle EAGLE        Path to Eagle2 binary file
   --snpvcf SNPVCF      SNP VCF for pileup
   --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
   --outdir OUTDIR      Output directory
   --ncores NCORES      Number of cores
-  --UMItag UMITAG      UMI tag in bam. Should be Auto for 10x and XM for
-                       Slide-seq
-  --cellTAG CELLTAG    Cell tag in bam. Should be CB for 10x and XC for Slide-
-                       seq
 ```
 
 For example, within the Numbat Docker [container](#docker) you can run the preprocessing script like this:
 ```
 Rscript /numbat/pileup_and_phase.R \
-    --label sample \
-    --samples sample \
-    --bams /mnt/mydata/sample_BAM.bam \
-    --barcodes /mnt/mydata/sample_barcodes.tsv \
-    --outdir /mnt/mydata/sample \
+    --label {sample} \
+    --samples {sample} \
+    --bams /mnt/mydata/{sample}_BAM.bam \
+    --barcodes /mnt/mydata/{sample}_barcodes.tsv \
+    --outdir /mnt/mydata/{sample} \
     --gmap /Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz \
     --snpvcf /data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf \
     --paneldir /data/1000G_hg38 \
