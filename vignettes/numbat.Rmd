@@ -1,12 +1,14 @@
 # Table of contents
   
-- [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Preparing data](#preparing-data)
+- [Docker](#docker)
 - [Running Numbat](#running-numbat)
 - [Understanding results](#understanding-results)
 
-# Prerequisites
+# Installation
+We now provide a ready-to-run Docker container that includes the package and all prerequisites (see section [Docker](#docker)). Alternatively, you can follow the installation procedure below.
+
 Numbat uses cellsnp-lite for generating SNP pileup data and eagle2 for phasing. Please follow their installation instructions and make sure their binary executables can be found in your $PATH.
 
 1. [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
@@ -22,16 +24,16 @@ wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_
 # hg19
 wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
 ```
-4. 1000G Reference Panel
+
+5. 1000G Reference Panel
 ```
 # hg38
 wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
 # hg19
 wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
 ```
-**Note**: currently Numbat only supports human hg19 and hg38 reference.
+Currently Numbat only supports human hg19 and hg38 reference.
 
-# Installation
 You can install the numbat R package via:
 ```
 devtools::install_github("https://github.com/kharchenkolab/numbat")
@@ -40,6 +42,14 @@ To get the most recent updates, you can install the development version:
 ```
 devtools::install_github("https://github.com/kharchenkolab/Numbat/tree/devel")
 ```
+
+# Docker
+We provide a ready-to-run Docker container that includes the Numbat R package and all of its dependencies. You can launch it as follows:
+```
+docker run -v /work:/mnt/mydata -it pkharchenkolab/numbat-rbase:latest /bin/bash
+```
+where `/work` is a local data folder you would like to access and write to. Within the container, `cellsnp-lite`, `eagle2` and `samtools` are available in path and the 1000 Genome SNP VCF and phasing panel files (hg38) are stored under `/data`. You can also launch R and run interactive analysis using Numbat (or run an R script).
+
 # Preparing data
 1. Prepare the allele data. Run the preprocessing script (`pileup_and_phase.R`) to count alleles and phase SNPs.
 
@@ -67,10 +77,21 @@ optional arguments:
                        Slide-seq
   --cellTAG CELLTAG    Cell tag in bam. Should be CB for 10x and XC for Slide-
                        seq
-  --smartseq           running with SMART-seq mode
 ```
 
-Note: If running with SMART-seq mode, you may provide a file containing a list of bams (each as its own line) to `--bams` and a file containing a list of cell names (each as its own line) to `--barcodes`. 
+For example, within the Numbat Docker [container](#docker) you can run the preprocessing script like this:
+```
+Rscript /numbat/pileup_and_phase.R \
+    --label sample \
+    --samples sample \
+    --bams /mnt/mydata/sample_BAM.bam \
+    --barcodes /mnt/mydata/sample_barcodes.tsv \
+    --outdir /mnt/mydata/sample \
+    --gmap /Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz \
+    --snpvcf /data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf \
+    --paneldir /data/1000G_hg38 \
+    --ncores ncores
+```
 
 This will produce a file named `{sample}_allele_counts.tsv.gz` under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under `phasing/` folder and raw pileup counts under `pileup/`.
 
@@ -83,7 +104,7 @@ This will produce a file named `{sample}_allele_counts.tsv.gz` under the specifi
 # cell_annot is a dataframe with columns "cell" and "group"
 ref_internal = aggregate_counts(count_mat, cell_annot)
 ```
-  
+
 # Running Numbat
   
 In this example (ATC2 from [Gao et al](https://www.nature.com/articles/s41587-020-00795-2)), the gene expression count matrix and allele dataframe are already prepared for you.
@@ -134,7 +155,7 @@ There are a few parameters you can consider tuning to a specific dataset.
 
 - `ncores`: number of cores to use for single-cell CNV testing
 - `ncores_nni`: number of cores to use for phylogeny inference
-  
+
 ## Detecting clonal LOH
 For cell line data and high-purity tumors, we recommend running the below procedure to identify and exclude regions of clonal deletions/LOH before running Numbat. To do so, aggregate all cells into a pseudobulk, and run the SNP-density HMM:
 ```
