@@ -278,17 +278,23 @@ Arguments:
 <li>
 <code>gexp_roll_wide.tsv.gz</code>: window-smoothed normalized expression profiles of single cells</li>
 <li>
-<code>hc.rds</code>: hierarchical clustering result based on smoothed expression</li>
+<code>hc.rds</code>: initial hierarchical clustering result based on smoothed expression</li>
 <li>
-<code>bulk_subtrees_{i}.tsv.gz</code>: pseudobulk HMM profiles based on subtrees defined by current cell lineage tree</li>
+<code>exp_roll_clust.png</code>: visualization of single-cell smoothed gene expression profiles</li>
+<li>
+<code>bulk_subtrees_{i}.tsv.gz</code>: subtree pseudobulk data based on current cell lineage tree</li>
+<li>
+<code>bulk_subtrees_{i}.png</code>: visualization of subtree pseudobulk CNV profiles</li>
 <li>
 <code>segs_consensus_{i}.tsv.gz</code>: consensus segments from subtree pseudobulk HMMs</li>
 <li>
-<code>bulk_clones_{i}.tsv.gz</code>: pseudobulk HMM profiles based on clones defined by current cell lineage tree</li>
+<code>bulk_clones_{i}.tsv.gz</code>: clone-leve pseudobulk data based on current cell lineage tree</li>
 <li>
-<code>bulk_clones_{i}.png</code>: visualization of clone pseudobulk HMM profiles</li>
+<code>bulk_clones_{i}.png</code>: visualization of clone pseudobulk CNV profiles</li>
 <li>
-<code>exp_sc_{i}.tsv.gz</code>: single-cell expression profiles used for single-cell CNV testing</li>
+<code>bulk_clones_final.tsv.gz</code>: clone-leve pseudobulk data based on final cell lineage tree</li>
+<li>
+<code>bulk_clones_final.png</code>: visualization of final clone pseudobulk CNV profiles</li>
 <li>
 <code>exp_post_{i}.tsv</code>: single-cell expression posteriors</li>
 <li>
@@ -296,23 +302,11 @@ Arguments:
 <li>
 <code>joint_post_{i}.tsv</code>: single-cell joint posteriors</li>
 <li>
-<code>treeUPGMA_{i}.rds</code>: UPGMA tree</li>
-<li>
-<code>treeNJ_{i}.rds</code>: NJ tree</li>
+<code>clone_post_{i}.tsv</code>: single-cell clone assignment and tumor versus normal classification posteriors</li>
 <li>
 <code>tree_list_{i}.rds</code>: list of candidate phylogeneies in the maximum likelihood tree search</li>
 <li>
-<code>tree_final_{i}.rds</code>: final tree after simplification</li>
-<li>
-<code>mut_graph_{i}.rds</code>: final mutation history</li>
-<li>
-<code>clone_post_{i}.rds</code>: clone assignment and tumor versus normal classification posteriors</li>
-<li>
-<code>bulk_subtrees_{i}.png</code>: visualization of subtree pseudobulk HMM profiles</li>
-<li>
-<code>bulk_clones_{i}.png</code>: visualization of clone pseudobulk HMM profiles</li>
-<li>
-<code>panel_{i}.png</code>: visualization of combined phylogeny and CNV heatmap</li>
+<code>panel_{i}.png</code>: integrated visualization of single-cell phylogeny and CNV landscape</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
