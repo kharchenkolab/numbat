@@ -65,6 +65,10 @@ node_depth <- function(ntip, e1, e2, nedge, xx, method) {
     .Call('_numbat_node_depth', PACKAGE = 'numbat', ntip, e1, e2, nedge, xx, method)
 }
 
+roman2int_internal <- function(letters, nchar) {
+    .Call('_numbat_roman2int_internal', PACKAGE = 'numbat', letters, nchar)
+}
+
 poilog1 <- function(x, my, sig) {
     .Call('_numbat_poilog1', PACKAGE = 'numbat', x, my, sig)
 }

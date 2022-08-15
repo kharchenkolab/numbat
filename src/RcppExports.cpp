@@ -219,6 +219,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// roman2int_internal
+int roman2int_internal(Rcpp::StringVector letters, int nchar);
+RcppExport SEXP _numbat_roman2int_internal(SEXP lettersSEXP, SEXP ncharSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type letters(lettersSEXP);
+    Rcpp::traits::input_parameter< int >::type nchar(ncharSEXP);
+    rcpp_result_gen = Rcpp::wrap(roman2int_internal(letters, nchar));
+    return rcpp_result_gen;
+END_RCPP
+}
 // poilog1
 std::vector<double> poilog1(std::vector<int> x, std::vector<double> my, std::vector<double> sig);
 RcppExport SEXP _numbat_poilog1(SEXP xSEXP, SEXP mySEXP, SEXP sigSEXP) {
@@ -266,6 +278,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_numbat_nni_cpp", (DL_FUNC) &_numbat_nni_cpp, 1},
     {"_numbat_nni_cpp_parallel", (DL_FUNC) &_numbat_nni_cpp_parallel, 2},
     {"_numbat_node_depth", (DL_FUNC) &_numbat_node_depth, 6},
+    {"_numbat_roman2int_internal", (DL_FUNC) &_numbat_roman2int_internal, 2},
     {"_numbat_poilog1", (DL_FUNC) &_numbat_poilog1, 3},
     {"_numbat_l_lnpois_cpp", (DL_FUNC) &_numbat_l_lnpois_cpp, 6},
     {NULL, NULL, 0}

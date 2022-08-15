@@ -3,7 +3,7 @@
 pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 getPalette = colorRampPalette(pal)
 
-#' @export
+#' @keywords internal
 cnv_colors = c("neu" = "gray", 
         "neu_up" = "darkgray", "neu_down" = "gray",
         "del_up" = "royalblue", "del_down" = "darkblue", 
@@ -32,7 +32,7 @@ cnv_colors = c("neu" = "gray",
         'major' = '#66C2A5', 'minor' = '#FC8D62'
     )
 
-#' @export
+#' @keywords internal
 cnv_labels = names(cnv_colors) %>%
     str_remove_all('_') %>% 
     str_to_upper() %>%
@@ -510,7 +510,7 @@ plot_phylo_heatmap = function(
         guides(color = 'none')
 
     if (root_edge) {
-        p_tree = p_tree + geom_rootedge(size = branch_width)
+        p_tree = p_tree + ggtree::geom_rootedge(size = branch_width)
     }
 
     # order the cells
@@ -870,14 +870,14 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 
     p_tree = gtree %>% 
         to_phylo() %>%
-        groupOTU(
+        ggtree::groupOTU(
             OTU_dict,
             'clone'
         ) %>%
         ggtree::ggtree(ladderize = TRUE, size = branch_width) %<+%
         mut_nodes +
-        layout_dendrogram() +
-        geom_rootedge(size = branch_width) +
+        ggtree::layout_dendrogram() +
+        ggtree::geom_rootedge(size = branch_width) +
         theme(
             plot.margin = margin(0,0,0,0),
             axis.title.x = element_blank(),
@@ -892,8 +892,8 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 
     if (label_mut) {
         p_tree = p_tree + 
-            geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
-            geom_text2(
+            ggtree::geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
+            ggtree::geom_text2(
                 aes(x = branch, label = str_trunc(site, 20, side = 'center')),
                 size = label_size, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
             )
@@ -907,7 +907,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
         }
 
         p_tree = p_tree + 
-            geom_tippoint(aes(color = as.factor(clone)), size=dot_size, stroke = 0.2) +
+            ggtree::geom_tippoint(aes(color = as.factor(clone)), size=dot_size, stroke = 0.2) +
             scale_color_manual(values = pal_clone, limits = force)
     }
     
@@ -1349,16 +1349,14 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 # model diagnostics
 plot_exp_post = function(exp_post, jitter = TRUE) {
  
-    if (!requireNamespace("gtools", quietly = TRUE)) {
-        stop("Package \"gtools\" needed for this function to work. Please install it.", call. = FALSE)
-    } 
+
     if (!'annot' %in% colnames(exp_post)) {
         exp_post$annot = '0'
     }
     p = exp_post %>%
         filter(n > 20) %>%
         mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
-        mutate(seg_label = factor(seg_label, gtools::mixedsort(unique(seg_label)))) %>%
+        mutate(seg_label = factor(seg_label, mixedsort(unique(seg_label)))) %>%
         ggplot(
             aes(x = seg_label, y = log2(phi_mle), fill = cnv_state, color = p_cnv)
         ) +

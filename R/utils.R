@@ -897,7 +897,7 @@ phi_hat_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
     )
 }
 
-#' @export
+#' @keywords internal
 letters_all = c(letters, paste0(letters, letters), paste0(letters, letters, letters))
 
 #' Annotate copy number segments after HMM decoding 
@@ -980,10 +980,6 @@ smooth_segs = function(bulk, min_genes = 10) {
 annot_consensus = function(bulk, segs_consensus, join_mode = 'inner') {
 
 
-    if (!requireNamespace("gtools", quietly = TRUE)) {
-        stop("Package \"gtools\" needed for this function to work. Please install it.", call. = FALSE)
-    }
-
     if (join_mode == 'inner') {
         join = inner_join
     } else {
@@ -1026,7 +1022,7 @@ annot_consensus = function(bulk, segs_consensus, join_mode = 'inner') {
         select(-any_of(colnames(marker_seg)[!colnames(marker_seg) %in% c('snp_id', 'CHROM')])) %>% 
         join(marker_seg, by = c('snp_id', 'CHROM'))  %>%
         mutate(seg = seg_cons) %>%
-        mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) 
+        mutate(seg = factor(seg, mixedsort(unique(seg)))) 
 
     return(bulk)
 }
@@ -1047,9 +1043,6 @@ find_common_diploid = function(
     ncores = 1, segs_loh = NULL, debug = FALSE, verbose = TRUE) {
 
 
-    if (!requireNamespace("gtools", quietly = TRUE)) {
-        stop("Package \"gtools\" needed for this function to work. Please install it.", call. = FALSE)
-    }
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = '1'
     }
@@ -1246,7 +1239,7 @@ find_common_diploid = function(
         }
     }
 
-    log_info(glue('diploid regions: {paste0(gtools::mixedsort(diploid_segs), collapse = ",")}'))
+    log_info(glue('diploid regions: {paste0(mixedsort(diploid_segs), collapse = ",")}'))
     
     bulks = bulks %>% mutate(diploid = seg %in% diploid_segs)
     
@@ -1832,6 +1825,7 @@ pnorm.range.log = function(lower, upper, mu, sd) {
     return(l_upper + VGAM::log1mexp(l_upper - l_lower))
 }
 
+#' @keywords internal
 pnorm.range.log = function(lower, upper, mu, sd) {
     if (!requireNamespace("VGAM", quietly = TRUE)) {
         stop("Package \"VGAM\" needed for this function to work. Please install it.", call. = FALSE)
@@ -1858,7 +1852,7 @@ binary_entropy = function(p) {
     return(H)
 }
 
-
+#' @keywords internal
 fit_switch_prob = function(y, d) {
     
     eta = function(d, lambda, min_p = 1e-10) {
@@ -1880,6 +1874,7 @@ fit_switch_prob = function(y, d) {
     return(fit@coef)
 }
 
+#' @keywords internal
 switch_prob_mle = function(pAD, DP, d, theta, gamma = 20) {
 
     fit = optim(
@@ -1897,6 +1892,7 @@ switch_prob_mle = function(pAD, DP, d, theta, gamma = 20) {
     
 }
 
+#' @keywords internal
 switch_prob_mle2 = function(pAD, DP, d, gamma = 20) {
 
     fit = optim(
@@ -1917,6 +1913,7 @@ switch_prob_mle2 = function(pAD, DP, d, gamma = 20) {
     
 }
 
+#' @keywords internal
 read_if_exist = function(f) {
 
     if (file.exists(f)) {
@@ -1930,7 +1927,7 @@ read_if_exist = function(f) {
     }
 }
 
-
+#' @keywords internal
 l_geno_2d = function(g, theta_mle, phi_mle, theta_sigma, phi_sigma) {
 
     if (g[[1]] == 2 & g[[2]] == 2) {
@@ -1953,6 +1950,7 @@ l_geno_2d = function(g, theta_mle, phi_mle, theta_sigma, phi_sigma) {
 
 }
 
+#' @keywords internal
 p_geno_2d = function(theta_mle, phi_mle, theta_sigma, phi_sigma) {
     
     ps = sapply(
@@ -1968,15 +1966,18 @@ p_geno_2d = function(theta_mle, phi_mle, theta_sigma, phi_sigma) {
     
 }
 
+#' @keywords internal
 logphi_f = function(f, m = 0, p = 1) {
   log2((2 * (1 - f) + (m + p) * f) / 2)
 }
 
+#' @keywords internal
 theta_f = function(f, m = 0, p = 1) {
     baf = (m * f + 1 - f)/((m * f + 1 - f) + (p * f + 1 - f))
     baf
 }
 
+#' @keywords internal
 snp_rate_roll = function(gene_snps, gene_length, h) {
     n = length(gene_snps)
     sapply(
@@ -1988,6 +1989,7 @@ snp_rate_roll = function(gene_snps, gene_length, h) {
     )
 }
 
+#' @keywords internal
 fit_snp_rate_pois = function(gene_snps, gene_length) {
     
     fit = optim(
@@ -2002,6 +2004,7 @@ fit_snp_rate_pois = function(gene_snps, gene_length) {
     return(fit$par)
 }
 
+#' @keywords internal
 fit_snp_rate_poilog = function(gene_snps, gene_length) {
     
     n = length(gene_snps)
@@ -2021,6 +2024,7 @@ fit_snp_rate_poilog = function(gene_snps, gene_length) {
 }
 
 # negative binomial model
+#' @keywords internal
 fit_snp_rate = function(gene_snps, gene_length) {
     
     n = length(gene_snps)
@@ -2042,11 +2046,13 @@ fit_snp_rate = function(gene_snps, gene_length) {
 
 ########################### Benchmarking ############################
 
+#' @keywords internal
 subtract_ranges = function(gr1, gr2) {
     overlap = GenomicRanges::intersect(gr1, gr2)
     GenomicRanges::setdiff(gr1, overlap)
 }
 
+#' @keywords internal
 compare_segs = function(segs_x, segs_y, gaps = gaps_hg38) {
     
     ranges_x = segs_x %>% {GenomicRanges::GRanges(
@@ -2079,6 +2085,7 @@ compare_segs = function(segs_x, segs_y, gaps = gaps_hg38) {
     return(overlap_total/union_total)
 }
 
+#' @keywords internal
 evaluate_calls = function(cnvs_dna, cnvs_call, gaps = gaps_hg38) {
     
     ranges_dna = cnvs_dna %>% {GenomicRanges::GRanges(
@@ -2117,6 +2124,7 @@ evaluate_calls = function(cnvs_dna, cnvs_call, gaps = gaps_hg38) {
 ########################### Experimental ############################
 
 # this is actually slower and doesn't give same answer as optim
+#' @keywords internal
 theta_hat_EM = function(pAD, DP, p_s, start = 0.08, gamma = 20) {
     
     theta = start
@@ -2137,6 +2145,7 @@ theta_hat_EM = function(pAD, DP, p_s, start = 0.08, gamma = 20) {
     return(theta)
 }
 
+#' @keywords internal
 test_branch = function(count_mat, df_allele, gtree, segs_consensus, from_node, to_node, ncores, ...) {
     
     segs_consensus = segs_consensus %>% mutate(CHROM = factor(CHROM))
@@ -2191,6 +2200,7 @@ test_branch = function(count_mat, df_allele, gtree, segs_consensus, from_node, t
     return(bulks)
 }
 
+#' @keywords internal
 compare_bulks = function(bulks, segs_consensus, t = 1e-5, gamma = 20, ncores = 1) {
     
     segs_consensus = segs_consensus %>% mutate(CHROM = factor(CHROM))
@@ -2269,6 +2279,7 @@ compare_bulks = function(bulks, segs_consensus, t = 1e-5, gamma = 20, ncores = 1
 }
 
 # evaluate pseduobulks against one set of segmentations
+#' @keywords internal
 evaluate_segs = function(bulks, segs, t = 1e-5, ncores = 1) {
 
     M = length(unique(bulks$sample))
@@ -2323,6 +2334,7 @@ evaluate_segs = function(bulks, segs, t = 1e-5, ncores = 1) {
 }
 
 # get optimal segmentation from subtree and clone bulk results
+#' @keywords internal
 get_segs_optimal = function(bulk_subtrees, bulk_clones, t = 1e-5, min_LLR = 10, ncores = 1) {
     
     samples = unique(bulk_subtrees$sample)
