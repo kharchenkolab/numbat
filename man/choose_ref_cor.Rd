@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{choose_ref_cor}
 \alias{choose_ref_cor}
-\title{choose beest reference for each cell based on correlation}
+\title{Choose beest reference for each cell based on correlation}
 \usage{
 choose_ref_cor(count_mat, lambdas_ref, gtf)
 }
@@ -17,6 +17,6 @@ choose_ref_cor(count_mat, lambdas_ref, gtf)
 named vector Best references for each cell
 }
 \description{
-choose beest reference for each cell based on correlation
+Choose beest reference for each cell based on correlation
 }
 \keyword{internal}

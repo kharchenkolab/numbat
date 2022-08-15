@@ -1,3 +1,57 @@
+## for magrittr and dplyr functions 
+if (getRversion() >= "2.15.1"){
+  utils::globalVariables(c(".", "AD", "AD_all", "ALT", "AR", "CHROM", "DP",  
+        "DP_all", "FILTER", "FP", "GT", "ID", "LLR", "LLR_sample", 
+        "LLR_x", "LLR_y", "L_x_a", "L_x_d", "L_x_n", "L_y_a", 
+        "L_y_d", "L_y_n", "MAF", "OTH", "OTH_all POS",
+        "QUAL", "REF", "TP", "UQ", "Y_obs", "Z", "Z_amp", "Z_bamp", 
+        "Z_bdel", "Z_clone", "Z_clone_x",
+        "Z_clone_y", "Z_cnv", "Z_del", "Z_loh", "Z_n", "acen_hg38", 
+        "annot", "avg_entropy", "bkp",
+        "branch", "cM", "cell", "cell_index", "chrom_sizes_hg38", 
+        "clone", "clone_opt", "clone_size",
+        "cluster", "cnv_state", "cnv_state_expand",
+        "cnv_state_map", "cnv_state_post",
+        "cnv_states", "compartment", "component", "cost", 
+        "d_obs", "diploid", "down", "edges", "end_x",
+        "end_y", "exp_rollmean", "expected_colnames", "extract", "frac_overlap_x",
+        "frac_overlap_y", "from", "from_label", "from_node", "gaps_hg38", "gene gene_end",
+        "gene_index", "gene_length", "gene_snps", "gene_start", 
+        "genetic_map", "get_desc", "group", "gtf", "haplo", "haplo_naive", "haplo_post", 
+        "haplo_theta_min", "het", "hom_alt", "i",
+        "inter_snp_cm", "inter_snp_dist", "isTip", "is_desc", 
+        "j", "keep", "l", "l00", "l00_x", "l00_y",
+        "l10", "l10_x", "l10_y", "l11", "l11_x", "l11_y", "l20", "l20_x", 
+        "l20_y", "l21", "l21_x", "l21_y", "l22",
+        "l22_x", "l22_y", "l31", "l31_x", "l31_y", "l_adj", "l_clone", 
+        "l_clone_x", "l_clone_y", "l_x", "l_y",
+        "label", "lambda_obs", "lambda_ref", "lambdas_ref", 
+        "last_mut", "leaf", "len_overlap",
+        "len_x", "len_y", "lnFC", "lnFC_i", "lnFC_j", "lnFC_max_i", "lnFC_max_j",
+        "logBF", "logBF_x","logBF_y", "logFC", "loh", "major", "major_count", "marker_index", 
+        "min_depth", "minor", "minor_count", "mu", "mut_burden", "n_chrom_snp", "n_genes", "n_mut", 
+        "n_sibling", "n_snps","n_states", "n_x", "n_y", "name", "node", "node_phylo", "nodes", "p", "pAD", 
+        "pBAF", "p_0", "p_1", "p_amp", "p_bamp", "p_bdel", "p_cnv", "p_cnv_expand", "p_del", "p_loh", "p_max", 
+        "p_n", "p_neu", "p_s", "p_up", "phi_mle", "phi_mle_roll", "phi_sigma", "pnorm.range", 
+        "potential_missing_columns","precision", "prior_amp", "prior_bamp", "prior_bdel",
+        "prior_clone prior_del",
+        "prior_loh", "root", "s", "seg", "seg_cons", "seg_end", 
+        "seg_end_index", "seg_label",
+        "seg_length", "seg_start", "seg_start_index", 
+        "segs_consensus", "seqnames",
+        "set_colnames", "sig", "site", "size", "snp_id", "snp_index", 
+        "snp_rate", "start_x", "start_y",
+        "state", "state_post", "superclone", "theta_hat", 
+        "theta_level", "theta_mle",
+        "theta_sigma", "to", "to_label", "to_node", "total", "value", 
+        "variable", "vcf_meta", "vertex",
+        "vp", "w", "width", "write.vcf", "x", "y"))
+}
+
+
+
+
+
 
 #' @title Numbat R6 class
 #' @description Used to allow users to plot results

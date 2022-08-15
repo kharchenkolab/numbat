@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{switch_prob_cm}
 \alias{switch_prob_cm}
-\title{predict phase switch probablity as a function of genetic distance}
+\title{Predict phase switch probablity as a function of genetic distance}
 \usage{
 switch_prob_cm(d, lambda = 1, min_p = 1e-10)
 }
@@ -17,6 +17,6 @@ switch_prob_cm(d, lambda = 1, min_p = 1e-10)
 numeric vector Phase switch probability
 }
 \description{
-predict phase switch probablity as a function of genetic distance
+Predict phase switch probablity as a function of genetic distance
 }
 \keyword{internal}

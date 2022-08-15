@@ -448,6 +448,10 @@ plot_phylo_heatmap = function(
         clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, snvs = NULL, raster = FALSE
     ) {
 
+    if (!requireNamespace("ggtree", quietly = TRUE)) {
+        stop("Package \"ggtree\" needed for this function to work. Please install it.", call. = FALSE)
+    }
+
     if (raster) {
         if (!requireNamespace("ggrastr", quietly = TRUE)) {
             stop("Package \"ggrastr\" needed for this function to work with 'raster=TRUE'. Please install it.", call. = FALSE)
@@ -490,7 +494,7 @@ plot_phylo_heatmap = function(
     # plot phylogeny 
     p_tree = gtree %>% 
         to_phylo() %>%
-        ggtree(ladderize = TRUE, size = branch_width) +
+        ggtree::ggtree(ladderize = TRUE, size = branch_width) +
         theme(
             plot.margin = margin(0,1,0,0, unit = 'mm'),
             axis.title.x = element_blank(),
@@ -762,6 +766,7 @@ plot_consensus = function(segs) {
 }
 
 #' Plot single-cell smoothed expression magnitude heatmap
+#'
 #' @param gexp_roll_wide matrix Cell x gene smoothed expression magnitudes
 #' @param hc hclust Hierarchical clustring result
 #' @param gtf dataframe Transcript GTF
@@ -772,6 +777,10 @@ plot_consensus = function(segs) {
 #' @param plot_tree logical Whether to plot the dendrogram
 #' @export
 plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, reverse = TRUE, plot_tree = TRUE) {
+
+    if (!requireNamespace("ggtree", quietly = TRUE)) {
+        stop("Package \"ggtree\" needed for this function to work. Please install it.", call. = FALSE)
+    }
 
     gexp_norm_long = gexp_roll_wide %>% 
         as.data.frame() %>%
@@ -784,7 +793,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
     
     cell_sample = sample(cells, min(n_sample, length(cells)), replace = FALSE)
         
-    p_tree = ggtree(hc, size = 0.2)
+    p_tree = ggtree::ggtree(hc, size = 0.2)
 
     cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
 
@@ -829,6 +838,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
 }
 
 #' Plot single-cell smoothed expression magnitude heatmap
+#'
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @param label_mut logical Whether to label mutations
 #' @param label_size numeric Size of mutation labels
@@ -864,7 +874,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
             OTU_dict,
             'clone'
         ) %>%
-        ggtree(ladderize = T, size = branch_width) %<+%
+        ggtree::ggtree(ladderize = TRUE, size = branch_width) %<+%
         mut_nodes +
         layout_dendrogram() +
         geom_rootedge(size = branch_width) +

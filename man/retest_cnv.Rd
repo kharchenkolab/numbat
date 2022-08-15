@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{retest_cnv}
 \alias{retest_cnv}
-\title{retest CNVs in a pseudobulk}
+\title{Retest CNVs in a pseudobulk}
 \usage{
 retest_cnv(
   bulk,
@@ -24,6 +24,6 @@ retest_cnv(
 a dataframe of segments with CNV posterior information
 }
 \description{
-retest CNVs in a pseudobulk
+Retest CNVs in a pseudobulk
 }
 \keyword{internal}

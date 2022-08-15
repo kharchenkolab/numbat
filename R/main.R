@@ -5,9 +5,7 @@
 #' @import stringr
 #' @import glue
 #' @importFrom parallel mclapply
-#' @import tidygraph
 #' @import ggplot2
-#' @import ggtree
 #' @import ggraph
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{filter_genes}
 \alias{filter_genes}
-\title{filter for mutually expressed genes}
+\title{Filter for mutually expressed genes}
 \usage{
 filter_genes(count_mat, lambdas_ref, gtf, verbose = FALSE)
 }
@@ -17,6 +17,6 @@ filter_genes(count_mat, lambdas_ref, gtf, verbose = FALSE)
 vector Genes that are kept after filtering
 }
 \description{
-filter for mutually expressed genes
+Filter for mutually expressed genes
 }
 \keyword{internal}

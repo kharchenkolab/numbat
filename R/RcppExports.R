@@ -61,6 +61,10 @@ nni_cpp_parallel <- function(tree, P) {
     .Call('_numbat_nni_cpp_parallel', PACKAGE = 'numbat', tree, P)
 }
 
+node_depth <- function(ntip, e1, e2, nedge, xx, method) {
+    .Call('_numbat_node_depth', PACKAGE = 'numbat', ntip, e1, e2, nedge, xx, method)
+}
+
 poilog1 <- function(x, my, sig) {
     .Call('_numbat_poilog1', PACKAGE = 'numbat', x, my, sig)
 }

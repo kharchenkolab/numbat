@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{smooth_expression}
 \alias{smooth_expression}
-\title{filtering, normalization and capping}
+\title{Filtering, normalization and capping}
 \usage{
 smooth_expression(count_mat, lambdas_ref, gtf, window = 101, verbose = FALSE)
 }
@@ -17,6 +17,6 @@ smooth_expression(count_mat, lambdas_ref, gtf, window = 101, verbose = FALSE)
 dataframe Log(x+1) transformed normalized expression values for single cells
 }
 \description{
-filtering, normalization and capping
+Filtering, normalization and capping
 }
 \keyword{internal}

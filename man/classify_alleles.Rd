@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{classify_alleles}
 \alias{classify_alleles}
-\title{classify alleles using viterbi and forward-backward}
+\title{Classify alleles using viterbi and forward-backward}
 \usage{
 classify_alleles(bulk)
 }
@@ -13,6 +13,6 @@ classify_alleles(bulk)
 dataframe Pesudobulk profile
 }
 \description{
-classify alleles using viterbi and forward-backward
+Classify alleles using viterbi and forward-backward
 }
 \keyword{internal}

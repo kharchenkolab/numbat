@@ -1,6 +1,7 @@
 ########################### Data processing ############################
 
-#' choose beest reference for each cell based on correlation
+#' Choose beest reference for each cell based on correlation
+#'
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf dataframe Transcript gtf
@@ -37,12 +38,14 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf) {
     return(best_refs)
 }
 
+#' @keywords internal
 scale_counts = function(count_mat) {
     count_mat@x <- count_mat@x/rep.int(colSums(count_mat), diff(count_mat@p))
     return(count_mat)
 }
 
 #' Utility function to make reference gene expression profiles
+#'
 #' @param count_mat matrix/dgCMatrix Gene expression counts
 #' @param annot dataframe Cell annotation with columns "cell" and "group"
 #' @param normalized logical Whether to return normalized expression values
@@ -84,7 +87,8 @@ aggregate_counts = function(count_mat, annot, normalized = TRUE, verbose = TRUE)
 
 }
 
-#' filtering, normalization and capping
+#' Filtering, normalization and capping
+#'
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf dataframe Transcript gtf
@@ -121,7 +125,8 @@ smooth_expression = function(count_mat, lambdas_ref, gtf, window = 101, verbose 
 }
 
 
-#' filter for mutually expressed genes
+#' Filter for mutually expressed genes
+#'
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref named numeric vector A reference expression profile
 #' @param gtf dataframe Transcript gtf
@@ -160,6 +165,7 @@ filter_genes = function(count_mat, lambdas_ref, gtf, verbose = FALSE) {
 }
 
 #' Aggregate into bulk expression profile
+#'
 #' @param count_mat dgCMatrix Gene expression counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf dataframe Transcript gtf
@@ -201,6 +207,7 @@ get_exp_bulk = function(count_mat, lambdas_ref, gtf, verbose = FALSE) {
 
 
 #' Aggregate into pseudobulk alelle profile
+#'
 #' @param df_allele dataframe Single-cell allele counts
 #' @param genetic_map dataframe Genetic map
 #' @param lambda numeric Phase switch rate
@@ -239,6 +246,7 @@ get_allele_bulk = function(df_allele, genetic_map, lambda = 1, min_depth = 0) {
 
 
 #' Combine allele and expression pseudobulks
+#'
 #' @param allele_bulk dataframe Bulk allele profile
 #' @param genetic_map dataframe Genetic map
 #' @return dataframe Pseudobulk allele and expression profile
@@ -289,6 +297,7 @@ combine_bulk = function(allele_bulk, exp_bulk) {
 }
 
 #' Get average reference expressio profile based on single-cell ref choices
+#'
 #' @keywords internal
 get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 
@@ -353,6 +362,7 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_dep
 }
 
 #' Fit a reference profile from multiple references using constrained least square
+#'
 #' @param Y_obs vector 
 #' @param lambdas_ref named vector 
 #' @param gtf dataframe 
@@ -405,6 +415,7 @@ fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FAL
 }
 
 #' Annotate genetic distance between markers
+#'
 #' @param bulk dataframe Pseudobulk profile
 #' @param genetic_map dataframe Genetic map
 #' @return dataframe Annotated pseudobulk profile
@@ -447,7 +458,8 @@ annot_cm = function(bulk, genetic_map) {
     
 }
 
-#' predict phase switch probablity as a function of genetic distance
+#' Predict phase switch probablity as a function of genetic distance
+#'
 #' @param d numeric vector Genetic distance in cM
 #' @param lambda numeric Phase switch rate
 #' @param min_p numeric Minimum phase switch probability 
@@ -463,6 +475,7 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
 ########################### Analysis ############################
 
 #' Call CNVs in a pseudobulk profile using the Numbat joint HMM
+#' 
 #' @param bulk dataframe Pesudobulk profile
 #' @param t numeric Transition probability
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
@@ -640,7 +653,8 @@ analyze_bulk = function(
 }
 
 
-#' retest CNVs in a pseudobulk
+#' Retest CNVs in a pseudobulk
+#' 
 #' @param bulk pesudobulk dataframe
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param allele_only whether to retest only using allele data
@@ -745,7 +759,8 @@ retest_cnv = function(bulk, theta_min = 0.08, logphi_min = 0.25, gamma = 20, all
     return(segs_post)
 }
 
-#' classify alleles using viterbi and forward-backward
+#' Classify alleles using viterbi and forward-backward
+#' 
 #' @param bulk dataframe Pesudobulk profile
 #' @return dataframe Pesudobulk profile
 #' @keywords internal
@@ -787,6 +802,7 @@ classify_alleles = function(bulk) {
 }
 
 #' Annotate rolling estimate of imbalance level theta
+#' 
 #' @param bulk a pseudobulk dataframe
 #' @return a pseudobulk dataframe
 #' @keywords internal
@@ -823,6 +839,7 @@ annot_theta_roll = function(bulk) {
 }
 
 #' Estimate of imbalance level theta in a segment
+#' 
 #' @param major_count vector of major allele count
 #' @param minor_count vector of minor allele count
 #' @return estimate of theta
@@ -835,6 +852,7 @@ theta_hat_seg = function(major_count, minor_count) {
 }
 
 #' Rolling estimate of imbalance level theta
+#' 
 #' @param major_count vector of major allele count
 #' @param minor_count vector of minor allele count
 #' @param h window size
@@ -852,6 +870,7 @@ theta_hat_roll = function(major_count, minor_count, h) {
 }
 
 #' Estimate of expression fold change phi in a segment
+#' 
 #' @keywords internal
 phi_hat_seg = function(Y_obs, lambda_ref, d, mu, sig) {
     logFC = log((Y_obs/d)/lambda_ref)
@@ -859,6 +878,7 @@ phi_hat_seg = function(Y_obs, lambda_ref, d, mu, sig) {
 }
 
 #' Rolling estimate of expression fold change phi
+#' 
 #' @keywords internal
 phi_hat_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
     n = length(Y_obs)
@@ -881,6 +901,7 @@ phi_hat_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
 letters_all = c(letters, paste0(letters, letters), paste0(letters, letters, letters))
 
 #' Annotate copy number segments after HMM decoding 
+#' 
 #' @param bulk dataframe Pseudobulk profile
 #' @return a pseudobulk dataframe
 #' @keywords internal

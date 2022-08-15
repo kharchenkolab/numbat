@@ -185,9 +185,8 @@ ladderize <- function(phy, right = TRUE) {
     nb.edge <- dim(phy$edge)[1]
 
     phy <- reorder(phy, "postorder")
-    N <- .C(ape::node_depth, as.integer(nb.tip),
-            as.integer(phy$edge[, 1]), as.integer(phy$edge[, 2]),
-            as.integer(nb.edge), double(nb.tip + nb.node), 1L)[[5]]
+    N <- node_depth(as.integer(nb.tip), as.integer(phy$edge[, 1]), as.integer(phy$edge[, 2]),
+            as.integer(nb.edge), double(nb.tip + nb.node), 1L)
 
     ii <- order(x <- phy$edge[,1], y <- N[phy$edge[,2]], decreasing = right)
     desc <- desc_fun(phy$edge[ii,])
@@ -454,6 +453,7 @@ mut_to_tree = function(gtree, mut_nodes) {
 }
 
 #' Convert the phylogeny from tidygraph to igraph object
+#'
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @return phylo The single-cell phylogeny
 #' @keywords internal
