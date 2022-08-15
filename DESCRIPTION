@@ -42,6 +42,7 @@ Imports:
     stats4,
     stringr,
     tibble,
+    tidygraph,
     tidyr,
     zoo
 Suggests: 
@@ -55,8 +56,7 @@ Suggests:
     matrixStats,
     R.utils,
     Rsamtools,
-    testthat (>= 3.0.0), 
-    tidygraph,
+    testthat (>= 3.0.0),
     vcfR,
     VGAM,
 Config/testthat/edition: 3

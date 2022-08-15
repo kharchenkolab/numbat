@@ -271,6 +271,7 @@ mark_tumor_lineage = function(gtree) {
 }
 
 #' Convert a single-cell phylogeny with mutation placements into a mutation graph
+#'
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @param mut_nodes dataframe Mutation placements
 #' @return igraph Mutation graph

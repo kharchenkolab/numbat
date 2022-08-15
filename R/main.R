@@ -3,6 +3,7 @@
 #' @import Matrix
 #' @importFrom data.table fread fwrite as.data.table
 #' @import stringr
+#' @import tidygraph
 #' @import glue
 #' @importFrom parallel mclapply
 #' @import ggplot2
