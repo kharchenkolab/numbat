@@ -178,10 +178,19 @@ warning = function(w){
 cat('Generating allele count dataframes\n')
 
 if (genome == 'hg19') {
-    gtf_transcript = gtf_hg19
+    gtf = gtf_hg19
 } else {
-    gtf_transcript = gtf_hg38
+    gtf = gtf_hg38
 }
+
+genetic_map = fread(gmap) %>% 
+    setNames(c('CHROM', 'POS', 'rate', 'cM')) %>%
+    group_by(CHROM) %>%
+    mutate(
+        start = POS,
+        end = c(POS[2:length(POS)], POS[length(POS)])
+    ) %>%
+    ungroup()
 
 for (sample in samples) {
     
@@ -215,7 +224,8 @@ for (sample in samples) {
         AD = AD,
         DP = DP,
         barcodes = cell_barcodes,
-        gtf_transcript = gtf_transcript
+        gtf = gtf,
+        gmap = genetic_map
     ) %>%
     filter(GT %in% c('1|0', '0|1'))
     

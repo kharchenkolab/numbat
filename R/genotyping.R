@@ -156,7 +156,8 @@ vcfR_file_fix <- function(file) {
 #' @param AD dgTMatrix Alt allele depth matrix from pileup
 #' @param DP dgTMatrix Total allele depth matrix from pileup
 #' @param barcodes vector List of barcodes from pileup
-#' @param gtf_transcript dataframe Transcript GTF
+#' @param gtf dataframe Transcript GTF
+#' @param gmap dataframe Genetic map
 #' @return dataframe Allele counts by cell
 #' @keywords internal
 preprocess_allele = function(
@@ -166,7 +167,8 @@ preprocess_allele = function(
     AD,
     DP,
     barcodes,
-    gtf_transcript
+    gtf,
+    gmap
 ) {
 
     # pileup VCF
@@ -218,14 +220,12 @@ preprocess_allele = function(
     )
     
     # phased VCF
-    vcf_phased = vcf_phased %>% mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
+    vcf_phased = vcf_phased %>% 
+        mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
         tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
-        mutate_at(c('AD', 'DP', 'OTH'), as.integer)
-
-    vcf_phased = vcf_phased %>% mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_')) %>%
+        mutate_at(c('AD', 'DP', 'OTH'), as.integer) %>%
+        mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_')) %>%
         mutate(GT = get(sample))
-
-    vcf_phased = vcf_phased %>% mutate(region = paste0('chr', CHROM, ':', POS, '-', format(POS+1, scientific = F, trim = T)))
 
     # annotate SNP by gene
     overlap_transcript = GenomicRanges::findOverlaps(
@@ -234,7 +234,7 @@ preprocess_allele = function(
                 IRanges::IRanges(start = .$POS,
                     end = .$POS)
             )},
-            gtf_transcript %>% {GenomicRanges::GRanges(
+            gtf %>% {GenomicRanges::GRanges(
                 seqnames = .$CHROM,
                 IRanges::IRanges(start = .$gene_start,
                     end = .$gene_end)
@@ -248,7 +248,7 @@ preprocess_allele = function(
             by = c('snp_index')
         ) %>%
         left_join(
-            gtf_transcript %>% mutate(gene_index = 1:n()),
+            gtf %>% mutate(gene_index = 1:n()),
             by = c('gene_index')
         ) %>%
         arrange(snp_index, gene) %>%
@@ -260,9 +260,44 @@ preprocess_allele = function(
             by = c('snp_id')
         )
 
-    # add annotation to cell counts 
-    df = df %>% left_join(vcf_phased %>% select(snp_id, gene, gene_start, gene_end, GT), by = 'snp_id') 
+    # annotate SNPs by genetic map
+    marker_map = GenomicRanges::findOverlaps(
+            vcf_phased %>% {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$POS,
+                    end = .$POS)
+            )},
+            gmap %>% {GenomicRanges::GRanges(
+                seqnames = .$CHROM,
+                IRanges::IRanges(start = .$start,
+                    end = .$end)
+            )}
+        ) %>%
+        as.data.frame() %>%
+        setNames(c('marker_index', 'map_index')) %>%
+        left_join(
+            vcf_phased %>% mutate(marker_index = 1:n()) %>%
+                select(marker_index, snp_id),
+            by = c('marker_index')
+        ) %>%
+        left_join(
+            gmap %>% mutate(map_index = 1:n()),
+            by = c('map_index')
+        ) %>%
+        arrange(marker_index, -start) %>%
+        distinct(marker_index, `.keep_all` = T) %>%
+        select(snp_id, cM)
+
+    vcf_phased = vcf_phased %>% 
+        left_join(marker_map, by = 'snp_id')
+
+    # add annotation to cell counts
+    df = df %>% left_join(vcf_phased %>% select(snp_id, gene, GT, cM), by = 'snp_id')
     df = df %>% mutate(CHROM = factor(CHROM, unique(CHROM)))
+    df = df %>% select(cell, snp_id, CHROM, POS, cM, REF, ALT, AD, DP, GT, gene)
+
+    # only keep hets
+    df = df %>% filter(GT %in% c('1|0', '0|1'))
     
     return(df)
 }
