@@ -137,7 +137,7 @@ plot_psbulk = function(
             filter(CHROM %in% bulk$CHROM)
 
         if (nrow(segs_exclude) > 0) {
-            p = p + geom_rect(inherit.aes = F, data = segs_exclude, 
+            p = p + geom_rect(inherit.aes = FALSE, data = segs_exclude, 
                 aes(xmin = seg_start, xmax = seg_end, ymin = -Inf, ymax = Inf), 
                 fill = "gray95")
         }
@@ -164,13 +164,13 @@ plot_psbulk = function(
             axis.text.x = element_blank(),
             axis.ticks.x = element_blank()
         ) +
-        facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
+        facet_grid(variable ~ CHROM, scales = 'free', space = 'free_x') +
         # scale_x_continuous(expand = expansion(add = 5)) +
         scale_color_manual(
             values = cnv_colors,
             limits = force,
             labels = cnv_labels,
-            na.translate = F
+            na.translate = FALSE
         ) +
         guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = 'none', alpha = 'none', shape = 'none') +
         xlab(marker) +
@@ -549,7 +549,7 @@ plot_phylo_heatmap = function(
             size = line_width
         ) +
         geom_segment(
-            inherit.aes = F,
+            inherit.aes = FALSE,
             aes(x = seg_start, xend = seg_end, y = 1, yend = 1),
             data = segs_consensus, size = 0, color = 'white', alpha = 0
         ) +
@@ -571,7 +571,7 @@ plot_phylo_heatmap = function(
         ) +
         scale_x_continuous(expand = expansion(0)) +
         scale_y_continuous(expand = expansion(0)) +
-        facet_grid(.~CHROM, space = 'free', scale = 'free', labeller = labeller(CHROM = chrom_labeller)) +
+        facet_grid(.~CHROM, space = 'free', scales = 'free', labeller = labeller(CHROM = chrom_labeller)) +
         scale_alpha_continuous(range = c(0,1), limits = c(p_min, 1), oob = scales::squish) +
         guides(
             alpha = 'none',
@@ -582,7 +582,7 @@ plot_phylo_heatmap = function(
             values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = cnv_colors[['bamp']], 'loh' = 'darkgreen', 'bdel' = 'blue'),
             labels = c('amp' = 'AMP', 'del' = 'DEL', 'bamp' = 'BAMP', 'loh' = 'CNLoH', 'bdel' = 'BDEL'),
             limits = force,
-            na.translate = F
+            na.translate = FALSE
         ) +
         xlab('Genomic position')
 
@@ -737,7 +737,7 @@ plot_consensus = function(segs) {
         plot.margin = margin(0, 0, 0, 0),
         legend.position = 'top'
     ) +
-    facet_grid(~CHROM, space = 'free_x', scale = 'free', labeller = labeller(CHROM = chrom_labeller)) +
+    facet_grid(~CHROM, space = 'free_x', scales = 'free', labeller = labeller(CHROM = chrom_labeller)) +
     scale_fill_manual(
       values = cnv_colors,
       labels = cnv_labels,
@@ -825,7 +825,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
             # axis.title.y = element_text(angle = 90),
             # axis.title.x = element_text()
         ) +
-        facet_grid(cluster~CHROM, scale = 'free', space = 'free', labeller = labeller(CHROM = chrom_labeller)) +
+        facet_grid(cluster~CHROM, scales = 'free', space = 'free', labeller = labeller(CHROM = chrom_labeller)) +
         guides(fill = guide_colorbar(title = 'Expression\nmagnitude')) +
         xlab('Gene index') +
         ylab('Cell')
@@ -990,7 +990,7 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
         scale_alpha_continuous(range = c(0,1), limits = c(0.5,1), oob = scales::squish) +
         guides(alpha = 'none') +
         scale_x_continuous(expand = expansion(add = 0)) +
-        facet_grid(get(var)~CHROM, space = 'free_x', scale = 'free', drop = TRUE)
+        facet_grid(get(var)~CHROM, space = 'free_x', scales = 'free', drop = TRUE)
 
         if (!legend) {
             p = p + theme(legend.position = 'none')
@@ -1046,7 +1046,7 @@ plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
         axis.text.y = element_blank()
     ) +
     scale_x_continuous(expand = expansion(0)) +
-    facet_grid(group~CHROM, space = 'free', scale = 'free') +
+    facet_grid(group~CHROM, space = 'free', scales = 'free') +
     scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = scales::oob_squish)
 }
 
@@ -1098,7 +1098,7 @@ plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
             panel.spacing = unit(0, 'mm'),
             panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
         ) +
-        facet_grid(clone~CHROM, space = 'free', scale = 'free') +
+        facet_grid(clone~CHROM, space = 'free', scales = 'free') +
         scale_x_discrete(expand = expansion(0)) +
         scale_color_gradient(low = pal[1], high = pal[2])
     
@@ -1143,7 +1143,7 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
             strip.text.y.left = element_text(size = 6, angle = 0),
         ) +
         ylab('marker') +
-        facet_grid(marker_type ~ cell_group, space = 'free_y', scale = 'free', switch="y") +
+        facet_grid(marker_type ~ cell_group, space = 'free_y', scales = 'free', switch="y") +
         scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', limits = c(-1.5,1.5), oob = scales::oob_squish)
 
     p_annot = ggplot(
@@ -1164,7 +1164,7 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
             strip.text.x = element_blank()
         ) +
         ylab('') +
-        facet_grid(~ cell_group, space = 'free_y', scale = 'free', switch="y") +
+        facet_grid(~ cell_group, space = 'free_y', scales = 'free', switch="y") +
         scale_fill_manual(values = pal_annot) +
         guides(fill = guide_legend())
 
@@ -1185,7 +1185,7 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
             axis.title.x = element_blank()
         ) +
         ylab('') +
-        facet_grid(~cell_group, space = 'free_y', scale = 'free', switch="y") +
+        facet_grid(~cell_group, space = 'free_y', scales = 'free', switch="y") +
         scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 0.5, limits = c(0,1), oob = scales::oob_squish) + 
         ggtitle(sample) +
         guides(fill = 'none')
@@ -1313,7 +1313,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
         ) +
         scale_color_manual(values = cnv_colors, limits = force) +
         ylim(0,1) +
-        facet_grid(.~CHROM, space = 'free_x', scale = 'free_x') +
+        facet_grid(.~CHROM, space = 'free_x', scales = 'free_x') +
         geom_vline(xintercept = boundary - 1, color = 'red', size = 0.5, linetype = 'dashed') +
         guides(color = 'none')
 
@@ -1339,7 +1339,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
         ) +
         scale_color_manual(values = cnv_colors) +
         ylim(0,1) +
-        facet_grid(.~CHROM, space = 'free_x', scale = 'free_x') +
+        facet_grid(.~CHROM, space = 'free_x', scales = 'free_x') +
         geom_vline(xintercept = boundary - 1, color = 'red', size = 0.5, linetype = 'dashed') +
         guides(color = 'none')
 
@@ -1366,7 +1366,7 @@ plot_exp_post = function(exp_post, jitter = TRUE) {
         geom_hline(yintercept = 0, color = 'green', linetype = 'dashed') +
         geom_hline(yintercept = log2(1.5), color = 'red', linetype = 'dashed') +
         geom_hline(yintercept = -1, color = 'blue', linetype = 'dashed') +
-        facet_grid(annot~cnv_state, scale = 'free', space = 'free') +
+        facet_grid(annot~cnv_state, scales = 'free', space = 'free') +
         theme_classic() +
         theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
         scale_fill_manual(values = cnv_colors)
@@ -1394,7 +1394,7 @@ plot_clone_profile = function(joint_post, clone_post) {
         theme(
             plot.margin = margin(0, 0, 0, 0)
         ) +
-        facet_grid(clone~., scale = 'free') +
+        facet_grid(clone~., scales = 'free') +
         scale_size_continuous(
             range = c(0, 5),
             name = 'Cells'

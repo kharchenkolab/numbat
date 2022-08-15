@@ -1423,16 +1423,16 @@ get_allele_post = function(df_allele, haplotypes, segs_consensus) {
         ) %>%
         rowwise() %>%
         mutate(
-            l11 = dbinom(major, total, p = 0.5, log = TRUE),
-            l10 = dbinom(major, total, p = 0.9, log = TRUE),
-            l01 = dbinom(major, total, p = 0.1, log = TRUE),
-            l20 = dbinom(major, total, p = 0.9, log = TRUE),
-            l02 = dbinom(major, total, p = 0.1, log = TRUE),
-            l21 = dbinom(major, total, p = 0.66, log = TRUE),
-            l12 = dbinom(major, total, p = 0.33, log = TRUE),
-            l31 = dbinom(major, total, p = 0.75, log = TRUE),
-            l13 = dbinom(major, total, p = 0.25, log = TRUE),
-            l32 = dbinom(major, total, p = 0.6, log = TRUE),
+            l11 = dbinom(major, total, prob = 0.5, log = TRUE),
+            l10 = dbinom(major, total, prob = 0.9, log = TRUE),
+            l01 = dbinom(major, total, prob = 0.1, log = TRUE),
+            l20 = dbinom(major, total, prob = 0.9, log = TRUE),
+            l02 = dbinom(major, total, prob = 0.1, log = TRUE),
+            l21 = dbinom(major, total, prob = 0.66, log = TRUE),
+            l12 = dbinom(major, total, prob = 0.33, log = TRUE),
+            l31 = dbinom(major, total, prob = 0.75, log = TRUE),
+            l13 = dbinom(major, total, prob = 0.25, log = TRUE),
+            l32 = dbinom(major, total, prob = 0.6, log = TRUE),
             l22 = l11,
             l00 = l11
         ) %>%
