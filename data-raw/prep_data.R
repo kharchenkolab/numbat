@@ -5,26 +5,6 @@ library(glue)
 library(pagoda2)
 library(conos)
 
-## genetic_map_hg19.rda ##
-genetic_map = fread('~/Eagle_v2.4.1/tables/genetic_map_hg19_withX.txt.gz') %>% 
-    setNames(c('CHROM', 'POS', 'rate', 'cM')) %>%
-    group_by(CHROM) %>%
-    mutate(
-        start = POS,
-        end = c(POS[2:length(POS)], POS[length(POS)])
-    ) %>%
-    ungroup()
-
-## genetic_map_hg38.rda ##
-genetic_map = fread('~/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz') %>% 
-    setNames(c('CHROM', 'POS', 'rate', 'cM')) %>%
-    group_by(CHROM) %>%
-    mutate(
-        start = POS,
-        end = c(POS[2:length(POS)], POS[length(POS)])
-    ) %>%
-    ungroup()
-
 ## gtf_hg19.rda ##
 # https://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/genes/hg19.refGene.gtf.gz
 gtf = fread('~/ref/hg38.refGene.gtf')
@@ -89,6 +69,32 @@ acen_hg38 = fread('~/ref/chromosome.band.hg38.txt') %>%
     mutate(CHROM = factor(CHROM, 1:22)) %>%
     group_by(CHROM) %>%
     summarise(start = min(start), end = max(end))
+
+## chrom_sizes_hg19.rda ##
+chrom_sizes_hg19 = fread('~/ref/hg19.chrom.sizes.txt') %>% 
+    setNames(c('CHROM', 'size')) %>%
+    mutate(CHROM = str_remove(CHROM, 'chr')) %>%
+    filter(CHROM %in% 1:22) %>%
+    mutate(CHROM = factor(as.integer(CHROM)))
+
+## acen_hg19.rda ##
+acen_hg19 = fread('~/ref/chromosome.band.hg19.txt') %>%
+    setNames(c('CHROM', 'start', 'end', 'band', 'gieStain')) %>%
+    filter(gieStain == 'acen') %>%
+    mutate(CHROM = str_remove(CHROM, 'chr')) %>%
+    filter(CHROM %in% 1:22) %>%
+    mutate(CHROM = factor(CHROM, 1:22)) %>%
+    group_by(CHROM) %>%
+    summarise(start = min(start), end = max(end))
+
+## gaps_hg19.rda ##
+# https://github.com/hartwigmedical/hmftools/blob/master/purple/src/main/resources/circos/gaps.19.txt
+gaps_hg19 = fread('~/ref/gaps.19.txt') %>%
+        setNames(c('CHROM', 'start', 'end')) %>%
+        mutate(CHROM = str_remove(CHROM, 'hs')) %>%
+        filter(CHROM %in% 1:22) %>%
+        mutate(CHROM = as.factor(as.integer(CHROM))) %>%
+        arrange(CHROM)
 
 ## vcf_meta.rda ##
 # wget ftp://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz

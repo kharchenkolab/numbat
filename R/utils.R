@@ -209,15 +209,15 @@ get_exp_bulk = function(count_mat, lambdas_ref, gtf, verbose = FALSE) {
 #' Aggregate into pseudobulk alelle profile
 #'
 #' @param df_allele dataframe Single-cell allele counts
-#' @param genetic_map dataframe Genetic map
-#' @param lambda numeric Phase switch rate
+#' @param nu numeric Phase switch rate
 #' @param min_depth integer Minimum coverage to filter SNPs
 #' @return dataframe Pseudobulk allele profile
 #' @keywords internal
-get_allele_bulk = function(df_allele, genetic_map, lambda = 1, min_depth = 0) {
+get_allele_bulk = function(df_allele, nu = 1, min_depth = 0) {
     df_allele %>%
         filter(GT %in% c('1|0', '0|1')) %>%
-        group_by(snp_id, CHROM, POS, REF, ALT, GT, gene) %>%
+        filter(!is.na(cM)) %>%
+        group_by(snp_id, CHROM, POS, cM, REF, ALT, GT, gene) %>%
         summarise(
             AD = sum(AD),
             DP = sum(DP),
@@ -233,22 +233,20 @@ get_allele_bulk = function(df_allele, genetic_map, lambda = 1, min_depth = 0) {
         mutate(pAD = ifelse(GT == '1|0', AD, DP - AD)) %>%
         mutate(CHROM = factor(CHROM, unique(CHROM))) %>%
         arrange(CHROM, POS) %>%
-        annot_cm(genetic_map) %>%
         group_by(CHROM) %>%
         filter(n() > 1) %>%
         mutate(
             inter_snp_cm = c(NA, cM[2:length(cM)] - cM[1:(length(cM)-1)]),
-            p_s = switch_prob_cm(inter_snp_cm, lambda = lambda)
+            p_s = switch_prob_cm(inter_snp_cm, nu = nu)
         ) %>%
         ungroup() %>%
         mutate(gene = ifelse(gene == '', NA, gene))
 }
 
-
 #' Combine allele and expression pseudobulks
 #'
 #' @param allele_bulk dataframe Bulk allele profile
-#' @param genetic_map dataframe Genetic map
+#' @param exp_bulk dataframe Bulk expression profile
 #' @return dataframe Pseudobulk allele and expression profile
 #' @keywords internal
 combine_bulk = function(allele_bulk, exp_bulk) {
@@ -319,10 +317,12 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param df_allele dataframe Single-cell allele counts
 #' @param gtf dataframe Transcript gtf
-#' @param genetic_map dataframe Genetic map
+#' @param min_depth integer Minimum coverage to filter SNPs
+#' @param nu numeric Phase switch rate
+#' @param verbose logical Verbosity
 #' @return dataframe Pseudobulk gene expression and allele profile
 #' @export
-get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_depth = 0, lambda = 1, verbose = TRUE) {
+get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, min_depth = 0, nu = 1, verbose = TRUE) {
 
     count_mat = check_matrix(count_mat)
 
@@ -339,8 +339,7 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, genetic_map, min_dep
 
     allele_bulk = get_allele_bulk(
         df_allele,
-        genetic_map,
-        lambda = lambda,
+        nu = nu,
         min_depth = min_depth)
             
     bulk = combine_bulk(
@@ -414,6 +413,7 @@ fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FAL
     return(list('w' = w, 'lambdas_bar' = lambdas_bar, 'sse' = fit$value/length(Y_obs)))
 }
 
+<<<<<<< HEAD
 #' Annotate genetic distance between markers
 #'
 #' @param bulk dataframe Pseudobulk profile
@@ -461,12 +461,12 @@ annot_cm = function(bulk, genetic_map) {
 #' Predict phase switch probablity as a function of genetic distance
 #'
 #' @param d numeric vector Genetic distance in cM
-#' @param lambda numeric Phase switch rate
+#' @param nu numeric Phase switch rate
 #' @param min_p numeric Minimum phase switch probability 
 #' @return numeric vector Phase switch probability
 #' @keywords internal
-switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
-    p = (1-exp(-2*lambda*d))/2
+switch_prob_cm = function(d, nu = 1, min_p = 1e-10) {
+    p = (1-exp(-2*nu*d))/2
     p = pmax(p, min_p)
     p = ifelse(is.na(d), 0, p)
     return(p)
@@ -481,19 +481,26 @@ switch_prob_cm = function(d, lambda = 1, min_p = 1e-10) {
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param theta_min numeric Minimum imbalance threshold
 #' @param logphi_min numeric Minimum log expression deviation threshold
-#' @param lambda numeric Phase switch rate
+#' @param nu numeric Phase switch rate
 #' @param min_genes integer Minimum number of genes to call an event
 #' @param exp_only logical Whether to run expression-only HMM
 #' @param allele_only logical Whether to run allele-only HMM
 #' @param bal_cnv logical Whether to call balanced amplifications/deletions
-#' @param retest whether to retest CNVs after Viterbi decoding
-#' @param find_diploid whether to run diploid region identification routine
-#' @param diploid_chroms user-given chromsomes that are known to be in diploid state
-#' @return a dataframe of segments with CNV posterior information
+#' @param retest logical Whether to retest CNVs after Viterbi decoding
+#' @param find_diploid logical Whether to run diploid region identification routine
+#' @param diploid_chroms character vector User-given chromosomes that are known to be in diploid state
+#' @param segs_loh dataframe Segments with clonal LOH to be excluded
+#' @param classify_allele logical Whether to only classify allele (internal use only)
+#' @param run_hmm logical Whether to run HMM (internal use only)
+#' @param prior numeric vector Prior probabilities of states (internal use only)
+#' @param exclude_neu logical Whether to exclude neutral segments from retesting (internal use only)
+#' @param phasing logical Whether to use phasing information (internal use only)
+#' @param verbose logical Verbosity
+#' @return a pseudobulk profile dataframe with called CNV information
 #' @export
 analyze_bulk = function(
     bulk, t = 1e-5, gamma = 20, theta_min = 0.08, logphi_min = 0.25,
-    lambda = 1, min_genes = 10,
+    nu = 1, min_genes = 10,
     exp_only = FALSE, allele_only = FALSE, bal_cnv = TRUE, retest = TRUE, 
     find_diploid = TRUE, diploid_chroms = NULL, segs_loh = NULL,
     classify_allele = FALSE, run_hmm = TRUE, prior = NULL, exclude_neu = TRUE,
@@ -509,7 +516,7 @@ analyze_bulk = function(
     }
 
     # update transition probablity
-    bulk = bulk %>% mutate(p_s = switch_prob_cm(inter_snp_cm, lambda = UQ(lambda)))
+    bulk = bulk %>% mutate(p_s = switch_prob_cm(inter_snp_cm, nu = UQ(nu)))
 
     if (exp_only | allele_only) {
         bulk$diploid = TRUE
@@ -646,7 +653,7 @@ analyze_bulk = function(
     }
 
     # store these info here
-    bulk$lambda = lambda 
+    bulk$nu = nu 
     bulk$gamma = gamma
 
     return(bulk)
@@ -1855,17 +1862,17 @@ binary_entropy = function(p) {
 #' @keywords internal
 fit_switch_prob = function(y, d) {
     
-    eta = function(d, lambda, min_p = 1e-10) {
-        switch_prob_cm(d, lambda)
+    eta = function(d, nu, min_p = 1e-10) {
+        switch_prob_cm(d, nu)
     }
 
-    l_lambda = function(y, d, lambda) {
-        sum(log(eta(d[y == 1], lambda))) + sum(log(1-eta(d[y == 0], lambda)))
+    l_nu = function(y, d, nu) {
+        sum(log(eta(d[y == 1], nu))) + sum(log(1-eta(d[y == 0], nu)))
     }
 
     fit = stats4::mle(
-        minuslogl = function(lambda) {
-            -l_lambda(y, d, lambda)
+        minuslogl = function(nu) {
+            -l_nu(y, d, nu)
         },
         start = c(5),
         lower = c(1e-7)
@@ -1879,8 +1886,8 @@ switch_prob_mle = function(pAD, DP, d, theta, gamma = 20) {
 
     fit = optim(
             par = 1, 
-            function(lambda) {
-                p_s = switch_prob_cm(d, lambda)
+            function(nu) {
+                p_s = switch_prob_cm(d, nu)
                 -calc_allele_lik(pAD, DP, p_s, theta, gamma)
             },
             method = 'L-BFGS-B',
@@ -1898,9 +1905,9 @@ switch_prob_mle2 = function(pAD, DP, d, gamma = 20) {
     fit = optim(
             par = c(1, 0.4), 
             function(params) {
-                lambda = params[1]
+                nu = params[1]
                 theta = params[2]
-                p_s = switch_prob_cm(d, lambda)
+                p_s = switch_prob_cm(d, nu)
                 -calc_allele_lik(pAD, DP, p_s, theta, gamma)
             },
             method = 'L-BFGS-B',
@@ -1989,6 +1996,7 @@ snp_rate_roll = function(gene_snps, gene_length, h) {
     )
 }
 
+<<<<<<< HEAD
 #' @keywords internal
 fit_snp_rate_pois = function(gene_snps, gene_length) {
     
@@ -2023,6 +2031,8 @@ fit_snp_rate_poilog = function(gene_snps, gene_length) {
     return(fit$par)
 }
 
+=======
+>>>>>>> devel
 # negative binomial model
 #' @keywords internal
 fit_snp_rate = function(gene_snps, gene_length) {
@@ -2032,10 +2042,10 @@ fit_snp_rate = function(gene_snps, gene_length) {
     fit = optim(
         par = c(10, 1),
         fn = function(params) {
-            lambda = params[1]
+            v = params[1]
             sig = params[2]
             
-            -sum(dnbinom(x = gene_snps, mu = lambda * gene_length/1e6, size = sig, log = TRUE))
+            -sum(dnbinom(x = gene_snps, mu = v * gene_length/1e6, size = sig, log = TRUE))
         },
         method = 'L-BFGS-B',
         lower = c(1e-10, 1e-10)
@@ -2119,6 +2129,7 @@ evaluate_calls = function(cnvs_dna, cnvs_call, gaps = gaps_hg38) {
     rec = overlap_total/dna_total
     
     return(c('precision' = pre, 'recall' = rec))
+<<<<<<< HEAD
 }
 
 ########################### Experimental ############################
@@ -2374,4 +2385,6 @@ get_segs_optimal = function(bulk_subtrees, bulk_clones, t = 1e-5, min_LLR = 10, 
     
     return(list(segs_optimal = segs_optimal, scores = scores))
     
+=======
+>>>>>>> devel
 }

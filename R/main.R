@@ -26,14 +26,16 @@ NULL
 #' @param lambdas_ref matrix Either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe Allele counts per cell, produced by preprocess_allele
 #' @param gtf dataframe GTF of transcripts 
-#' @param genetic_map dataframe A genetic map dataframe
 #' @param out_dir string Output directory
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param t numeric Transition probability
 #' @param init_k integer Number of clusters in the initial clustering
 #' @param min_cells integer Minimum number of cells to run HMM on
+#' @param min_genes integer Minimum number of genes to call a segment
 #' @param max_cost numeric Likelihood threshold to collapse internal branches
 #' @param tau numeric Factor to determine max_cost as a function of the number of cells (0-1)
+#' @param alpha numeric P value cutoff for diploid finding
+#' @param min_overlap numeric Minimum CNV overlap threshold
 #' @param max_iter integer Maximum number of iterations to run the phyologeny optimization
 #' @param max_nni integer Maximum number of iterations to run NNI in the ML phylogeny inference
 #' @param min_depth integer Minimum allele depth 
@@ -44,14 +46,20 @@ NULL
 #' @param min_LLR numeric Minimum LLR to filter CNVs
 #' @param eps numeric Convergence threshold for ML tree search
 #' @param multi_allelic logical Whether to call multi-allelic CNVs
+#' @param p_multi numeric P value cutoff for calling multi-allelic CNVs
 #' @param use_loh logical Whether to include LOH regions in the expression baseline
 #' @param skip_nj logical Whether to skip NJ tree construction and only use UPGMA
 #' @param diploid_chroms vector Known diploid chromosomes
 #' @param segs_loh dataframe Segments of clonal LOH to be excluded
+#' @param check_convergence logical Whether to terminate iterations based on consensus CNV convergence 
+#' @param random_init logical Whether to initiate phylogney using a random tree (internal use only)
+#' @param exclude_neu logical Whether to exclude neutral segments from CNV retesting (internal use only)
+#' @param plot logical Whether to plot results
+#' @param verbose logical Verbosity
 #' @return a status code
 #' @export
 run_numbat = function(
-        count_mat, lambdas_ref, df_allele, gtf, genetic_map, 
+        count_mat, lambdas_ref, df_allele, gtf, 
         out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3,
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
@@ -217,7 +225,6 @@ run_numbat = function(
                 df_allele = df_allele, 
                 lambdas_ref = lambdas_ref,
                 gtf = gtf,
-                genetic_map = genetic_map,
                 min_depth = min_depth,
                 ncores = ncores)
 
@@ -276,7 +283,6 @@ run_numbat = function(
                 df_allele = df_allele, 
                 lambdas_ref = lambdas_ref,
                 gtf = gtf,
-                genetic_map = genetic_map,
                 min_depth = min_depth,
                 ncores = ncores)
 
@@ -528,7 +534,6 @@ run_numbat = function(
         df_allele = df_allele, 
         lambdas_ref = lambdas_ref,
         gtf = gtf,
-        genetic_map = genetic_map,
         min_depth = min_depth,
         ncores = ncores)
 
@@ -632,12 +637,11 @@ exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101,
 #' @param df_allele dataframe Alelle counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf dataframe Transcript GTF
-#' @param genetic_map dataframe Genetic map
 #' @param min_depth integer Minimum allele depth to include
 #' @param ncores integer Number of cores
 #' @return dataframe Pseudobulk profiles
 #' @keywords internal 
-make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, genetic_map, min_depth = 0, ncores = NULL) {
+make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_depth = 0, ncores = NULL) {
     
 
     if (length(groups) == 0) {
@@ -655,7 +659,6 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, gene
                     df_allele = df_allele %>% filter(cell %in% g$cells),
                     lambdas_ref = lambdas_ref,
                     gtf = gtf,
-                    genetic_map = genetic_map,
                     min_depth = min_depth
                 ) %>%
                 mutate(

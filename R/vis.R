@@ -53,6 +53,8 @@ cnv_labels = names(cnv_colors) %>%
 #' @param dot_size numeric Size of marker dots
 #' @param dot_alpha numeric Transparency of the marker dots
 #' @param legend logical Whether to show legend
+#' @param exclude_gap logical Whether to mark gap regions and centromeres
+#' @param raster logical Whether to raster images
 #' @return ggplot Plot of pseudobulk HMM profile
 #' @export
 plot_psbulk = function(
@@ -311,6 +313,7 @@ plot_bulks = function(
 #' @param horizontal logical Whether to use horizontal layout 
 #' @param show_clone_size logical Whether to show clone size
 #' @param show_distance logical Whether to show evolutionary distance between clones
+#' @param legend logical Whether to show legend
 #' @param pal named vector Node colors
 #' @return ggplot object
 #' @export
@@ -438,6 +441,10 @@ plot_mut_history = function(
 #' @param tip_length numeric Length of tips in the phylogeny
 #' @param clone_line logical Whether to display borders for clones in the heatmap
 #' @param superclone logical Wehether to display superclones in the clone bar
+#' @param pal_clone named vector Clone colors
+#' @param root_edge logical Whether to plot root edge
+#' @param exclude_gap logical Whether to mark gap regions
+#' @param raster logical Whether to raster images
 #' @return ggplot panel
 #' @export
 plot_phylo_heatmap = function(
@@ -445,7 +452,7 @@ plot_phylo_heatmap = function(
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = FALSE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE, 
         p_min = 0.9, line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2, 
-        clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, snvs = NULL, raster = FALSE
+        clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, raster = FALSE
     ) {
 
     if (!requireNamespace("ggtree", quietly = TRUE)) {
@@ -585,18 +592,6 @@ plot_phylo_heatmap = function(
             na.translate = FALSE
         ) +
         xlab('Genomic position')
-
-    if (!is.null(snvs)) {
-        p_segs = p_segs + 
-            geom_point(
-                data = snvs %>% 
-                    mutate(cell = factor(cell, cell_order)) %>%
-                    mutate(cell_index = as.integer(cell)),
-                aes(x = POS, y = cell_index),
-                pch = 4,
-                size = 1
-            )
-    }
 
     if (exclude_gap) {
 
@@ -920,6 +915,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 #' @param var character Column to facet by
 #' @param label_group logical Label the groups
 #' @param legend logical Display the legend
+#' @param exclude_gap logical Whether to mark gap regions
 #' @export
 cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, exclude_gap = TRUE) {
 
