@@ -3,7 +3,7 @@
 \docType{data}
 \name{gtf_hg19}
 \alias{gtf_hg19}
-\title{something}
+\title{gene model (hg19)}
 \format{
 An object of class \code{data.table} (inherits from \code{data.frame}) with 26841 rows and 6 columns.
 }
@@ -11,6 +11,6 @@ An object of class \code{data.table} (inherits from \code{data.frame}) with 2684
 gtf_hg19
 }
 \description{
-something
+gene model (hg19)
 }
 \keyword{datasets}

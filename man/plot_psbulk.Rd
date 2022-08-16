@@ -42,6 +42,10 @@ plot_psbulk(
 \item{dot_alpha}{numeric Transparency of the marker dots}
 
 \item{legend}{logical Whether to show legend}
+
+\item{exclude_gap}{logical Whether to mark gap regions and centromeres}
+
+\item{raster}{logical Whether to raster images}
 }
 \value{
 ggplot Plot of pseudobulk HMM profile

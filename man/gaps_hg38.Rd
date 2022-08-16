@@ -3,7 +3,7 @@
 \docType{data}
 \name{gaps_hg38}
 \alias{gaps_hg38}
-\title{something}
+\title{genome gap regions (hg38)}
 \format{
 An object of class \code{data.table} (inherits from \code{data.frame}) with 30 rows and 3 columns.
 }
@@ -11,6 +11,6 @@ An object of class \code{data.table} (inherits from \code{data.frame}) with 30 r
 gaps_hg38
 }
 \description{
-something
+genome gap regions (hg38)
 }
 \keyword{datasets}

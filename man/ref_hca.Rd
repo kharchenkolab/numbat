@@ -3,7 +3,7 @@
 \docType{data}
 \name{ref_hca}
 \alias{ref_hca}
-\title{something}
+\title{reference expression magnitudes from HCA}
 \format{
 An object of class \code{matrix} (inherits from \code{array}) with 24756 rows and 12 columns.
 }
@@ -11,6 +11,6 @@ An object of class \code{matrix} (inherits from \code{array}) with 24756 rows an
 ref_hca
 }
 \description{
-something
+reference expression magnitudes from HCA
 }
 \keyword{datasets}

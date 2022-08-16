@@ -413,7 +413,7 @@ fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FAL
     return(list('w' = w, 'lambdas_bar' = lambdas_bar, 'sse' = fit$value/length(Y_obs)))
 }
 
-<<<<<<< HEAD
+
 #' Annotate genetic distance between markers
 #'
 #' @param bulk dataframe Pseudobulk profile
@@ -1996,7 +1996,7 @@ snp_rate_roll = function(gene_snps, gene_length, h) {
     )
 }
 
-<<<<<<< HEAD
+
 #' @keywords internal
 fit_snp_rate_pois = function(gene_snps, gene_length) {
     
@@ -2031,8 +2031,7 @@ fit_snp_rate_poilog = function(gene_snps, gene_length) {
     return(fit$par)
 }
 
-=======
->>>>>>> devel
+
 # negative binomial model
 #' @keywords internal
 fit_snp_rate = function(gene_snps, gene_length) {
@@ -2129,7 +2128,6 @@ evaluate_calls = function(cnvs_dna, cnvs_call, gaps = gaps_hg38) {
     rec = overlap_total/dna_total
     
     return(c('precision' = pre, 'recall' = rec))
-<<<<<<< HEAD
 }
 
 ########################### Experimental ############################
@@ -2385,6 +2383,5 @@ get_segs_optimal = function(bulk_subtrees, bulk_clones, t = 1e-5, min_LLR = 10, 
     
     return(list(segs_optimal = segs_optimal, scores = scores))
     
-=======
->>>>>>> devel
+
 }

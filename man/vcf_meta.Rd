@@ -3,7 +3,7 @@
 \docType{data}
 \name{vcf_meta}
 \alias{vcf_meta}
-\title{something}
+\title{example VCF header}
 \format{
 An object of class \code{character} of length 65.
 }
@@ -11,6 +11,6 @@ An object of class \code{character} of length 65.
 vcf_meta
 }
 \description{
-something
+example VCF header
 }
 \keyword{datasets}

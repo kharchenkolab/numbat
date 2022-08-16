@@ -3,7 +3,7 @@
 \docType{data}
 \name{pre_likelihood_hmm}
 \alias{pre_likelihood_hmm}
-\title{something}
+\title{HMM object for unit tests}
 \format{
 An object of class \code{list} of length 10.
 }
@@ -11,6 +11,6 @@ An object of class \code{list} of length 10.
 pre_likelihood_hmm
 }
 \description{
-something
+HMM object for unit tests
 }
 \keyword{datasets}

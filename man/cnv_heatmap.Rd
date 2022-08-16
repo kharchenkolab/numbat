@@ -20,6 +20,8 @@ cnv_heatmap(
 \item{label_group}{logical Label the groups}
 
 \item{legend}{logical Display the legend}
+
+\item{exclude_gap}{logical Whether to mark gap regions}
 }
 \description{
 Plot CNV heatmap

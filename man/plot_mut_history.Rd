@@ -37,6 +37,8 @@ plot_mut_history(
 
 \item{show_distance}{logical Whether to show evolutionary distance between clones}
 
+\item{legend}{logical Whether to show legend}
+
 \item{edge_label}{logical Whether to label edges}
 
 \item{node_label}{logical Whether to label nodes}

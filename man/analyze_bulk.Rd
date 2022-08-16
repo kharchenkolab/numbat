@@ -10,7 +10,7 @@ analyze_bulk(
   gamma = 20,
   theta_min = 0.08,
   logphi_min = 0.25,
-  lambda = 1,
+  nu = 1,
   min_genes = 10,
   exp_only = FALSE,
   allele_only = FALSE,
@@ -38,7 +38,7 @@ analyze_bulk(
 
 \item{logphi_min}{numeric Minimum log expression deviation threshold}
 
-\item{lambda}{numeric Phase switch rate}
+\item{nu}{numeric Phase switch rate}
 
 \item{min_genes}{integer Minimum number of genes to call an event}
 
@@ -48,14 +48,28 @@ analyze_bulk(
 
 \item{bal_cnv}{logical Whether to call balanced amplifications/deletions}
 
-\item{retest}{whether to retest CNVs after Viterbi decoding}
+\item{retest}{logical Whether to retest CNVs after Viterbi decoding}
 
-\item{find_diploid}{whether to run diploid region identification routine}
+\item{find_diploid}{logical Whether to run diploid region identification routine}
 
-\item{diploid_chroms}{user-given chromsomes that are known to be in diploid state}
+\item{diploid_chroms}{character vector User-given chromosomes that are known to be in diploid state}
+
+\item{segs_loh}{dataframe Segments with clonal LOH to be excluded}
+
+\item{classify_allele}{logical Whether to only classify allele (internal use only)}
+
+\item{run_hmm}{logical Whether to run HMM (internal use only)}
+
+\item{prior}{numeric vector Prior probabilities of states (internal use only)}
+
+\item{exclude_neu}{logical Whether to exclude neutral segments from retesting (internal use only)}
+
+\item{phasing}{logical Whether to use phasing information (internal use only)}
+
+\item{verbose}{logical Verbosity}
 }
 \value{
-a dataframe of segments with CNV posterior information
+a pseudobulk profile dataframe with called CNV information
 }
 \description{
 Call CNVs in a pseudobulk profile using the Numbat joint HMM

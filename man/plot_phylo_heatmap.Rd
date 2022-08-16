@@ -26,7 +26,6 @@ plot_phylo_heatmap(
   superclone = FALSE,
   exclude_gap = FALSE,
   root_edge = TRUE,
-  snvs = NULL,
   raster = FALSE
 )
 }
@@ -49,6 +48,8 @@ plot_phylo_heatmap(
 
 \item{clone_bar}{logical Whether to display clone bar plot}
 
+\item{pal_clone}{named vector Clone colors}
+
 \item{clone_title}{character Legend title for the clone bar}
 
 \item{clone_legend}{logical Whether to display the clone legend}
@@ -66,6 +67,12 @@ plot_phylo_heatmap(
 \item{clone_line}{logical Whether to display borders for clones in the heatmap}
 
 \item{superclone}{logical Wehether to display superclones in the clone bar}
+
+\item{exclude_gap}{logical Whether to mark gap regions}
+
+\item{root_edge}{logical Whether to plot root edge}
+
+\item{raster}{logical Whether to raster images}
 }
 \value{
 ggplot panel
