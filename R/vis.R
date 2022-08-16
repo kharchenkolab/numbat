@@ -455,10 +455,6 @@ plot_phylo_heatmap = function(
         clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, raster = FALSE
     ) {
 
-    if (!requireNamespace("ggtree", quietly = TRUE)) {
-        stop("Package \"ggtree\" needed for this function to work. Please install it.", call. = FALSE)
-    }
-
     if (raster) {
         if (!requireNamespace("ggrastr", quietly = TRUE)) {
             stop("Package \"ggrastr\" needed for this function to work with 'raster=TRUE'. Please install it.", call. = FALSE)
@@ -772,10 +768,6 @@ plot_consensus = function(segs) {
 #' @param plot_tree logical Whether to plot the dendrogram
 #' @export
 plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, reverse = TRUE, plot_tree = TRUE) {
-
-    if (!requireNamespace("ggtree", quietly = TRUE)) {
-        stop("Package \"ggtree\" needed for this function to work. Please install it.", call. = FALSE)
-    }
 
     gexp_norm_long = gexp_roll_wide %>% 
         as.data.frame() %>%

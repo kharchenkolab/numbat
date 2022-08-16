@@ -8,6 +8,7 @@
 #' @importFrom parallel mclapply
 #' @import ggplot2
 #' @import ggraph
+#' @importFrom ggtree %<+%
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
 #' @importFrom extraDistr dgpois
