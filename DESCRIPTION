@@ -12,41 +12,37 @@ Depends:
 biocViews:
 Imports:
     ape,
+    caTools,
     data.table,
+    dendextend,
     GenomicRanges,
     ggplot2,
     ggraph,
     ggtree,
     igraph,
-    lobstr,
     logger,
     Matrix,
     methods,
     parallel,
     parallelDist,
     patchwork,
-    RColorBrewer,
+    R.utils,
     Rcpp, 
     RcppParallel,
     RhpcBLASctl,
+    Rsamtools,
     stats4,
     stringr,
     tidygraph, 
-    tidyverse
+    tidyverse,
+    vcfR
 Suggests: 
     argparse,
-    caTools,
-    dendextend,
-    extraDistr,
     ggrastr,
     ggrepel,
     knitr,
     matrixStats,
-    R.utils,
-    Rsamtools,
     testthat (>= 3.0.0),
-    vcfR,
-    VGAM,
 Config/testthat/edition: 3
 LinkingTo: Rcpp, RcppArmadillo, RcppParallel, roptim
 NeedsCompilation: yes

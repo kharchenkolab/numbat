@@ -43,3 +43,4 @@ arma::rowvec fit_lnpois_cpp(std::vector<int> Y_obs, std::vector<double> lambda_r
   return opt.par().t();
 }
 
+

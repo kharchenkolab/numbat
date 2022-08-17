@@ -151,9 +151,6 @@ make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE
 #' @keywords internal 
 vcfR_file_fix <- function(file) {
 
-    if (!requireNamespace("vcfR", quietly = TRUE)) {
-        stop("Package \"vcfR\" needed for this function to work. Please install it.", call. = FALSE)
-    }
     if (!requireNamespace("Rsamtools", quietly = TRUE)) {
         stop("Package \"Rsamtools\" needed for this function to work. Please install it.", call. = FALSE)
     }

@@ -3,7 +3,8 @@ NULL
 
 ########################### Visualizations ############################
 # default color palette
-pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
+## pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
+pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
 getPalette = colorRampPalette(pal)
 
 
@@ -348,7 +349,8 @@ plot_mut_history = function(
     }
 
     if (is.null(pal)) {
-        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 8, 'Set1'))
+        ## getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 8, 'Set1'))
+        getPalette = colorRampPalette(pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF"))
         pal = c('gray', getPalette(length(V(G))))
     }
 
@@ -638,7 +640,8 @@ plot_phylo_heatmap = function(
 
     if (is.null(pal_clone)) {
 
-        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 10, 'Spectral'))
+        ## getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 10, 'Spectral'))
+        getPalette = colorRampPalette(c("#9E0142", "#D53E4F", "#F46D43", "#FDAE61", "#FEE08B", "#E6F598", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2"))
 
         pal_clone = getPalette(length(unique(clone_dict)))
 
@@ -647,6 +650,7 @@ plot_phylo_heatmap = function(
         }
         
     }
+
 
     p_clone = data.frame(
             cell = names(clone_dict),
@@ -1083,7 +1087,8 @@ plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
         {setNames(.$haplo, .$snp_id)}
     
     
-    pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
+    ## pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
+    pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
 
     p = df_allele %>% 
         left_join(

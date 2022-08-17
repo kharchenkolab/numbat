@@ -1731,8 +1731,8 @@ get_clone_profile = function(joint_post, clone_post) {
 ########################### Misc ############################
 
 log_mem = function() {
-    m = lobstr::mem_used()
-    msg = paste0('Mem used: ', signif(m/1e9, 3), 'Gb')
+    m = mem_used()
+    msg = paste0('Mem used: ', m)
     log_message(msg)
 }
 
@@ -1808,27 +1808,31 @@ simes_p = function(p.vals, n_dim) {
     n_dim * min(sort(p.vals)/seq_along(p.vals))
 }
 
+## https://github.com/cran/VGAM/blob/391729a24a7b520df09ae857e2098b3e95cb6fca/R/family.others.R
+#' @keywords internal
+log1mexp <- function(x) {
+  if (any(x < 0 & !is.na(x)))
+    stop("Inputs need to be non-negative!")
+    ifelse(x <= log(2), log(-expm1(-x)), log1p(-exp(-x)))
+}
+
+
 #' Get the total probability from a region of a normal pdf
 #' @keywords internal
 pnorm.range.log = function(lower, upper, mu, sd) {
-    if (!requireNamespace("VGAM", quietly = TRUE)) {
-        stop("Package \"VGAM\" needed for this function to work. Please install it.", call. = FALSE)
-    }
+
     if (sd == 0) { return(1) }
     l_upper = pnorm(upper, mu, sd, log.p = TRUE)
     l_lower = pnorm(lower, mu, sd, log.p = TRUE)
-    return(l_upper + VGAM::log1mexp(l_upper - l_lower))
+    return(l_upper + log1mexp(l_upper - l_lower))
 }
 
 #' @keywords internal
 pnorm.range.log = function(lower, upper, mu, sd) {
-    if (!requireNamespace("VGAM", quietly = TRUE)) {
-        stop("Package \"VGAM\" needed for this function to work. Please install it.", call. = FALSE)
-    }
     if (sd == 0) { return(1) }
     l_upper = pnorm(upper, mu, sd, log.p = TRUE)
     l_lower = pnorm(lower, mu, sd, log.p = TRUE)
-    return(l_upper + VGAM::log1mexp(l_upper - l_lower))
+    return(l_upper + log1mexp(l_upper - l_lower))
 }
 
 #' Get the modes of a vector
@@ -2228,3 +2232,94 @@ na.trim.ts <- function (object, ...)
 {
     as.ts(na.trim(as.zoo(object), ...))
 }
+
+## memory calculation
+
+## https://github.com/r-lib/prettyunits/blob/8706d89c8a9a2e4b90e3311427ddfe8b77654b5f/R/sizes.R
+
+#' @keywords internal
+compute_bytes <- function(bytes, smallest_unit = "B") {
+    units0 <- c("B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+
+    stopifnot(
+      is.numeric(bytes),
+      is.character(smallest_unit),
+      length(smallest_unit) == 1,
+      !is.na(smallest_unit),
+      smallest_unit %in% units0
+    )
+
+    limits <- c(1000, 999950 * 1000 ^ (seq_len(length(units0) - 2) - 1))
+    low <- match(smallest_unit, units0)
+    units <- units0[low:length(units0)]
+    limits <- limits[low:length(limits)]
+
+    neg <- bytes < 0 & !is.na(bytes)
+    bytes <- abs(bytes)
+
+    mat <- matrix(
+      rep(bytes, each = length(limits)),
+      nrow = length(limits),
+      ncol = length(bytes)
+    )
+    mat2 <- matrix(mat < limits, nrow  = length(limits), ncol = length(bytes))
+    exponent <- length(limits) - colSums(mat2) + low - 1L
+    res <- bytes / 1000 ^ exponent
+    unit <- units[exponent - low + 2L]
+
+    ## Zero bytes
+    res[bytes == 0] <- 0
+    unit[bytes == 0] <- units[1]
+
+    ## NA and NaN bytes
+    res[is.na(bytes)] <- NA_real_
+    res[is.nan(bytes)] <- NaN
+    unit[is.na(bytes)] <- units0[low]     # Includes NaN as well
+
+    data.frame(
+      stringsAsFactors = FALSE,
+      amount = res,
+      unit = unit,
+      negative = neg
+    )
+}
+
+#' @keywords internal
+pretty_bytes <- function(bytes) {
+    szs <- compute_bytes(bytes)
+    amt <- szs$amount
+
+    ## String. For fractions we always show two fraction digits
+    res <- character(length(amt))
+    int <- is.na(amt) | amt == as.integer(amt)
+    res[int] <- format(
+      ifelse(szs$negative[int], -1, 1) * amt[int],
+      scientific = FALSE
+    )
+    res[!int] <- sprintf("%.2f", ifelse(szs$negative[!int], -1, 1) * amt[!int])
+
+    format(paste(res, szs$unit), justify = "right")
+}
+
+## https://github.com/cran/lobstr/blob/master/R/mem.R
+#' @keywords internal
+mem_used <- function() {
+  pretty_bytes(sum(gc()[, 1] * c(node_size(), 8)))
+}
+
+#' @keywords internal
+node_size <- function() {
+  bit <- 8L * .Machine$sizeof.pointer
+  if (!(bit == 32L || bit == 64L)) {
+    stop("Unknown architecture", call. = FALSE)
+  }
+
+  if (bit == 32L) 28L else 56L
+}
+
+
+
+## https://github.com/cran/vcfR/blob/356b90b5ad656ca700ed93d193b2a5bb8a419a6b/R/io_vcfR.R
+#' @keywords internal
+
+
