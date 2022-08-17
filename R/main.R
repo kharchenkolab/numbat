@@ -21,7 +21,7 @@ NULL
 #' @param count_mat dgCMatrix Raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref matrix Either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe Allele counts per cell, produced by preprocess_allele
-#' @param gtf dataframe GTF of transcripts 
+#' @param genome character Genome version (hg38 or hg19) 
 #' @param out_dir string Output directory
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param t numeric Transition probability
@@ -55,7 +55,7 @@ NULL
 #' @return a status code
 #' @export
 run_numbat = function(
-        count_mat, lambdas_ref, df_allele, gtf, 
+        count_mat, lambdas_ref, df_allele, genome = c('hg38', 'hg19'), 
         out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3,
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
@@ -95,6 +95,7 @@ run_numbat = function(
         glue('tau = {tau}'),
         glue('check_convergence = {check_convergence}'),
         glue('plot = {plot}'),
+        glue('genome = {genome}'),
         'Input metrics:',
         glue('{ncol(count_mat)} cells'),
         sep = "\n"
@@ -110,6 +111,14 @@ run_numbat = function(
     count_mat = check_matrix(count_mat)
     df_allele = check_allele_df(df_allele)
     lambdas_ref = check_exp_ref(lambdas_ref)
+
+    if (genome == 'hg38') {
+        gtf = gtf_hg38
+    } else if (genome == 'hg19') {
+        gtf = gtf_hg19
+    } else {
+        stop('Genome version must be hg38 or hg19')
+    }
 
     # filter for annotated genes
     genes_annotated = unique(gtf$gene) %>% 
@@ -239,7 +248,7 @@ run_numbat = function(
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
         
         if (plot) {
-            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR, use_pos = TRUE)
+            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
             ggsave(
                 glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
                 width = 12, height = 2*length(unique(bulk_subtrees$sample)), dpi = 250
@@ -306,7 +315,7 @@ run_numbat = function(
         fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
         if (plot) {
-            p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE)
+            p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
             ggsave(
                 glue('{out_dir}/bulk_clones_{i}.png'), p, 
                 width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 250
@@ -557,7 +566,7 @@ run_numbat = function(
     fwrite(bulk_clones, glue('{out_dir}/bulk_clones_final.tsv.gz'), sep = '\t')
 
     if (plot) {
-        p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE)
+        p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
         ggsave(
             glue('{out_dir}/bulk_clones_final.png'), p, 
             width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 250
