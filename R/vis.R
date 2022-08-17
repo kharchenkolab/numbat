@@ -53,6 +53,7 @@ cnv_colors = c("neu" = "gray",
 #' @param dot_alpha numeric Transparency of the marker dots
 #' @param legend logical Whether to show legend
 #' @param exclude_gap logical Whether to mark gap regions and centromeres
+#' @param genome character Genome build, either 'hg38' or 'hg19'
 #' @param raster logical Whether to raster images
 #' @return ggplot Plot of pseudobulk HMM profile
 #' @export
@@ -935,6 +936,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 #' @param label_group logical Label the groups
 #' @param legend logical Display the legend
 #' @param exclude_gap logical Whether to mark gap regions
+#' @param genome character Genome build, either 'hg38' or 'hg19'
 #' @export
 cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, exclude_gap = TRUE, genome = c('hg38', 'hg19')) {
 

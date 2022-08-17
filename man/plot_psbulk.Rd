@@ -17,6 +17,7 @@ plot_psbulk(
   dot_alpha = 0.5,
   legend = FALSE,
   exclude_gap = TRUE,
+  genome = c("hg38", "hg19"),
   raster = FALSE
 )
 }
@@ -44,6 +45,8 @@ plot_psbulk(
 \item{legend}{logical Whether to show legend}
 
 \item{exclude_gap}{logical Whether to mark gap regions and centromeres}
+
+\item{genome}{character Genome build, either 'hg38' or 'hg19'}
 
 \item{raster}{logical Whether to raster images}
 }

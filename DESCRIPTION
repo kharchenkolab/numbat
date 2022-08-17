@@ -8,7 +8,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R (>= 4.0.0)
+    R (>= 4.0.0), Matrix, igraph
 biocViews:
 Imports:
     ape,
@@ -19,9 +19,7 @@ Imports:
     ggplot2,
     ggraph,
     ggtree,
-    igraph,
     logger,
-    Matrix,
     methods,
     parallel,
     parallelDist,
@@ -31,7 +29,6 @@ Imports:
     RcppParallel,
     RhpcBLASctl,
     Rsamtools,
-    stats4,
     stringr,
     tidygraph, 
     tidyverse,

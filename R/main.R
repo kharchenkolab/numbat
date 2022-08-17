@@ -9,10 +9,9 @@
 #' @importFrom ggtree %<+%
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
-#' @importFrom methods as is
+#' @importFrom methods is as
 #' @importFrom RcppParallel RcppParallelLibs
 #' @importFrom grDevices colorRampPalette
-#' @importFrom stats4 mle
 #' @importFrom stats as.dendrogram as.dist cor cutree dbinom dnbinom dnorm dpois end hclust integrate model.matrix na.omit optim p.adjust pnorm reorder rnorm setNames start t.test as.ts complete.cases is.leaf na.contiguous
 #' @import stringr
 #' @importFrom utils combn

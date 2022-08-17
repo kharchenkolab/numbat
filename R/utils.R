@@ -2319,7 +2319,4 @@ node_size <- function() {
 
 
 
-## https://github.com/cran/vcfR/blob/356b90b5ad656ca700ed93d193b2a5bb8a419a6b/R/io_vcfR.R
-#' @keywords internal
-
 

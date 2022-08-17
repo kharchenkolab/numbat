@@ -318,7 +318,7 @@ if (getRversion() >= "2.15.1"){
         "variable", "vcf_meta", "vertex",
         "vp", "w", "width", "write.vcf", "x", "y", ".fill_short_gaps", "IRanges", "add_row", "as.phylo", "as.zoo", "bind_rows",
         "column_to_rownames", "complete", "count", "first", "id", "is.dendrogram", "na.approx",
-        "nesting", "remove_rownames", "row_number", "rownames_to_column", "rowwise", "separate", "map"))
+        "nesting", "remove_rownames", "row_number", "rownames_to_column", "rowwise", "separate", "map", "mle"))
 }
 
 

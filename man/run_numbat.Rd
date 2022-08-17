@@ -8,7 +8,7 @@ run_numbat(
   count_mat,
   lambdas_ref,
   df_allele,
-  gtf,
+  genome = c("hg38", "hg19"),
   out_dir = "./",
   max_iter = 2,
   max_nni = 100,
@@ -48,7 +48,7 @@ run_numbat(
 
 \item{df_allele}{dataframe Allele counts per cell, produced by preprocess_allele}
 
-\item{gtf}{dataframe GTF of transcripts}
+\item{genome}{character Genome version (hg38 or hg19)}
 
 \item{out_dir}{string Output directory}
 
