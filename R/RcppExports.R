@@ -5,6 +5,10 @@ cppdbbinom <- function(x, size, alpha, beta, log_prob = FALSE) {
     .Call('_numbat_cppdbbinom', PACKAGE = 'numbat', x, size, alpha, beta, log_prob)
 }
 
+cpp_dgpois <- function(x, alpha, beta, log_prob = FALSE) {
+    .Call('_numbat_cpp_dgpois', PACKAGE = 'numbat', x, alpha, beta, log_prob)
+}
+
 logSumExp <- function(x) {
     .Call('_numbat_logSumExp', PACKAGE = 'numbat', x)
 }

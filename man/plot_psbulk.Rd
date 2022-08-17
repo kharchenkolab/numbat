@@ -2,7 +2,7 @@
 % Please edit documentation in R/vis.R
 \name{plot_psbulk}
 \alias{plot_psbulk}
-\title{plot a pseudobulk HMM profile}
+\title{Plot a pseudobulk HMM profile}
 \usage{
 plot_psbulk(
   bulk,
@@ -51,5 +51,5 @@ plot_psbulk(
 ggplot Plot of pseudobulk HMM profile
 }
 \description{
-plot a pseudobulk HMM profile
+Plot a pseudobulk HMM profile
 }

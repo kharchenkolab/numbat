@@ -148,15 +148,15 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
 
         fetch_results = function(out_dir, i = 2) {
  
-            self$joint_post = read_file(inputfile=glue('{out_dir}/joint_post_{i}.tsv'), filetype="tsv")
+            self$joint_post = read_file(inputfile=paste0(out_dir, '/joint_post_', i, '.tsv'), filetype="tsv")
 
-            self$exp_post = read_file(inputfile=glue('{out_dir}/exp_post_{i}.tsv'), filetype="tsv")
+            self$exp_post = read_file(inputfile=paste0(out_dir, '/exp_post_', i, '.tsv'), filetype="tsv")
 
-            self$allele_post = read_file(inputfile=glue('{out_dir}/allele_post_{i}.tsv'), filetype="tsv")
+            self$allele_post = read_file(inputfile=paste0(out_dir, '/allele_post_', i, '.tsv'), filetype="tsv")
 
-            self$bulk_clones = read_file(inputfile=glue('{out_dir}/bulk_clones_final.tsv.gz'), filetype="tsv")
+            self$bulk_clones = read_file(inputfile=paste0(out_dir, '/bulk_clones_final.tsv.gz'), filetype="tsv")
   
-            self$segs_consensus = read_file(inputfile=glue('{out_dir}/segs_consensus_{i}.tsv'), filetype="tsv")
+            self$segs_consensus = read_file(inputfile=paste0(out_dir, '/segs_consensus_', i, '.tsv'), filetype="tsv")
 
             self$segs_consensus = self$segs_consensus %>% relevel_chrom()
             self$joint_post = self$joint_post %>% relevel_chrom()
@@ -164,20 +164,20 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             self$allele_post = self$allele_post %>% relevel_chrom()
             self$bulk_clones = self$bulk_clones %>% relevel_chrom()
             
-            self$tree_post = read_file(inputfile=glue('{out_dir}/tree_post_{i}.rds'), filetype="rds")
-            self$mut_graph = read_file(inputfile=glue('{out_dir}/mut_graph_{i}.rds'), filetype="rds")
-            self$gtree = read_file(inputfile=glue('{out_dir}/tree_final_{i}.rds'), filetype="rds")
-            self$clone_post = read_file(inputfile=glue('{out_dir}/clone_post_{i}.tsv'), filetype="tsv")
-            self$gexp_roll_wide = read_file(inputfile=glue('{out_dir}/gexp_roll_wide.tsv.gz'), filetype="tsv")
+            self$tree_post = read_file(inputfile=paste0(out_dir, '/tree_post_', {i}, '.rds'), filetype="rds")
+            self$mut_graph = read_file(inputfile=paste0(out_dir, '/mut_graph_', {i}, '.rds'), filetype="rds")
+            self$gtree = read_file(inputfile=paste0(out_dir, '/tree_final_', {i}, '.rds'), filetype="rds")
+            self$clone_post = read_file(inputfile=paste0(out_dir, '/clone_post_', {i}, '.tsv'), filetype="tsv")
+            self$gexp_roll_wide = read_file(inputfile=paste0(out_dir, '/gexp_roll_wide.tsv.gz'), filetype="tsv")
             
             if (!is.null(self$gexp_roll_wide)) {
                 if ('V1' %in% colnames(self$gexp_roll_wide)) {
                     self$gexp_roll_wide = self$gexp_roll_wide %>% rename(cell = V1)
                 }
-                self$gexp_roll_wide = self$gexp_roll_wide %>% tibble::column_to_rownames('cell')
+                self$gexp_roll_wide = self$gexp_roll_wide %>% column_to_rownames('cell')
             }
             
-            self$hc = read_hc_rds(inputfile=glue('{out_dir}/hc.rds'))
+            self$hc = read_hc_rds(inputfile=paste0(out_dir, '/hc.rds'))
             
     })
 )
@@ -269,7 +269,7 @@ read_hc_rds = function(inputfile) {
 }
 
 
-## for magrittr and dplyr functions 
+## for tidyverse (magrittr & dplyr) functions 
 if (getRversion() >= "2.15.1"){
   utils::globalVariables(c(".", "AD", "AD_all", "ALT", "AR", "CHROM", "DP",  
         "DP_all", "FILTER", "FP", "GT", "ID", "LLR", "LLR_sample", 
@@ -278,8 +278,8 @@ if (getRversion() >= "2.15.1"){
         "QUAL", "REF", "TP", "UQ", "Y_obs", "Z", "Z_amp", "Z_bamp", 
         "Z_bdel", "Z_clone", "Z_clone_x",
         "Z_clone_y", "Z_cnv", "Z_del", "Z_loh", "Z_n", "acen_hg38", 
-        "annot", "avg_entropy", "bkp",
-        "branch", "cM", "cell", "cell_index", "chrom_sizes_hg38", 
+        "annot", "any_of", "avg_entropy", "bkp",
+        "branch", "cM", "case_when", "cell", "cell_index", "chrom_sizes_hg38", 
         "clone", "clone_opt", "clone_size",
         "cluster", "cnv_state", "cnv_state_expand",
         "cnv_state_map", "cnv_state_post",
@@ -306,18 +306,21 @@ if (getRversion() >= "2.15.1"){
         "p_n", "p_neu", "p_s", "p_up", "phi_mle", "phi_mle_roll", "phi_sigma", "pnorm.range", 
         "potential_missing_columns","precision", "prior_amp", "prior_bamp", "prior_bdel",
         "prior_clone", "prior_del",
-        "prior_loh", "root", "s", "seg", "seg_cons", "seg_end", 
+        "prior_loh", "replace_na", "root", "s", "seg", "seg_cons", "seg_end", 
         "seg_end_index", "seg_label",
         "seg_length", "seg_start", "seg_start_index", 
-        "segs_consensus", "seqnames",
+        "segs_consensus", "separate_rows", "seqnames",
         "set_colnames", "sig", "site", "size", "snp_id", "snp_index", 
         "snp_rate", "start_x", "start_y",
-        "state", "state_post", "superclone", "theta_hat", 
+        "state", "state_post", "summarise", "superclone", "theta_hat", 
         "theta_level", "theta_mle",
-        "theta_sigma", "to", "to_label", "to_node", "total", "value", 
+        "theta_sigma", "tibble", "to", "to_label", "to_node", "total", "value", 
         "variable", "vcf_meta", "vertex",
-        "vp", "w", "width", "write.vcf", "x", "y"))
+        "vp", "w", "width", "write.vcf", "x", "y", ".fill_short_gaps", "IRanges", "add_row", "as.phylo", "as.zoo", "bind_rows",
+        "column_to_rownames", "complete", "count", "first", "id", "is.dendrogram", "na.approx",
+        "nesting", "remove_rownames", "row_number", "rownames_to_column", "rowwise", "separate"))
 }
 
-            
+
+
 

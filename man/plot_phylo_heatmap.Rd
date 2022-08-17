@@ -2,7 +2,7 @@
 % Please edit documentation in R/vis.R
 \name{plot_phylo_heatmap}
 \alias{plot_phylo_heatmap}
-\title{plot single-cell CNV calls along with the clonal phylogeny}
+\title{Plot single-cell CNV calls along with the clonal phylogeny}
 \usage{
 plot_phylo_heatmap(
   gtree,
@@ -78,5 +78,5 @@ plot_phylo_heatmap(
 ggplot panel
 }
 \description{
-plot single-cell CNV calls along with the clonal phylogeny
+Plot single-cell CNV calls along with the clonal phylogeny
 }

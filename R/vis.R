@@ -1,7 +1,11 @@
+#' @import tidyverse
+NULL
+
 ########################### Visualizations ############################
 # default color palette
 pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
 getPalette = colorRampPalette(pal)
+
 
 #' @keywords internal
 cnv_colors = c("neu" = "gray", 
@@ -29,19 +33,13 @@ cnv_colors = c("neu" = "gray",
         "theta_up_1" = "darkgreen", "theta_down_1" = "olivedrab4",
         "theta_up_2" = "darkgreen", "theta_down_2" = "olivedrab4",
         '0|1' = 'red', '1|0' = 'blue',
-        'major' = '#66C2A5', 'minor' = '#FC8D62'
-    )
+        'major' = '#66C2A5', 'minor' = '#FC8D62')
 
-#' @keywords internal
-cnv_labels = names(cnv_colors) %>%
-    str_remove_all('_') %>% 
-    str_to_upper() %>%
-    str_replace('UP', '(major)') %>%
-    str_replace('DOWN', '(minor)') %>%
-    str_replace('LOH', 'CNLoH') %>%
-    setNames(names(cnv_colors))
 
-#' plot a pseudobulk HMM profile
+
+
+#' Plot a pseudobulk HMM profile
+#'
 #' @param bulk dataframe Pseudobulk profile
 #' @param use_pos logical Use marker position instead of index as x coordinate
 #' @param allele_only logical Only plot alleles
@@ -118,7 +116,7 @@ plot_psbulk = function(
         mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
         mutate(pBAF = ifelse(DP >= min_depth, pBAF, NA)) %>%
         mutate(pHF = pBAF) %>%
-        reshape2::melt(measure.vars = c('logFC', 'pHF'))
+        data.table::melt(measure.vars = c('logFC', 'pHF'))
 
     if (allele_only) {
         D = D %>% filter(variable == 'pHF')
@@ -249,7 +247,19 @@ plot_psbulk = function(
     return(p)
 }
 
-#' plot a group of pseudobulks HMM profile
+
+#' @keywords internal
+cnv_labels = names(cnv_colors) %>%
+    stringr::str_remove_all('_') %>% 
+    stringr::str_to_upper() %>%
+    stringr::str_replace('UP', '(major)') %>%
+    stringr::str_replace('DOWN', '(minor)') %>%
+    stringr::str_replace('LOH', 'CNLoH') %>%
+    setNames(names(cnv_colors))
+
+
+#' Plot a group of pseudobulks HMM profile
+#'
 #' @param bulks dataframe Pseudobulk profiles annotated with "sample" column
 #' @param ncol integer Number of columns
 #' @param title logical Whether to add titles to individual plots
@@ -286,7 +296,7 @@ plot_bulks = function(
                     if (is.null(n_cells)) {
                         title_text = sample
                     } else {
-                        title_text = glue('{sample} (n={n_cells})')
+                        title_text = paste0(sample,' (n=',n_cells,')')
                     }
                     p = p + ggtitle(title_text)
                 }
@@ -301,7 +311,8 @@ plot_bulks = function(
     return(panel)
 }
 
-#' plot mutational history
+#' Plot mutational history
+#'
 #' @param G igraph Mutation history graph
 #' @param clone_post dataframe Clone assignment posteriors
 #' @param edge_label_size numeric Size of edge label
@@ -422,7 +433,8 @@ plot_mut_history = function(
     return(p)
 }
 
-#' plot single-cell CNV calls along with the clonal phylogeny
+#' Plot single-cell CNV calls along with the clonal phylogeny
+#'
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @param joint_post dataframe Joint single cell CNV posteriors
 #' @param segs_consensus datatframe Consensus segment dataframe
@@ -575,7 +587,7 @@ plot_phylo_heatmap = function(
         scale_x_continuous(expand = expansion(0)) +
         scale_y_continuous(expand = expansion(0)) +
         facet_grid(.~CHROM, space = 'free', scales = 'free', labeller = labeller(CHROM = chrom_labeller)) +
-        scale_alpha_continuous(range = c(0,1), limits = c(p_min, 1), oob = scales::squish) +
+        scale_alpha_continuous(range = c(0,1), limits = c(p_min, 1), oob = oob_squish) +
         guides(
             alpha = 'none',
             # alpha = guide_legend(),
@@ -771,8 +783,8 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
 
     gexp_norm_long = gexp_roll_wide %>% 
         as.data.frame() %>%
-        tibble::rownames_to_column('cell') %>%
-        reshape2::melt(id.var = 'cell', variable.name = 'gene', value.name = 'exp_rollmean') %>%
+        rownames_to_column('cell') %>%
+        data.table::melt(id.var = 'cell', variable.name = 'gene', value.name = 'exp_rollmean') %>%
         left_join(gtf, by = 'gene') %>%
         mutate(gene_index = as.integer(factor(gene, unique(gene))))
 
@@ -799,7 +811,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
         ggplot() +
         geom_tile(aes(x = gene_index, y = cell, fill = exp_rollmean)) +
         # geom_rect(aes(xmin = gene_start, xmax = gene_end, ymin = cell_index - 0.5, ymax = cell_index + 0.5, fill = exp_rollmean)) +
-        scale_fill_gradient2(low = 'blue', high = 'red', mid = 'white', midpoint = 0, limits = c(-lim,lim), oob = scales::squish) +
+        scale_fill_gradient2(low = 'blue', high = 'red', mid = 'white', midpoint = 0, limits = c(-lim,lim), oob = oob_squish) +
         theme_void() +
         scale_x_discrete(expand = expansion(0)) +
         scale_y_discrete(expand = expansion(0)) +
@@ -903,6 +915,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 }
 
 #' Plot CNV heatmap
+#'
 #' @param segs dataframe Segments to plot. Need columns "seg_start", "seg_end", "cnv_state"
 #' @param var character Column to facet by
 #' @param label_group logical Label the groups
@@ -972,10 +985,10 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
             na.value = 'white',
             limits = force,
             labels = cnv_labels,
-            na.translate = F,
+            na.translate = FALSE,
             name = 'States'
         ) +
-        scale_alpha_continuous(range = c(0,1), limits = c(0.5,1), oob = scales::squish) +
+        scale_alpha_continuous(range = c(0,1), limits = c(0.5,1), oob = oob_squish) +
         guides(alpha = 'none') +
         scale_x_continuous(expand = expansion(add = 0)) +
         facet_grid(get(var)~CHROM, space = 'free_x', scales = 'free', drop = TRUE)
@@ -995,6 +1008,16 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
 
 ########################### Functions for internal use ############################
 
+#' @keywords internal
+oob_squish <- function(x, range = c(0, 1), only.finite = TRUE) {
+  force(range)
+  finite <- if (only.finite) is.finite(x) else TRUE
+  x[finite & x < range[1]] <- range[1]
+  x[finite & x > range[2]] <- range[2]
+  x
+}
+
+#' @keywords internal
 plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     
     # cell_order = exp_post %>% 
@@ -1035,9 +1058,10 @@ plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     ) +
     scale_x_continuous(expand = expansion(0)) +
     facet_grid(group~CHROM, space = 'free', scales = 'free') +
-    scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = scales::oob_squish)
+    scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = oob_squish)
 }
 
+#' @keywords internal
 plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
     
     snp_seg = bulk_subtrees %>%
@@ -1093,6 +1117,7 @@ plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
     return(p)
 }
 
+#' @keywords internal
 plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_annot = NULL) {
 
     if (is.null(pal_annot)) {
@@ -1101,8 +1126,8 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
     
     D = as.matrix(count_mat[,markers$gene]) %>%
         scale %>%
-        reshape2::melt() %>%
-        magrittr::set_colnames(c('cell', 'gene', 'exp')) %>%
+        data.table::melt() %>%
+        set_colnames(c('cell', 'gene', 'exp')) %>%
         inner_join(
             cell_annot, by = 'cell'
         ) %>%
@@ -1132,7 +1157,7 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
         ) +
         ylab('marker') +
         facet_grid(marker_type ~ cell_group, space = 'free_y', scales = 'free', switch="y") +
-        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', limits = c(-1.5,1.5), oob = scales::oob_squish)
+        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', limits = c(-1.5,1.5), oob = oob_squish)
 
     p_annot = ggplot(
             D,
@@ -1174,7 +1199,7 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
         ) +
         ylab('') +
         facet_grid(~cell_group, space = 'free_y', scales = 'free', switch="y") +
-        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 0.5, limits = c(0,1), oob = scales::oob_squish) + 
+        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 0.5, limits = c(0,1), oob = oob_squish) + 
         ggtitle(sample) +
         guides(fill = 'none')
 
@@ -1182,6 +1207,7 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
     
 }
 
+#' @keywords internal
 do_plot = function(p, f, w, h, out_dir = '~/figures', device = 'pdf') {
     ggsave(filename = paste0(out_dir, '/', f, '.', device), plot = p, width = w, height = h, device = device, dpi = 300)
     options(repr.plot.width = w, repr.plot.height = h, repr.plot.res = 300)
@@ -1189,6 +1215,7 @@ do_plot = function(p, f, w, h, out_dir = '~/figures', device = 'pdf') {
 }
 
 # expect columns cell and annot
+#' @keywords internal
 annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL, annot_scale = NULL, raster = FALSE) {
 
 
@@ -1335,6 +1362,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 }
 
 # model diagnostics
+#' @keywords internal
 plot_exp_post = function(exp_post, jitter = TRUE) {
  
 
@@ -1364,6 +1392,7 @@ plot_exp_post = function(exp_post, jitter = TRUE) {
     return(p)
 }
 
+#' @keywords internal
 plot_clone_profile = function(joint_post, clone_post) {
     
     clone_profile = get_clone_profile(joint_post, clone_post)

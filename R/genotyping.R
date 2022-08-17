@@ -55,7 +55,7 @@ get_snps = function(vcf) {
     }
     snps = as.data.frame(vcf@fix) %>%
         mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
-        tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
+        separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
         mutate_at(c('AD', 'DP', 'OTH'), as.integer)
 
     snps = snps %>% mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_'))
@@ -94,7 +94,7 @@ make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE
         distinct(snp_id, `.keep_all` = T)
 
     if (nrow(chr_snps) == 0) {
-        message(glue('No SNPs left for chr{chr}!'))
+        message(paste0('No SNPs left for chr', chr,'!'))
         return(NULL)
     }
 
@@ -132,7 +132,7 @@ make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE
         vcf_chr@fix[,1] = paste0('chr', vcf_chr@fix[,1])
     }
 
-    file_name = glue('{outdir}/{label}_chr{chr}.vcf.gz')
+    file_name = paste0(outdir, '/', label,'_chr', chr,'.vcf.gz')
     
     write.vcf(vcf_chr, file_name)
 
@@ -192,7 +192,7 @@ preprocess_allele = function(
     # pileup VCF
     vcf_pu = vcf_pu %>%
         mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
-        tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
+        separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
         mutate_at(c('AD', 'DP', 'OTH'), as.integer) %>%
         mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_'))
 
@@ -227,7 +227,7 @@ preprocess_allele = function(
             AR_all = AD_all/DP_all
         )
 
-    df = df %>% dplyr::filter(DP_all > 1 & OTH_all == 0)
+    df = df %>% filter(DP_all > 1 & OTH_all == 0)
 
     # vcf has duplicated records sometimes
     df = df %>% distinct() 
@@ -240,7 +240,7 @@ preprocess_allele = function(
     # phased VCF
     vcf_phased = vcf_phased %>% 
         mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
-        tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
+        separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
         mutate_at(c('AD', 'DP', 'OTH'), as.integer) %>%
         mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_')) %>%
         mutate(GT = get(sample))
@@ -249,12 +249,12 @@ preprocess_allele = function(
     overlap_transcript = GenomicRanges::findOverlaps(
             vcf_phased %>% {GenomicRanges::GRanges(
                 seqnames = .$CHROM,
-                IRanges::IRanges(start = .$POS,
+                IRanges(start = .$POS,
                     end = .$POS)
             )},
             gtf %>% {GenomicRanges::GRanges(
                 seqnames = .$CHROM,
-                IRanges::IRanges(start = .$gene_start,
+                IRanges(start = .$gene_start,
                     end = .$gene_end)
             )}
         ) %>%
@@ -282,12 +282,12 @@ preprocess_allele = function(
     marker_map = GenomicRanges::findOverlaps(
             vcf_phased %>% {GenomicRanges::GRanges(
                 seqnames = .$CHROM,
-                IRanges::IRanges(start = .$POS,
+                IRanges(start = .$POS,
                     end = .$POS)
             )},
             gmap %>% {GenomicRanges::GRanges(
                 seqnames = .$CHROM,
-                IRanges::IRanges(start = .$start,
+                IRanges(start = .$start,
                     end = .$end)
             )}
         ) %>%

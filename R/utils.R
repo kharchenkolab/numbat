@@ -71,12 +71,12 @@ aggregate_counts = function(count_mat, annot, normalized = TRUE, verbose = TRUE)
     }
     
     if (length(levels(cell_dict)) == 1) {
-        count_mat_clust = count_mat %>% rowSums() %>% as.matrix %>% magrittr::set_colnames(levels(cell_dict))
+        count_mat_clust = count_mat %>% rowSums() %>% as.matrix %>% set_colnames(levels(cell_dict))
         exp_mat_clust = count_mat_clust/sum(count_mat_clust)
     } else {
-        M = model.matrix(~ 0 + cell_dict) %>% magrittr::set_colnames(levels(cell_dict))
+        M = model.matrix(~ 0 + cell_dict) %>% set_colnames(levels(cell_dict))
         count_mat_clust = count_mat %*% M
-        exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% magrittr::set_colnames(colnames(count_mat_clust))
+        exp_mat_clust = count_mat_clust %*% diag(1/colSums(count_mat_clust)) %>% set_colnames(colnames(count_mat_clust))
     }
 
     if (normalized) {
@@ -158,7 +158,7 @@ filter_genes = function(count_mat, lambdas_ref, gtf, verbose = FALSE) {
     retained = names(mut_expressed)[mut_expressed]
 
     if (verbose) {
-        message(glue('number of genes left: {length(retained)}'))
+        message(paste0('number of genes left: ', length(retained)))
     }
 
     return(retained)
@@ -183,7 +183,7 @@ get_exp_bulk = function(count_mat, lambdas_ref, gtf, verbose = FALSE) {
         rowSums() %>%
         data.frame() %>%
         setNames('Y_obs') %>%
-        tibble::rownames_to_column('gene') %>%
+        rownames_to_column('gene') %>%
         mutate(lambda_obs = (Y_obs/depth_obs)) %>%
         mutate(lambda_ref = lambdas_ref[gene]) %>%
         mutate(d_obs = depth_obs) %>%
@@ -385,7 +385,7 @@ fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FAL
         intersect(rownames(lambdas_ref)[rowMeans(lambdas_ref) > min_lambda])
 
     if (verbose) {
-        log_info(glue('{length(genes_common)} genes common in reference and observation'))
+        log_info(paste0(length(genes_common), ' genes common in reference and observation'))
     }
 
     Y_obs = Y_obs[genes_common]
@@ -478,7 +478,7 @@ analyze_bulk = function(
     if (exp_only | allele_only) {
         bulk$diploid = TRUE
     } else if (!is.null(diploid_chroms)) {
-        log_info(glue('Using diploid chromosomes given: {paste0(diploid_chroms, collapse = ",")}'))
+        log_info(paste0('Using diploid chromosomes given: ', paste0(diploid_chroms, collapse = ",")))
         bulk = bulk %>% mutate(diploid = CHROM %in% diploid_chroms)
     } else if (find_diploid) {
         bulk = find_common_diploid(
@@ -604,7 +604,7 @@ analyze_bulk = function(
             by = c('CHROM', 'gene')
         ) %>%
         group_by(CHROM) %>%
-        mutate(phi_mle_roll = zoo::na.locf(phi_mle_roll, na.rm=FALSE)) %>%
+        mutate(phi_mle_roll = na.locf(phi_mle_roll, na.rm=FALSE)) %>%
         ungroup()
 
     }
@@ -796,7 +796,7 @@ annot_theta_roll = function(bulk) {
             by = c('CHROM', 'snp_id')
         ) %>%
         group_by(CHROM) %>%
-        mutate(theta_hat_roll = zoo::na.locf(theta_hat_roll, na.rm=FALSE)) %>%
+        mutate(theta_hat_roll = na.locf(theta_hat_roll, na.rm=FALSE)) %>%
         ungroup()
 
     return(bulk)
@@ -931,8 +931,8 @@ smooth_segs = function(bulk, min_genes = 10) {
         ) %>%
         ungroup() %>%
         group_by(CHROM) %>%
-        mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = FALSE, na.rm=FALSE)) %>%
-        mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = TRUE, na.rm=FALSE)) %>%
+        mutate(cnv_state = na.locf(cnv_state, fromLast = FALSE, na.rm=FALSE)) %>%
+        mutate(cnv_state = na.locf(cnv_state, fromLast = TRUE, na.rm=FALSE)) %>%
         ungroup()
 }
 
@@ -959,12 +959,12 @@ annot_consensus = function(bulk, segs_consensus, join_mode = 'inner') {
     marker_seg = GenomicRanges::findOverlaps(
             bulk %>% {GenomicRanges::GRanges(
                 seqnames = .$CHROM,
-                IRanges::IRanges(start = .$POS,
+                IRanges(start = .$POS,
                     end = .$POS)
             )}, 
             segs_consensus %>% {GenomicRanges::GRanges(
                 seqnames = .$CHROM,
-                IRanges::IRanges(start = .$seg_start,
+                IRanges(start = .$seg_start,
                     end = .$seg_end)
             )}
         ) %>%
@@ -1054,7 +1054,7 @@ find_common_diploid = function(
         distinct(sample, CHROM, seg, seg_start, seg_end) %>%
         {GenomicRanges::GRanges(
             seqnames = .$CHROM,
-            IRanges::IRanges(start = .$seg_start,
+            IRanges(start = .$seg_start,
                 end = .$seg_end)
         )} %>%
         GenomicRanges::reduce() %>%
@@ -1099,7 +1099,7 @@ find_common_diploid = function(
     } else {
         test_dat = bulks_bal %>%
             select(gene, seg, lnFC, sample) %>%
-            reshape2::dcast(seg+gene ~ sample, value.var = 'lnFC') %>%
+            data.table::dcast(seg+gene ~ sample, value.var = 'lnFC') %>%
             na.omit() %>%
             mutate(seg = as.character(seg)) %>%
             select(-gene)
@@ -1156,8 +1156,8 @@ find_common_diploid = function(
                     lnFC = mean(lnFC, na.rm = T),
                     .groups = 'drop'
                 ) %>%
-                reshape2::dcast(sample ~ component, value.var = 'lnFC') %>%
-                tibble::column_to_rownames('sample')
+                data.table::dcast(sample ~ component, value.var = 'lnFC') %>%
+                column_to_rownames('sample')
 
         } else {
 
@@ -1176,8 +1176,8 @@ find_common_diploid = function(
                     setNames(c('sample', i))
             }) %>%
             Reduce(x = ., f = function(x,y){full_join(x, y, by = 'sample')}) %>%
-            tibble::remove_rownames() %>%
-            tibble::column_to_rownames('sample')
+            remove_rownames() %>%
+            column_to_rownames('sample')
 
         }
 
@@ -1203,7 +1203,7 @@ find_common_diploid = function(
         }
     }
 
-    log_info(glue('diploid regions: {paste0(mixedsort(diploid_segs), collapse = ",")}'))
+    log_info(paste0('diploid regions: ', paste0(mixedsort(diploid_segs), collapse = ",")))
     
     bulks = bulks %>% mutate(diploid = seg %in% diploid_segs)
     
@@ -1228,7 +1228,7 @@ get_segs_neu = function(bulks) {
         distinct(sample, CHROM, seg, seg_start, seg_end)
 
     segs_neu = segs_neu %>% arrange(CHROM) %>% {
-            GenomicRanges::GRanges(seqnames = .$CHROM, IRanges::IRanges(start = .$seg_start, end = .$seg_end))
+            GenomicRanges::GRanges(seqnames = .$CHROM, IRanges(start = .$seg_start, end = .$seg_end))
         } %>% 
         GenomicRanges::reduce() %>% 
         as.data.frame() %>% 
@@ -1255,7 +1255,7 @@ l_bbinom = function(AD, DP, alpha, beta) {
 #' @keywords internal
 fit_bbinom = function(AD, DP) {
 
-    fit = stats4::mle(
+    fit = mle(
         minuslogl = function(alpha, beta) {
             -l_bbinom(AD, DP, alpha, beta)
         },
@@ -1276,7 +1276,7 @@ fit_bbinom = function(AD, DP) {
 #' @keywords internal
 fit_gamma = function(AD, DP, start = 20) {
 
-    fit = stats4::mle(
+    fit = mle(
         minuslogl = function(gamma) {
             -l_bbinom(AD, DP, gamma/2, gamma/2)
         },
@@ -1287,6 +1287,11 @@ fit_gamma = function(AD, DP, start = 20) {
     gamma = fit@coef[1]
 
     return(gamma)
+}
+
+#' @keywords internal
+dgpois <- function(x, shape, rate, scale = 1/rate, log = FALSE) {
+  cpp_dgpois(x, shape, scale, log[1L])
 }
 
 #' calculate joint likelihood of a gamma-poisson model
@@ -1312,7 +1317,7 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
     Y_obs = Y_obs[lambda_ref > 0]
     lambda_ref = lambda_ref[lambda_ref > 0]
     
-    fit = stats4::mle(
+    fit = mle(
         minuslogl = function(alpha, beta) {
             -l_gpois(Y_obs, lambda_ref, d, alpha, beta)
         },
@@ -1334,7 +1339,7 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
 #' @return numeric Joint log likelihood
 #' @keywords internal
 l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
-    if (any(sig <= 0)) {stop(glue('negative sigma. value: {sig}'))}
+    if (any(sig <= 0)) {stop(paste0('negative sigma. value:', sig))}
     if (length(sig) == 1) {sig = rep(sig, length(Y_obs))}
     sum(log(dpoilog(Y_obs, mu + log(phi * d * lambda_ref), sig)))
 }
@@ -1350,7 +1355,7 @@ fit_lnpois = function(Y_obs, lambda_ref, d) {
     Y_obs = Y_obs[lambda_ref > 0]
     lambda_ref = lambda_ref[lambda_ref > 0]
     
-    fit = stats4::mle(
+    fit = mle(
         minuslogl = function(mu, sig) {
             if (sig < 0) {stop('optim is trying negative sigma')}
             -l_lnpois(Y_obs, lambda_ref, d, mu, sig)
@@ -1373,7 +1378,7 @@ calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, uppe
     
     start = max(min(1, upper), lower)
     
-    res = stats4::mle(minuslogl = function(phi) {
+    res = mle(minuslogl = function(phi) {
         -l_lnpois(Y_obs, lambda_ref, d, mu, sig, phi)
     }, start = start, lower = lower, upper = upper)
     
@@ -1462,13 +1467,37 @@ approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu =
     return(tibble('phi_mle' = mean, 'phi_sigma' = sd))
 }
 
+## https://github.com/talgalili/dendextend
+#' @keywords internal
+find_dendrogram <- function(dend, selected_labels) {
+  # if the dendrogram is exactly the labels in selected_labels - then we found our dend 
+  if (all(labels(dend) %in% selected_labels) && 
+      (length(labels(dend)) == length(selected_labels))) {
+    return(dend)
+  }
+
+  # if not, either we can find such a sub dendrogram, or it doesn't exist (return NULL)
+  for(i in 1:length(dend)) {
+    if(all(selected_labels %in% labels(dend[[i]]))) {
+      return(Recall(dend[[i]], selected_labels))
+    }
+  }
+  # if we couldn't find any sub-dend that includes all the labels we're looking for
+  # then we return NULL
+  return(NULL)
+}
+
+
+
 #' Helper function to get the internal nodes of a dendrogram and the leafs in each subtree 
 #' @keywords internal
 get_internal_nodes = function(den, node, labels) {
 
+
     if (!requireNamespace("dendextend", quietly = TRUE)) {
         stop("Package \"dendextend\" needed for this function to work. Please install it.", call. = FALSE)
     }
+
     membership = data.frame(
         cell = dendextend::get_leaves_attr(den, attribute = 'label'),
         node = node
@@ -1496,6 +1525,8 @@ get_internal_nodes = function(den, node, labels) {
         
     return(rbind(membership, membership_l, membership_r))
 }
+
+
 
 #' Get the internal nodes of a dendrogram and the leafs in each subtree 
 #' @param hc hclust Clustering results
@@ -1700,7 +1731,7 @@ get_clone_profile = function(joint_post, clone_post) {
 ########################### Misc ############################
 
 log_mem = function() {
-    m = pryr::mem_used()
+    m = lobstr::mem_used()
     msg = paste0('Mem used: ', signif(m/1e9, 3), 'Gb')
     log_message(msg)
 }
@@ -1764,7 +1795,7 @@ check_allele_df = function(df) {
 check_exp_ref = function(lambdas_ref) {
 
     if (!is.matrix(lambdas_ref)) {
-        lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
+        lambdas_ref = as.matrix(lambdas_ref) %>% set_colnames('ref')
     }
 
     return(lambdas_ref)
@@ -1827,7 +1858,7 @@ fit_switch_prob = function(y, d) {
         sum(log(eta(d[y == 1], nu))) + sum(log(1-eta(d[y == 0], nu)))
     }
 
-    fit = stats4::mle(
+    fit = mle(
         minuslogl = function(nu) {
             -l_nu(y, d, nu)
         },
@@ -1990,19 +2021,19 @@ compare_segs = function(segs_x, segs_y, gaps = gaps_hg38) {
     
     ranges_x = segs_x %>% {GenomicRanges::GRanges(
             seqnames = .$CHROM,
-            IRanges::IRanges(start = .$seg_start,
+            IRanges(start = .$seg_start,
                 end = .$seg_end)
         )}
     
     ranges_y = segs_y %>% {GenomicRanges::GRanges(
             seqnames = .$CHROM,
-            IRanges::IRanges(start = .$seg_start,
+            IRanges(start = .$seg_start,
                 end = .$seg_end)
         )}
     
     ranges_gap = gaps %>% {GenomicRanges::GRanges(
             seqnames = .$CHROM,
-            IRanges::IRanges(start = .$start,
+            IRanges(start = .$start,
                 end = .$end)
         )}
     
@@ -2023,19 +2054,19 @@ evaluate_calls = function(cnvs_dna, cnvs_call, gaps = gaps_hg38) {
     
     ranges_dna = cnvs_dna %>% {GenomicRanges::GRanges(
             seqnames = .$CHROM,
-            IRanges::IRanges(start = .$seg_start,
+            IRanges(start = .$seg_start,
                 end = .$seg_end)
         )}
     
     ranges_call = cnvs_call %>% {GenomicRanges::GRanges(
             seqnames = .$CHROM,
-            IRanges::IRanges(start = .$seg_start,
+            IRanges(start = .$seg_start,
                 end = .$seg_end)
         )}
     
     ranges_gap = gaps %>% {GenomicRanges::GRanges(
             seqnames = .$CHROM,
-            IRanges::IRanges(start = .$start,
+            IRanges(start = .$start,
                 end = .$end)
         )}
     
@@ -2054,4 +2085,146 @@ evaluate_calls = function(cnvs_dna, cnvs_call, gaps = gaps_hg38) {
     return(c('precision' = pre, 'recall' = rec))
 }
 
+##  https://github.com/cran/zoo/blob/master/R/na.locf.R
+#' @keywords internal
+na.locf0 <- function(object, fromLast = FALSE, maxgap = Inf, coredata = NULL) {
+  if(is.null(coredata)) coredata <- inherits(object, "ts") || inherits(object, "zoo") || inherits(object, "its") || inherits(object, "irts")
+  if(coredata) {
+    x <- object
+    object <- if (fromLast) rev(coredata(object)) else coredata(object)
+  } else {
+    if(fromLast) object <- rev(object)
+  }
+  ok <- which(!is.na(object))
+  if(is.na(object[1L])) ok <- c(1L, ok)
+  gaps <- diff(c(ok, length(object) + 1L))
+  object <- if(any(gaps > maxgap)) {
+    .fill_short_gaps(object, rep(object[ok], gaps), maxgap = maxgap)
+  } else {
+    rep(object[ok], gaps)
+  }
+  if (fromLast) object <- rev(object)
+  if(coredata) {
+    x[] <- object
+    return(x)
+  } else {
+    return(object)
+  }
+}
 
+#' @keywords internal
+na.locf <- function(object, na.rm = TRUE, ...)
+    UseMethod("na.locf")
+
+#' @keywords internal
+na.locf.default <- function(object, na.rm = TRUE, fromLast, rev, maxgap = Inf, rule = 2, ...) {
+
+    L <- list(...)
+    if ("x" %in% names(L) || "xout" %in% names(L)) {
+
+        if (!missing(fromLast)) {
+            stop("fromLast not supported if x or xout is specified")
+        }
+        return(na.approx(object, na.rm = na.rm, 
+            maxgap = maxgap, method = "constant", rule = rule, ...))
+    }
+
+    if (!missing(rev)) {
+       warning("na.locf.default: rev= deprecated. Use fromLast= instead.")
+       if (missing(fromLast)) fromLast <- rev
+    } else if (missing(fromLast)) fromLast <- FALSE
+    rev <- base::rev
+    object[] <- if (length(dim(object)) == 0)
+        na.locf0(object, fromLast = fromLast, maxgap = maxgap)
+    else
+        apply(object, length(dim(object)), na.locf0, fromLast = fromLast, maxgap = maxgap)
+    if (na.rm) na.trim(object, is.na = "all") else object
+}
+
+#' @keywords internal
+na.locf.data.frame <- function(object, na.rm = TRUE, fromLast = FALSE, maxgap = Inf, ...)
+{
+    object[] <- lapply(object, na.locf0, fromLast = fromLast, maxgap = maxgap)
+    if (na.rm) na.omit(object) else object
+}
+
+
+#' @keywords internal
+na.contiguous.data.frame <- na.contiguous.zoo <- function(object, ...) 
+{
+    if (length(dim(object)) == 2) 
+        good <- apply(!is.na(object), 1, all)
+    else good <- !is.na(object)
+    if (!sum(good)) 
+        stop("all times contain an NA")
+    tt <- cumsum(!good)
+    ln <- sapply(0:max(tt), function(i) sum(tt == i))
+    seg <- (seq_along(ln)[ln == max(ln)])[1] - 1
+    keep <- (tt == seg)
+    st <- min(which(keep))
+    if (!good[st]) 
+        st <- st + 1
+    en <- max(which(keep))
+    omit <- integer(0)
+    n <- NROW(object)
+    if (st > 1) 
+        omit <- c(omit, 1:(st - 1))
+    if (en < n) 
+        omit <- c(omit, (en + 1):n)
+    cl <- class(object)
+    if (length(omit)) {
+        object <- if (length(dim(object))) 
+            object[st:en, ]
+        else object[st:en]
+        attr(omit, "class") <- "omit"
+        attr(object, "na.action") <- omit
+        if (!is.null(cl)) 
+            class(object) <- cl
+    }
+    object
+}
+
+#' @keywords internal
+na.contiguous.list <- function(object, ...)
+    lapply(object, na.contiguous)
+
+
+#' @keywords internal
+na.trim <- function(object, ...) UseMethod("na.trim")
+
+#' @keywords internal
+na.trim.default <- function (object, sides = c("both", "left", "right"), 
+    is.na = c("any", "all"), maxgap = Inf, ...)
+{
+   is.na <- match.arg(is.na, c("any", "all"))
+   nisna <- if (is.na == "any" || length(dim(object)) < 2L)  {
+    complete.cases(object)
+   } else rowSums(!is.na(object)) > 0
+   rlength <- function(x) if(all(!x)) length(x) else min(which(x)) - 1L
+   idx <- switch(match.arg(sides),
+       left = {
+           idx0 <- cumsum(nisna) > 0
+       idx0 | rlength(idx0) > maxgap
+       },
+       right = {
+           idx0 <- cumsum(rev(nisna) > 0) > 0
+       rev(idx0) | rlength(idx0) > maxgap
+       },
+       both = {
+           idx0l <- cumsum(nisna) > 0
+       idx0r <- cumsum(rev(nisna) > 0) > 0
+       (idx0l | rlength(idx0l) > maxgap) & (rev(idx0r) | rlength(idx0r) > maxgap)
+       }
+   )
+   if (length(dim(object)) < 2L)
+       object[idx]
+   else
+       object[idx,, drop = FALSE]
+}
+
+## need a 'ts' method because indexing destroys ts attributes
+#' @keywords internal
+na.trim.ts <- function (object, ...)
+{
+    as.ts(na.trim(as.zoo(object), ...))
+}

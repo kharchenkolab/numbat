@@ -84,7 +84,8 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, ver
         runtime = proc.time() - ptm
         
         if (verbose) {
-            msg = glue('Iter {i} {max_current} {signif(unname(runtime[3]),2)}s')
+            ## msg = glue('Iter {i} {max_current} {signif(unname(runtime[3]),2)}s')
+            msg = paste0('Iter ', i, ' ', max_current, ' ', signif(unname(runtime[3]),2), 's')
             message(msg)
             log_info(msg)
         }
@@ -94,6 +95,22 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, ver
     
     return(tree_list)
 }
+
+# from phangorn
+#' UPGMA and WPGMA clustering
+#' @param D A distance matrix.
+#' @param method The agglomeration method to be used. This should be (an
+#' unambiguous abbreviation of) one of "ward", "single", "complete", "average",
+#' "mcquitty", "median" or "centroid". The default is "average".
+#' @param \dots Further arguments passed to or from other methods.
+upgma <- function(D, method = "average", ...) {
+  DD <- as.dist(D)
+  hc <- hclust(DD, method = method, ...)
+  result <- as.phylo(hc)
+  result <- reorder(result, "postorder")
+  result
+}
+
 
 # from phangorn
 #' Perform the NNI at a specific branch
@@ -290,7 +307,7 @@ get_mut_tree = function(gtree, mut_nodes) {
     V(G)$node = G %>%
         igraph::as_data_frame('vertices') %>%
         left_join(
-            mut_nodes %>% dplyr::rename(node = name),
+            mut_nodes %>% rename(node = name),
             by = c('label' = 'site')
         ) %>%
         pull(node)
@@ -527,7 +544,7 @@ label_genotype = function(G) {
     # V(G)$GT = igraph::all_simple_paths(G, from = 1) %>% 
     V(G)$GT = lapply(
             2:length(V(G)), 
-            function(v) {dplyr::first(igraph::all_simple_paths(G, from = 1, to = v), default = NULL)}
+            function(v) {first(igraph::all_simple_paths(G, from = 1, to = v), default = NULL)}
         ) %>%
         purrr::map(as.character) %>%
         purrr::map(function(x) {
@@ -612,10 +629,12 @@ simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
 
             if (move_opt$direction == 'up') {
                 G = G %>% contract_nodes(c(move_opt$from_label, move_opt$to_label), move_opt$from_node) %>% transfer_links()
-                msg = glue('opt_move:{move_opt$to_label}->{move_opt$from_label}, cost={signif(move_opt$cost,3)}')
+                ##msg = glue('opt_move:{move_opt$to_label}->{move_opt$from_label}, cost={signif(move_opt$cost,3)}')
+                msg = paste0('opt_move:', move_opt$to_label, '->', move_opt$from_label, ', cost=', signif(move_opt$cost,3) )
             } else {
                 G = G %>% contract_nodes(c(move_opt$from_label, move_opt$to_label), move_opt$to_node) %>% transfer_links()
-                msg = glue('opt_move:{move_opt$from_label}->{move_opt$to_label}, cost={signif(move_opt$cost,3)}')
+                ##msg = glue('opt_move:{move_opt$from_label}->{move_opt$to_label}, cost={signif(move_opt$cost,3)}')
+                msg = paste0('opt_move:', move_opt$to_label, '->', move_opt$from_label, ', cost=', signif(move_opt$cost,3) )
             }
 
             # moves = moves %>% rbind(move_opt %>% mutate(i = i))
@@ -668,7 +687,7 @@ get_move_opt = function(G, l_matrix) {
         ungroup() %>%
         # prevent a down move if branching. Technically it's fine but graph has to be modified correctly
         mutate(down = ifelse(n_sibling > 1, Inf, down)) %>%
-        reshape2::melt(measure.vars = c('up', 'down'), variable.name = 'direction', value.name = 'cost') %>%
+        data.table::melt(measure.vars = c('up', 'down'), variable.name = 'direction', value.name = 'cost') %>%
         arrange(cost) %>%
         head(1)
 
@@ -688,7 +707,7 @@ annot_superclones = function(gtree, geno, p_min = 0.95, precision_cutoff = 0.9) 
         filter(!is.na(site)) %>%
         as.data.frame() %>%
         select(name, site) %>%
-        tidyr::separate_rows(site, sep = ',') %>%
+        separate_rows(site, sep = ',') %>%
         filter(site %in% anchors) %>%
         group_by(name) %>%
         summarise(
@@ -720,7 +739,7 @@ score_mut = function(gtree, geno, p_min = 0.95) {
         as.data.frame() %>%
         distinct(site, id, name) %>%
         rename(node = id) %>%
-        tidyr::separate_rows(site, sep = ',') %>%
+        separate_rows(site, sep = ',') %>%
         group_by(site, node, name) %>%
         summarise(
             score_mut_helper(gtree, geno, site, node, p_min),

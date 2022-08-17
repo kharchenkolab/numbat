@@ -26,6 +26,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_dgpois
+NumericVector cpp_dgpois(const NumericVector& x, const NumericVector& alpha, const NumericVector& beta, const bool& log_prob);
+RcppExport SEXP _numbat_cpp_dgpois(SEXP xSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP log_probSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type log_prob(log_probSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_dgpois(x, alpha, beta, log_prob));
+    return rcpp_result_gen;
+END_RCPP
+}
 // logSumExp
 double logSumExp(const arma::vec& x);
 RcppExport SEXP _numbat_logSumExp(SEXP xSEXP) {
@@ -263,6 +277,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_numbat_cppdbbinom", (DL_FUNC) &_numbat_cppdbbinom, 5},
+    {"_numbat_cpp_dgpois", (DL_FUNC) &_numbat_cpp_dgpois, 4},
     {"_numbat_logSumExp", (DL_FUNC) &_numbat_logSumExp, 1},
     {"_numbat_likelihood_compute", (DL_FUNC) &_numbat_likelihood_compute, 5},
     {"_numbat_forward_backward_compute", (DL_FUNC) &_numbat_forward_backward_compute, 5},
