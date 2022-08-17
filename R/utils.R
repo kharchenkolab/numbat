@@ -1551,7 +1551,7 @@ get_nodes_celltree = function(hc, clusters) {
     # convert to list
     nodes = nodes %>%
         split(.$node) %>%
-        purrr::map(function(node){
+        map(function(node){
             list(
                 sample = unique(node$node),
                 members = unique(node$cluster),

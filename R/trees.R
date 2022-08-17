@@ -416,7 +416,7 @@ mut_to_tree = function(gtree, mut_nodes) {
         select(-any_of(c('n_mut', 'l', 'site', 'clone'))) %>%
         left_join(
             mut_nodes %>%
-                mutate(n_mut = unlist(purrr::map(str_split(site, ','), length))) %>%
+                mutate(n_mut = unlist(map(str_split(site, ','), length))) %>%
                 select(name, n_mut, site),
             by = 'name'
         ) %>%
@@ -546,8 +546,8 @@ label_genotype = function(G) {
             2:length(V(G)), 
             function(v) {first(igraph::all_simple_paths(G, from = 1, to = v), default = NULL)}
         ) %>%
-        purrr::map(as.character) %>%
-        purrr::map(function(x) {
+        map(as.character) %>%
+        map(function(x) {
             muts = id_to_label[x]
             muts = muts[muts != '']
             paste0(muts, collapse = ',')

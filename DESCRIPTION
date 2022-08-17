@@ -25,7 +25,6 @@ Imports:
     parallel,
     parallelDist,
     patchwork,
-    purrr,
     RColorBrewer,
     Rcpp, 
     RcppParallel,

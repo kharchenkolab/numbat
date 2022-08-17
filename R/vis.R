@@ -363,7 +363,7 @@ plot_mut_history = function(
 
         if ((!'length' %in% colnames(as.data.frame(activate(G_df, 'edges'))))) {
             G_df = G_df %>% activate(edges) %>%
-                mutate(n_mut = unlist(purrr::map(str_split(to_label, ','), length))) %>%
+                mutate(n_mut = unlist(map(str_split(to_label, ','), length))) %>%
                 mutate(length = n_mut)
         }
 

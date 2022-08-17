@@ -204,7 +204,7 @@ run_numbat = function(
 
     }
 
-    clones = purrr::keep(subtrees, function(x) x$sample %in% 1:init_k)
+    clones = keep(subtrees, function(x) x$sample %in% 1:init_k)
 
     normal_cells = c()
     segs_consensus_old = data.frame()
@@ -217,7 +217,7 @@ run_numbat = function(
 
         ######## Run HMMs ########
 
-        subtrees = purrr::keep(subtrees, function(x) x$size > min_cells)
+        subtrees = keep(subtrees, function(x) x$size > min_cells)
 
         bulk_subtrees = make_group_bulks(
                 groups = subtrees,
@@ -275,7 +275,7 @@ run_numbat = function(
             get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = FALSE)
 
         # retest on clones
-        clones = purrr::keep(clones, function(x) x$size > min_cells)
+        clones = keep(clones, function(x) x$size > min_cells)
         
         bulk_clones = make_group_bulks(
                 groups = clones,
@@ -508,7 +508,7 @@ run_numbat = function(
         saveRDS(subtrees, paste0(out_dir, '/subtrees_', i, '.rds'))
 
         clones = clone_post %>% split(.$clone_opt) %>%
-            purrr::map(function(c){list(sample = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
+            map(function(c){list(sample = unique(c$clone_opt), members = unique(c$GT_opt), cells = c$cell, size = length(c$cell))})
 
         saveRDS(clones, paste0(out_dir, '/clones_', i, '.rds'))
 
