@@ -137,31 +137,16 @@ make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE
     write.vcf(vcf_chr, file_name)
 
     # compress using bgzip
-    vcfR_file_fix(file_name)
+    system(paste0('gunzip ', file))
+    system(paste0('bgzip ', str_remove(file, '.gz')))
 
     # index the vcf
-    cmd = paste0('tabix ', file_name)
-
-    system(cmd)
+    system(paste0('tabix ', file_name))
     
     return(vcf_chr)
     
 }
 
-#' @keywords internal 
-vcfR_file_fix <- function(file) {
-
-    if (!requireNamespace("Rsamtools", quietly = TRUE)) {
-        stop("Package \"Rsamtools\" needed for this function to work. Please install it.", call. = FALSE)
-    }
-    if (!requireNamespace("R.utils", quietly = TRUE)) {
-        stop("Package \"R.utils\" needed for this function to work. Please install it.", call. = FALSE)
-    }
-    out <- R.utils::gunzip(file, overwrite = TRUE)
-    out2 <- Rsamtools::bgzip(out, dest=sprintf("%s.gz", sub("\\.gz$", "", out)), overwrite = TRUE)
-    file.remove(out)
-
-}
 
 #' Preprocess allele data
 #' 
