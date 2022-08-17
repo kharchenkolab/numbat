@@ -58,7 +58,7 @@ cnv_colors = c("neu" = "gray",
 plot_psbulk = function(
         bulk, use_pos = TRUE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2, 
         phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = FALSE, 
-        exclude_gap = TRUE, raster = FALSE
+        exclude_gap = TRUE, genome = c('hg38', 'hg19'), raster = FALSE
     ) {
 
     if (raster) {
@@ -129,10 +129,20 @@ plot_psbulk = function(
         )
 
     if (use_pos & exclude_gap) {
+
+        if (genome == 'hg38') {
+            gaps = gaps_hg38
+            acen = acen_hg38
+        } else if (genome == 'hg19') {
+            gaps = gaps_hg19
+            acen = acen_hg19
+        } else {
+            stop("Genome version must be hg38 or hg19")
+        }
         
-        segs_exclude = gaps_hg38 %>% 
+        segs_exclude = gaps %>% 
             filter(end - start > 1e+06) %>% 
-            rbind(acen_hg38) %>%
+            rbind(acen) %>%
             rename(seg_start = start, seg_end = end) %>%
             filter(CHROM %in% bulk$CHROM)
 
@@ -922,10 +932,20 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 #' @param legend logical Display the legend
 #' @param exclude_gap logical Whether to mark gap regions
 #' @export
-cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, exclude_gap = TRUE) {
+cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, exclude_gap = TRUE, genome = c('hg38', 'hg19')) {
 
     if (!'p_cnv' %in% colnames(segs)) {
         segs$p_cnv = 1
+    }
+
+    if (genome == 'hg38') {
+        chrom_sizes = chrom_sizes_hg38
+        gaps = gaps_hg38
+    } else if (genome == 'hg19') {
+        chrom_sizes = chrom_sizes_hg19
+        gaps = gaps_hg19
+    } else {
+        stop("Genome version must be hg38 or hg19")
     }
     
     p = ggplot(
@@ -941,7 +961,7 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
 
     if (exclude_gap) {
 
-        segs_exclude = gaps_hg38 %>% 
+        segs_exclude = gaps %>% 
             filter(end - start > 1e+06) %>% 
             rename(seg_start = start, seg_end = end) 
 
