@@ -3,13 +3,13 @@
 #' @import Matrix
 #' @importFrom data.table fread fwrite as.data.table
 #' @import tidygraph
-#' @importFrom parallel mclapply
 #' @import ggplot2
 #' @import ggraph
 #' @importFrom ggtree %<+%
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
 #' @importFrom methods is as
+#' @importFrom parallel mclapply
 #' @importFrom RcppParallel RcppParallelLibs
 #' @importFrom grDevices colorRampPalette
 #' @importFrom stats as.dendrogram as.dist cor cutree dbinom dnbinom dnorm dpois end hclust integrate model.matrix na.omit optim p.adjust pnorm reorder rnorm setNames start t.test as.ts complete.cases is.leaf na.contiguous
