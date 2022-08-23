@@ -15,6 +15,7 @@ Imports:
     caTools,
     data.table,
     dendextend,
+    dplyr,
     GenomicRanges,
     ggplot2,
     ggraph,
@@ -28,6 +29,7 @@ Imports:
     RcppParallel,
     RhpcBLASctl,
     stringr,
+    tibble,
     tidygraph, 
     tidyverse,
     vcfR

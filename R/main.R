@@ -1,5 +1,6 @@
 #' @import logger
 #' @import tidyverse
+#' @import dplyr
 #' @import Matrix
 #' @importFrom data.table fread fwrite as.data.table
 #' @import tidygraph
@@ -14,6 +15,7 @@
 #' @importFrom grDevices colorRampPalette
 #' @importFrom stats as.dendrogram as.dist cor cutree dbinom dnbinom dnorm dpois end hclust integrate model.matrix na.omit optim p.adjust pnorm reorder rnorm setNames start t.test as.ts complete.cases is.leaf na.contiguous
 #' @import stringr
+#' @import tibble
 #' @importFrom utils combn
 #' @useDynLib numbat
 NULL
