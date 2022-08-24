@@ -66,6 +66,40 @@ run_numbat = function(
     ) {
 
     ######### Basic checks #########
+    if (genome == 'hg38') {
+        gtf = gtf_hg38
+    } else if (genome == 'hg19') {
+        gtf = gtf_hg19
+    } else {
+        stop('Genome version must be hg38 or hg19')
+    }
+
+    count_mat = check_matrix(count_mat)
+    df_allele = check_allele_df(df_allele)
+    lambdas_ref = check_exp_ref(lambdas_ref)
+
+    # filter for annotated genes
+    genes_annotated = unique(gtf$gene) %>% 
+        intersect(rownames(count_mat)) %>%
+        intersect(rownames(lambdas_ref))
+
+    count_mat = count_mat[genes_annotated,,drop=FALSE]
+    lambdas_ref = lambdas_ref[genes_annotated,,drop=FALSE]
+
+    zero_cov = names(which(colSums(count_mat) == 0))
+    if (length(zero_cov) > 0) {
+        log_message(glue('Filtering out {length(zero_cov)} cells with 0 coverage'))
+        count_mat = count_mat[,!colnames(count_mat) %in% zero_cov]
+        df_allele = df_allele %>% filter(!cell %in% zero_cov)
+    }
+
+    # only keep cells that have a transcriptome
+    df_allele = df_allele %>% filter(cell %in% colnames(count_mat))
+    if (nrow(df_allele) == 0){
+        stop('No matching cell names between count_mat and df_allele')
+    }
+
+    ######### Log parameters #########
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
     if (file.exists(logfile)) {file.remove(logfile)}
@@ -106,40 +140,6 @@ run_numbat = function(
     RhpcBLASctl::blas_set_num_threads(1)
     RhpcBLASctl::omp_set_num_threads(1)
     data.table::setDTthreads(1)
-    ######### Basic checks #########
-
-    count_mat = check_matrix(count_mat)
-    df_allele = check_allele_df(df_allele)
-    lambdas_ref = check_exp_ref(lambdas_ref)
-
-    if (genome == 'hg38') {
-        gtf = gtf_hg38
-    } else if (genome == 'hg19') {
-        gtf = gtf_hg19
-    } else {
-        stop('Genome version must be hg38 or hg19')
-    }
-
-    # filter for annotated genes
-    genes_annotated = unique(gtf$gene) %>% 
-        intersect(rownames(count_mat)) %>%
-        intersect(rownames(lambdas_ref))
-
-    count_mat = count_mat[genes_annotated,,drop=FALSE]
-    lambdas_ref = lambdas_ref[genes_annotated,,drop=FALSE]
-
-    zero_cov = names(which(colSums(count_mat) == 0))
-    if (length(zero_cov) > 0) {
-        log_message(glue('Filtering out {length(zero_cov)} cells with 0 coverage'))
-        count_mat = count_mat[,!colnames(count_mat) %in% zero_cov]
-        df_allele = df_allele %>% filter(!cell %in% zero_cov)
-    }
-
-    # only keep cells that have a transcriptome
-    df_allele = df_allele %>% filter(cell %in% colnames(count_mat))
-    if (nrow(df_allele) == 0){
-        stop('No matching cell names between count_mat and df_allele')
-    }
 
     ######## Initialization ########
 
