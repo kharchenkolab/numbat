@@ -26,6 +26,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_dgpois
+NumericVector cpp_dgpois(const NumericVector& x, const NumericVector& alpha, const NumericVector& beta, const bool& log_prob);
+RcppExport SEXP _numbat_cpp_dgpois(SEXP xSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP log_probSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type log_prob(log_probSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_dgpois(x, alpha, beta, log_prob));
+    return rcpp_result_gen;
+END_RCPP
+}
 // logSumExp
 double logSumExp(const arma::vec& x);
 RcppExport SEXP _numbat_logSumExp(SEXP xSEXP) {
@@ -203,6 +217,34 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// node_depth
+NumericVector node_depth(int ntip, NumericVector e1, NumericVector e2, int nedge, NumericVector xx, int method);
+RcppExport SEXP _numbat_node_depth(SEXP ntipSEXP, SEXP e1SEXP, SEXP e2SEXP, SEXP nedgeSEXP, SEXP xxSEXP, SEXP methodSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type ntip(ntipSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type e1(e1SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type e2(e2SEXP);
+    Rcpp::traits::input_parameter< int >::type nedge(nedgeSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type xx(xxSEXP);
+    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
+    rcpp_result_gen = Rcpp::wrap(node_depth(ntip, e1, e2, nedge, xx, method));
+    return rcpp_result_gen;
+END_RCPP
+}
+// roman2int_internal
+int roman2int_internal(Rcpp::StringVector letters, int nchar);
+RcppExport SEXP _numbat_roman2int_internal(SEXP lettersSEXP, SEXP ncharSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type letters(lettersSEXP);
+    Rcpp::traits::input_parameter< int >::type nchar(ncharSEXP);
+    rcpp_result_gen = Rcpp::wrap(roman2int_internal(letters, nchar));
+    return rcpp_result_gen;
+END_RCPP
+}
 // poilog1
 std::vector<double> poilog1(std::vector<int> x, std::vector<double> my, std::vector<double> sig);
 RcppExport SEXP _numbat_poilog1(SEXP xSEXP, SEXP mySEXP, SEXP sigSEXP) {
@@ -235,6 +277,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_numbat_cppdbbinom", (DL_FUNC) &_numbat_cppdbbinom, 5},
+    {"_numbat_cpp_dgpois", (DL_FUNC) &_numbat_cpp_dgpois, 4},
     {"_numbat_logSumExp", (DL_FUNC) &_numbat_logSumExp, 1},
     {"_numbat_likelihood_compute", (DL_FUNC) &_numbat_likelihood_compute, 5},
     {"_numbat_forward_backward_compute", (DL_FUNC) &_numbat_forward_backward_compute, 5},
@@ -249,6 +292,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_numbat_nnin_cpp", (DL_FUNC) &_numbat_nnin_cpp, 2},
     {"_numbat_nni_cpp", (DL_FUNC) &_numbat_nni_cpp, 1},
     {"_numbat_nni_cpp_parallel", (DL_FUNC) &_numbat_nni_cpp_parallel, 2},
+    {"_numbat_node_depth", (DL_FUNC) &_numbat_node_depth, 6},
+    {"_numbat_roman2int_internal", (DL_FUNC) &_numbat_roman2int_internal, 2},
     {"_numbat_poilog1", (DL_FUNC) &_numbat_poilog1, 3},
     {"_numbat_l_lnpois_cpp", (DL_FUNC) &_numbat_l_lnpois_cpp, 6},
     {NULL, NULL, 0}

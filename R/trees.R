@@ -96,6 +96,23 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, ver
 }
 
 # from phangorn
+#' UPGMA and WPGMA clustering
+#' @param D A distance matrix.
+#' @param method The agglomeration method to be used. This should be (an
+#' unambiguous abbreviation of) one of "ward", "single", "complete", "average",
+#' "mcquitty", "median" or "centroid". The default is "average".
+#' @param \dots Further arguments passed to or from other methods.
+upgma <- function(D, method = "average", ...) {
+  DD <- as.dist(D)
+  hc <- hclust(DD, method = method, ...)
+  result <- as.phylo(hc)
+  result <- reorder(result, "postorder")
+  result
+}
+
+
+
+# from phangorn
 #' Perform the NNI at a specific branch
 #' @param tree phylo Single-cell phylogenetic tree
 #' @param n integer Branch ID
@@ -185,9 +202,8 @@ ladderize <- function(phy, right = TRUE) {
     nb.edge <- dim(phy$edge)[1]
 
     phy <- reorder(phy, "postorder")
-    N <- .C(ape::node_depth, as.integer(nb.tip),
-            as.integer(phy$edge[, 1]), as.integer(phy$edge[, 2]),
-            as.integer(nb.edge), double(nb.tip + nb.node), 1L)[[5]]
+    N <- node_depth(as.integer(nb.tip), as.integer(phy$edge[, 1]), as.integer(phy$edge[, 2]),
+            as.integer(nb.edge), double(nb.tip + nb.node), 1L)
 
     ii <- order(x <- phy$edge[,1], y <- N[phy$edge[,2]], decreasing = right)
     desc <- desc_fun(phy$edge[ii,])
@@ -272,6 +288,7 @@ mark_tumor_lineage = function(gtree) {
 }
 
 #' Convert a single-cell phylogeny with mutation placements into a mutation graph
+#'
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @param mut_nodes dataframe Mutation placements
 #' @return igraph Mutation graph
@@ -302,6 +319,7 @@ get_mut_tree = function(gtree, mut_nodes) {
 }
 
 #' Compute site branch likelihood (not used)
+#'
 #' @param node integer Node id
 #' @param site character Mutation site name
 #' @param gtree tbl_graph The single-cell phylogeny
@@ -386,7 +404,8 @@ get_tree_post = function(tree, P) {
     return(list('mut_nodes' = mut_nodes, 'gtree' = gtree, 'l_matrix' = l_matrix))
 }
 
-#' transfer mutation assignment onto a single-cell phylogeny
+#' Transfer mutation assignment onto a single-cell phylogeny
+#'
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @param mut_nodes dataframe Mutation placements
 #' @return tbl_graph A single-cell phylogeny with mutation placements
@@ -454,6 +473,7 @@ mut_to_tree = function(gtree, mut_nodes) {
 }
 
 #' Convert the phylogeny from tidygraph to igraph object
+#'
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @return phylo The single-cell phylogeny
 #' @keywords internal
@@ -469,6 +489,7 @@ to_phylo = function(gtree) {
 }
 
 #' Annotate the direct upstream or downstream mutations on the edges
+#'
 #' @param G igraph Mutation graph
 #' @return igraph Mutation graph 
 #' @keywords internal
@@ -493,6 +514,7 @@ label_edges = function(G) {
 }
 
 #' Annotate the direct upstream or downstream node on the edges
+#'
 #' @param G igraph Mutation graph
 #' @return igraph Mutation graph 
 #' @keywords internal
@@ -515,6 +537,7 @@ transfer_links = function(G) {
 }
 
 #' Label the genotypes on a mutation graph
+#'
 #' @param G igraph Mutation graph
 #' @return igraph Mutation graph
 #' @keywords internal
@@ -544,6 +567,7 @@ label_genotype = function(G) {
 }
 
 #' Merge adjacent set of nodes
+#'
 #' @param G igraph Mutation graph
 #' @param vset vector Set of adjacent vertices to merge
 #' @return igraph Mutation graph
@@ -595,6 +619,7 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
 }
 
 #' Simplify the mutational history based on likelihood evidence
+#'
 #' @param G igraph Mutation graph 
 #' @param l_matrix matrix Mutation placement likelihood matrix (node by mutation)
 #' @return igraph Mutation graph
@@ -630,6 +655,7 @@ simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
 }
 
 #' Get the cost of a mutation reassignment
+#'
 #' @param muts character Mutations dlimited by comma
 #' @param node_ori character Name of the "from" node
 #' @param node_tar character Name of the "to" node
@@ -649,6 +675,7 @@ get_move_cost = function(muts, node_ori, node_tar, l_matrix) {
 }
 
 #' Get the least costly mutation reassignment 
+#'
 #' @param G igraph Mutation graph
 #' @param l_matrix matrix Likelihood matrix of mutation placements
 #' @return numeric Lieklihood cost of performing the mutation move
@@ -675,6 +702,7 @@ get_move_opt = function(G, l_matrix) {
 }
 
 #' Annotate superclones on a tree
+#'
 #' @keywords internal
 annot_superclones = function(gtree, geno, p_min = 0.95, precision_cutoff = 0.9) {
     
@@ -710,6 +738,7 @@ annot_superclones = function(gtree, geno, p_min = 0.95, precision_cutoff = 0.9) 
 }
 
 #' Score mutations on goodness of fit on the tree
+#'
 #' @keywords internal
 score_mut = function(gtree, geno, p_min = 0.95) {
 
@@ -732,6 +761,7 @@ score_mut = function(gtree, geno, p_min = 0.95) {
 }
 
 #' Helper for mutation scoring
+#'
 #' @keywords internal
 score_mut_helper = function(gtree, geno, s, v, p_min = 0.95) {
     gtree %>%

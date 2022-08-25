@@ -4,7 +4,7 @@
 \alias{get_segs_consensus}
 \title{Extract consensus CNV segments}
 \usage{
-get_segs_consensus(bulks, min_LLR = 5, min_overlap = 0.45, retest = FALSE)
+get_segs_consensus(bulks, min_LLR = 5, min_overlap = 0.45, retest = TRUE)
 }
 \arguments{
 \item{bulks}{dataframe Pseudobulks}

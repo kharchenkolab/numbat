@@ -5,6 +5,10 @@ cppdbbinom <- function(x, size, alpha, beta, log_prob = FALSE) {
     .Call('_numbat_cppdbbinom', PACKAGE = 'numbat', x, size, alpha, beta, log_prob)
 }
 
+cpp_dgpois <- function(x, alpha, beta, log_prob = FALSE) {
+    .Call('_numbat_cpp_dgpois', PACKAGE = 'numbat', x, alpha, beta, log_prob)
+}
+
 logSumExp <- function(x) {
     .Call('_numbat_logSumExp', PACKAGE = 'numbat', x)
 }
@@ -59,6 +63,14 @@ nni_cpp <- function(tree) {
 
 nni_cpp_parallel <- function(tree, P) {
     .Call('_numbat_nni_cpp_parallel', PACKAGE = 'numbat', tree, P)
+}
+
+node_depth <- function(ntip, e1, e2, nedge, xx, method) {
+    .Call('_numbat_node_depth', PACKAGE = 'numbat', ntip, e1, e2, nedge, xx, method)
+}
+
+roman2int_internal <- function(letters, nchar) {
+    .Call('_numbat_roman2int_internal', PACKAGE = 'numbat', letters, nchar)
 }
 
 poilog1 <- function(x, my, sig) {

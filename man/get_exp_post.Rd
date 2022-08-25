@@ -15,7 +15,7 @@ get_exp_post(
   segs_loh = NULL,
   ncores = 30,
   verbose = TRUE,
-  debug = F
+  debug = FALSE
 )
 }
 \arguments{

@@ -8,8 +8,7 @@ run_numbat(
   count_mat,
   lambdas_ref,
   df_allele,
-  gtf,
-  genetic_map,
+  genome = c("hg38", "hg19"),
   out_dir = "./",
   max_iter = 2,
   max_nni = 100,
@@ -49,9 +48,7 @@ run_numbat(
 
 \item{df_allele}{dataframe Allele counts per cell, produced by preprocess_allele}
 
-\item{gtf}{dataframe GTF of transcripts}
-
-\item{genetic_map}{dataframe A genetic map dataframe}
+\item{genome}{character Genome version (hg38 or hg19)}
 
 \item{out_dir}{string Output directory}
 
@@ -64,6 +61,8 @@ run_numbat(
 \item{gamma}{numeric Dispersion parameter for the Beta-Binomial allele model}
 
 \item{min_LLR}{numeric Minimum LLR to filter CNVs}
+
+\item{alpha}{numeric P value cutoff for diploid finding}
 
 \item{eps}{numeric Convergence threshold for ML tree search}
 
@@ -81,19 +80,35 @@ run_numbat(
 
 \item{common_diploid}{logical Whether to find common diploid regions in a group of peusdobulks}
 
+\item{min_overlap}{numeric Minimum CNV overlap threshold}
+
 \item{ncores}{integer Number of threads to use}
 
 \item{ncores_nni}{integer Number of threads to use for NNI}
 
+\item{random_init}{logical Whether to initiate phylogney using a random tree (internal use only)}
+
 \item{segs_loh}{dataframe Segments of clonal LOH to be excluded}
+
+\item{verbose}{logical Verbosity}
 
 \item{diploid_chroms}{vector Known diploid chromosomes}
 
 \item{use_loh}{logical Whether to include LOH regions in the expression baseline}
 
+\item{min_genes}{integer Minimum number of genes to call a segment}
+
 \item{skip_nj}{logical Whether to skip NJ tree construction and only use UPGMA}
 
 \item{multi_allelic}{logical Whether to call multi-allelic CNVs}
+
+\item{p_multi}{numeric P value cutoff for calling multi-allelic CNVs}
+
+\item{plot}{logical Whether to plot results}
+
+\item{check_convergence}{logical Whether to terminate iterations based on consensus CNV convergence}
+
+\item{exclude_neu}{logical Whether to exclude neutral segments from CNV retesting (internal use only)}
 }
 \value{
 a status code
