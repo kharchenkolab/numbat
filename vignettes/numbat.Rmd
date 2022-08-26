@@ -36,10 +36,6 @@ You can install the numbat R package via:
 ```
 devtools::install_github("https://github.com/kharchenkolab/numbat")
 ```
-To get the most recent updates, you can install the development version:
-```
-devtools::install_github("https://github.com/kharchenkolab/Numbat/tree/devel")
-```
 
 ## Docker
 We provide a ready-to-run Docker container that includes the Numbat R package and all of its dependencies. You can launch it as follows:
