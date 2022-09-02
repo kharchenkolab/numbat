@@ -1,9 +1,10 @@
 ########################### Visualizations ############################
 # default color palette
-pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
+## pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
+pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
 getPalette = colorRampPalette(pal)
 
-#' @export
+#' @keywords internal
 cnv_colors = c("neu" = "gray", 
         "neu_up" = "darkgray", "neu_down" = "gray",
         "del_up" = "royalblue", "del_down" = "darkblue", 
@@ -28,20 +29,20 @@ cnv_colors = c("neu" = "gray",
         "theta_2_up" = "darkgreen", "theta_2_down" = "olivedrab4",
         "theta_up_1" = "darkgreen", "theta_down_1" = "olivedrab4",
         "theta_up_2" = "darkgreen", "theta_down_2" = "olivedrab4",
-        '0|1' = 'red', '1|0' = 'blue',
-        'major' = '#66C2A5', 'minor' = '#FC8D62'
-    )
+        '0|1' = 'red', '1|0' = 'blue','major' = '#66C2A5', 'minor' = '#FC8D62')
 
-#' @export
+#' @keywords internal
 cnv_labels = names(cnv_colors) %>%
-    str_remove_all('_') %>% 
-    str_to_upper() %>%
-    str_replace('UP', '(major)') %>%
-    str_replace('DOWN', '(minor)') %>%
-    str_replace('LOH', 'CNLoH') %>%
+    stringr::str_remove_all('_') %>% 
+    stringr::str_to_upper() %>%
+    stringr::str_replace('UP', '(major)') %>%
+    stringr::str_replace('DOWN', '(minor)') %>%
+    stringr::str_replace('LOH', 'CNLoH') %>%
     setNames(names(cnv_colors))
 
-#' plot a pseudobulk HMM profile
+
+#' Plot a pseudobulk HMM profile
+#'
 #' @param bulk dataframe Pseudobulk profile
 #' @param use_pos logical Use marker position instead of index as x coordinate
 #' @param allele_only logical Only plot alleles
@@ -54,6 +55,7 @@ cnv_labels = names(cnv_colors) %>%
 #' @param dot_alpha numeric Transparency of the marker dots
 #' @param legend logical Whether to show legend
 #' @param exclude_gap logical Whether to mark gap regions and centromeres
+#' @param genome character Genome build, either 'hg38' or 'hg19'
 #' @param raster logical Whether to raster images
 #' @return ggplot Plot of pseudobulk HMM profile
 #' @export
@@ -143,7 +145,7 @@ plot_psbulk = function(
             filter(CHROM %in% bulk$CHROM)
 
         if (nrow(segs_exclude) > 0) {
-            p = p + geom_rect(inherit.aes = F, data = segs_exclude, 
+            p = p + geom_rect(inherit.aes = FALSE, data = segs_exclude, 
                 aes(xmin = seg_start, xmax = seg_end, ymin = -Inf, ymax = Inf), 
                 fill = "gray95")
         }
@@ -170,13 +172,13 @@ plot_psbulk = function(
             axis.text.x = element_blank(),
             axis.ticks.x = element_blank()
         ) +
-        facet_grid(variable ~ CHROM, scale = 'free', space = 'free_x') +
+        facet_grid(variable ~ CHROM, scales = 'free', space = 'free_x') +
         # scale_x_continuous(expand = expansion(add = 5)) +
         scale_color_manual(
             values = cnv_colors,
             limits = force,
             labels = cnv_labels,
-            na.translate = F
+            na.translate = FALSE
         ) +
         guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = 'none', alpha = 'none', shape = 'none') +
         xlab(marker) +
@@ -305,7 +307,8 @@ plot_bulks = function(
     return(panel)
 }
 
-#' plot mutational history
+#' Plot mutational history
+#'
 #' @param G igraph Mutation history graph
 #' @param clone_post dataframe Clone assignment posteriors
 #' @param edge_label_size numeric Size of edge label
@@ -341,7 +344,8 @@ plot_mut_history = function(
     }
 
     if (is.null(pal)) {
-        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 8, 'Set1'))
+        ## getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 8, 'Set1'))
+        getPalette = colorRampPalette(pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF"))
         pal = c('gray', getPalette(length(V(G))))
     }
 
@@ -426,7 +430,8 @@ plot_mut_history = function(
     return(p)
 }
 
-#' plot single-cell CNV calls along with the clonal phylogeny
+#' Plot single-cell CNV calls along with the clonal phylogeny
+#'
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @param joint_post dataframe Joint single cell CNV posteriors
 #' @param segs_consensus datatframe Consensus segment dataframe
@@ -551,7 +556,7 @@ plot_phylo_heatmap = function(
             size = line_width
         ) +
         geom_segment(
-            inherit.aes = F,
+            inherit.aes = FALSE,
             aes(x = seg_start, xend = seg_end, y = 1, yend = 1),
             data = segs_consensus, size = 0, color = 'white', alpha = 0
         ) +
@@ -573,7 +578,7 @@ plot_phylo_heatmap = function(
         ) +
         scale_x_continuous(expand = expansion(0)) +
         scale_y_continuous(expand = expansion(0)) +
-        facet_grid(.~CHROM, space = 'free', scale = 'free', labeller = labeller(CHROM = chrom_labeller)) +
+        facet_grid(.~CHROM, space = 'free', scales = 'free', labeller = labeller(CHROM = chrom_labeller)) +
         scale_alpha_continuous(range = c(0,1), limits = c(p_min, 1), oob = scales::squish) +
         guides(
             alpha = 'none',
@@ -598,7 +603,7 @@ plot_phylo_heatmap = function(
 
         p_segs = p_segs + 
             geom_rect(
-                inherit.aes = F,
+                inherit.aes = FALSE,
                 data = segs_exclude, 
                 aes(xmin = seg_start,
                     xmax = seg_end,
@@ -625,7 +630,8 @@ plot_phylo_heatmap = function(
 
     if (is.null(pal_clone)) {
 
-        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 10, 'Spectral'))
+        ## getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 10, 'Spectral'))
+        getPalette = colorRampPalette(c("#9E0142", "#D53E4F", "#F46D43", "#FDAE61", "#FEE08B", "#E6F598", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2"))
 
         pal_clone = getPalette(length(unique(clone_dict)))
 
@@ -723,7 +729,7 @@ plot_consensus = function(segs) {
         plot.margin = margin(0, 0, 0, 0),
         legend.position = 'top'
     ) +
-    facet_grid(~CHROM, space = 'free_x', scale = 'free', labeller = labeller(CHROM = chrom_labeller)) +
+    facet_grid(~CHROM, space = 'free_x', scales = 'free', labeller = labeller(CHROM = chrom_labeller)) +
     scale_fill_manual(
       values = cnv_colors,
       labels = cnv_labels,
@@ -806,7 +812,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
             # axis.title.y = element_text(angle = 90),
             # axis.title.x = element_text()
         ) +
-        facet_grid(cluster~CHROM, scale = 'free', space = 'free', labeller = labeller(CHROM = chrom_labeller)) +
+        facet_grid(cluster~CHROM, scales = 'free', space = 'free', labeller = labeller(CHROM = chrom_labeller)) +
         guides(fill = guide_colorbar(title = 'Expression\nmagnitude')) +
         xlab('Gene index') +
         ylab('Cell')
@@ -937,7 +943,7 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
 
         p = p +
             geom_rect(
-                inherit.aes = F,
+                inherit.aes = FALSE,
                 data = segs_exclude,
                 aes(xmin = seg_start, 
                     xmax = seg_end,
@@ -946,7 +952,7 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
                 fill = 'white'
             ) +
             geom_rect(
-                inherit.aes = F,
+                inherit.aes = FALSE,
                 data = segs_exclude,
                 aes(xmin = seg_start, 
                     xmax = seg_end,
@@ -981,7 +987,7 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
         scale_alpha_continuous(range = c(0,1), limits = c(0.5,1), oob = scales::squish) +
         guides(alpha = 'none') +
         scale_x_continuous(expand = expansion(add = 0)) +
-        facet_grid(get(var)~CHROM, space = 'free_x', scale = 'free', drop = TRUE)
+        facet_grid(get(var)~CHROM, space = 'free_x', scales = 'free', drop = TRUE)
 
         if (!legend) {
             p = p + theme(legend.position = 'none')
@@ -997,6 +1003,16 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
 
 
 ########################### Functions for internal use ############################
+
+#' @keywords internal
+oob_squish <- function(x, range = c(0, 1), only.finite = TRUE) {
+  force(range)
+  finite <- if (only.finite) is.finite(x) else TRUE
+  x[finite & x < range[1]] <- range[1]
+  x[finite & x > range[2]] <- range[2]
+  x
+}
+
 
 plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     
@@ -1037,8 +1053,8 @@ plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
         axis.text.y = element_blank()
     ) +
     scale_x_continuous(expand = expansion(0)) +
-    facet_grid(group~CHROM, space = 'free', scale = 'free') +
-    scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = scales::oob_squish)
+    facet_grid(group~CHROM, space = 'free', scales = 'free') +
+    scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = oob_squish)
 }
 
 plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
@@ -1089,7 +1105,7 @@ plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
             panel.spacing = unit(0, 'mm'),
             panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
         ) +
-        facet_grid(clone~CHROM, space = 'free', scale = 'free') +
+        facet_grid(clone~CHROM, space = 'free', scales = 'free') +
         scale_x_discrete(expand = expansion(0)) +
         scale_color_gradient(low = pal[1], high = pal[2])
     
@@ -1134,8 +1150,8 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
             strip.text.y.left = element_text(size = 6, angle = 0),
         ) +
         ylab('marker') +
-        facet_grid(marker_type ~ cell_group, space = 'free_y', scale = 'free', switch="y") +
-        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', limits = c(-1.5,1.5), oob = scales::oob_squish)
+        facet_grid(marker_type ~ cell_group, space = 'free_y', scales = 'free', switch="y") +
+        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', limits = c(-1.5,1.5), oob = oob_squish)
 
     p_annot = ggplot(
             D,
@@ -1155,7 +1171,7 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
             strip.text.x = element_blank()
         ) +
         ylab('') +
-        facet_grid(~ cell_group, space = 'free_y', scale = 'free', switch="y") +
+        facet_grid(~ cell_group, space = 'free_y', scales = 'free', switch="y") +
         scale_fill_manual(values = pal_annot) +
         guides(fill = guide_legend())
 
@@ -1176,8 +1192,8 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
             axis.title.x = element_blank()
         ) +
         ylab('') +
-        facet_grid(~cell_group, space = 'free_y', scale = 'free', switch="y") +
-        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 0.5, limits = c(0,1), oob = scales::oob_squish) + 
+        facet_grid(~cell_group, space = 'free_y', scales = 'free', switch="y") +
+        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 0.5, limits = c(0,1), oob = oob_squish) + 
         ggtitle(sample) +
         guides(fill = 'none')
 
@@ -1185,6 +1201,7 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
     
 }
 
+#' @keywords internal
 do_plot = function(p, f, w, h, out_dir = '~/figures', device = 'pdf') {
     ggsave(filename = paste0(out_dir, '/', f, '.', device), plot = p, width = w, height = h, device = device, dpi = 300)
     options(repr.plot.width = w, repr.plot.height = h, repr.plot.res = 300)
@@ -1192,6 +1209,7 @@ do_plot = function(p, f, w, h, out_dir = '~/figures', device = 'pdf') {
 }
 
 # expect columns cell and annot
+#' @keywords internal
 annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL, annot_scale = NULL, raster = FALSE) {
 
     D = D %>% mutate(cell_index = as.integer(cell))
@@ -1328,6 +1346,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
 }
 
 # model diagnostics
+#' @keywords internal
 plot_exp_post = function(exp_post, jitter = TRUE) {
     if (!'annot' %in% colnames(exp_post)) {
         exp_post$annot = '0'
@@ -1355,6 +1374,7 @@ plot_exp_post = function(exp_post, jitter = TRUE) {
     return(p)
 }
 
+#' @keywords internal
 plot_clone_profile = function(joint_post, clone_post) {
     
     clone_profile = get_clone_profile(joint_post, clone_post)

@@ -1262,6 +1262,12 @@ fit_gamma = function(AD, DP, start = 20) {
     return(gamma)
 }
 
+#' @keywords internal
+dgpois <- function(x, shape, rate, scale = 1/rate, log = FALSE) {
+  cpp_dgpois(x, shape, scale, log[1L])
+}
+
+
 #' calculate joint likelihood of a gamma-poisson model
 #' @param Y_obs numeric vector Gene expression counts
 #' @param lambda_ref numeric vector Reference expression levels

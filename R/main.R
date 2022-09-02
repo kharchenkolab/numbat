@@ -14,7 +14,6 @@
 #' @importFrom parallel mclapply
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
-#' @importFrom extraDistr dgpois
 #' @importFrom RcppParallel RcppParallelLibs
 #' @importFrom grDevices colorRampPalette
 #' @importFrom stats as.dendrogram as.dist cor cutree dbinom dnbinom dnorm dpois end hclust integrate model.matrix na.omit optim p.adjust pnorm reorder rnorm setNames start t.test as.ts complete.cases is.leaf na.contiguous

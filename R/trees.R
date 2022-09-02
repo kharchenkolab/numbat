@@ -97,6 +97,7 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, ver
 
 # from phangorn
 #' UPGMA and WPGMA clustering
+#'
 #' @param D A distance matrix.
 #' @param method The agglomeration method to be used. This should be (an
 #' unambiguous abbreviation of) one of "ward", "single", "complete", "average",
