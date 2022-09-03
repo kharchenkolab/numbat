@@ -20,4 +20,5 @@ logo.png
 ^docs$
 ^pkgdown$
 index.md
-^vignettes$ 
+^vignettes$
+vignettes

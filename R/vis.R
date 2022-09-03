@@ -255,7 +255,8 @@ plot_psbulk = function(
     return(p)
 }
 
-#' plot a group of pseudobulks HMM profile
+#' Plot a group of pseudobulks HMM profile
+#' 
 #' @param bulks dataframe Pseudobulk profiles annotated with "sample" column
 #' @param ncol integer Number of columns
 #' @param title logical Whether to add titles to individual plots
@@ -501,7 +502,7 @@ plot_phylo_heatmap = function(
     # plot phylogeny 
     p_tree = gtree %>% 
         to_phylo() %>%
-        ggtree(ladderize = TRUE, size = branch_width) +
+        ggtree::ggtree(ladderize = TRUE, size = branch_width) +
         theme(
             plot.margin = margin(0,1,0,0, unit = 'mm'),
             axis.title.x = element_blank(),
@@ -517,7 +518,7 @@ plot_phylo_heatmap = function(
         guides(color = 'none')
 
     if (root_edge) {
-        p_tree = p_tree + geom_rootedge(size = branch_width)
+        p_tree = p_tree + ggtree::geom_rootedge(size = branch_width)
     }
 
     # order the cells
@@ -704,7 +705,8 @@ plot_phylo_heatmap = function(
 }
 
 
-#' plot consensus CNVs
+#' Plot consensus CNVs
+#' 
 #' @param segs dataframe Consensus segments
 #' @return ggplot object
 #' @export
@@ -758,6 +760,7 @@ plot_consensus = function(segs) {
 }
 
 #' Plot single-cell smoothed expression magnitude heatmap
+#' 
 #' @param gexp_roll_wide matrix Cell x gene smoothed expression magnitudes
 #' @param hc hclust Hierarchical clustring result
 #' @param gtf dataframe Transcript GTF
@@ -780,7 +783,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
     
     cell_sample = sample(cells, min(n_sample, length(cells)), replace = FALSE)
         
-    p_tree = ggtree(hc, size = 0.2)
+    p_tree = ggtree::ggtree(hc, size = 0.2)
 
     cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
 
@@ -825,6 +828,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
 }
 
 #' Plot single-cell smoothed expression magnitude heatmap
+#' 
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @param label_mut logical Whether to label mutations
 #' @param label_size numeric Size of mutation labels
@@ -860,10 +864,10 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
             OTU_dict,
             'clone'
         ) %>%
-        ggtree(ladderize = T, size = branch_width) %<+%
+        ggtree::ggtree(ladderize = TRUE, size = branch_width) %<+%
         mut_nodes +
-        layout_dendrogram() +
-        geom_rootedge(size = branch_width) +
+        ggtree::layout_dendrogram() +
+        ggtree::geom_rootedge(size = branch_width) +
         theme(
             plot.margin = margin(0,0,0,0),
             axis.title.x = element_blank(),
@@ -878,8 +882,8 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 
     if (label_mut) {
         p_tree = p_tree + 
-            geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
-            geom_text2(
+            ggtree::geom_point2(aes(subset = !is.na(site), x = branch), shape = 21, size = dot_size, fill = 'red') +
+            ggtree::geom_text2(
                 aes(x = branch, label = str_trunc(site, 20, side = 'center')),
                 size = label_size, hjust = 0, vjust = -0.5, nudge_y = 1, color = 'darkred'
             )
@@ -893,7 +897,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
         }
 
         p_tree = p_tree + 
-            geom_tippoint(aes(color = as.factor(clone)), size=dot_size, stroke = 0.2) +
+            ggtree::geom_tippoint(aes(color = as.factor(clone)), size=dot_size, stroke = 0.2) +
             scale_color_manual(values = pal_clone, limits = force)
     }
     
@@ -902,11 +906,13 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 }
 
 #' Plot CNV heatmap
+#'
 #' @param segs dataframe Segments to plot. Need columns "seg_start", "seg_end", "cnv_state"
 #' @param var character Column to facet by
 #' @param label_group logical Label the groups
 #' @param legend logical Display the legend
 #' @param exclude_gap logical Whether to mark gap regions
+#' @param genome character Genome build, either 'hg38' or 'hg19'
 #' @export
 cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, exclude_gap = TRUE, genome = c('hg38', 'hg19')) {
 
@@ -981,7 +987,7 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
             na.value = 'white',
             limits = force,
             labels = cnv_labels,
-            na.translate = F,
+            na.translate = FALSE,
             name = 'States'
         ) +
         scale_alpha_continuous(range = c(0,1), limits = c(0.5,1), oob = scales::squish) +
@@ -1013,7 +1019,7 @@ oob_squish <- function(x, range = c(0, 1), only.finite = TRUE) {
   x
 }
 
-
+#' @keywords internal
 plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     
     # cell_order = exp_post %>% 
@@ -1057,6 +1063,7 @@ plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
     scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = oob_squish)
 }
 
+#' @keywords internal
 plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
     
     snp_seg = bulk_subtrees %>%
@@ -1078,7 +1085,8 @@ plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
         {setNames(.$haplo, .$snp_id)}
     
     
-    pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
+    ## pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
+    pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
 
     p = df_allele %>% 
         left_join(
@@ -1112,6 +1120,7 @@ plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
     return(p)
 }
 
+#' @keywords internal
 plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_annot = NULL) {
 
     if (is.null(pal_annot)) {
@@ -1207,6 +1216,7 @@ do_plot = function(p, f, w, h, out_dir = '~/figures', device = 'pdf') {
     options(repr.plot.width = w, repr.plot.height = h, repr.plot.res = 300)
     print(p)
 }
+
 
 # expect columns cell and annot
 #' @keywords internal
@@ -1312,7 +1322,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
         ) +
         scale_color_manual(values = cnv_colors, limits = force) +
         ylim(0,1) +
-        facet_grid(.~CHROM, space = 'free_x', scale = 'free_x') +
+        facet_grid(.~CHROM, space = 'free_x', scales = 'free_x') +
         geom_vline(xintercept = boundary - 1, color = 'red', size = 0.5, linetype = 'dashed') +
         guides(color = 'none')
 
@@ -1338,7 +1348,7 @@ show_phasing = function(bulk, min_depth = 8, dot_size = 0.5, h = 50) {
         ) +
         scale_color_manual(values = cnv_colors) +
         ylim(0,1) +
-        facet_grid(.~CHROM, space = 'free_x', scale = 'free_x') +
+        facet_grid(.~CHROM, space = 'free_x', scales = 'free_x') +
         geom_vline(xintercept = boundary - 1, color = 'red', size = 0.5, linetype = 'dashed') +
         guides(color = 'none')
 
@@ -1354,7 +1364,7 @@ plot_exp_post = function(exp_post, jitter = TRUE) {
     p = exp_post %>%
         filter(n > 20) %>%
         mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
-        mutate(seg_label = factor(seg_label, gtools::mixedsort(unique(seg_label)))) %>%
+        mutate(seg_label = factor(seg_label, mixedsort(unique(seg_label)))) %>%
         ggplot(
             aes(x = seg_label, y = log2(phi_mle), fill = cnv_state, color = p_cnv)
         ) +
@@ -1362,7 +1372,7 @@ plot_exp_post = function(exp_post, jitter = TRUE) {
         geom_hline(yintercept = 0, color = 'green', linetype = 'dashed') +
         geom_hline(yintercept = log2(1.5), color = 'red', linetype = 'dashed') +
         geom_hline(yintercept = -1, color = 'blue', linetype = 'dashed') +
-        facet_grid(annot~cnv_state, scale = 'free', space = 'free') +
+        facet_grid(annot~cnv_state, scales = 'free', space = 'free') +
         theme_classic() +
         theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
         scale_fill_manual(values = cnv_colors)
@@ -1391,7 +1401,7 @@ plot_clone_profile = function(joint_post, clone_post) {
         theme(
             plot.margin = margin(0, 0, 0, 0)
         ) +
-        facet_grid(clone~., scale = 'free') +
+        facet_grid(clone~., scales = 'free') +
         scale_size_continuous(
             range = c(0, 5),
             name = 'Cells'

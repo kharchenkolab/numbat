@@ -837,8 +837,10 @@ phi_hat_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
     )
 }
 
-#' @export
+#' @keywords internal
 letters_all = c(letters, paste0(letters, letters), paste0(letters, letters, letters))
+
+
 
 #' Annotate copy number segments after HMM decoding 
 #' @param bulk dataframe Pseudobulk profile
@@ -960,7 +962,7 @@ annot_consensus = function(bulk, segs_consensus, join_mode = 'inner') {
         select(-any_of(colnames(marker_seg)[!colnames(marker_seg) %in% c('snp_id', 'CHROM')])) %>% 
         join(marker_seg, by = c('snp_id', 'CHROM'))  %>%
         mutate(seg = seg_cons) %>%
-        mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) 
+        mutate(seg = factor(seg, mixedsort(unique(seg)))) 
 
     return(bulk)
 }
@@ -1753,20 +1755,29 @@ simes_p = function(p.vals, n_dim) {
     n_dim * min(sort(p.vals)/seq_along(p.vals))
 }
 
+## https://github.com/cran/VGAM/blob/391729a24a7b520df09ae857e2098b3e95cb6fca/R/family.others.R
+#' @keywords internal
+log1mexp <- function(x) {
+  if (any(x < 0 & !is.na(x)))
+    stop("Inputs need to be non-negative!")
+    ifelse(x <= log(2), log(-expm1(-x)), log1p(-exp(-x)))
+}
+
+
 #' Get the total probability from a region of a normal pdf
 #' @keywords internal
 pnorm.range.log = function(lower, upper, mu, sd) {
     if (sd == 0) { return(1) }
     l_upper = pnorm(upper, mu, sd, log.p = TRUE)
     l_lower = pnorm(lower, mu, sd, log.p = TRUE)
-    return(l_upper + VGAM::log1mexp(l_upper - l_lower))
+    return(l_upper + log1mexp(l_upper - l_lower))
 }
 
 pnorm.range.log = function(lower, upper, mu, sd) {
     if (sd == 0) { return(1) }
     l_upper = pnorm(upper, mu, sd, log.p = TRUE)
     l_lower = pnorm(lower, mu, sd, log.p = TRUE)
-    return(l_upper + VGAM::log1mexp(l_upper - l_lower))
+    return(l_upper + log1mexp(l_upper - l_lower))
 }
 
 #' Get the modes of a vector

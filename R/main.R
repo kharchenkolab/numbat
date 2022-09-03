@@ -7,7 +7,6 @@
 #' @importFrom parallel mclapply
 #' @import tidygraph
 #' @import ggplot2
-#' @import ggtree
 #' @import ggraph
 #' @importFrom ggtree %<+%
 #' @importFrom methods is as
@@ -420,7 +419,7 @@ run_numbat = function(
         # contruct initial tree
         dist_mat = parallelDist::parDist(rbind(P, 'outgroup' = 1), threads = ncores)
 
-        treeUPGMA = phangorn::upgma(dist_mat) %>%
+        treeUPGMA = upgma(dist_mat) %>%
             ape::root(outgroup = 'outgroup') %>%
             ape::drop.tip('outgroup') %>%
             reorder(order = 'postorder')
@@ -1296,7 +1295,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
     
     exp_post = results[!bad] %>%
         bind_rows() %>%
-        mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) %>%
+        mutate(seg = factor(seg, mixedsort(unique(seg)))) %>%
         left_join(
             segs_consensus %>% select(
                 CHROM, 
@@ -1516,7 +1515,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
         ungroup()
 
     joint_post = joint_post %>% 
-        mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) %>%
+        mutate(seg = factor(seg, mixedsort(unique(seg)))) %>%
         mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
         mutate(seg_label = factor(seg_label, unique(seg_label)))
     

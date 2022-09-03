@@ -2,7 +2,7 @@
 % Please edit documentation in R/vis.R
 \name{plot_mut_history}
 \alias{plot_mut_history}
-\title{plot mutational history}
+\title{Plot mutational history}
 \usage{
 plot_mut_history(
   G,
@@ -51,5 +51,5 @@ plot_mut_history(
 ggplot object
 }
 \description{
-plot mutational history
+Plot mutational history
 }

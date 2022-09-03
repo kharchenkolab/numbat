@@ -23,6 +23,8 @@ cnv_heatmap(
 \item{legend}{logical Display the legend}
 
 \item{exclude_gap}{logical Whether to mark gap regions}
+
+\item{genome}{character Genome build, either 'hg38' or 'hg19'}
 }
 \description{
 Plot CNV heatmap

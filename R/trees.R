@@ -39,6 +39,9 @@ score_tree = function(tree, P, get_l_matrix = FALSE) {
     
 }
 
+
+
+
 #' Maximum likelihood tree search via NNI
 #' @param tree_init phylo Intial tree
 #' @param P matrix Genotype probability matrix
@@ -106,7 +109,7 @@ perform_nni = function(tree_init, P, max_iter = 100, eps = 0.01, ncores = 1, ver
 upgma <- function(D, method = "average", ...) {
   DD <- as.dist(D)
   hc <- hclust(DD, method = method, ...)
-  result <- as.phylo(hc)
+  result <- ape::as.phylo(hc)
   result <- reorder(result, "postorder")
   result
 }

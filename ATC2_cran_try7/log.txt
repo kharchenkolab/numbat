@@ -1,0 +1,30 @@
+INFO [2022-09-03 00:42:57] Running under parameters:
+t = 1e-05
+alpha = 1e-04
+gamma = 20
+min_cells = 50
+init_k = 3
+max_cost = 51.9
+max_iter = 2
+max_nni = 100
+min_depth = 0
+use_loh = auto
+multi_allelic = TRUE
+min_LLR = 5
+min_overlap = 0.45
+max_entropy = 0.5
+skip_nj = FALSE
+diploid_chroms = 
+ncores = 10
+ncores_nni = 10
+common_diploid = TRUE
+tau = 0.3
+check_convergence = FALSE
+plot = TRUE
+genome = hg38
+Input metrics:
+173 cells
+INFO [2022-09-03 00:42:58] Mem used: 0.427Gb
+INFO [2022-09-03 00:42:58] Approximating initial clusters using smoothed expression ..
+INFO [2022-09-03 00:42:58] Mem used: 0.428Gb
+INFO [2022-09-03 00:43:00] running hclust...
