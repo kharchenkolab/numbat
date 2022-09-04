@@ -1915,7 +1915,7 @@ if (getRversion() >= "2.15.1"){
     "precision", "prior_amp", "prior_bamp", "prior_bdel", "prior_clone", "prior_del",
     "prior_loh", "s", "seg", "seg_cons", "seg_end", "seg_end_index", "seg_label", "seg_length",
     "seg_start", "seg_start_index", "segs_consensus", "seqnames", "set_colnames", "sig",
-    "site", "size", "snp_id", "snp_index", "snp_rate", "start_x", "start_y state", "state_post",
+    "site", "size", "snp_id", "snp_index", "snp_rate", "start_x", "start_y", "state", "state_post",
     "superclone", "theta_hat", "theta_level", "theta_mle", "theta_sigma", "to", "to_label",
     "to_node", "total", "value", "variable", "vcf_meta", "vertex", "vp", "width", "write.vcf", "x", "y"))
 }
