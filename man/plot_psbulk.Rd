@@ -17,7 +17,7 @@ plot_psbulk(
   dot_alpha = 0.5,
   legend = FALSE,
   exclude_gap = TRUE,
-  genome = c("hg38", "hg19"),
+  genome = "hg38",
   raster = FALSE
 )
 }

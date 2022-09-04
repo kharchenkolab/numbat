@@ -62,7 +62,7 @@ cnv_labels = names(cnv_colors) %>%
 plot_psbulk = function(
         bulk, use_pos = TRUE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2, 
         phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = FALSE, 
-        exclude_gap = TRUE, genome = c('hg38', 'hg19'), raster = FALSE
+        exclude_gap = TRUE, genome = 'hg38', raster = FALSE
     ) {
 
     if (!all(c('state_post', 'cnv_state_post') %in% colnames(bulk))) {
@@ -914,7 +914,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 #' @param exclude_gap logical Whether to mark gap regions
 #' @param genome character Genome build, either 'hg38' or 'hg19'
 #' @export
-cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, exclude_gap = TRUE, genome = c('hg38', 'hg19')) {
+cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, exclude_gap = TRUE, genome = 'hg38') {
 
     if (!'p_cnv' %in% colnames(segs)) {
         segs$p_cnv = 1

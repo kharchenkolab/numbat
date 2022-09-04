@@ -8,7 +8,7 @@ run_numbat(
   count_mat,
   lambdas_ref,
   df_allele,
-  genome = c("hg38", "hg19"),
+  genome = "hg38",
   out_dir = "./",
   max_iter = 2,
   max_nni = 100,

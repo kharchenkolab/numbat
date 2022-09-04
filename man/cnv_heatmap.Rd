@@ -10,7 +10,7 @@ cnv_heatmap(
   label_group = TRUE,
   legend = TRUE,
   exclude_gap = TRUE,
-  genome = c("hg38", "hg19")
+  genome = "hg38"
 )
 }
 \arguments{
