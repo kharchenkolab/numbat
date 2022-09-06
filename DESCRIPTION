@@ -12,6 +12,7 @@ Depends:
 biocViews:
 Imports:
     ape,
+    argparse,
     caTools,
     data.table,
     dendextend,
@@ -45,7 +46,6 @@ Imports:
     vcfR, 
     zoo
 Suggests: 
-    argparse,
     ggrastr,
     ggrepel,
     knitr,
