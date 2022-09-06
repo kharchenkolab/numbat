@@ -477,12 +477,18 @@ analyze_bulk = function(
 
     if (!allele_only) {
         # fit expression baseline
-        fit = bulk %>%
+        bulk_baseline = bulk %>%
             filter(!is.na(Y_obs)) %>%
             filter(logFC < 8 & logFC > -8) %>%
-            filter(diploid) %>%
-            {fit_lnpois_cpp(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
-            
+            filter(diploid)
+        
+        if (nrow(bulk_baseline) == 0) {
+            log_warn('No genes left in diploid regions, using all genes as baseline')
+            bulk_baseline = bulk %>% filter(!is.na(Y_obs))
+        }
+        
+        fit = bulk_baseline %>% {fit_lnpois_cpp(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+        
         bulk = bulk %>% mutate(mu = fit[1], sig = fit[2])
     } else {
         bulk = bulk %>% mutate(mu = NA, sig = NA)
