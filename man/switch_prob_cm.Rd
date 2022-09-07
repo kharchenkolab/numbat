@@ -4,12 +4,12 @@
 \alias{switch_prob_cm}
 \title{predict phase switch probablity as a function of genetic distance}
 \usage{
-switch_prob_cm(d, lambda = 1, min_p = 1e-10)
+switch_prob_cm(d, nu = 1, min_p = 1e-10)
 }
 \arguments{
 \item{d}{numeric vector Genetic distance in cM}
 
-\item{lambda}{numeric Phase switch rate}
+\item{nu}{numeric Phase switch rate}
 
 \item{min_p}{numeric Minimum phase switch probability}
 }

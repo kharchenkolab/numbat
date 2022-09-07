@@ -19,3 +19,6 @@ logo.png
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+index.md
+^vignettes$
+vignettes

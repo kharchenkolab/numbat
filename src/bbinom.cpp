@@ -97,3 +97,65 @@ NumericVector cppdbbinom(
 
   return p;
 }
+
+
+// https://github.com/cran/extraDistr/blob/19708536de6549404dec52588a36f4b598d0016a/src/gamma-poisson-distribution.cpp
+
+inline double lfactorial(double x) {
+  return R::lgammafn(x + 1.0);
+}
+
+inline double logpmf_gpois(double x, double alpha, double beta,
+                           bool& throw_warning) {
+#ifdef IEEE_754
+  if (ISNAN(x) || ISNAN(alpha) || ISNAN(beta))
+    return x+alpha+beta;
+#endif
+  if (alpha <= 0.0 || beta <= 0.0) {
+    throw_warning = true;
+    return NAN;
+  }
+  if (!isInteger(x) || x < 0.0 || !R_FINITE(x))
+    return R_NegInf;
+  // p = beta/(1.0+beta);
+  double p = exp( log(beta) - log1p(beta) );
+  return R::lgammafn(alpha+x) - lfactorial(x) - R::lgammafn(alpha) +
+    log(p)*x + log(1.0-p)*alpha;
+}
+
+// [[Rcpp::export]]
+NumericVector cpp_dgpois(
+    const NumericVector& x,
+    const NumericVector& alpha,
+    const NumericVector& beta,
+    const bool& log_prob = false
+  ) {
+
+  if (std::min({x.length(), alpha.length(), beta.length()}) < 1) {
+    return NumericVector(0);
+  }
+
+  int Nmax = std::max({
+    x.length(),
+    alpha.length(),
+    beta.length()
+  });
+  NumericVector p(Nmax);
+
+  bool throw_warning = false;
+
+  for (int i = 0; i < Nmax; i++)
+    p[i] = logpmf_gpois(GETV(x, i), GETV(alpha, i),
+                        GETV(beta, i), throw_warning);
+
+  if (!log_prob)
+    p = Rcpp::exp(p);
+
+  if (throw_warning)
+    Rcpp::warning("NaNs produced");
+
+  return p;
+}
+
+
+

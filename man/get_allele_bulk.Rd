@@ -4,14 +4,12 @@
 \alias{get_allele_bulk}
 \title{Aggregate into pseudobulk alelle profile}
 \usage{
-get_allele_bulk(df_allele, genetic_map, lambda = 1, min_depth = 0)
+get_allele_bulk(df_allele, nu = 1, min_depth = 0)
 }
 \arguments{
 \item{df_allele}{dataframe Single-cell allele counts}
 
-\item{genetic_map}{dataframe Genetic map}
-
-\item{lambda}{numeric Phase switch rate}
+\item{nu}{numeric Phase switch rate}
 
 \item{min_depth}{integer Minimum coverage to filter SNPs}
 }

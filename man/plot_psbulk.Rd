@@ -2,7 +2,7 @@
 % Please edit documentation in R/vis.R
 \name{plot_psbulk}
 \alias{plot_psbulk}
-\title{plot a pseudobulk HMM profile}
+\title{Plot a pseudobulk HMM profile}
 \usage{
 plot_psbulk(
   bulk,
@@ -16,7 +16,9 @@ plot_psbulk(
   dot_size = 0.8,
   dot_alpha = 0.5,
   legend = FALSE,
-  exclude_gap = TRUE
+  exclude_gap = TRUE,
+  genome = "hg38",
+  raster = FALSE
 )
 }
 \arguments{
@@ -41,10 +43,16 @@ plot_psbulk(
 \item{dot_alpha}{numeric Transparency of the marker dots}
 
 \item{legend}{logical Whether to show legend}
+
+\item{exclude_gap}{logical Whether to mark gap regions and centromeres}
+
+\item{genome}{character Genome build, either 'hg38' or 'hg19'}
+
+\item{raster}{logical Whether to raster images}
 }
 \value{
 ggplot Plot of pseudobulk HMM profile
 }
 \description{
-plot a pseudobulk HMM profile
+Plot a pseudobulk HMM profile
 }

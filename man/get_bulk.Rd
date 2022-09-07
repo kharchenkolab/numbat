@@ -9,9 +9,8 @@ get_bulk(
   lambdas_ref,
   df_allele,
   gtf,
-  genetic_map,
   min_depth = 0,
-  lambda = 1,
+  nu = 1,
   verbose = TRUE
 )
 }
@@ -24,7 +23,11 @@ get_bulk(
 
 \item{gtf}{dataframe Transcript gtf}
 
-\item{genetic_map}{dataframe Genetic map}
+\item{min_depth}{integer Minimum coverage to filter SNPs}
+
+\item{nu}{numeric Phase switch rate}
+
+\item{verbose}{logical Verbosity}
 }
 \value{
 dataframe Pseudobulk gene expression and allele profile

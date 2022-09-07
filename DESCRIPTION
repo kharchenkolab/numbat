@@ -1,14 +1,14 @@
 Package: numbat
-Title: Haplotype-aware CNV anlaysis from scRNA-seq
-URL: https://github.com/kharchenkolab/numbat, https://kharchenkolab.github.io/numbat
-Version: 1.0.0
+Title: Haplotype-Aware CNV Analysis from scRNA-Seq
+URL: https://github.com/kharchenkolab/numbat
+Version: 1.0.1
 Authors@R: c(person("Teng","Gao", email="tgao@g.harvard.edu", role=c("cre", "aut")), person("Hirak", "Sarkar", email="hirak_sarkar@hms.harvard.edu", role="aut"), person("Evan", "Biederstedt", email="evan.biederstedt@gmail.com", role="aut"), person("Peter", "Kharchenko", email = "peter_kharchenko@hms.harvard.edu", role = "aut"))
-Description: Numbat is a computational method that infers copy number variations (CNVs) in cancer scRNA-Seq data and reconstructs the tumor phylogeny. The R package integrates signals from gene expression, allelic ratio, and population haplotype structures to accurately infer allele-specific CNVs in single cells and reconstruct their lineage relationship. Numbat can be used to: 1. detect allele-specific copy number variations from single-cells; 2. differentiate tumor versus normal cells in the tumor microenvironment; 3. infer the clonal architecture and evolutionary history of profiled tumors. Numbat does not require tumor/normal-paired DNA or genotype data, but operates solely on the donor scRNA-data data (for example, 10x Cell Ranger output).
-License: MIT
+Description: A computational method that infers copy number variations (CNVs) in cancer scRNA-Seq data and reconstructs the tumor phylogeny. Numbat integrates signals from gene expression, allelic ratio, and population haplotype structures to accurately infer allele-specific CNVs in single cells and reconstruct their lineage relationship. Numbat can be used to: 1. detect allele-specific copy number variations from single-cells; 2. differentiate tumor versus normal cells in the tumor microenvironment; 3. infer the clonal architecture and evolutionary history of profiled tumors. Numbat does not require tumor/normal-paired DNA or genotype data, but operates solely on the donor scRNA-data data (for example, 10x Cell Ranger output).
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R (>= 4.0.0)
+    R (>= 4.0.0), Matrix
 biocViews:
 Imports:
     ape,
@@ -17,42 +17,45 @@ Imports:
     data.table,
     dendextend,
     dplyr,
-    extraDistr,
     GenomicRanges,
     ggplot2,
     ggraph,
     ggtree,
     glue,
-    gtools,
     igraph,
     IRanges,
     logger,
     magrittr,
-    Matrix,
-    phangorn,
+    methods,
     parallel,
     parallelDist,
     patchwork,
-    purrr,
     pryr,
-    Rcpp,
+    purrr,
+    Rcpp, 
     RcppParallel,
-    roptim,
-    reshape2,
     RhpcBLASctl,
+    reshape2,
+    scales,
+    stats4,
     stringr,
+    tibble,
     tidygraph,
-    tidyr,
-    vcfR,
-    VGAM,
+    tidyr, 
+    tidyverse,
+    vcfR, 
     zoo
 Suggests: 
+    ggrastr,
+    ggrepel,
+    knitr,
     matrixStats,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
 Config/testthat/edition: 3
 LinkingTo: Rcpp, RcppArmadillo, RcppParallel, roptim
 NeedsCompilation: yes
 SystemRequirements: C++11, GNU make
 Author: Teng Gao [cre, aut], Hirak Sarkar [aut], Evan Biederstedt [aut], Peter Kharchenko [aut]
 Maintainer: Teng Gao <tgao@g.harvard.edu>
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
+

@@ -2,7 +2,7 @@
 % Please edit documentation in R/vis.R
 \name{plot_mut_history}
 \alias{plot_mut_history}
-\title{plot mutational history}
+\title{Plot mutational history}
 \usage{
 plot_mut_history(
   G,
@@ -37,6 +37,8 @@ plot_mut_history(
 
 \item{show_distance}{logical Whether to show evolutionary distance between clones}
 
+\item{legend}{logical Whether to show legend}
+
 \item{edge_label}{logical Whether to label edges}
 
 \item{node_label}{logical Whether to label nodes}
@@ -49,5 +51,5 @@ plot_mut_history(
 ggplot object
 }
 \description{
-plot mutational history
+Plot mutational history
 }

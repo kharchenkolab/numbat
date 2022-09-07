@@ -4,7 +4,7 @@
 \alias{preprocess_allele}
 \title{Preprocess allele data}
 \usage{
-preprocess_allele(sample, vcf_pu, vcf_phased, AD, DP, barcodes, gtf_transcript)
+preprocess_allele(sample, vcf_pu, vcf_phased, AD, DP, barcodes, gtf, gmap)
 }
 \arguments{
 \item{sample}{character Sample label}
@@ -19,7 +19,9 @@ preprocess_allele(sample, vcf_pu, vcf_phased, AD, DP, barcodes, gtf_transcript)
 
 \item{barcodes}{vector List of barcodes from pileup}
 
-\item{gtf_transcript}{dataframe Transcript GTF}
+\item{gtf}{dataframe Transcript GTF}
+
+\item{gmap}{dataframe Genetic map}
 }
 \value{
 dataframe Allele counts by cell

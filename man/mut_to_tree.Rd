@@ -2,7 +2,7 @@
 % Please edit documentation in R/trees.R
 \name{mut_to_tree}
 \alias{mut_to_tree}
-\title{transfer mutation assignment onto a single-cell phylogeny}
+\title{Transfer mutation assignment onto a single-cell phylogeny}
 \usage{
 mut_to_tree(gtree, mut_nodes)
 }
@@ -15,6 +15,6 @@ mut_to_tree(gtree, mut_nodes)
 tbl_graph A single-cell phylogeny with mutation placements
 }
 \description{
-transfer mutation assignment onto a single-cell phylogeny
+Transfer mutation assignment onto a single-cell phylogeny
 }
 \keyword{internal}
