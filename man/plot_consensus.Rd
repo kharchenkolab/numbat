@@ -2,7 +2,7 @@
 % Please edit documentation in R/vis.R
 \name{plot_consensus}
 \alias{plot_consensus}
-\title{plot consensus CNVs}
+\title{Plot consensus CNVs}
 \usage{
 plot_consensus(segs)
 }
@@ -13,5 +13,5 @@ plot_consensus(segs)
 ggplot object
 }
 \description{
-plot consensus CNVs
+Plot consensus CNVs
 }

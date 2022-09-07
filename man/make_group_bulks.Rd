@@ -10,7 +10,6 @@ make_group_bulks(
   df_allele,
   lambdas_ref,
   gtf,
-  genetic_map,
   min_depth = 0,
   ncores = NULL
 )
@@ -25,8 +24,6 @@ make_group_bulks(
 \item{lambdas_ref}{matrix Reference expression profiles}
 
 \item{gtf}{dataframe Transcript GTF}
-
-\item{genetic_map}{dataframe Genetic map}
 
 \item{min_depth}{integer Minimum allele depth to include}
 

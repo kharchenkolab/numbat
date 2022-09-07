@@ -5,29 +5,26 @@ test_that("dpoilog works", {
   expect_equal(numbat:::dpoilog(c(1,11),c(1,1),c(1,1)), c(0.175733342664327, 0.0150105250670325))
 })
 
-test_that("HMM works", {
+# test_that("HMM works", {
 
-  message('getting pseudobulk ..')
+#   message('getting pseudobulk ..')
 
-  bulk = get_bulk(
-      count_mat = count_mat_ATC2,
-      df_allele = df_allele_ATC2,
-      lambdas_ref = ref_hca,
-      gtf = gtf_hg38,
-      genetic_map = genetic_map_hg38
-  )
+#   bulk = get_bulk(
+#       count_mat = count_mat_ATC2,
+#       df_allele = df_allele_ATC2,
+#       lambdas_ref = ref_hca,
+#       gtf = gtf_hg38
+#   )
 
-  expect_true(length(bulk) > 0)
+#   expect_true(length(bulk) > 0)
 
-  message('running HMM..')
+#   message('running HMM..')
 
-  bulk = analyze_bulk(bulk, t = 1e-5)
+#   bulk = analyze_bulk(bulk, t = 1e-5)
 
-  expect_true(length(bulk) > 0)
+#   expect_true(length(bulk) > 0)
   
-})
-
-
+# })
 
 test_that("logSumExp() works", {
 
@@ -69,3 +66,16 @@ test_that("Check that viterbi_allele() works as expected", {
   
 })
 
+
+
+test_that("Check that roman2int works as expected", {
+   val.3899 <- 'MMMDCCCXCIX'
+   val.3900 <- 'MMMCM'
+   val.4000 <- 'MMMM'
+   expect_equal(names(roman2int(val.3899)), "MMMDCCCXCIX")
+   expect_equal(as.integer(roman2int(val.3899)), 3899)
+   expect_equal(names(roman2int(val.3900)), "MMMCM")
+   expect_equal(as.integer(roman2int(val.3900)), 3900)
+   expect_equal(names(roman2int(val.4000)), "MMMM")
+   expect_equal(as.integer(roman2int(val.4000)), 4000)   
+})

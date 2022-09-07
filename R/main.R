@@ -7,12 +7,18 @@
 #' @importFrom parallel mclapply
 #' @import tidygraph
 #' @import ggplot2
-#' @import ggtree
 #' @import ggraph
+#' @importFrom ggtree %<+%
+#' @importFrom methods is as
+#' @importFrom parallel mclapply
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
-#' @importFrom extraDistr dgpois
 #' @importFrom RcppParallel RcppParallelLibs
+#' @importFrom grDevices colorRampPalette
+#' @importFrom stats as.dendrogram as.dist cor cutree dbinom dnbinom dnorm dpois end hclust integrate model.matrix na.omit optim p.adjust pnorm reorder rnorm setNames start t.test as.ts complete.cases is.leaf na.contiguous
+#' @import stringr
+#' @import tibble
+#' @importFrom utils combn
 #' @useDynLib numbat
 NULL
 
@@ -21,15 +27,17 @@ NULL
 #' @param count_mat dgCMatrix Raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref matrix Either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe Allele counts per cell, produced by preprocess_allele
-#' @param gtf dataframe GTF of transcripts 
-#' @param genetic_map dataframe A genetic map dataframe
+#' @param genome character Genome version (hg38 or hg19) 
 #' @param out_dir string Output directory
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param t numeric Transition probability
 #' @param init_k integer Number of clusters in the initial clustering
 #' @param min_cells integer Minimum number of cells to run HMM on
+#' @param min_genes integer Minimum number of genes to call a segment
 #' @param max_cost numeric Likelihood threshold to collapse internal branches
 #' @param tau numeric Factor to determine max_cost as a function of the number of cells (0-1)
+#' @param alpha numeric P value cutoff for diploid finding
+#' @param min_overlap numeric Minimum CNV overlap threshold
 #' @param max_iter integer Maximum number of iterations to run the phyologeny optimization
 #' @param max_nni integer Maximum number of iterations to run NNI in the ML phylogeny inference
 #' @param min_depth integer Minimum allele depth 
@@ -40,14 +48,20 @@ NULL
 #' @param min_LLR numeric Minimum LLR to filter CNVs
 #' @param eps numeric Convergence threshold for ML tree search
 #' @param multi_allelic logical Whether to call multi-allelic CNVs
+#' @param p_multi numeric P value cutoff for calling multi-allelic CNVs
 #' @param use_loh logical Whether to include LOH regions in the expression baseline
 #' @param skip_nj logical Whether to skip NJ tree construction and only use UPGMA
 #' @param diploid_chroms vector Known diploid chromosomes
 #' @param segs_loh dataframe Segments of clonal LOH to be excluded
+#' @param check_convergence logical Whether to terminate iterations based on consensus CNV convergence 
+#' @param random_init logical Whether to initiate phylogney using a random tree (internal use only)
+#' @param exclude_neu logical Whether to exclude neutral segments from CNV retesting (internal use only)
+#' @param plot logical Whether to plot results
+#' @param verbose logical Verbosity
 #' @return a status code
 #' @export
 run_numbat = function(
-        count_mat, lambdas_ref, df_allele, gtf, genetic_map, 
+        count_mat, lambdas_ref, df_allele, genome ='hg38', 
         out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3,
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
@@ -58,6 +72,40 @@ run_numbat = function(
     ) {
 
     ######### Basic checks #########
+    if (genome == 'hg38') {
+        gtf = gtf_hg38
+    } else if (genome == 'hg19') {
+        gtf = gtf_hg19
+    } else {
+        stop('Genome version must be hg38 or hg19')
+    }
+
+    count_mat = check_matrix(count_mat)
+    df_allele = check_allele_df(df_allele)
+    lambdas_ref = check_exp_ref(lambdas_ref)
+
+    # filter for annotated genes
+    genes_annotated = unique(gtf$gene) %>% 
+        intersect(rownames(count_mat)) %>%
+        intersect(rownames(lambdas_ref))
+
+    count_mat = count_mat[genes_annotated,,drop=FALSE]
+    lambdas_ref = lambdas_ref[genes_annotated,,drop=FALSE]
+
+    zero_cov = names(which(colSums(count_mat) == 0))
+    if (length(zero_cov) > 0) {
+        log_message(glue('Filtering out {length(zero_cov)} cells with 0 coverage'))
+        count_mat = count_mat[,!colnames(count_mat) %in% zero_cov]
+        df_allele = df_allele %>% filter(!cell %in% zero_cov)
+    }
+
+    # only keep cells that have a transcriptome
+    df_allele = df_allele %>% filter(cell %in% colnames(count_mat))
+    if (nrow(df_allele) == 0){
+        stop('No matching cell names between count_mat and df_allele')
+    }
+
+    ######### Log parameters #########
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
     if (file.exists(logfile)) {file.remove(logfile)}
@@ -87,6 +135,7 @@ run_numbat = function(
         glue('tau = {tau}'),
         glue('check_convergence = {check_convergence}'),
         glue('plot = {plot}'),
+        glue('genome = {genome}'),
         'Input metrics:',
         glue('{ncol(count_mat)} cells'),
         sep = "\n"
@@ -97,32 +146,6 @@ run_numbat = function(
     RhpcBLASctl::blas_set_num_threads(1)
     RhpcBLASctl::omp_set_num_threads(1)
     data.table::setDTthreads(1)
-    ######### Basic checks #########
-
-    count_mat = check_matrix(count_mat)
-    df_allele = check_allele_df(df_allele)
-    lambdas_ref = check_exp_ref(lambdas_ref)
-
-    # filter for annotated genes
-    genes_annotated = unique(gtf$gene) %>% 
-        intersect(rownames(count_mat)) %>%
-        intersect(rownames(lambdas_ref))
-
-    count_mat = count_mat[genes_annotated,,drop=FALSE]
-    lambdas_ref = lambdas_ref[genes_annotated,,drop=FALSE]
-
-    zero_cov = names(which(colSums(count_mat) == 0))
-    if (length(zero_cov) > 0) {
-        log_message(glue('Filtering out {length(zero_cov)} cells with 0 coverage'))
-        count_mat = count_mat[,!colnames(count_mat) %in% zero_cov]
-        df_allele = df_allele %>% filter(!cell %in% zero_cov)
-    }
-
-    # only keep cells that have a transcriptome
-    df_allele = df_allele %>% filter(cell %in% colnames(count_mat))
-    if (nrow(df_allele) == 0){
-        stop('No matching cell names between count_mat and df_allele')
-    }
 
     ######## Initialization ########
 
@@ -213,7 +236,6 @@ run_numbat = function(
                 df_allele = df_allele, 
                 lambdas_ref = lambdas_ref,
                 gtf = gtf,
-                genetic_map = genetic_map,
                 min_depth = min_depth,
                 ncores = ncores)
 
@@ -232,7 +254,7 @@ run_numbat = function(
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
         
         if (plot) {
-            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR, use_pos = TRUE)
+            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
             ggsave(
                 glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
                 width = 12, height = 2*length(unique(bulk_subtrees$sample)), dpi = 250
@@ -272,7 +294,6 @@ run_numbat = function(
                 df_allele = df_allele, 
                 lambdas_ref = lambdas_ref,
                 gtf = gtf,
-                genetic_map = genetic_map,
                 min_depth = min_depth,
                 ncores = ncores)
 
@@ -300,7 +321,7 @@ run_numbat = function(
         fwrite(bulk_clones, glue('{out_dir}/bulk_clones_{i}.tsv.gz'), sep = '\t')
 
         if (plot) {
-            p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE)
+            p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
             ggsave(
                 glue('{out_dir}/bulk_clones_{i}.png'), p, 
                 width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 250
@@ -398,7 +419,7 @@ run_numbat = function(
         # contruct initial tree
         dist_mat = parallelDist::parDist(rbind(P, 'outgroup' = 1), threads = ncores)
 
-        treeUPGMA = phangorn::upgma(dist_mat) %>%
+        treeUPGMA = upgma(dist_mat) %>%
             ape::root(outgroup = 'outgroup') %>%
             ape::drop.tip('outgroup') %>%
             reorder(order = 'postorder')
@@ -524,7 +545,6 @@ run_numbat = function(
         df_allele = df_allele, 
         lambdas_ref = lambdas_ref,
         gtf = gtf,
-        genetic_map = genetic_map,
         min_depth = min_depth,
         ncores = ncores)
 
@@ -552,7 +572,7 @@ run_numbat = function(
     fwrite(bulk_clones, glue('{out_dir}/bulk_clones_final.tsv.gz'), sep = '\t')
 
     if (plot) {
-        p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE)
+        p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
         ggsave(
             glue('{out_dir}/bulk_clones_final.png'), p, 
             width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 250
@@ -628,12 +648,11 @@ exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101,
 #' @param df_allele dataframe Alelle counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf dataframe Transcript GTF
-#' @param genetic_map dataframe Genetic map
 #' @param min_depth integer Minimum allele depth to include
 #' @param ncores integer Number of cores
 #' @return dataframe Pseudobulk profiles
 #' @keywords internal 
-make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, genetic_map, min_depth = 0, ncores = NULL) {
+make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_depth = 0, ncores = NULL) {
     
 
     if (length(groups) == 0) {
@@ -651,7 +670,6 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, gene
                     df_allele = df_allele %>% filter(cell %in% g$cells),
                     lambdas_ref = lambdas_ref,
                     gtf = gtf,
-                    genetic_map = genetic_map,
                     min_depth = min_depth
                 ) %>%
                 mutate(
@@ -1219,7 +1237,7 @@ exclude_loh = function(exp_sc, segs_loh) {
 #' @param lambdas_ref matrix Reference expression profiles
 #' @return dataframe Expression posteriors
 #' @keywords internal
-get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = NULL, diploid_chroms = NULL, use_loh = NULL, segs_loh = NULL, ncores = 30, verbose = TRUE, debug = F) {
+get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = NULL, diploid_chroms = NULL, use_loh = NULL, segs_loh = NULL, ncores = 30, verbose = TRUE, debug = FALSE) {
 
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf, segs_loh)
 
@@ -1277,7 +1295,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
     
     exp_post = results[!bad] %>%
         bind_rows() %>%
-        mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) %>%
+        mutate(seg = factor(seg, mixedsort(unique(seg)))) %>%
         left_join(
             segs_consensus %>% select(
                 CHROM, 
@@ -1416,16 +1434,16 @@ get_allele_post = function(df_allele, haplotypes, segs_consensus) {
         ) %>%
         rowwise() %>%
         mutate(
-            l11 = dbinom(major, total, p = 0.5, log = TRUE),
-            l10 = dbinom(major, total, p = 0.9, log = TRUE),
-            l01 = dbinom(major, total, p = 0.1, log = TRUE),
-            l20 = dbinom(major, total, p = 0.9, log = TRUE),
-            l02 = dbinom(major, total, p = 0.1, log = TRUE),
-            l21 = dbinom(major, total, p = 0.66, log = TRUE),
-            l12 = dbinom(major, total, p = 0.33, log = TRUE),
-            l31 = dbinom(major, total, p = 0.75, log = TRUE),
-            l13 = dbinom(major, total, p = 0.25, log = TRUE),
-            l32 = dbinom(major, total, p = 0.6, log = TRUE),
+            l11 = dbinom(major, total, prob = 0.5, log = TRUE),
+            l10 = dbinom(major, total, prob = 0.9, log = TRUE),
+            l01 = dbinom(major, total, prob = 0.1, log = TRUE),
+            l20 = dbinom(major, total, prob = 0.9, log = TRUE),
+            l02 = dbinom(major, total, prob = 0.1, log = TRUE),
+            l21 = dbinom(major, total, prob = 0.66, log = TRUE),
+            l12 = dbinom(major, total, prob = 0.33, log = TRUE),
+            l31 = dbinom(major, total, prob = 0.75, log = TRUE),
+            l13 = dbinom(major, total, prob = 0.25, log = TRUE),
+            l32 = dbinom(major, total, prob = 0.6, log = TRUE),
             l22 = l11,
             l00 = l11
         ) %>%
@@ -1497,7 +1515,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
         ungroup()
 
     joint_post = joint_post %>% 
-        mutate(seg = factor(seg, gtools::mixedsort(unique(seg)))) %>%
+        mutate(seg = factor(seg, mixedsort(unique(seg)))) %>%
         mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
         mutate(seg_label = factor(seg_label, unique(seg_label)))
     
@@ -1666,4 +1684,245 @@ expand_states = function(sc_post, segs_consensus) {
 
     return(sc_post)
 }
+
+
+
+## gtools is orphaned
+## https://github.com/cran/gtools/blob/master/R/mixedsort.R
+#' @keywords internal 
+mixedsort <- function(x,
+                      decreasing = FALSE,
+                      na.last = TRUE,
+                      blank.last = FALSE,
+                      numeric.type = c("decimal", "roman"),
+                      roman.case = c("upper", "lower", "both"),
+                      scientific = TRUE) {
+  ord <- mixedorder(x,
+    decreasing = decreasing,
+    na.last = na.last,
+    blank.last = blank.last,
+    numeric.type = numeric.type,
+    roman.case = roman.case,
+    scientific = scientific
+  )
+  x[ord]
+}
+
+#' @keywords internal 
+mixedorder <- function(x,
+                       decreasing = FALSE,
+                       na.last = TRUE,
+                       blank.last = FALSE,
+                       numeric.type = c("decimal", "roman"),
+                       roman.case = c("upper", "lower", "both"),
+                       scientific = TRUE) {
+  # - Split each each character string into an vector of strings and
+  #   numbers
+  # - Separately rank numbers and strings
+  # - Combine orders so that strings follow numbers
+
+  numeric.type <- match.arg(numeric.type)
+  roman.case <- match.arg(roman.case)
+
+  if (length(x) < 1) {
+    return(NULL)
+  } else if (length(x) == 1) {
+    return(1)
+  }
+
+  if (!is.character(x)) {
+    return(order(x, decreasing = decreasing, na.last = na.last))
+  }
+
+  delim <- "\\$\\@\\$"
+
+  if (numeric.type == "decimal") {
+    if (scientific) {
+      regex <- "((?:(?i)(?:[-+]?)(?:(?=[.]?[0123456789])(?:[0123456789]*)(?:(?:[.])(?:[0123456789]{0,}))?)(?:(?:[eE])(?:(?:[-+]?)(?:[0123456789]+))|)))"
+    } # uses PERL syntax
+    else {
+      regex <- "((?:(?i)(?:[-+]?)(?:(?=[.]?[0123456789])(?:[0123456789]*)(?:(?:[.])(?:[0123456789]{0,}))?)))"
+    } # uses PERL syntax
+
+    numeric <- function(x) as.numeric(x)
+  }
+  else if (numeric.type == "roman") {
+    regex <- switch(roman.case,
+      "both"  = "([IVXCLDMivxcldm]+)",
+      "upper" = "([IVXCLDM]+)",
+      "lower" = "([ivxcldm]+)"
+    )
+    numeric <- function(x) roman2int(x)
+  }
+  else {
+    stop("Unknown value for numeric.type: ", numeric.type)
+  }
+
+  nonnumeric <- function(x) {
+    ifelse(is.na(numeric(x)), toupper(x), NA)
+  }
+
+  x <- as.character(x)
+
+  which.nas <- which(is.na(x))
+  which.blanks <- which(x == "")
+
+  ####
+  # - Convert each character string into an vector containing single
+  #   character and  numeric values.
+  ####
+
+  # find and mark numbers in the form of +1.23e+45.67
+  delimited <- gsub(regex,
+    paste(delim, "\\1", delim, sep = ""),
+    x,
+    perl = TRUE
+  )
+
+  # separate out numbers
+  step1 <- strsplit(delimited, delim)
+
+  # remove empty elements
+  step1 <- lapply(step1, function(x) x[x > ""])
+
+  # create numeric version of data
+  suppressWarnings(step1.numeric <- lapply(step1, numeric))
+
+  # create non-numeric version of data
+  suppressWarnings(step1.character <- lapply(step1, nonnumeric))
+
+  # now transpose so that 1st vector contains 1st element from each
+  # original string
+  maxelem <- max(sapply(step1, length))
+
+  step1.numeric.t <- lapply(
+    1:maxelem,
+    function(i) {
+      sapply(
+        step1.numeric,
+        function(x) x[i]
+      )
+    }
+  )
+
+  step1.character.t <- lapply(
+    1:maxelem,
+    function(i) {
+      sapply(
+        step1.character,
+        function(x) x[i]
+      )
+    }
+  )
+
+  # now order them
+  rank.numeric <- sapply(step1.numeric.t, rank)
+  rank.character <- sapply(
+    step1.character.t,
+    function(x) as.numeric(factor(x))
+  )
+
+  # and merge
+  rank.numeric[!is.na(rank.character)] <- 0 # mask off string values
+
+  rank.character <- t(
+    t(rank.character) +
+      apply(matrix(rank.numeric), 2, max, na.rm = TRUE)
+  )
+
+  rank.overall <- ifelse(is.na(rank.character), rank.numeric, rank.character)
+
+  order.frame <- as.data.frame(rank.overall)
+  if (length(which.nas) > 0) {
+    if (is.na(na.last)) {
+      order.frame[which.nas, ] <- NA
+    } else if (na.last) {
+      order.frame[which.nas, ] <- Inf
+    } else {
+      order.frame[which.nas, ] <- -Inf
+    }
+  }
+
+  if (length(which.blanks) > 0) {
+    if (is.na(blank.last)) {
+      order.frame[which.blanks, ] <- NA
+    } else if (blank.last) {
+      order.frame[which.blanks, ] <- 1e99
+    } else {
+      order.frame[which.blanks, ] <- -1e99
+    }
+  }
+
+  order.frame <- as.list(order.frame)
+  order.frame$decreasing <- decreasing
+  order.frame$na.last <- NA
+
+  retval <- do.call("order", order.frame)
+
+  return(retval)
+}
+
+
+#' @keywords internal
+roman2int <- function(roman){
+    roman <- trimws(toupper(as.character(roman)))
+
+    roman2int.inner <- function(roman){
+        results <- roman2int_internal(letters = as.character(roman), nchar = as.integer(nchar(roman)))
+        return(results)
+    }
+
+    tryIt <- function(x){
+            retval <- try(roman2int.inner(x), silent=TRUE)
+            if(is.numeric(retval)){
+                retval
+            }
+            else{
+                NA
+            }
+        }
+
+    retval <- sapply(roman, tryIt)
+
+    retval
+}
+
+
+## for tidyverse (magrittr & dplyr) functions 
+if (getRversion() >= "2.15.1"){
+  utils::globalVariables(c(".", "AD", "AD_all", "ALT", "AR", "CHROM", "DP", "DP_all", "FILTER", "FP",
+    "GT", "ID", "LLR", "LLR_sample","LLR_x", "LLR_y", "L_x_a", "L_x_d", "L_x_n", 
+    "L_y_a", "L_y_d", "L_y_n", "MAF", "OTH", "OTH_all", "POS",
+    "QUAL", "REF", "TP", "UQ", "Y_obs", "Z", "Z_amp", "Z_bamp", "Z_bdel", "Z_clone", "Z_clone_x",
+    "Z_clone_y", "Z_cnv", "Z_del", "Z_loh", "Z_n", "acen_hg19", "acen_hg38", "annot", "avg_entropy",
+    "branch", "cM", "cell", "cell_index", "chrom_sizes_hg19", "chrom_sizes_hg38", "clone",
+    "clone_opt", "clone_size", "cluster", "cnv_state", "cnv_state_expand", "cnv_state_map",
+    "cnv_state_post", "cnv_states", "compartment", "component", "cost", "d_obs", "diploid",
+    "down", "edges", "end_x", "end_y", "exp_rollmean", "expected_colnames", "extract",
+    "frac_overlap_x", "frac_overlap_y", "from", "from_label", "from_node", "gaps_hg19",
+    "gaps_hg38", "gene", "gene_end", "gene_index", "gene_length", "gene_snps", "gene_start",
+    "group", "groupOTU", "gtf_hg19", "gtf_hg38", "haplo", "haplo_naive", "haplo_post",
+    "haplo_theta_min", "het", "hom_alt", "i", "inter_snp_cm", "inter_snp_dist", "isTip",
+    "is_desc", "j", "keep", "l", "l00", "l00_x", "l00_y", "l10", "l10_x", "l10_y", "l11", "l11_x",
+    "l11_y", "l20", "l20_x", "l20_y", "l21", "l21_x", "l21_y", "l22", "l22_x", "l22_y", "l31",
+    "l31_x", "l31_y", "l_clone", "l_clone_x", "l_clone_y", "label", "lambda_obs", "lambda_ref", "last_mut", "leaf",
+    "len_overlap", "len_x", "len_y", "lnFC", "lnFC_i", "lnFC_j", "lnFC_max_i", "lnFC_max_j",
+    "logBF", "logBF_x", "logBF_y", "logFC", "loh", "major", "major_count", "marker_index", 
+    "minor", "minor_count", "mu", "mut_burden", "n_chrom_snp", "n_genes", "n_mut", "n_sibling", 
+    "n_snps", "n_states", "name", "node", "node_phylo", "nodes", "p", "pAD", "pBAF", "p_0",
+    "p_1", "p_amp", "p_bamp", "p_bdel", "p_cnv", "p_cnv_expand", "p_del", "p_loh", "p_max", "p_n", "p_neu", "p_s", "p_up",
+    "phi_mle", "phi_mle_roll", "phi_sigma", "pnorm.range", "potential_missing_columns",
+    "precision", "prior_amp", "prior_bamp", "prior_bdel", "prior_clone", "prior_del",
+    "prior_loh", "s", "seg", "seg_cons", "seg_end", "seg_end_index", "seg_label", "seg_length",
+    "seg_start", "seg_start_index", "segs_consensus", "seqnames", "set_colnames", "sig",
+    "site", "size", "snp_id", "snp_index", "snp_rate", "start_x", "start_y", "state", "state_post",
+    "superclone", "theta_hat", "theta_level", "theta_mle", "theta_sigma", "to", "to_label",
+    "to_node", "total", "value", "variable", "vcf_meta", "vertex", "vp", "width", "write.vcf", "x", "y"))
+}
+
+
+
+
+
+
 
