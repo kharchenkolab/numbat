@@ -34,7 +34,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,7 +53,6 @@
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
     <a class="dropdown-item" href="../articles/results.html">Interpreting Numbat results</a>
-    <a class="dropdown-item" href="../articles/hmm.html">Numbat haplotype-aware HMM</a>
   </div>
 </li>
 <li class="nav-item">
@@ -93,7 +92,6 @@
 <h2 id="table-of-contents">Table of contents<a class="anchor" aria-label="anchor" href="#table-of-contents"></a>
 </h2>
 <ul>
-<li><a href="#prerequisites">Prerequisites</a></li>
 <li><a href="#installation">Installation</a></li>
 <li><a href="#preparing-data">Preparing data</a></li>
 <li><a href="#running-numbat">Running Numbat</a></li>
@@ -101,8 +99,9 @@
 </ul>
 </div>
 <div class="section level2">
-<h2 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
+<p>We now provide a ready-to-run Docker container that includes the package and all prerequisites (see section <a href="#docker">Docker</a>). Alternatively, you can follow the installation procedure below.</p>
 <p>Numbat uses cellsnp-lite for generating SNP pileup data and eagle2 for phasing. Please follow their installation instructions and make sure their binary executables can be found in your $PATH.</p>
 <ol style="list-style-type: decimal">
 <li><a href="https://github.com/single-cell-genetics/cellsnp-lite" class="external-link">cellsnp-lite</a></li>
@@ -124,17 +123,19 @@ wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_
 wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
 # hg19
 wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip</code></pre>
-<p><strong>Note</strong>: currently Numbat only supports human hg19 and hg38 reference.</p>
 </li>
 </ol>
-</div>
-<div class="section level2">
-<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
-</h2>
 <p>You can install the numbat R package via:</p>
 <pre><code><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/remote-reexports.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"https://github.com/kharchenkolab/numbat"</span><span class="op">)</span></code></pre>
 <p>To get the most recent updates, you can install the development version:</p>
 <pre><code><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/remote-reexports.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"https://github.com/kharchenkolab/Numbat/tree/devel"</span><span class="op">)</span></code></pre>
+<div class="section level3">
+<h3 id="docker">Docker<a class="anchor" aria-label="anchor" href="#docker"></a>
+</h3>
+<p>We provide a ready-to-run Docker container that includes the Numbat R package and all of its dependencies. You can launch it as follows:</p>
+<pre><code>docker run -v /work:/mnt/mydata -it pkharchenkolab/numbat-rbase:latest /bin/bash</code></pre>
+<p>where <code>/work</code> is a local data folder you would like to access and write to. Within the container, <code>cellsnp-lite</code>, <code>eagle2</code> and <code>samtools</code> are available in path and the 1000 Genome SNP VCF and phasing panel files (hg38) are stored under <code>/data</code>. You can also launch R and run interactive analysis using Numbat (or run an R script).</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="preparing-data">Preparing data<a class="anchor" aria-label="anchor" href="#preparing-data"></a>
@@ -143,31 +144,37 @@ wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip</code></pre>
 <li>Prepare the allele data. Run the preprocessing script (<code>pileup_and_phase.R</code>) to count alleles and phase SNPs.</li>
 </ol>
 <pre><code>usage: pileup_and_phase.R [-h] --label LABEL --samples SAMPLES --bams BAMS
-                          --barcodes BARCODES --gmap GMAP [--eagle EAGLE]
+                          [--barcodes BARCODES] --gmap GMAP [--eagle EAGLE]
                           --snpvcf SNPVCF --paneldir PANELDIR --outdir OUTDIR
                           --ncores NCORES [--UMItag UMITAG]
-                          [--cellTAG CELLTAG] [--smartseq]
+                          [--cellTAG CELLTAG] [--smartseq] [--bulk]
 
 Run SNP pileup and phasing with 1000G
 
-optional arguments:
+Arguments:
   -h, --help           show this help message and exit
   --label LABEL        Individual label
   --samples SAMPLES    Sample names, comma delimited
   --bams BAMS          BAM files, one per sample, comma delimited
   --barcodes BARCODES  Cell barcode files, one per sample, comma delimited
-  --gmap GMAP          Path to genetic map provided by Eagle2 (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)
+  --gmap GMAP          Path to genetic map provided by Eagle2 (e.g.
+                       Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)
+  --eagle EAGLE        Path to Eagle2 binary file
   --snpvcf SNPVCF      SNP VCF for pileup
   --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
   --outdir OUTDIR      Output directory
-  --ncores NCORES      Number of cores
-  --UMItag UMITAG      UMI tag in bam. Should be Auto for 10x and XM for
-                       Slide-seq
-  --cellTAG CELLTAG    Cell tag in bam. Should be CB for 10x and XC for Slide-
-                       seq
-  --smartseq           running with SMART-seq mode
-  --bulk               running with bulk RNA-seq mode</code></pre>
-<p>Note: If running with SMART-seq mode, you may provide a file containing a list of bams (each as its own line) to <code>--bams</code> and a file containing a list of cell names (each as its own line) to <code>--barcodes</code>. When running with bulk RNA-seq mode, the <code>--barcodes</code> argument does not need to be provided.</p>
+  --ncores NCORES      Number of cores</code></pre>
+<p>For example, within the Numbat Docker <a href="#docker">container</a> you can run the preprocessing script like this:</p>
+<pre><code>Rscript /numbat/pileup_and_phase.R \
+    --label {sample} \
+    --samples {sample} \
+    --bams /mnt/mydata/{sample}_BAM.bam \
+    --barcodes /mnt/mydata/{sample}_barcodes.tsv \
+    --outdir /mnt/mydata/{sample} \
+    --gmap /Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz \
+    --snpvcf /data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf \
+    --paneldir /data/1000G_hg38 \
+    --ncores ncores</code></pre>
 <p>This will produce a file named <code>{sample}_allele_counts.tsv.gz</code> under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under <code>phasing/</code> folder and raw pileup counts under <code>pileup/</code>.</p>
 <ol start="2" style="list-style-type: decimal">
 <li><p>Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.</p></li>
@@ -271,17 +278,23 @@ optional arguments:
 <li>
 <code>gexp_roll_wide.tsv.gz</code>: window-smoothed normalized expression profiles of single cells</li>
 <li>
-<code>hc.rds</code>: hierarchical clustering result based on smoothed expression</li>
+<code>hc.rds</code>: initial hierarchical clustering result based on smoothed expression</li>
 <li>
-<code>bulk_subtrees_{i}.tsv.gz</code>: pseudobulk HMM profiles based on subtrees defined by current cell lineage tree</li>
+<code>exp_roll_clust.png</code>: visualization of single-cell smoothed gene expression profiles</li>
+<li>
+<code>bulk_subtrees_{i}.tsv.gz</code>: subtree pseudobulk data based on current cell lineage tree</li>
+<li>
+<code>bulk_subtrees_{i}.png</code>: visualization of subtree pseudobulk CNV profiles</li>
 <li>
 <code>segs_consensus_{i}.tsv.gz</code>: consensus segments from subtree pseudobulk HMMs</li>
 <li>
-<code>bulk_clones_{i}.tsv.gz</code>: pseudobulk HMM profiles based on clones defined by current cell lineage tree</li>
+<code>bulk_clones_{i}.tsv.gz</code>: clone-leve pseudobulk data based on current cell lineage tree</li>
 <li>
-<code>bulk_clones_{i}.png</code>: visualization of clone pseudobulk HMM profiles</li>
+<code>bulk_clones_{i}.png</code>: visualization of clone pseudobulk CNV profiles</li>
 <li>
-<code>exp_sc_{i}.tsv.gz</code>: single-cell expression profiles used for single-cell CNV testing</li>
+<code>bulk_clones_final.tsv.gz</code>: clone-leve pseudobulk data based on final cell lineage tree</li>
+<li>
+<code>bulk_clones_final.png</code>: visualization of final clone pseudobulk CNV profiles</li>
 <li>
 <code>exp_post_{i}.tsv</code>: single-cell expression posteriors</li>
 <li>
@@ -289,23 +302,11 @@ optional arguments:
 <li>
 <code>joint_post_{i}.tsv</code>: single-cell joint posteriors</li>
 <li>
-<code>treeUPGMA_{i}.rds</code>: UPGMA tree</li>
-<li>
-<code>treeNJ_{i}.rds</code>: NJ tree</li>
+<code>clone_post_{i}.tsv</code>: single-cell clone assignment and tumor versus normal classification posteriors</li>
 <li>
 <code>tree_list_{i}.rds</code>: list of candidate phylogeneies in the maximum likelihood tree search</li>
 <li>
-<code>tree_final_{i}.rds</code>: final tree after simplification</li>
-<li>
-<code>mut_graph_{i}.rds</code>: final mutation history</li>
-<li>
-<code>clone_post_{i}.rds</code>: clone assignment and tumor versus normal classification posteriors</li>
-<li>
-<code>bulk_subtrees_{i}.png</code>: visualization of subtree pseudobulk HMM profiles</li>
-<li>
-<code>bulk_clones_{i}.png</code>: visualization of clone pseudobulk HMM profiles</li>
-<li>
-<code>panel_{i}.png</code>: visualization of combined phylogeny and CNV heatmap</li>
+<code>panel_{i}.png</code>: integrated visualization of single-cell phylogeny and CNV landscape</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
