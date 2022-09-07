@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,7 +60,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">preprocess_allele</span><span class="op">(</span><span class="va">sample</span>, <span class="va">vcf_pu</span>, <span class="va">vcf_phased</span>, <span class="va">AD</span>, <span class="va">DP</span>, <span class="va">barcodes</span>, <span class="va">gtf_transcript</span><span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">preprocess_allele</span><span class="op">(</span><span class="va">sample</span>, <span class="va">vcf_pu</span>, <span class="va">vcf_phased</span>, <span class="va">AD</span>, <span class="va">DP</span>, <span class="va">barcodes</span>, <span class="va">gtf</span>, <span class="va">gmap</span><span class="op">)</span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -77,8 +77,10 @@
 <dd><p>dgTMatrix Total allele depth matrix from pileup</p></dd>
 <dt>barcodes</dt>
 <dd><p>vector List of barcodes from pileup</p></dd>
-<dt>gtf_transcript</dt>
+<dt>gtf</dt>
 <dd><p>dataframe Transcript GTF</p></dd>
+<dt>gmap</dt>
+<dd><p>dataframe Genetic map</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>

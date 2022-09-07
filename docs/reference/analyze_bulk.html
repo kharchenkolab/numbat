@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -66,7 +66,7 @@
   gamma <span class="op">=</span> <span class="fl">20</span>,
   theta_min <span class="op">=</span> <span class="fl">0.08</span>,
   logphi_min <span class="op">=</span> <span class="fl">0.25</span>,
-  lambda <span class="op">=</span> <span class="fl">1</span>,
+  nu <span class="op">=</span> <span class="fl">1</span>,
   min_genes <span class="op">=</span> <span class="fl">10</span>,
   exp_only <span class="op">=</span> <span class="cn">FALSE</span>,
   allele_only <span class="op">=</span> <span class="cn">FALSE</span>,
@@ -96,7 +96,7 @@
 <dd><p>numeric Minimum imbalance threshold</p></dd>
 <dt>logphi_min</dt>
 <dd><p>numeric Minimum log expression deviation threshold</p></dd>
-<dt>lambda</dt>
+<dt>nu</dt>
 <dd><p>numeric Phase switch rate</p></dd>
 <dt>min_genes</dt>
 <dd><p>integer Minimum number of genes to call an event</p></dd>
@@ -107,15 +107,29 @@
 <dt>bal_cnv</dt>
 <dd><p>logical Whether to call balanced amplifications/deletions</p></dd>
 <dt>retest</dt>
-<dd><p>whether to retest CNVs after Viterbi decoding</p></dd>
+<dd><p>logical Whether to retest CNVs after Viterbi decoding</p></dd>
 <dt>find_diploid</dt>
-<dd><p>whether to run diploid region identification routine</p></dd>
+<dd><p>logical Whether to run diploid region identification routine</p></dd>
 <dt>diploid_chroms</dt>
-<dd><p>user-given chromsomes that are known to be in diploid state</p></dd>
+<dd><p>character vector User-given chromosomes that are known to be in diploid state</p></dd>
+<dt>segs_loh</dt>
+<dd><p>dataframe Segments with clonal LOH to be excluded</p></dd>
+<dt>classify_allele</dt>
+<dd><p>logical Whether to only classify allele (internal use only)</p></dd>
+<dt>run_hmm</dt>
+<dd><p>logical Whether to run HMM (internal use only)</p></dd>
+<dt>prior</dt>
+<dd><p>numeric vector Prior probabilities of states (internal use only)</p></dd>
+<dt>exclude_neu</dt>
+<dd><p>logical Whether to exclude neutral segments from retesting (internal use only)</p></dd>
+<dt>phasing</dt>
+<dd><p>logical Whether to use phasing information (internal use only)</p></dd>
+<dt>verbose</dt>
+<dd><p>logical Verbosity</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>a dataframe of segments with CNV posterior information</p>
+    <p>a pseudobulk profile dataframe with called CNV information</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

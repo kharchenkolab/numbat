@@ -4,6 +4,9 @@
     <loc>https://kharchenkolab.github.io/numbat/404.html</loc>
   </url>
   <url>
+    <loc>https://kharchenkolab.github.io/numbat/LICENSE-text.html</loc>
+  </url>
+  <url>
     <loc>https://kharchenkolab.github.io/numbat/articles/hmm.html</loc>
   </url>
   <url>
@@ -29,6 +32,12 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/Numbat.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/acen_hg19.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/acen_hg38.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/aggregate_counts.html</loc>
@@ -94,7 +103,16 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/choose_ref_cor.html</loc>
   </url>
   <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/chrom_sizes_hg19.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/chrom_sizes_hg38.html</loc>
+  </url>
+  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/classify_alleles.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/cnv_heatmap.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/combine_bulk.html</loc>
@@ -146,6 +164,12 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/forward_back_allele.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/gaps_hg19.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/gaps_hg38.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/genotype.html</loc>
@@ -215,6 +239,12 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/get_tree_post.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/gtf_hg19.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/gtf_hg38.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/index.html</loc>
@@ -292,7 +322,16 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/pnorm.range.log.html</loc>
   </url>
   <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/pre_likelihood_hmm.html</loc>
+  </url>
+  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/preprocess_allele.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/ref_hca.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/ref_hca_counts.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/resolve_cnvs.html</loc>
@@ -353,6 +392,12 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/transfer_links.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/upgma.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/vcf_meta.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/viterbi_allele.html</loc>

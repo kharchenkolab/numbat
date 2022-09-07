@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,13 +54,24 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.2" id="numbat-1-0-2---09072022">numbat 1.0.2 - 09/07/2022<a class="anchor" aria-label="anchor" href="#numbat-1-0-2---09072022"></a></h2>
+<ul><li><p>Conform to CRAN guidelines</p></li>
+<li><p>Removed ATC2 examples from package data - users can download from lab server link instead</p></li>
+<li><p>New option to specific genome version (genome = ‘hg38’ or ‘hg19’). Support plotting of centromeres and gap regions for hg19.</p></li>
+<li><p>Removed genetic maps from package data and they are no longer provided as input to <code>run_numbat</code>. Annotation of genetic distance is performed in <code>pileup_and_phase.R</code> script instead, using the genetic map included in Eagle2.</p></li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.0" id="numbat-1-0-0---08122022">numbat 1.0.0 - 08/12/2022<a class="anchor" aria-label="anchor" href="#numbat-1-0-0---08122022"></a></h2>
+<ul><li>Archival version for the paper</li></ul></div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.3" id="numbat-0-1-3---07022022">numbat 0.1.3 - 07/02/2022<a class="anchor" aria-label="anchor" href="#numbat-0-1-3---07022022"></a></h2>
 <ul><li><p>Speed up of NNI using RcppParallel (<a href="https://github.com/kharchenkolab/numbat/issues/34" class="external-link">#34</a>). 10x faster and much more memory efficient (memory requirement is constant with respect to the number of threads).</p></li>
 <li><p>Speed up of expression single-cell testing using roptim. Approximately 2x speedup.</p></li>
 <li><p>New LLR metric for CNV filtering that is not inflated (default: 5).</p></li>
 <li><p>Only keep heterozygous SNPs in alelle dataframe to reduce memory usage</p></li>
 </ul></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
