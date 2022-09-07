@@ -4,7 +4,7 @@
 
 * Removed ATC2 examples from package data - users can download from lab server link instead
 
-* New option to specific genome version (genome = 'hg38' or 'hg19'). Support plotting of centromeres and gap regions for hg19.
+* New option to specify genome version (genome = 'hg38' or 'hg19'). Support plotting of centromeres and gap regions for hg19.
 
 * Removed genetic maps from package data and they are no longer provided as input to `run_numbat`. Annotation of genetic distance is performed in `pileup_and_phase.R` script instead, using the genetic map included in Eagle2.
 
