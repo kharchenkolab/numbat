@@ -31,9 +31,8 @@ RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/geno
 ## RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz && gzip -d genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
 
 
-## 
 # hg38
-##RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip && unzip 1000G_hg38.zip 
+RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip && unzip 1000G_hg38.zip 
 
 # hg19
 ##RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip && unzip 1000G_hg19.zip
@@ -48,7 +47,6 @@ RUN wget https://storage.googleapis.com/broad-alkesgroup-public/Eagle/downloads/
 
 
 RUN R -e 'chooseCRANmirror(ind=42); install.packages("BiocManager")'
-RUN R -e 'BiocManager::install(c("Rsamtools"))'
 
 RUN R -e 'chooseCRANmirror(ind=42); install.packages("ragg")'
 
@@ -63,7 +61,7 @@ RUN git clone https://github.com/kharchenkolab/numbat.git
 
 RUN mkdir -p /tmp && chmod 777 /tmp
 
-RUN chmod 777 /numbat/pileup_and_phase.R 
+RUN chmod 777 /numbat/inst/bin/pileup_and_phase.R 
 
 
 WORKDIR /numbat
