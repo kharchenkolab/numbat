@@ -49,7 +49,7 @@ docker run -v /work:/mnt/mydata -it pkharchenkolab/numbat-rbase:latest /bin/bash
 where `/work` is a local data folder you would like to access and write to. Within the container, `cellsnp-lite`, `eagle2` and `samtools` are available in path and the 1000 Genome SNP VCF and phasing panel files (hg38) are stored under `/data`. You can also launch R and run interactive analysis using Numbat (or run an R script).
 
 # Preparing data
-1. Prepare the allele data. Run the preprocessing script (`pileup_and_phase.R`) to count alleles and phase SNPs.
+1. Prepare the allele data. Run the preprocessing script (`numbat/inst/bin/pileup_and_phase.R`) to count alleles and phase SNPs.
 
 ```
 usage: pileup_and_phase.R [-h] --label LABEL --samples SAMPLES --bams BAMS
@@ -77,10 +77,10 @@ Arguments:
 
 For example, within the Numbat Docker [container](#docker) you can run the preprocessing script like this:
 ```
-Rscript /numbat/pileup_and_phase.R \
+Rscript /numbat/inst/bin/pileup_and_phase.R \
     --label {sample} \
     --samples {sample} \
-    --bams /mnt/mydata/{sample}_BAM.bam \
+    --bams /mnt/mydata/{sample}.bam \
     --barcodes /mnt/mydata/{sample}_barcodes.tsv \
     --outdir /mnt/mydata/{sample} \
     --gmap /Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz \
