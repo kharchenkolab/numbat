@@ -61,8 +61,8 @@ NULL
 #' @return a status code
 #' @export
 run_numbat = function(
-        count_mat, lambdas_ref, df_allele, genome ='hg38', 
-        out_dir = './', max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
+        count_mat, lambdas_ref, df_allele, genome = 'hg38', 
+        out_dir = tempdir(), max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3,
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL,
@@ -1045,7 +1045,7 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
         rowwise() %>%
         mutate(vp = paste0(sort(c(from, to)), collapse = ',')) %>%
         ungroup() %>%
-        distinct(vp, .keep_all = T)
+        distinct(vp, .keep_all = TRUE)
 
     # cut some edges with weak overlaps
     E = E %>% 

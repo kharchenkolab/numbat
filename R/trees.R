@@ -576,7 +576,7 @@ label_genotype = function(G) {
 #' @param vset vector Set of adjacent vertices to merge
 #' @return igraph Mutation graph
 #' @keywords internal
-contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
+contract_nodes = function(G, vset, node_tar = NULL, debug = FALSE) {
     
     vset = unlist(vset)
     
@@ -628,7 +628,7 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = F) {
 #' @param l_matrix matrix Mutation placement likelihood matrix (node by mutation)
 #' @return igraph Mutation graph
 #' @keywords internal
-simplify_history = function(G, l_matrix, max_cost = 150, verbose = T) {
+simplify_history = function(G, l_matrix, max_cost = 150, verbose = TRUE) {
 
     # moves = data.frame()
 

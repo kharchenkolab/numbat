@@ -1,6 +1,7 @@
 
 #' @title Numbat R6 class
 #' @description Used to allow users to plot results
+#' @return a new 'Numbat' object
 #' @export
 Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
   public = list(

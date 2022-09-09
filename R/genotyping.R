@@ -82,7 +82,7 @@ make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE
                 hom_ref ~ '0/0'
             )
         ) %>%
-        distinct(snp_id, `.keep_all` = T)
+        distinct(snp_id, `.keep_all` = TRUE)
 
     if (nrow(chr_snps) == 0) {
         message(glue('No SNPs left for chr{chr}!'))
@@ -242,7 +242,7 @@ preprocess_allele = function(
             by = c('gene_index')
         ) %>%
         arrange(snp_index, gene) %>%
-        distinct(snp_index, `.keep_all` = T)
+        distinct(snp_index, `.keep_all` = TRUE)
 
     vcf_phased = vcf_phased %>%
         left_join(
@@ -275,7 +275,7 @@ preprocess_allele = function(
             by = c('map_index')
         ) %>%
         arrange(marker_index, -start) %>%
-        distinct(marker_index, `.keep_all` = T) %>%
+        distinct(marker_index, `.keep_all` = TRUE) %>%
         select(snp_id, cM)
 
     vcf_phased = vcf_phased %>% 

@@ -161,7 +161,7 @@ plot_psbulk = function(
             aes(yintercept = y),
             size = 0, alpha = 0
         ) +
-        scale_alpha_discrete(range = c(dot_alpha, 1)) +
+        suppressWarnings(scale_alpha_discrete(range = c(dot_alpha, 1))) +
         scale_shape_manual(values = c(`FALSE` = 16, `TRUE` = 15)) +
         theme_classic() +
         theme(
@@ -271,7 +271,6 @@ plot_bulks = function(
         bulks$sample = 1
     }
 
-    options(warn = -1)
     plot_list = bulks %>%
         split(.$sample) %>%
         lapply(
@@ -301,7 +300,6 @@ plot_bulks = function(
                 return(p)
             }
         )
-    options(warn = 0)
 
     panel = wrap_plots(plot_list, ncol = ncol, guides = 'collect')
 
@@ -481,7 +479,7 @@ plot_phylo_heatmap = function(
             group_by(cell, CHROM, seg_end, seg_start) %>%
             mutate(p_cnv = sum(p_cnv)) %>%
             ungroup() %>%
-            distinct(cell, CHROM, seg_end, seg_start, .keep_all = T) %>%
+            distinct(cell, CHROM, seg_end, seg_start, .keep_all = TRUE) %>%
             mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
     }
 
@@ -690,7 +688,7 @@ plot_phylo_heatmap = function(
             ) %>%
             filter(cell %in% cell_order) %>%
             mutate(cell = factor(cell, cell_order)) %>%
-            annot_bar(transpose = T, pal_annot = pal_annot, legend_title = annot_title, size = size, annot_scale = annot_scale, raster = raster)
+            annot_bar(transpose = TRUE, pal_annot = pal_annot, legend_title = annot_title, size = size, annot_scale = annot_scale, raster = raster)
 
         if (clone_bar) {
             (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')
@@ -769,6 +767,7 @@ plot_consensus = function(segs) {
 #' @param n_sample integer Number of cells to subsample
 #' @param reverse logical Whether to reverse the cell order
 #' @param plot_tree logical Whether to plot the dendrogram
+#' @return ggplot A single-cell heatmap of window-smoothed expression CNV signals
 #' @export
 plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, reverse = TRUE, plot_tree = TRUE) {
 
@@ -837,6 +836,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
 #' @param tip logical Whether to plot tip point
 #' @param tip_length numeric Length of the tips
 #' @param pal_clone named vector Clone colors
+#' @return ggplot A single-cell phylogeny with mutation history labeled
 #' @export
 plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, tip_length = 0.5, pal_clone = NULL) {
 
@@ -913,6 +913,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 #' @param legend logical Display the legend
 #' @param exclude_gap logical Whether to mark gap regions
 #' @param genome character Genome build, either 'hg38' or 'hg19'
+#' @return ggplot Heatmap of CNVs along the genome
 #' @export
 cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, exclude_gap = TRUE, genome = 'hg38') {
 
@@ -1209,14 +1210,6 @@ plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_
     p_cnv/p_annot/p_markers + plot_layout(heights = c(0.5,0.5,10), guides = 'collect')
     
 }
-
-#' @keywords internal
-do_plot = function(p, f, w, h, out_dir = '~/figures', device = 'pdf') {
-    ggsave(filename = paste0(out_dir, '/', f, '.', device), plot = p, width = w, height = h, device = device, dpi = 300)
-    options(repr.plot.width = w, repr.plot.height = h, repr.plot.res = 300)
-    print(p)
-}
-
 
 # expect columns cell and annot
 #' @keywords internal

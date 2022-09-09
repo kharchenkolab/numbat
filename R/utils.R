@@ -1134,7 +1134,7 @@ find_common_diploid = function(
                 filter(!is.na(component)) %>%
                 group_by(component, sample) %>%
                 summarise(
-                    lnFC = mean(lnFC, na.rm = T),
+                    lnFC = mean(lnFC, na.rm = TRUE),
                     .groups = 'drop'
                 ) %>%
                 reshape2::dcast(sample ~ component, value.var = 'lnFC') %>%
@@ -1151,7 +1151,7 @@ find_common_diploid = function(
                     filter(seg %in% names(cliques[[i]])) %>%
                     group_by(sample) %>%
                     summarise(
-                        lnFC = mean(lnFC, na.rm = T),
+                        lnFC = mean(lnFC, na.rm = TRUE),
                         .groups = 'drop'
                     ) %>%
                     setNames(c('sample', i))
