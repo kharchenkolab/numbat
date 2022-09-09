@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,8 +64,7 @@
   <span class="va">count_mat</span>,
   <span class="va">lambdas_ref</span>,
   <span class="va">df_allele</span>,
-  <span class="va">gtf</span>,
-  <span class="va">genetic_map</span>,
+  genome <span class="op">=</span> <span class="st">"hg38"</span>,
   out_dir <span class="op">=</span> <span class="st">"./"</span>,
   max_iter <span class="op">=</span> <span class="fl">2</span>,
   max_nni <span class="op">=</span> <span class="fl">100</span>,
@@ -107,10 +106,8 @@
 <dd><p>matrix Either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names</p></dd>
 <dt>df_allele</dt>
 <dd><p>dataframe Allele counts per cell, produced by preprocess_allele</p></dd>
-<dt>gtf</dt>
-<dd><p>dataframe GTF of transcripts</p></dd>
-<dt>genetic_map</dt>
-<dd><p>dataframe A genetic map dataframe</p></dd>
+<dt>genome</dt>
+<dd><p>character Genome version (hg38 or hg19)</p></dd>
 <dt>out_dir</dt>
 <dd><p>string Output directory</p></dd>
 <dt>max_iter</dt>
@@ -123,6 +120,8 @@
 <dd><p>numeric Dispersion parameter for the Beta-Binomial allele model</p></dd>
 <dt>min_LLR</dt>
 <dd><p>numeric Minimum LLR to filter CNVs</p></dd>
+<dt>alpha</dt>
+<dd><p>numeric P value cutoff for diploid finding</p></dd>
 <dt>eps</dt>
 <dd><p>numeric Convergence threshold for ML tree search</p></dd>
 <dt>max_entropy</dt>
@@ -139,20 +138,36 @@
 <dd><p>integer Minimum allele depth</p></dd>
 <dt>common_diploid</dt>
 <dd><p>logical Whether to find common diploid regions in a group of peusdobulks</p></dd>
+<dt>min_overlap</dt>
+<dd><p>numeric Minimum CNV overlap threshold</p></dd>
 <dt>ncores</dt>
 <dd><p>integer Number of threads to use</p></dd>
 <dt>ncores_nni</dt>
 <dd><p>integer Number of threads to use for NNI</p></dd>
+<dt>random_init</dt>
+<dd><p>logical Whether to initiate phylogney using a random tree (internal use only)</p></dd>
 <dt>segs_loh</dt>
 <dd><p>dataframe Segments of clonal LOH to be excluded</p></dd>
+<dt>verbose</dt>
+<dd><p>logical Verbosity</p></dd>
 <dt>diploid_chroms</dt>
 <dd><p>vector Known diploid chromosomes</p></dd>
 <dt>use_loh</dt>
 <dd><p>logical Whether to include LOH regions in the expression baseline</p></dd>
+<dt>min_genes</dt>
+<dd><p>integer Minimum number of genes to call a segment</p></dd>
 <dt>skip_nj</dt>
 <dd><p>logical Whether to skip NJ tree construction and only use UPGMA</p></dd>
 <dt>multi_allelic</dt>
 <dd><p>logical Whether to call multi-allelic CNVs</p></dd>
+<dt>p_multi</dt>
+<dd><p>numeric P value cutoff for calling multi-allelic CNVs</p></dd>
+<dt>plot</dt>
+<dd><p>logical Whether to plot results</p></dd>
+<dt>check_convergence</dt>
+<dd><p>logical Whether to terminate iterations based on consensus CNV convergence</p></dd>
+<dt>exclude_neu</dt>
+<dd><p>logical Whether to exclude neutral segments from CNV retesting (internal use only)</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>

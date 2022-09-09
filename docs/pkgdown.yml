@@ -2,10 +2,9 @@ pandoc: 1.19.2.4
 pkgdown: 2.0.3
 pkgdown_sha: ~
 articles:
-  hmm: hmm.html
   numbat: numbat.html
   results: results.html
-last_built: 2022-08-14T01:57Z
+last_built: 2022-09-07T20:45Z
 urls:
   reference: https://kharchenkolab.github.io/numbat/reference
   article: https://kharchenkolab.github.io/numbat/articles
