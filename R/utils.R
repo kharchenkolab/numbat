@@ -1184,7 +1184,7 @@ find_common_diploid = function(
         }
     }
 
-    log_info(glue('diploid regions: {paste0(gtools::mixedsort(diploid_segs), collapse = ",")}'))
+    log_info(glue('diploid regions: {paste0(mixedsort(diploid_segs), collapse = ",")}'))
     
     bulks = bulks %>% mutate(diploid = seg %in% diploid_segs)
     
