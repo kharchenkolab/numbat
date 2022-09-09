@@ -9,7 +9,7 @@ run_numbat(
   lambdas_ref,
   df_allele,
   genome = "hg38",
-  out_dir = "./",
+  out_dir = tempdir(),
   max_iter = 2,
   max_nni = 100,
   t = 1e-05,

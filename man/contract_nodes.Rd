@@ -4,7 +4,7 @@
 \alias{contract_nodes}
 \title{Merge adjacent set of nodes}
 \usage{
-contract_nodes(G, vset, node_tar = NULL, debug = F)
+contract_nodes(G, vset, node_tar = NULL, debug = FALSE)
 }
 \arguments{
 \item{G}{igraph Mutation graph}

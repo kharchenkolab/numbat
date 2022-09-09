@@ -32,6 +32,9 @@ plot_exp_roll(
 
 \item{plot_tree}{logical Whether to plot the dendrogram}
 }
+\value{
+ggplot A single-cell heatmap of window-smoothed expression CNV signals
+}
 \description{
 Plot single-cell smoothed expression magnitude heatmap
 }

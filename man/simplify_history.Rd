@@ -4,7 +4,7 @@
 \alias{simplify_history}
 \title{Simplify the mutational history based on likelihood evidence}
 \usage{
-simplify_history(G, l_matrix, max_cost = 150, verbose = T)
+simplify_history(G, l_matrix, max_cost = 150, verbose = TRUE)
 }
 \arguments{
 \item{G}{igraph Mutation graph}

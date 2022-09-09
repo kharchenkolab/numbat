@@ -3,6 +3,9 @@
 \name{Numbat}
 \alias{Numbat}
 \title{Numbat R6 class}
+\value{
+a new 'Numbat' object
+}
 \description{
 Used to allow users to plot results
 }
@@ -42,19 +45,19 @@ Used to allow users to plot results
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-Numbat-new}{\code{Numbat$new()}}
-\item \href{#method-Numbat-plot_phylo_heatmap}{\code{Numbat$plot_phylo_heatmap()}}
-\item \href{#method-Numbat-plot_exp_roll}{\code{Numbat$plot_exp_roll()}}
-\item \href{#method-Numbat-plot_mut_history}{\code{Numbat$plot_mut_history()}}
-\item \href{#method-Numbat-plot_sc_tree}{\code{Numbat$plot_sc_tree()}}
-\item \href{#method-Numbat-plot_consensus}{\code{Numbat$plot_consensus()}}
-\item \href{#method-Numbat-plot_clone_profile}{\code{Numbat$plot_clone_profile()}}
-\item \href{#method-Numbat-clone}{\code{Numbat$clone()}}
+\item \href{#method-new}{\code{Numbat$new()}}
+\item \href{#method-plot_phylo_heatmap}{\code{Numbat$plot_phylo_heatmap()}}
+\item \href{#method-plot_exp_roll}{\code{Numbat$plot_exp_roll()}}
+\item \href{#method-plot_mut_history}{\code{Numbat$plot_mut_history()}}
+\item \href{#method-plot_sc_tree}{\code{Numbat$plot_sc_tree()}}
+\item \href{#method-plot_consensus}{\code{Numbat$plot_consensus()}}
+\item \href{#method-plot_clone_profile}{\code{Numbat$plot_clone_profile()}}
+\item \href{#method-clone}{\code{Numbat$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Numbat-new"></a>}}
-\if{latex}{\out{\hypertarget{method-Numbat-new}{}}}
+\if{html}{\out{<a id="method-new"></a>}}
+\if{latex}{\out{\hypertarget{method-new}{}}}
 \subsection{Method \code{new()}}{
 initialize Numbat class
 \subsection{Usage}{
@@ -79,8 +82,8 @@ a new 'Numbat' object
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Numbat-plot_phylo_heatmap"></a>}}
-\if{latex}{\out{\hypertarget{method-Numbat-plot_phylo_heatmap}{}}}
+\if{html}{\out{<a id="method-plot_phylo_heatmap"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_phylo_heatmap}{}}}
 \subsection{Method \code{plot_phylo_heatmap()}}{
 Plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
 \subsection{Usage}{
@@ -96,8 +99,8 @@ Plot the single-cell CNV calls in a heatmap and the corresponding phylogeny
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Numbat-plot_exp_roll"></a>}}
-\if{latex}{\out{\hypertarget{method-Numbat-plot_exp_roll}{}}}
+\if{html}{\out{<a id="method-plot_exp_roll"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_exp_roll}{}}}
 \subsection{Method \code{plot_exp_roll()}}{
 Plot window-smoothed expression profiles
 \subsection{Usage}{
@@ -117,8 +120,8 @@ Plot window-smoothed expression profiles
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Numbat-plot_mut_history"></a>}}
-\if{latex}{\out{\hypertarget{method-Numbat-plot_mut_history}{}}}
+\if{html}{\out{<a id="method-plot_mut_history"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_mut_history}{}}}
 \subsection{Method \code{plot_mut_history()}}{
 Plot the mutation history of the tumor
 \subsection{Usage}{
@@ -134,8 +137,8 @@ Plot the mutation history of the tumor
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Numbat-plot_sc_tree"></a>}}
-\if{latex}{\out{\hypertarget{method-Numbat-plot_sc_tree}{}}}
+\if{html}{\out{<a id="method-plot_sc_tree"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_sc_tree}{}}}
 \subsection{Method \code{plot_sc_tree()}}{
 Plot the single cell phylogeny
 \subsection{Usage}{
@@ -151,8 +154,8 @@ Plot the single cell phylogeny
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Numbat-plot_consensus"></a>}}
-\if{latex}{\out{\hypertarget{method-Numbat-plot_consensus}{}}}
+\if{html}{\out{<a id="method-plot_consensus"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_consensus}{}}}
 \subsection{Method \code{plot_consensus()}}{
 Plot consensus segments
 \subsection{Usage}{
@@ -168,8 +171,8 @@ Plot consensus segments
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Numbat-plot_clone_profile"></a>}}
-\if{latex}{\out{\hypertarget{method-Numbat-plot_clone_profile}{}}}
+\if{html}{\out{<a id="method-plot_clone_profile"></a>}}
+\if{latex}{\out{\hypertarget{method-plot_clone_profile}{}}}
 \subsection{Method \code{plot_clone_profile()}}{
 Plot clone cnv profiles
 \subsection{Usage}{
@@ -185,8 +188,8 @@ Plot clone cnv profiles
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Numbat-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-Numbat-clone}{}}}
+\if{html}{\out{<a id="method-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

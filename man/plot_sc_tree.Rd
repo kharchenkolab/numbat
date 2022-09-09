@@ -32,6 +32,9 @@ plot_sc_tree(
 
 \item{pal_clone}{named vector Clone colors}
 }
+\value{
+ggplot A single-cell phylogeny with mutation history labeled
+}
 \description{
 Plot single-cell smoothed expression magnitude heatmap
 }

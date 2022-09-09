@@ -26,6 +26,9 @@ cnv_heatmap(
 
 \item{genome}{character Genome build, either 'hg38' or 'hg19'}
 }
+\value{
+ggplot Heatmap of CNVs along the genome
+}
 \description{
 Plot CNV heatmap
 }
