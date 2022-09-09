@@ -1,5 +1,5 @@
 Package: numbat
-Title: Haplotype-aware CNV Analysis from scRNA-seq
+Title: Haplotype-Aware CNV Analysis from scRNA-Seq
 URL: https://github.com/kharchenkolab/numbat
 Version: 1.0.2
 Authors@R: c(person("Teng","Gao", email="tgao@g.harvard.edu", role=c("cre", "aut")), person("Hirak", "Sarkar", email="hirak_sarkar@hms.harvard.edu", role="aut"), person("Evan", "Biederstedt", email="evan.biederstedt@gmail.com", role="aut"), person("Peter", "Kharchenko", email = "peter_kharchenko@hms.harvard.edu", role = "aut"))
