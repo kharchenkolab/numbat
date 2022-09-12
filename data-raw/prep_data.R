@@ -177,6 +177,30 @@ genes = gtf_hg38 %>% filter(CHROM == 5) %>% pull(gene)
 genes = intersect(genes, rownames(count_mat_ATC2))
 count_mat_example = count_mat_ATC2[genes,]
 
+## df_allele_example.rda ##
+df_allele_example = df_allele_ATC2 %>% filter(CHROM == 5)
+
+## count_mat_ref.rda ##
+genes_common = intersect(gtf_hg38$gene, rownames(count_mat_ATC2))
+count_mat_ref = count_mat_ATC2[genes_common[1:1000], normal_cells]
+
+## annot_ref.rda ##
+annot_ref = fread('~/paper_data/cell_annotations/cell_annot_MDA.tsv') %>% 
+    filter(cell %in% colnames(count_mat_ATC2)) %>%
+    filter(copykat.pred == 'N') %>%
+    mutate(group = c(rep('Immune', 25), rep('Endothelial', 20), rep('Fibroblast', 5))) %>%
+    select(cell, group) %>%
+    as.data.frame()
+
+## mut_graph_example.rda ##
+mut_graph_example = readRDS('~/ATC2_test/mut_graph_1.rds')
+
+## segs_example.rda ##
+nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
+segs_example = nb$segs_consensus %>% mutate(group = 'TNBC1')
+
+## phylogeny_example.rda ##
+phylogeny_example = readRDS('~/ATC2_test/tree_final_1.rds')
 
 ## Data used for unit tests
 
