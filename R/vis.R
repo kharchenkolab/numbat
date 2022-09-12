@@ -349,7 +349,8 @@ plot_mut_history = function(
     }
 
     if (is.null(pal)) {
-        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 8, 'Set1'))
+        pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
+        getPalette = colorRampPalette(pal)
         pal = c('gray', getPalette(length(V(G))))
     }
 
@@ -639,7 +640,6 @@ plot_phylo_heatmap = function(
 
     if (is.null(pal_clone)) {
 
-        ## getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 10, 'Spectral'))
         getPalette = colorRampPalette(c("#9E0142", "#D53E4F", "#F46D43", "#FDAE61", "#FEE08B", "#E6F598", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2"))
 
         pal_clone = getPalette(length(unique(clone_dict)))
@@ -911,6 +911,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
     if (tip) {
 
         if (is.null(pal_clone)) {
+            pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
             getPalette = colorRampPalette(pal)
             pal_clone = getPalette(nrow(mut_nodes) + 1)
         }
@@ -1030,208 +1031,6 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
 }
 
 
-########################### Functions for internal use ############################
-
-#' @keywords internal
-oob_squish <- function(x, range = c(0, 1), only.finite = TRUE) {
-  force(range)
-  finite <- if (only.finite) is.finite(x) else TRUE
-  x[finite & x < range[1]] <- range[1]
-  x[finite & x > range[2]] <- range[2]
-  x
-}
-
-#' @keywords internal
-plot_sc_exp = function(exp_post, segs_consensus, size = 0.05, censor = 0) {
-    
-    # cell_order = exp_post %>% 
-    #     filter(!cnv_state %in% c('neu', 'loh')) %>%
-    #     left_join(cell_annot, by = 'cell') %>%
-    #     group_by(cell_group) %>%
-    #     do(
-    #         reshape2::dcast(., cell ~ seg, value.var = 'phi_mle') %>%
-    #         tibble::column_to_rownames('cell') %>%
-    #         dist() %>%
-    #         hclust %>%
-    #         {.$labels[.$order]} %>%
-    #         as.data.frame()
-    #     ) %>%
-    #     set_names(c('cell_group', 'cell'))
-
-    exp_post = exp_post %>% filter(n > 15)
-
-    exp_post = exp_post %>% 
-            inner_join(
-                segs_consensus %>% select(seg = seg_cons, CHROM, seg_start, seg_end),
-                by = 'seg'
-            ) %>%
-            mutate(phi_mle = ifelse(phi_mle > 1-censor & phi_mle < 1+censor, 1, phi_mle))
-            # mutate(cell = factor(cell, cell_order$cell))
-
-    ggplot(
-        exp_post,
-        aes(x = seg_start, xend = seg_end, y = cell, yend = cell, color = phi_mle)
-    ) +
-    theme_classic() +
-    geom_segment(size = size) +
-    theme(
-        panel.spacing = unit(0, 'mm'),
-        panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
-        strip.background = element_blank(),
-        axis.text.y = element_blank()
-    ) +
-    scale_x_continuous(expand = expansion(0)) +
-    facet_grid(group~CHROM, space = 'free', scales = 'free') +
-    scale_color_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 1, limits = c(0.5, 2), oob = oob_squish)
-}
-
-#' @keywords internal
-plot_sc_allele = function(df_allele, bulk_subtrees, clone_post) {
-    
-    snp_seg = bulk_subtrees %>%
-        filter(!is.na(pAD)) %>%
-        mutate(haplo = case_when(
-            str_detect(state, 'up') ~ 'major',
-            str_detect(state, 'down') ~ 'minor',
-            T ~ ifelse(pBAF > 0.5, 'major', 'minor')
-        )) %>%
-        select(snp_id, snp_index, sample, seg, haplo) %>%
-        inner_join(
-            segs_consensus,
-            by = c('sample', 'seg')
-        )
-
-    snp_neu_haplo = bulk_subtrees %>% filter(sample == 1) %>%
-        mutate(haplo = ifelse(pBAF > 0.5, 'major', 'minor')) %>% 
-        filter(!is.na(haplo)) %>%
-        {setNames(.$haplo, .$snp_id)}
-    
-    
-    ## pal = RColorBrewer::brewer.pal(n = 8, 'Set1')
-    pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
-
-    p = df_allele %>% 
-        left_join(
-            snp_seg %>% select(snp_id, haplo, cnv_state),
-            by = 'snp_id'
-        ) %>% 
-        mutate(haplo = ifelse(is.na(haplo), snp_neu_haplo[snp_id], haplo)) %>%
-        mutate(cnv_state = ifelse(is.na(cnv_state), 'neu', cnv_state)) %>%
-        mutate(pBAF = ifelse(GT == '1|0', AR, 1-AR)) %>%
-        filter(!is.na(haplo)) %>%
-        mutate(MAF = ifelse(haplo == 'major', pBAF, 1-pBAF)) %>%
-        left_join(clone_post, by = 'cell') %>%
-        arrange(clone) %>%
-        arrange(CHROM, POS) %>%
-        mutate(snp_index = as.integer(factor(snp_id, unique(snp_id)))) %>%
-        ggplot(
-            aes(x = snp_index, y = cell, color = MAF)
-        ) +
-        theme_classic() +
-        geom_point(alpha = 0.5, pch = 16, size = 1) +
-        theme(
-            axis.text.y = element_blank(),
-            axis.ticks.y = element_blank(),
-            panel.spacing = unit(0, 'mm'),
-            panel.border = element_rect(size = 0.5, color = 'white', fill = NA),
-        ) +
-        facet_grid(clone~CHROM, space = 'free', scales = 'free') +
-        scale_x_discrete(expand = expansion(0)) +
-        scale_color_gradient(low = pal[1], high = pal[2])
-    
-    return(p)
-}
-
-#' @keywords internal
-plot_markers = function(sample, count_mat, cell_annot, markers, clone_post, pal_annot = NULL) {
-
-    if (is.null(pal_annot)) {
-        pal_annot = getPalette(length(unique(cell_annot$annot)))
-    }
-    
-    D = as.matrix(count_mat[,markers$gene]) %>%
-        scale %>%
-        reshape2::melt() %>%
-        magrittr::set_colnames(c('cell', 'gene', 'exp')) %>%
-        inner_join(
-            cell_annot, by = 'cell'
-        ) %>%
-        mutate(exp = ifelse(is.na(exp), 0, exp)) %>%
-        inner_join(
-            clone_post, by = 'cell'
-        ) %>%
-        left_join(markers, by = 'gene') %>%
-        arrange(p_1) %>%
-        mutate(cell = factor(cell, unique(cell)))
-
-    p_markers = ggplot(
-            D,
-            aes(x = cell, y = gene, fill = exp)
-        ) +
-        geom_tile() +
-        theme_classic() +
-        theme(
-            axis.text.x = element_blank(),
-            axis.text.y = element_text(size = 7),
-            panel.spacing = unit(0, 'mm'),
-            panel.border = element_rect(size = 0.2, fill = NA),
-            strip.background.x = element_blank(),
-            strip.text.x = element_blank(),
-            strip.background.y = element_rect(size = 0, fill = NA),
-            strip.text.y.left = element_text(size = 6, angle = 0),
-        ) +
-        ylab('marker') +
-        facet_grid(marker_type ~ cell_group, space = 'free_y', scales = 'free', switch="y") +
-        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', limits = c(-1.5,1.5), oob = oob_squish)
-
-    p_annot = ggplot(
-            D,
-            aes(x = cell, y = 'annot', fill = annot)
-        ) +
-        geom_tile() +
-        theme_classic() +
-        theme(
-            axis.text.x = element_blank(),
-            axis.text.y = element_text(size = 7),
-            axis.ticks.x = element_blank(),
-            panel.spacing = unit(0, 'mm'),
-            panel.border = element_rect(size = 0.2, fill = NA),
-            strip.background = element_rect(size = 0, fill = NA),
-            strip.text = element_text(size = 6),
-            axis.title.x = element_blank(),
-            strip.text.x = element_blank()
-        ) +
-        ylab('') +
-        facet_grid(~ cell_group, space = 'free_y', scales = 'free', switch="y") +
-        scale_fill_manual(values = pal_annot) +
-        guides(fill = guide_legend())
-
-    p_cnv = ggplot(
-            D %>% mutate(p_cnv = 1-p_1),
-            aes(x = cell, y = 'cnv', fill = p_cnv)
-        ) +
-        geom_tile() +
-        theme_classic() +
-        theme(
-            axis.text.x = element_blank(),
-            axis.text.y = element_text(size = 7),
-            axis.ticks.x = element_blank(),
-            panel.spacing = unit(0, 'mm'),
-            panel.border = element_rect(size = 0.2, fill = NA),
-            strip.background = element_rect(size = 0, fill = NA),
-            strip.text = element_text(size = 6),
-            axis.title.x = element_blank()
-        ) +
-        ylab('') +
-        facet_grid(~cell_group, space = 'free_y', scales = 'free', switch="y") +
-        scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red', midpoint = 0.5, limits = c(0,1), oob = oob_squish) + 
-        ggtitle(sample) +
-        guides(fill = 'none')
-
-    p_cnv/p_annot/p_markers + plot_layout(heights = c(0.5,0.5,10), guides = 'collect')
-    
-}
-
 # expect columns cell and annot
 #' @keywords internal
 annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL, annot_scale = NULL, raster = FALSE) {
@@ -1267,6 +1066,8 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', siz
         p = p + annot_scale
     } else {
         if (is.null(pal_annot)) {
+            pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
+            getPalette = colorRampPalette(pal)
             pal_annot = getPalette(length(unique(D$annot)))
         }
         p = p + scale_fill_manual(values = pal_annot, na.value = 'gray90')
@@ -1288,6 +1089,18 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', siz
     }
 
     return(p)
+}
+
+
+########################### Functions for internal use ############################
+
+#' @keywords internal
+oob_squish <- function(x, range = c(0, 1), only.finite = TRUE) {
+  force(range)
+  finite <- if (only.finite) is.finite(x) else TRUE
+  x[finite & x < range[1]] <- range[1]
+  x[finite & x > range[2]] <- range[2]
+  x
 }
 
 #' @keywords internal
