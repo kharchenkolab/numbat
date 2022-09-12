@@ -879,7 +879,7 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 
     p_tree = gtree %>% 
         to_phylo() %>%
-        groupOTU(
+        ggtree::groupOTU(
             OTU_dict,
             'clone'
         ) %>%
