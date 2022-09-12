@@ -15,3 +15,6 @@ ggplot object
 \description{
 Plot consensus CNVs
 }
+\examples{
+p = plot_consensus(segs_example)
+}

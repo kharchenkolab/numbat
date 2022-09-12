@@ -32,3 +32,6 @@ ggplot Heatmap of CNVs along the genome
 \description{
 Plot CNV heatmap
 }
+\examples{
+p = cnv_heatmap(segs_example)
+}

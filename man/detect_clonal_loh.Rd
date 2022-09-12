@@ -21,3 +21,6 @@ dataframe LOH segments
 Call clonal LOH using SNP density. 
 Rcommended for cell lines or tumor samples with no normal cells.
 }
+\examples{
+segs_loh = detect_clonal_loh(bulk_example)
+}

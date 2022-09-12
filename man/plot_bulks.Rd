@@ -21,3 +21,6 @@ a ggplot object
 \description{
 Plot a group of pseudobulks HMM profile
 }
+\examples{
+p = plot_bulks(bulk_example)
+}

@@ -38,3 +38,6 @@ ggplot A single-cell phylogeny with mutation history labeled
 \description{
 Plot single-cell smoothed expression magnitude heatmap
 }
+\examples{
+p = plot_sc_tree(phylogeny_example)
+}

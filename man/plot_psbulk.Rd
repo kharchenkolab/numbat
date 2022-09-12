@@ -56,3 +56,6 @@ ggplot Plot of pseudobulk HMM profile
 \description{
 Plot a pseudobulk HMM profile
 }
+\examples{
+p = plot_psbulk(bulk_example)
+}

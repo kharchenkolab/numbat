@@ -74,3 +74,6 @@ a pseudobulk profile dataframe with called CNV information
 \description{
 Call CNVs in a pseudobulk profile using the Numbat joint HMM
 }
+\examples{
+bulk_analyzed = analyze_bulk(bulk_example, t = 1e-5)
+}

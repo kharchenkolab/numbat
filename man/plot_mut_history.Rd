@@ -53,3 +53,6 @@ ggplot object
 \description{
 Plot mutational history
 }
+\examples{
+p = plot_mut_history(mut_graph_example)
+}
