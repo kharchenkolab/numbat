@@ -48,6 +48,8 @@ scale_counts = function(count_mat) {
 #' @param normalized logical Whether to return normalized expression values
 #' @param verbose logical Verbosity
 #' @return matrix Reference gene expression levels
+#' @examples
+#' ref_custom = aggregate_counts(count_mat_ref, annot_ref, verbose = FALSE)
 #' @export
 aggregate_counts = function(count_mat, annot, normalized = TRUE, verbose = TRUE) {
 
@@ -77,9 +79,9 @@ aggregate_counts = function(count_mat, annot, normalized = TRUE, verbose = TRUE)
     }
 
     if (normalized) {
-        return(exp_mat_clust)
+        return(as.matrix(exp_mat_clust))
     } else {
-        return(count_mat_clust)
+        return(as.matrix(count_mat_clust))
     }
 
 }
