@@ -21,3 +21,6 @@ matrix Reference gene expression levels
 \description{
 Utility function to make reference gene expression profiles
 }
+\examples{
+ref_custom = aggregate_counts(count_mat_ref, annot_ref, verbose = FALSE)
+}

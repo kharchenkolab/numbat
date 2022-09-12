@@ -45,3 +45,11 @@
 #' example VCF header
 #' 
 "vcf_meta"
+
+#' example reference count matrix
+#' 
+"count_mat_ref"
+
+#' example reference cell annotation
+#' 
+"annot_ref"
