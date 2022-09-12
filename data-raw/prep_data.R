@@ -172,6 +172,12 @@ ref_hca_counts = ref$count_mat[,names(rename_dict)]
 colnames(ref_hca_counts) = unname(sapply(colnames(ref_hca_counts), function(x){rename_dict[x]}))
 
 
+## count_mat_example.rda ##
+genes = gtf_hg38 %>% filter(CHROM == 5) %>% pull(gene)
+genes = intersect(genes, rownames(count_mat_ATC2))
+count_mat_example = count_mat_ATC2[genes,]
+
+
 ## Data used for unit tests
 
 ### pre_likelihood_hmm
