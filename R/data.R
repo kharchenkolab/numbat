@@ -53,3 +53,28 @@
 #' example reference cell annotation
 #' 
 "annot_ref"
+
+#' example pseudobulk dataframe
+#' 
+"bulk_example"
+
+#' example gene expression count matrix
+#' 
+"count_mat_example"
+
+#' example allele count dataframe
+#' 
+"df_allele_example"
+
+#' example mutation graph
+#' 
+"mut_graph_example"
+
+#' example single-cell phylogeny
+#' 
+"phylogeny_example"
+
+#' example CNV segments dataframe
+#' 
+"segs_example"
+

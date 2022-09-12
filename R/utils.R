@@ -311,6 +311,12 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #' @param nu numeric Phase switch rate
 #' @param verbose logical Verbosity
 #' @return dataframe Pseudobulk gene expression and allele profile
+#' @examples
+#' bulk_example = get_bulk(
+#'     count_mat = count_mat_example,
+#'     lambdas_ref = ref_hca,
+#'     df_allele = df_allele_example,
+#'     gtf = gtf_hg38)
 #' @export
 get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, min_depth = 0, nu = 1, verbose = TRUE) {
 
@@ -438,6 +444,8 @@ switch_prob_cm = function(d, nu = 1, min_p = 1e-10) {
 #' @param exclude_neu logical Whether to exclude neutral segments from retesting (internal use only)
 #' @param phasing logical Whether to use phasing information (internal use only)
 #' @param verbose logical Verbosity
+#' @examples
+#' bulk_analyzed = analyze_bulk(bulk_example, t = 1e-5)
 #' @return a pseudobulk profile dataframe with called CNV information
 #' @export
 analyze_bulk = function(
@@ -1598,6 +1606,8 @@ calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, al
 #' @param t numeric Transition probability
 #' @param min_depth integer Minimum coverage to filter SNPs
 #' @return dataframe LOH segments
+#' @examples
+#' segs_loh = detect_clonal_loh(bulk_example)
 #' @export
 detect_clonal_loh = function(bulk, t = 1e-5, min_depth = 0) {
 

@@ -58,6 +58,8 @@ cnv_labels = names(cnv_colors) %>%
 #' @param genome character Genome build, either 'hg38' or 'hg19'
 #' @param raster logical Whether to raster images
 #' @return ggplot Plot of pseudobulk HMM profile
+#' @examples
+#' p = plot_psbulk(bulk_example)
 #' @export
 plot_psbulk = function(
         bulk, use_pos = TRUE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2, 
@@ -262,6 +264,8 @@ plot_psbulk = function(
 #' @param title logical Whether to add titles to individual plots
 #' @param ... additional parameters passed to plot_psbulk()
 #' @return a ggplot object
+#' @examples
+#' p = plot_bulks(bulk_example)
 #' @export
 plot_bulks = function(
     bulks, ..., ncol = 1, title = TRUE
@@ -322,6 +326,8 @@ plot_bulks = function(
 #' @param legend logical Whether to show legend
 #' @param pal named vector Node colors
 #' @return ggplot object
+#' @examples
+#' p = plot_mut_history(mut_graph_example)
 #' @export
 plot_mut_history = function(
         G, clone_post = NULL, 
@@ -343,8 +349,7 @@ plot_mut_history = function(
     }
 
     if (is.null(pal)) {
-        ## getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 8, 'Set1'))
-        getPalette = colorRampPalette(pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF"))
+        getPalette = colorRampPalette(RColorBrewer::brewer.pal(n = 8, 'Set1'))
         pal = c('gray', getPalette(length(V(G))))
     }
 
@@ -454,6 +459,11 @@ plot_mut_history = function(
 #' @param exclude_gap logical Whether to mark gap regions
 #' @param raster logical Whether to raster images
 #' @return ggplot panel
+#' @examples
+#' \dontrun{
+#' nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
+#' p = plot_phylo_heatmap(gtree = nb$gtree, joint_post = nb$joint_post, segs_consensus = nb$segs_consensus)
+#' }
 #' @export
 plot_phylo_heatmap = function(
         gtree, joint_post, segs_consensus, 
@@ -707,6 +717,8 @@ plot_phylo_heatmap = function(
 #' 
 #' @param segs dataframe Consensus segments
 #' @return ggplot object
+#' @examples
+#' p = plot_consensus(segs_example)
 #' @export
 plot_consensus = function(segs) {
   
@@ -768,6 +780,11 @@ plot_consensus = function(segs) {
 #' @param reverse logical Whether to reverse the cell order
 #' @param plot_tree logical Whether to plot the dendrogram
 #' @return ggplot A single-cell heatmap of window-smoothed expression CNV signals
+#' @examples
+#' \dontrun{
+#' nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
+#' p = plot_exp_roll(gexp_roll_wide = nb$gexp_roll_wide, hc = nb$hc, k = 3, gtf = gtf_hg38)
+#' }
 #' @export
 plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, reverse = TRUE, plot_tree = TRUE) {
 
@@ -837,6 +854,8 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
 #' @param tip_length numeric Length of the tips
 #' @param pal_clone named vector Clone colors
 #' @return ggplot A single-cell phylogeny with mutation history labeled
+#' @examples 
+#' p = plot_sc_tree(phylogeny_example)
 #' @export
 plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, branch_width = 0.5, tip = TRUE, tip_length = 0.5, pal_clone = NULL) {
 
@@ -914,6 +933,8 @@ plot_sc_tree = function(gtree, label_mut = TRUE, label_size = 3, dot_size = 2, b
 #' @param exclude_gap logical Whether to mark gap regions
 #' @param genome character Genome build, either 'hg38' or 'hg19'
 #' @return ggplot Heatmap of CNVs along the genome
+#' @examples
+#' p = cnv_heatmap(segs_example)
 #' @export
 cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, exclude_gap = TRUE, genome = 'hg38') {
 
