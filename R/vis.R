@@ -461,13 +461,10 @@ plot_mut_history = function(
 #' @param raster logical Whether to raster images
 #' @return ggplot panel
 #' @examples
-#' \dontrun{
-#' nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
 #' p = plot_phylo_heatmap(
-#'    gtree = nb$gtree, 
-#'    joint_post = nb$joint_post, 
-#'    segs_consensus = nb$segs_consensus)
-#' }
+#'     gtree = phylogeny_example, 
+#'     joint_post = joint_post_example, 
+#'     segs_consensus = segs_example)
 #' @export
 plot_phylo_heatmap = function(
         gtree, joint_post, segs_consensus, 
@@ -784,10 +781,7 @@ plot_consensus = function(segs) {
 #' @param plot_tree logical Whether to plot the dendrogram
 #' @return ggplot A single-cell heatmap of window-smoothed expression CNV signals
 #' @examples
-#' \dontrun{
-#' nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
-#' p = plot_exp_roll(gexp_roll_wide = nb$gexp_roll_wide, hc = nb$hc, k = 3, gtf = gtf_hg38)
-#' }
+#' p = plot_exp_roll(gexp_roll_example, gtf = gtf_hg38, hc = hc_example, k = 3)
 #' @export
 plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, reverse = TRUE, plot_tree = TRUE) {
 
@@ -796,6 +790,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
         tibble::rownames_to_column('cell') %>%
         reshape2::melt(id.var = 'cell', variable.name = 'gene', value.name = 'exp_rollmean') %>%
         left_join(gtf, by = 'gene') %>%
+        arrange(CHROM, gene_start) %>%
         mutate(gene_index = as.integer(factor(gene, unique(gene))))
 
     cells = unique(gexp_norm_long$cell)
