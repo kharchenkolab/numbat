@@ -78,3 +78,15 @@
 #' 
 "segs_example"
 
+#' example hclust tree
+#' 
+"hc_example"
+
+#' example smoothed gene expression dataframe
+#' 
+"gexp_roll_example"
+
+#' example joint single-cell cnv posterior dataframe
+#' 
+"joint_post_example"
+
