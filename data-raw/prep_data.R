@@ -196,11 +196,19 @@ annot_ref = fread('~/paper_data/cell_annotations/cell_annot_MDA.tsv') %>%
 mut_graph_example = readRDS('~/ATC2_test/mut_graph_1.rds')
 
 ## segs_example.rda ##
-nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
-segs_example = nb$segs_consensus %>% mutate(group = 'TNBC1')
+segs_example = fread('~/ATC2_test/segs_consensus_1.tsv') %>% mutate(group = 'ATC2') %>% relevel_chrom()
 
 ## phylogeny_example.rda ##
 phylogeny_example = readRDS('~/ATC2_test/tree_final_1.rds')
+
+## gexp_roll_example.rda ##
+gexp_roll_example = nb$gexp_roll_wide[1:10,sample(1:ncol(nb$gexp_roll_wide), 2000)]
+
+## hc_example.rda ##
+hc_example = hclust(dist(gexp_roll_example))
+
+## joint_post_example.rda ##
+joint_post_example = fread('~/ATC2_test/joint_post_1.tsv')
 
 ## Data used for unit tests
 
