@@ -81,11 +81,8 @@ ggplot panel
 Plot single-cell CNV calls along with the clonal phylogeny
 }
 \examples{
-\dontrun{
-nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
 p = plot_phylo_heatmap(
-   gtree = nb$gtree, 
-   joint_post = nb$joint_post, 
-   segs_consensus = nb$segs_consensus)
-}
+    gtree = phylogeny_example, 
+    joint_post = joint_post_example, 
+    segs_consensus = segs_example)
 }

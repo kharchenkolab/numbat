@@ -5,7 +5,7 @@
 \alias{segs_example}
 \title{example CNV segments dataframe}
 \format{
-An object of class \code{data.table} (inherits from \code{data.frame}) with 47 rows and 30 columns.
+An object of class \code{data.table} (inherits from \code{data.frame}) with 27 rows and 30 columns.
 }
 \usage{
 segs_example
