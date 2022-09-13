@@ -39,7 +39,7 @@ ggplot A single-cell heatmap of window-smoothed expression CNV signals
 Plot single-cell smoothed expression magnitude heatmap
 }
 \examples{
-\donttest{
+\dontrun{
 nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
 p = plot_exp_roll(gexp_roll_wide = nb$gexp_roll_wide, hc = nb$hc, k = 3, gtf = gtf_hg38)
 }

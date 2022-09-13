@@ -117,7 +117,7 @@ a status code
 Run workflow to decompose tumor subclones
 }
 \examples{
-\donttest{
+\dontrun{
 count_mat_ATC2 = readRDS(url('http://pklab.med.harvard.edu/teng/data/count_mat_ATC2.rds'))
 df_allele_ATC2 = readRDS(url('http://pklab.med.harvard.edu/teng/data/df_allele_ATC2.rds'))
 out = run_numbat(
