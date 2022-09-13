@@ -461,7 +461,7 @@ plot_mut_history = function(
 #' @param raster logical Whether to raster images
 #' @return ggplot panel
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
 #' p = plot_phylo_heatmap(
 #'    gtree = nb$gtree, 
@@ -784,7 +784,7 @@ plot_consensus = function(segs) {
 #' @param plot_tree logical Whether to plot the dendrogram
 #' @return ggplot A single-cell heatmap of window-smoothed expression CNV signals
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
 #' p = plot_exp_roll(gexp_roll_wide = nb$gexp_roll_wide, hc = nb$hc, k = 3, gtf = gtf_hg38)
 #' }
