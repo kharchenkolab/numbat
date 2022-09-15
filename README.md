@@ -1,9 +1,9 @@
 # Numbat
 
 <!-- badges: start -->
-
 [![<kharchenkolab>](https://circleci.com/gh/kharchenkolab/numbat.svg?style=svg)](https://app.circleci.com/pipelines/github/kharchenkolab/numbat)
-  
+[![CRAN status](https://www.r-pkg.org/badges/version/numbat)](https://cran.r-project.org/package=numbat)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/numbat)](https://cran.r-project.org/package=numbat)
 <!-- badges: end -->
 
 <img src="logo.png" align="right" width="150">
