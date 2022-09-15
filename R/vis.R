@@ -257,7 +257,7 @@ plot_psbulk = function(
     return(p)
 }
 
-#' Plot a group of pseudobulks HMM profile
+#' Plot a group of pseudobulk HMM profiles
 #' 
 #' @param bulks dataframe Pseudobulk profiles annotated with "sample" column
 #' @param ncol integer Number of columns
