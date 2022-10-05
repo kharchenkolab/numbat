@@ -4,6 +4,7 @@
 - [Preparing data](#preparing-data)
 - [Running Numbat](#running-numbat)
 - [Understanding results](#understanding-results)
+- [FAQ](#FAQ)
 
 # Installation
 We now provide a ready-to-run Docker container that includes the package and all prerequisites (see section [Docker](#docker)). Alternatively, you can follow the installation procedure below.
@@ -199,3 +200,15 @@ Numbat generates a number of files in the output folder. The file names are post
 - `clone_post_{i}.tsv`: single-cell clone assignment and tumor versus normal classification posteriors
 - `tree_list_{i}.rds`: list of candidate phylogeneies in the maximum likelihood tree search
 - `panel_{i}.png`: integrated visualization of single-cell phylogeny and CNV landscape
+
+# FAQ
+
+**Q**: We expect a certain CNV to be in a particular sample, but it is not detected by Numbat.
+
+**A**: In general, there are three scenarios that a CNV is not called. 
+
+1. The CNV is not called in pseudobulk HMM. You can check `bulk_subtrees_*.png` to see if the event was called. If it was not, I would suggest trying to find a better expression reference to reduce the noise in logFC, or changing the parameters used to configure the HMM (`gamma`, `t`, etc). Sometimes the CNV is very subclonal and was not isolated as a pseudobulk by the initial clustering. You can see if this was the case by looking at the `exp_roll_clust.png` and if so, try increasing `k_init`.
+
+2. CNV is called in pseudobulks but did not appear in `segs_consensus_*.tsv` and `joint_post_*tsv`. This is because the event is filtered out due to low LLR. Lowering `min_LLR` threshold will help.
+
+3. CNV is called in pseudobulks, is present in `segs_consensus_*.tsv` and `joint_post_*tsv`, but did not appear in phylogeny. This is because the event is filtered out due to high entropy (weak evidence) in single cells. Raising max_entropy threshold will help. You can check the entropy of specific events in `joint_post_*tsv` in the column `avg_entropy`.
