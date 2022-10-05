@@ -4,7 +4,7 @@
 - [Preparing data](#preparing-data)
 - [Running Numbat](#running-numbat)
 - [Understanding results](#understanding-results)
-- [FAQ](#FAQ)
+- [FAQ](#faq)
 
 # Installation
 We now provide a ready-to-run Docker container that includes the package and all prerequisites (see section [Docker](#docker)). Alternatively, you can follow the installation procedure below.
