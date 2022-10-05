@@ -96,6 +96,7 @@
 <li><a href="#preparing-data">Preparing data</a></li>
 <li><a href="#running-numbat">Running Numbat</a></li>
 <li><a href="#understanding-results">Understanding results</a></li>
+<li><a href="#phasing-panels">Advanced phasing options</a></li>
 <li><a href="#faq">FAQ</a></li>
 </ul>
 </div>
@@ -313,6 +314,11 @@ Arguments:
 </ul>
 </div>
 <div class="section level2">
+<h2 id="phasing-panels">Phasing panels<a class="anchor" aria-label="anchor" href="#phasing-panels"></a>
+</h2>
+<p>The CNV detection power of Numbat can be further enhanced by conducting population-based phasing with a larger and more diverse reference panel (i.e. reference haplotypes). The default pipeline above uses the <a href="https://www.internationalgenome.org" class="external-link">1000 Genome</a> panel, which contains genotypes from 2,504 individuals. Larger reference panels include: - gnomAD HGDP + 1KG panel (n=4,099). You can download the reference files using <a href="https://cloud.google.com/storage/docs/gsutil" class="external-link">gsutil</a>: <code>gs://gcp-public-data--gnomad/resources/hgdp_1kg/phased_haplotypes</code>. - TOPMed panel (n=97,256). You can upload your VCF to the <a href="https://imputation.biodatacatalyst.nhlbi.nih.gov/#!pages/jobs" class="external-link">TOPMed imputation server</a>.</p>
+</div>
+<div class="section level2">
 <h2 id="faq">FAQ<a class="anchor" aria-label="anchor" href="#faq"></a>
 </h2>
 <p><strong>Q</strong>: We expect a certain CNV to be in a particular sample, but it is not detected by Numbat.</p>
@@ -320,7 +326,7 @@ Arguments:
 <ol style="list-style-type: decimal">
 <li><p>The CNV is not called in pseudobulk HMM. You can check <code>bulk_subtrees_*.png</code> to see if the event was called. If it was not, I would suggest trying to find a better expression reference to reduce the noise in logFC, or changing the parameters used to configure the HMM (<code>gamma</code>, <code>t</code>, etc). Sometimes the CNV is very subclonal and was not isolated as a pseudobulk by the initial clustering. You can see if this was the case by looking at the <code>exp_roll_clust.png</code> and if so, try increasing <code>k_init</code>.</p></li>
 <li><p>CNV is called in pseudobulks but did not appear in <code>segs_consensus_*.tsv</code> and <code>joint_post_*tsv</code>. This is because the event is filtered out due to low LLR. Lowering <code>min_LLR</code> threshold will help.</p></li>
-<li><p>CNV is called in pseudobulks, is present in <code>segs_consensus_*.tsv</code> and <code>joint_post_*tsv</code>, but did not appear in phylogeny. This is because the event is filtered out due to high entropy (weak evidence) in single cells. Raising max_entropy threshold will help. You can check the entropy of specific events in <code>joint_post_*tsv</code> in the column <code>avg_entropy</code>.</p></li>
+<li><p>CNV is called in pseudobulks, is present in <code>segs_consensus_*.tsv</code> and <code>joint_post_*tsv</code>, but did not appear in phylogeny. This is because the event is filtered out due to high entropy (weak evidence) in single cells. Raising <code>max_entropy</code> threshold will help. You can check the entropy of specific events in <code>joint_post_*tsv</code> in the column <code>avg_entropy</code>.</p></li>
 </ol>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

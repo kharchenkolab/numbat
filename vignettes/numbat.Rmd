@@ -4,6 +4,7 @@
 - [Preparing data](#preparing-data)
 - [Running Numbat](#running-numbat)
 - [Understanding results](#understanding-results)
+- [Advanced phasing options](#phasing-panels)
 - [FAQ](#faq)
 
 # Installation
@@ -201,6 +202,11 @@ Numbat generates a number of files in the output folder. The file names are post
 - `tree_list_{i}.rds`: list of candidate phylogeneies in the maximum likelihood tree search
 - `panel_{i}.png`: integrated visualization of single-cell phylogeny and CNV landscape
 
+# Phasing panels
+The CNV detection power of Numbat can be further enhanced by conducting population-based phasing with a larger and more diverse reference panel (i.e. reference haplotypes). The default pipeline above uses the [1000 Genome](https://www.internationalgenome.org) panel, which contains genotypes from 2,504 individuals. Larger reference panels include:
+- gnomAD HGDP + 1KG panel (n=4,099). You can download the reference files using [gsutil](https://cloud.google.com/storage/docs/gsutil): `gs://gcp-public-data--gnomad/resources/hgdp_1kg/phased_haplotypes`. 
+- TOPMed panel (n=97,256). You can upload your VCF to the [TOPMed imputation server](https://imputation.biodatacatalyst.nhlbi.nih.gov/#!pages/jobs).
+
 # FAQ
 
 **Q**: We expect a certain CNV to be in a particular sample, but it is not detected by Numbat.
@@ -211,4 +217,4 @@ Numbat generates a number of files in the output folder. The file names are post
 
 2. CNV is called in pseudobulks but did not appear in `segs_consensus_*.tsv` and `joint_post_*tsv`. This is because the event is filtered out due to low LLR. Lowering `min_LLR` threshold will help.
 
-3. CNV is called in pseudobulks, is present in `segs_consensus_*.tsv` and `joint_post_*tsv`, but did not appear in phylogeny. This is because the event is filtered out due to high entropy (weak evidence) in single cells. Raising max_entropy threshold will help. You can check the entropy of specific events in `joint_post_*tsv` in the column `avg_entropy`.
+3. CNV is called in pseudobulks, is present in `segs_consensus_*.tsv` and `joint_post_*tsv`, but did not appear in phylogeny. This is because the event is filtered out due to high entropy (weak evidence) in single cells. Raising `max_entropy` threshold will help. You can check the entropy of specific events in `joint_post_*tsv` in the column `avg_entropy`.
