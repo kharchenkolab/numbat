@@ -332,6 +332,7 @@ Arguments:
 <li><p>CNV is called in pseudobulks but did not appear in <code>segs_consensus_*.tsv</code> and <code>joint_post_*tsv</code>. This is because the event is filtered out due to low LLR. Lowering <code>min_LLR</code> threshold will help.</p></li>
 <li><p>CNV is called in pseudobulks, is present in <code>segs_consensus_*.tsv</code> and <code>joint_post_*tsv</code>, but did not appear in phylogeny. This is because the event is filtered out due to high entropy (weak evidence) in single cells. Raising <code>max_entropy</code> threshold will help. You can check the entropy of specific events in <code>joint_post_*tsv</code> in the column <code>avg_entropy</code>.</p></li>
 </ol>
+<p><strong>Q</strong>: Numbat predicts most of the genome to be amplified, and there are gaps in the pseudobulk allele profile with no heterozygous SNPs. <strong>A</strong>: This is a sign that the sample consists mostly of tumor (with very few normal cells), and clonal deletions are present. The heterozygous SNPs cannot be identified in these regions, therefore leaving gaps. You can identify these clonally deleted regions via the SNP-density HMM prior to running the main <code>run_numbat</code> workflow (see section <a href="#detecting-clonal-loh">Detecting Clonal LOH</a>).</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>
