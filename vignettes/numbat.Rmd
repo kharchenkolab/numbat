@@ -222,4 +222,5 @@ The CNV detection power of Numbat can be further enhanced by conducting populati
 3. CNV is called in pseudobulks, is present in `segs_consensus_*.tsv` and `joint_post_*tsv`, but did not appear in phylogeny. This is because the event is filtered out due to high entropy (weak evidence) in single cells. Raising `max_entropy` threshold will help. You can check the entropy of specific events in `joint_post_*tsv` in the column `avg_entropy`.
 
 **Q**: Numbat predicts most of the genome to be amplified, and there are gaps in the pseudobulk allele profile with no heterozygous SNPs. 
+
 **A**: This is a sign that the sample consists mostly of tumor (with very few normal cells), and clonal deletions are present. The heterozygous SNPs cannot be identified in these regions, therefore leaving gaps. You can identify these clonally deleted regions via the SNP-density HMM prior to running the main `run_numbat` workflow (see section [Detecting Clonal LOH](#detecting-clonal-loh)).
