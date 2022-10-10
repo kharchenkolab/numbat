@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.3</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,10 +54,17 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.0.2" id="numbat-1-0-2---09072022">numbat 1.0.2 - 09/07/2022<a class="anchor" aria-label="anchor" href="#numbat-1-0-2---09072022"></a></h2>
+<h2 class="pkg-version" data-toc-text="1.0.3" id="numbat-1-0-3---10092022">numbat 1.0.3 - 10/09/2022<a class="anchor" aria-label="anchor" href="#numbat-1-0-3---10092022"></a></h2>
+<ul><li>Fail gracefully when no CNV remains after <code>retest_bulks</code>
+</li>
+<li>Passing <code>gamma</code> parameter to <code>retest_bulks</code>
+</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.2" id="numbat-1-0-2---09072022">numbat 1.0.2 - 09/07/2022<a class="anchor" aria-label="anchor" href="#numbat-1-0-2---09072022"></a></h2><p class="text-muted">CRAN release: 2022-09-15</p>
 <ul><li><p>Conform to CRAN guidelines</p></li>
 <li><p>Removed ATC2 examples from package data - users can download from lab server link instead</p></li>
-<li><p>New option to specific genome version (genome = ‘hg38’ or ‘hg19’). Support plotting of centromeres and gap regions for hg19.</p></li>
+<li><p>New option to specify genome version (genome = ‘hg38’ or ‘hg19’). Support plotting of centromeres and gap regions for hg19.</p></li>
 <li><p>Removed genetic maps from package data and they are no longer provided as input to <code>run_numbat</code>. Annotation of genetic distance is performed in <code>pileup_and_phase.R</code> script instead, using the genetic map included in Eagle2.</p></li>
 </ul></div>
     <div class="section level2">
