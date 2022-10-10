@@ -265,6 +265,7 @@ run_numbat = function(
         segs_consensus = bulk_subtrees %>% 
             get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = TRUE)
 
+        # check termination
         if (all(segs_consensus$cnv_state_post == 'neu')) {
             msg = 'No CNV remains after filtering - terminating.'
             log_message(msg)
@@ -276,6 +277,7 @@ run_numbat = function(
                 bulk_subtrees,
                 segs_consensus, 
                 diploid_chroms = diploid_chroms, 
+                gamma = gamma,
                 min_LLR = min_LLR,
                 ncores = ncores
             )
@@ -284,6 +286,13 @@ run_numbat = function(
         
         segs_consensus = bulk_subtrees %>%
             get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = FALSE)
+
+        # check termination again
+        if (all(segs_consensus$cnv_state_post == 'neu')) {
+            msg = 'No CNV remains after filtering - terminating.'
+            log_message(msg)
+            return(msg)
+        }
 
         # retest on clones
         clones = purrr::keep(clones, function(x) x$size > min_cells)
@@ -313,6 +322,7 @@ run_numbat = function(
         bulk_clones = retest_bulks(
             bulk_clones,
             segs_consensus,
+            gamma = gamma,
             use_loh = use_loh,
             min_LLR = min_LLR,
             diploid_chroms = diploid_chroms,
@@ -564,6 +574,7 @@ run_numbat = function(
     bulk_clones = retest_bulks(
         bulk_clones,
         segs_consensus,
+        gamma = gamma,
         use_loh = use_loh,
         min_LLR = min_LLR,
         diploid_chroms = diploid_chroms,
