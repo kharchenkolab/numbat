@@ -1,3 +1,8 @@
+# numbat 1.0.3 - 10/09/2022
+
+* Fail gracefully when no CNV remains after `retest_bulks`
+* Passing `gamma` parameter to `retest_bulks`
+
 # numbat 1.0.2 - 09/07/2022
 
 * Conform to CRAN guidelines
