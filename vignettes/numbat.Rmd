@@ -207,7 +207,7 @@ The CNV detection power of Numbat can be further enhanced by conducting populati
 
 - gnomAD HGDP + 1KG panel (n=4,099). You can download the reference files using [gsutil](https://cloud.google.com/storage/docs/gsutil): `gs://gcp-public-data--gnomad/resources/hgdp_1kg/phased_haplotypes`. 
 
-- TOPMed panel (n=97,256). You can upload your VCF to the [TOPMed imputation server](https://imputation.biodatacatalyst.nhlbi.nih.gov/#!pages/jobs).
+- TOPMed panel (n=97,256). You can upload your VCF to the [TOPMed imputation server](https://imputation.biodatacatalyst.nhlbi.nih.gov).
 
 # FAQ
 
