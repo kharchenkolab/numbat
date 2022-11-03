@@ -26,7 +26,8 @@ plot_phylo_heatmap(
   superclone = FALSE,
   exclude_gap = FALSE,
   root_edge = TRUE,
-  raster = FALSE
+  raster = FALSE,
+  show_phylo = TRUE
 )
 }
 \arguments{
@@ -73,6 +74,8 @@ plot_phylo_heatmap(
 \item{root_edge}{logical Whether to plot root edge}
 
 \item{raster}{logical Whether to raster images}
+
+\item{show_phylo}{logical Whether to display phylogeny on y axis}
 }
 \value{
 ggplot panel
@@ -82,7 +85,7 @@ Plot single-cell CNV calls along with the clonal phylogeny
 }
 \examples{
 p = plot_phylo_heatmap(
-    gtree = phylogeny_example, 
-    joint_post = joint_post_example, 
+    gtree = phylogeny_example,
+    joint_post = joint_post_example,
     segs_consensus = segs_example)
 }
