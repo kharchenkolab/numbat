@@ -2,7 +2,7 @@
 % Please edit documentation in R/vis.R
 \name{plot_bulks}
 \alias{plot_bulks}
-\title{Plot a group of pseudobulks HMM profile}
+\title{Plot a group of pseudobulk HMM profiles}
 \usage{
 plot_bulks(bulks, ..., ncol = 1, title = TRUE)
 }
@@ -19,7 +19,7 @@ plot_bulks(bulks, ..., ncol = 1, title = TRUE)
 a ggplot object
 }
 \description{
-Plot a group of pseudobulks HMM profile
+Plot a group of pseudobulk HMM profiles
 }
 \examples{
 p = plot_bulks(bulk_example)

@@ -440,7 +440,8 @@ plot_mut_history = function(
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @param joint_post dataframe Joint single cell CNV posteriors
 #' @param segs_consensus datatframe Consensus segment dataframe
-#' @param annot named vector Cell annotations, keys are cell names
+#' @param p_min numeric Probability threshold to display CNV calls
+#' @param annot dataframe Cell annotations, dataframe with 'cell' and additional annotation columns
 #' @param pal_annot named vector Colors for cell annotations
 #' @param annot_title character Legend title for the annotation bar
 #' @param annot_scale ggplot scale Color scale for the annotation bar
@@ -449,17 +450,19 @@ plot_mut_history = function(
 #' @param clone_title character Legend title for the clone bar
 #' @param clone_legend logical Whether to display the clone legend
 #' @param tree_height numeric Relative height of the phylogeny plot
-#' @param p_min numeric Probability threshold to display CNV calls
 #' @param line_width numeric Line width for CNV heatmap
 #' @param branch_width numeric Line width in the phylogeny
 #' @param tip_length numeric Length of tips in the phylogeny
+#' @param annot_bar_width numeric Width of annotation bar
+#' @param clone_bar_width numeric Width of clone genotype bar
+#' @param bar_label_size numeric Size of sidebar text labels
 #' @param clone_line logical Whether to display borders for clones in the heatmap
 #' @param superclone logical Wehether to display superclones in the clone bar
 #' @param pal_clone named vector Clone colors
 #' @param root_edge logical Whether to plot root edge
 #' @param exclude_gap logical Whether to mark gap regions
-#' @param raster logical Whether to raster images
 #' @param show_phylo logical Whether to display phylogeny on y axis
+#' @param raster logical Whether to raster images
 #' @return ggplot panel
 #' @examples
 #' p = plot_phylo_heatmap(
@@ -468,10 +471,11 @@ plot_mut_history = function(
 #'     segs_consensus = segs_example)
 #' @export
 plot_phylo_heatmap = function(
-        gtree, joint_post, segs_consensus,
+        gtree, joint_post, segs_consensus, p_min = 0.9, 
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = FALSE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE,
-        p_min = 0.9, line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2,
+        line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2,
+        annot_bar_width = 0.25, clone_bar_width = 0.25, bar_label_size = 0, 
         clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, raster = FALSE, show_phylo = TRUE
     ) {
 
@@ -667,7 +671,10 @@ plot_phylo_heatmap = function(
         ) %>%
         mutate(cell = factor(cell, cell_order)) %>%
         filter(!is.na(cell)) %>%
-        annot_bar(transpose = TRUE, legend = clone_legend, pal_annot = pal_clone, legend_title = clone_title, size = size, raster = raster)
+        annot_bar(
+            transpose = TRUE, legend = clone_legend, pal_annot = pal_clone,
+            legend_title = clone_title, label_size = bar_label_size, size = size, raster = raster
+        )
 
     # add clone lines
     if (clone_line) {
@@ -703,40 +710,40 @@ plot_phylo_heatmap = function(
     # external annotation
     if (!is.null(annot)) {
 
-    	if (is.data.frame(annot)){
-    		annot_names = names(annot)[!names(annot) == "cell"]
-
-    		p_annot = purrr::map(annot_names, ~dplyr::select(annot, cell, annot = .x)) %>%
-    			purrr::set_names(annot_names)
-
-    		make_annot_bar <- function(p_annot, annot_title){
-    			p_annot %>%
-    				filter(cell %in% cell_order) %>%
-    				mutate(cell = factor(cell, cell_order)) %>%
-    				mutate(annot = factor(annot)) %>%
-    				annot_bar(transpose = TRUE, pal_annot = pal_annot, legend_title = annot_title, size = size, annot_scale = annot_scale, raster = raster)
-    		}
-
-    		p_annot <- purrr::imap(p_annot, make_annot_bar)
-
-    		p_annot = patchwork::wrap_plots(p_annot)
-    	} else {
-    		p_annot = data.frame(
+        if (!is.data.frame(annot)) {
+            annot = data.frame(
     			cell = names(annot),
-    			annot = unname(annot)
-    		) %>%
-    			filter(cell %in% cell_order) %>%
-    			mutate(cell = factor(cell, cell_order)) %>%
-    			annot_bar(transpose = TRUE, pal_annot = pal_annot, legend_title = annot_title, size = size, annot_scale = annot_scale, raster = raster)
-    	}
+    			Annotation = unname(annot)
+    		)
+        }
+
+        annot_names = names(annot)[!names(annot) == "cell"]
+
+        annot_list = purrr::map(annot_names, function(col) {
+                annot[,c('cell', col)] %>% setNames(c('cell', 'annot'))
+            }) %>%
+            purrr::set_names(annot_names)
+
+        make_annot_bar = function(annot, annot_title){
+            annot %>%
+                filter(cell %in% cell_order) %>%
+                mutate(cell = factor(cell, cell_order)) %>%
+                mutate(annot = factor(annot)) %>%
+                annot_bar(
+                    transpose = TRUE, pal_annot = pal_annot, legend_title = annot_title,
+                    label_size = bar_label_size, size = size, annot_scale = annot_scale, raster = raster
+                )
+        }
+
+        p_annot = wrap_plots(purrr::imap(annot_list, make_annot_bar))
 
         if (clone_bar) {
-            (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')
+            (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(tree_height, clone_bar_width, annot_bar_width, 15), guides = 'collect')
         } else {
-            (p_tree | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 15), guides = 'collect')
+            (p_tree | p_annot | p_segs) + plot_layout(widths = c(tree_height, annot_bar_width, 15), guides = 'collect')
         }
     } else if (clone_bar) {
-        (p_tree | p_clone | p_segs) + plot_layout(widths = c(tree_height, 0.25, 15), guides = 'collect')
+        (p_tree | p_clone | p_segs) + plot_layout(widths = c(tree_height, clone_bar_width, 15), guides = 'collect')
     } else {
         (p_tree | p_segs) + plot_layout(widths = c(tree_height, 15), guides = 'collect')
     }
@@ -1061,7 +1068,10 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
 
 # expect columns cell and annot
 #' @keywords internal
-annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, pal_annot = NULL, annot_scale = NULL, raster = FALSE) {
+annot_bar = function(
+    D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, label_size = 5,
+    pal_annot = NULL, annot_scale = NULL, raster = FALSE
+) {
 
     D = D %>% mutate(cell_index = as.integer(cell))
 
@@ -1069,7 +1079,7 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', siz
 
     p = ggplot(
         D,
-        aes(x = cell_index, y = '', fill = annot)
+        aes(x = cell_index, y = legend_title, fill = annot)
     ) +
     geom_tile(width=1, height=0.9, size = 0) +
     # geom_segment(
@@ -1086,7 +1096,8 @@ annot_bar = function(D, transpose = FALSE, legend = TRUE, legend_title = '', siz
         strip.background = element_blank(),
         strip.text = element_blank(),
         # axis.text = element_text(size = 8),
-        axis.text = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 30, size = label_size, hjust = 1, vjust = 1),
         plot.margin = margin(0.5,0,0.5,0, unit = 'mm')
     )
 

@@ -8,6 +8,7 @@ plot_phylo_heatmap(
   gtree,
   joint_post,
   segs_consensus,
+  p_min = 0.9,
   annot = NULL,
   pal_annot = NULL,
   annot_title = "Annotation",
@@ -17,11 +18,13 @@ plot_phylo_heatmap(
   pal_clone = NULL,
   clone_title = "Genotype",
   clone_legend = TRUE,
-  p_min = 0.9,
   line_width = 0.1,
   tree_height = 1,
   branch_width = 0.2,
   tip_length = 0.2,
+  annot_bar_width = 0.25,
+  clone_bar_width = 0.25,
+  bar_label_size = 0,
   clone_line = FALSE,
   superclone = FALSE,
   exclude_gap = FALSE,
@@ -37,7 +40,9 @@ plot_phylo_heatmap(
 
 \item{segs_consensus}{datatframe Consensus segment dataframe}
 
-\item{annot}{named vector Cell annotations, keys are cell names}
+\item{p_min}{numeric Probability threshold to display CNV calls}
+
+\item{annot}{dataframe Cell annotations, dataframe with 'cell' and additional annotation columns}
 
 \item{pal_annot}{named vector Colors for cell annotations}
 
@@ -55,8 +60,6 @@ plot_phylo_heatmap(
 
 \item{clone_legend}{logical Whether to display the clone legend}
 
-\item{p_min}{numeric Probability threshold to display CNV calls}
-
 \item{line_width}{numeric Line width for CNV heatmap}
 
 \item{tree_height}{numeric Relative height of the phylogeny plot}
@@ -64,6 +67,12 @@ plot_phylo_heatmap(
 \item{branch_width}{numeric Line width in the phylogeny}
 
 \item{tip_length}{numeric Length of tips in the phylogeny}
+
+\item{annot_bar_width}{numeric Width of annotation bar}
+
+\item{clone_bar_width}{numeric Width of clone genotype bar}
+
+\item{bar_label_size}{numeric Size of sidebar text labels}
 
 \item{clone_line}{logical Whether to display borders for clones in the heatmap}
 
