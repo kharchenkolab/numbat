@@ -536,7 +536,7 @@ plot_phylo_heatmap = function(
     	cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
     } else {
     	p_tree = gtree %>%
-    		treeio::as.phylo() %>%
+    		ape::as.phylo() %>%
     		ape::ladderize(right = FALSE)
 
     	cell_order = rev(p_tree$tip.label)
@@ -703,13 +703,32 @@ plot_phylo_heatmap = function(
     # external annotation
     if (!is.null(annot)) {
 
-        p_annot = data.frame(
-                cell = names(annot),
-                annot = unname(annot)
-            ) %>%
-            filter(cell %in% cell_order) %>%
-            mutate(cell = factor(cell, cell_order)) %>%
-            annot_bar(transpose = TRUE, pal_annot = pal_annot, legend_title = annot_title, size = size, annot_scale = annot_scale, raster = raster)
+    	if (is.data.frame(annot)){
+    		annot_names = names(annot)[!names(annot) == "cell"]
+
+    		p_annot = purrr::map(annot_names, ~dplyr::select(annot, cell, annot = .x)) %>%
+    			purrr::set_names(annot_names)
+
+    		make_annot_bar <- function(p_annot, annot_title){
+    			p_annot %>%
+    				filter(cell %in% cell_order) %>%
+    				mutate(cell = factor(cell, cell_order)) %>%
+    				mutate(annot = factor(annot)) %>%
+    				annot_bar(transpose = TRUE, pal_annot = pal_annot, legend_title = annot_title, size = size, annot_scale = annot_scale, raster = raster)
+    		}
+
+    		p_annot <- purrr::imap(p_annot, make_annot_bar)
+
+    		p_annot = patchwork::wrap_plots(p_annot)
+    	} else {
+    		p_annot = data.frame(
+    			cell = names(annot),
+    			annot = unname(annot)
+    		) %>%
+    			filter(cell %in% cell_order) %>%
+    			mutate(cell = factor(cell, cell_order)) %>%
+    			annot_bar(transpose = TRUE, pal_annot = pal_annot, legend_title = annot_title, size = size, annot_scale = annot_scale, raster = raster)
+    	}
 
         if (clone_bar) {
             (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(tree_height, 0.25, 0.25, 15), guides = 'collect')
