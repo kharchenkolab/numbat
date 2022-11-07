@@ -677,7 +677,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_
             mc.cores = ncores,
             function(g) {
                 get_bulk(
-                    count_mat = count_mat[,g$cells],
+                    count_mat = count_mat[,g$cells,drop=FALSE],
                     df_allele = df_allele %>% filter(cell %in% g$cells),
                     lambdas_ref = lambdas_ref,
                     gtf = gtf,
