@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.4</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,6 +64,7 @@
   <span class="va">gtree</span>,
   <span class="va">joint_post</span>,
   <span class="va">segs_consensus</span>,
+  p_min <span class="op">=</span> <span class="fl">0.9</span>,
   annot <span class="op">=</span> <span class="cn">NULL</span>,
   pal_annot <span class="op">=</span> <span class="cn">NULL</span>,
   annot_title <span class="op">=</span> <span class="st">"Annotation"</span>,
@@ -73,16 +74,19 @@
   pal_clone <span class="op">=</span> <span class="cn">NULL</span>,
   clone_title <span class="op">=</span> <span class="st">"Genotype"</span>,
   clone_legend <span class="op">=</span> <span class="cn">TRUE</span>,
-  p_min <span class="op">=</span> <span class="fl">0.9</span>,
   line_width <span class="op">=</span> <span class="fl">0.1</span>,
   tree_height <span class="op">=</span> <span class="fl">1</span>,
   branch_width <span class="op">=</span> <span class="fl">0.2</span>,
   tip_length <span class="op">=</span> <span class="fl">0.2</span>,
+  annot_bar_width <span class="op">=</span> <span class="fl">0.25</span>,
+  clone_bar_width <span class="op">=</span> <span class="fl">0.25</span>,
+  bar_label_size <span class="op">=</span> <span class="fl">7</span>,
   clone_line <span class="op">=</span> <span class="cn">FALSE</span>,
   superclone <span class="op">=</span> <span class="cn">FALSE</span>,
   exclude_gap <span class="op">=</span> <span class="cn">FALSE</span>,
   root_edge <span class="op">=</span> <span class="cn">TRUE</span>,
-  raster <span class="op">=</span> <span class="cn">FALSE</span>
+  raster <span class="op">=</span> <span class="cn">FALSE</span>,
+  show_phylo <span class="op">=</span> <span class="cn">TRUE</span>
 <span class="op">)</span></code></pre></div>
     </div>
 
@@ -94,8 +98,10 @@
 <dd><p>dataframe Joint single cell CNV posteriors</p></dd>
 <dt>segs_consensus</dt>
 <dd><p>datatframe Consensus segment dataframe</p></dd>
+<dt>p_min</dt>
+<dd><p>numeric Probability threshold to display CNV calls</p></dd>
 <dt>annot</dt>
-<dd><p>named vector Cell annotations, keys are cell names</p></dd>
+<dd><p>dataframe Cell annotations, dataframe with 'cell' and additional annotation columns</p></dd>
 <dt>pal_annot</dt>
 <dd><p>named vector Colors for cell annotations</p></dd>
 <dt>annot_title</dt>
@@ -112,8 +118,6 @@
 <dd><p>character Legend title for the clone bar</p></dd>
 <dt>clone_legend</dt>
 <dd><p>logical Whether to display the clone legend</p></dd>
-<dt>p_min</dt>
-<dd><p>numeric Probability threshold to display CNV calls</p></dd>
 <dt>line_width</dt>
 <dd><p>numeric Line width for CNV heatmap</p></dd>
 <dt>tree_height</dt>
@@ -122,6 +126,12 @@
 <dd><p>numeric Line width in the phylogeny</p></dd>
 <dt>tip_length</dt>
 <dd><p>numeric Length of tips in the phylogeny</p></dd>
+<dt>annot_bar_width</dt>
+<dd><p>numeric Width of annotation bar</p></dd>
+<dt>clone_bar_width</dt>
+<dd><p>numeric Width of clone genotype bar</p></dd>
+<dt>bar_label_size</dt>
+<dd><p>numeric Size of sidebar text labels</p></dd>
 <dt>clone_line</dt>
 <dd><p>logical Whether to display borders for clones in the heatmap</p></dd>
 <dt>superclone</dt>
@@ -132,6 +142,8 @@
 <dd><p>logical Whether to plot root edge</p></dd>
 <dt>raster</dt>
 <dd><p>logical Whether to raster images</p></dd>
+<dt>show_phylo</dt>
+<dd><p>logical Whether to display phylogeny on y axis</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -141,8 +153,8 @@
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="va">p</span> <span class="op">=</span> <span class="fu">plot_phylo_heatmap</span><span class="op">(</span></span>
-<span class="r-in">    gtree <span class="op">=</span> <span class="va">phylogeny_example</span>, </span>
-<span class="r-in">    joint_post <span class="op">=</span> <span class="va">joint_post_example</span>, </span>
+<span class="r-in">    gtree <span class="op">=</span> <span class="va">phylogeny_example</span>,</span>
+<span class="r-in">    joint_post <span class="op">=</span> <span class="va">joint_post_example</span>,</span>
 <span class="r-in">    segs_consensus <span class="op">=</span> <span class="va">segs_example</span><span class="op">)</span></span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>The `x` argument of `as_tibble.matrix()` must have unique column names if `.name_repair` is omitted as of tibble 2.0.0.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> Using compatibility `.name_repair`.</span>

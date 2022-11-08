@@ -9,6 +9,7 @@ get_bulk(
   lambdas_ref,
   df_allele,
   gtf,
+  subset = NULL,
   min_depth = 0,
   nu = 1,
   verbose = TRUE
@@ -22,6 +23,8 @@ get_bulk(
 \item{df_allele}{dataframe Single-cell allele counts}
 
 \item{gtf}{dataframe Transcript gtf}
+
+\item{subset}{vector Subset of cells to aggregate}
 
 \item{min_depth}{integer Minimum coverage to filter SNPs}
 

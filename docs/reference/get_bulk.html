@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.4</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,6 +65,7 @@
   <span class="va">lambdas_ref</span>,
   <span class="va">df_allele</span>,
   <span class="va">gtf</span>,
+  subset <span class="op">=</span> <span class="cn">NULL</span>,
   min_depth <span class="op">=</span> <span class="fl">0</span>,
   nu <span class="op">=</span> <span class="fl">1</span>,
   verbose <span class="op">=</span> <span class="cn">TRUE</span>
@@ -81,6 +82,8 @@
 <dd><p>dataframe Single-cell allele counts</p></dd>
 <dt>gtf</dt>
 <dd><p>dataframe Transcript gtf</p></dd>
+<dt>subset</dt>
+<dd><p>vector Subset of cells to aggregate</p></dd>
 <dt>min_depth</dt>
 <dd><p>integer Minimum coverage to filter SNPs</p></dd>
 <dt>nu</dt>
