@@ -307,6 +307,7 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param df_allele dataframe Single-cell allele counts
 #' @param gtf dataframe Transcript gtf
+#' @param subset vector Subset of cells to aggregate
 #' @param min_depth integer Minimum coverage to filter SNPs
 #' @param nu numeric Phase switch rate
 #' @param verbose logical Verbosity
@@ -318,9 +319,18 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #'     df_allele = df_allele_example,
 #'     gtf = gtf_hg38)
 #' @export
-get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, min_depth = 0, nu = 1, verbose = TRUE) {
+get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, subset = NULL, min_depth = 0, nu = 1, verbose = TRUE) {
 
     count_mat = check_matrix(count_mat)
+
+    if (!is.null(subset)) {
+        if (!all(subset %in% colnames(count_mat))) {
+            stop('All requested cells must be present in count_mat')
+        } else {
+            count_mat = count_mat[,subset,drop=FALSE]
+            df_allele = df_allele %>% filter(cell %in% subset)
+        }
+    }
 
     fit = fit_ref_sse(rowSums(count_mat), lambdas_ref, gtf)
 

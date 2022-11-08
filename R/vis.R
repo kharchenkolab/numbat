@@ -475,7 +475,7 @@ plot_phylo_heatmap = function(
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = FALSE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE,
         line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2,
-        annot_bar_width = 0.25, clone_bar_width = 0.25, bar_label_size = 0, 
+        annot_bar_width = 0.25, clone_bar_width = 0.25, bar_label_size = 7, 
         clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, raster = FALSE, show_phylo = TRUE
     ) {
 

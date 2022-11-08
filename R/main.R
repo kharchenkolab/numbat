@@ -504,10 +504,11 @@ run_numbat = function(
                     clone_bar = TRUE
                 )
             
-                ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 8, height = 3.5, dpi = 250)
+                ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 7.5, height = 3.75, dpi = 250)
             
             },
             error = function(e) { 
+                print(e)
                 log_warn("Plotting phylo-heatmap failed, continuing..")
             })
 
@@ -677,8 +678,9 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_
             mc.cores = ncores,
             function(g) {
                 get_bulk(
-                    count_mat = count_mat[,g$cells,drop=FALSE],
-                    df_allele = df_allele %>% filter(cell %in% g$cells),
+                    count_mat = count_mat,
+                    df_allele = df_allele,
+                    subset = g$cells,
                     lambdas_ref = lambdas_ref,
                     gtf = gtf,
                     min_depth = min_depth

@@ -1,23 +1,23 @@
 #!/usr/bin/env Rscript
 
-library(argparse)
+library(optparse)
 
-parser <- ArgumentParser(description='Run SNP pileup and phasing with 1000G')
-parser$add_argument('--label', type = "character", required = TRUE, help = "Individual label")
-parser$add_argument('--samples', type = "character", required = TRUE, help = "Sample names, comma delimited")
-parser$add_argument('--bams', type = "character", required = TRUE, help = "BAM files, one per sample, comma delimited")
-parser$add_argument('--barcodes', type = "character", required = FALSE, help = "Cell barcode files, one per sample, comma delimited")
-parser$add_argument('--gmap', type = "character", required = TRUE, help = "Path to genetic map provided by Eagle2 (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)")
-parser$add_argument('--eagle', type = "character", required = FALSE, default = 'eagle', help = "Path to Eagle2 binary file")
-parser$add_argument('--snpvcf', type = "character", required = TRUE, help = "SNP VCF for pileup")
-parser$add_argument('--paneldir', type = "character", required = TRUE, help = "Directory to phasing reference panel (BCF files)")
-parser$add_argument('--outdir', type = "character", required = TRUE, help = "Output directory")
-parser$add_argument('--ncores', type = "integer", required = TRUE, help = "Number of cores")
-parser$add_argument('--UMItag', default = "Auto", required = FALSE, type = "character", help = "UMI tag in bam. Should be Auto for 10x and XM for Slide-seq")
-parser$add_argument('--cellTAG', default = "CB", required = FALSE, type = "character", help = "Cell tag in bam. Should be CB for 10x and XC for Slide-seq")
-parser$add_argument('--smartseq', action = 'store_true', help = "running with SMART-seq mode")
-parser$add_argument('--bulk', action = 'store_true', help = "running with bulk RNA-seq mode")
-args <- parser$parse_args()
+parser = OptionParser(description='Run SNP pileup and phasing with 1000G')
+parser = add_option(parser, '--label', default = 'subject', type = "character", help = "Individual label")
+parser = add_option(parser, '--samples', default = 'sample', type = "character", help = "Sample names, comma delimited")
+parser = add_option(parser, '--bams', default = NULL, type = "character",  help = "BAM files, one per sample, comma delimited")
+parser = add_option(parser, '--barcodes', default = NULL, type = "character", help = "Cell barcode files, one per sample, comma delimited")
+parser = add_option(parser, '--gmap', default = NULL, type = "character", help = "Path to genetic map provided by Eagle2 (e.g. Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)")
+parser = add_option(parser, '--eagle', type = "character", default = 'eagle', help = "Path to Eagle2 binary file")
+parser = add_option(parser, '--snpvcf', default = NULL, type = "character", help = "SNP VCF for pileup")
+parser = add_option(parser, '--paneldir', default = NULL, type = "character", help = "Directory to phasing reference panel (BCF files)")
+parser = add_option(parser, '--outdir', default = './pileup_and_phase', type = "character", help = "Output directory")
+parser = add_option(parser, '--ncores', default = 1, type = "integer", help = "Number of cores")
+parser = add_option(parser, '--UMItag', default = "Auto", type = "character", help = "UMI tag in bam. Should be Auto for 10x and XM for Slide-seq")
+parser = add_option(parser, '--cellTAG', default = "CB", type = "character", help = "Cell tag in bam. Should be CB for 10x and XC for Slide-seq")
+parser = add_option(parser, '--smartseq', default = FALSE, action = 'store_true', help = "running with SMART-seq mode")
+parser = add_option(parser, '--bulk', default = FALSE, action = 'store_true', help = "running with bulk RNA-seq mode")
+args <- parse_args(parser)
 
 suppressPackageStartupMessages({
     library(glue)
@@ -28,6 +28,11 @@ suppressPackageStartupMessages({
     library(Matrix)
     library(numbat)
 })
+
+# required args
+if (any(is.null(c(args$bams, args$barcodes, args$gmap, args$snpvcf, args$paneldir)))) {
+    stop('Missing one or more required arguments: bams, barcodes, gmap, snpvcf, paneldir')
+}
 
 label = args$label
 samples = str_split(args$samples, ',')[[1]]
@@ -144,7 +149,19 @@ warning = function(w){
 
 ## VCF creation
 cat('Creating VCFs\n')
-vcfs = lapply(samples, function(sample){vcfR::read.vcfR(glue('{outdir}/pileup/{sample}/cellSNP.base.vcf'), verbose = F)})
+vcfs = lapply(samples, function(sample) {
+    vcf_file = glue('{outdir}/pileup/{sample}/cellSNP.base.vcf')
+    if (file.exists(vcf_file)) {
+        if (file.size(vcf_file) != 0) {
+            vcf = vcfR::read.vcfR(vcf_file, verbose = F)
+            return(vcf)
+        } else {
+            stop('Pileup VCF is empty')
+        }
+    } else {
+        stop('Pileup VCF not found')
+    }
+})
 
 numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'))
 
@@ -201,6 +218,8 @@ for (sample in samples) {
                 fread(vcf_file) %>%
                     rename(CHROM = `#CHROM`) %>%
                     mutate(CHROM = str_remove(CHROM, 'chr'))   
+            } else {
+                stop('Phased VCF not found')
             }
         }) %>%
         Reduce(rbind, .) %>%
