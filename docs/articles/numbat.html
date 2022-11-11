@@ -177,6 +177,7 @@ Arguments:
     --snpvcf /data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf \
     --paneldir /data/1000G_hg38 \
     --ncores ncores</code></pre>
+<p><strong>Important</strong>: If your 10x bam is <em>multiplexed</em> (containing cells from multiple individuals), please only provide cell barcodes for a single individual in each genotyping run.</p>
 <p>This will produce a file named <code>{sample}_allele_counts.tsv.gz</code> under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under <code>phasing/</code> folder and raw pileup counts under <code>pileup/</code>.</p>
 <ol start="2" style="list-style-type: decimal">
 <li><p>Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.</p></li>
