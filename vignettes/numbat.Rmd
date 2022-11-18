@@ -78,9 +78,9 @@ Arguments:
   --outdir OUTDIR      Output directory
   --ncores NCORES      Number of cores
   --smartseq           Running with SMART-seq mode; Supply a txt file containing 
-                       directories of BAM files to --bams and a txt file containing 
-                       cell names to --barcodes (each entry on its own line for 
-                       both; ordering must match).
+                       directories of BAM files to --bams and a txt file 
+                       containing cell names to --barcodes (each entry on its 
+                       own line for both; ordering must match).
 ```
 
 For example, within the Numbat Docker [container](#docker) you can run the preprocessing script like this:
