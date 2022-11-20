@@ -9,7 +9,9 @@
 choose_ref_cor = function(count_mat, lambdas_ref, gtf) {
 
     if (any(duplicated(rownames(lambdas_ref)))) {
-        log_err('Duplicated genes in lambdas_ref')
+        msg = 'Duplicated genes in lambdas_ref'
+        log_error(msg)
+        stop(msg)
     }
 
     if (ncol(lambdas_ref) == 1) {
@@ -375,7 +377,9 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, subset = NULL, min_d
 fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FALSE) {
 
     if (any(duplicated(rownames(lambdas_ref)))) {
-        log_err('Duplicated genes in lambdas_ref')
+        msg = 'Duplicated genes in lambdas_ref'
+        log_error(msg)
+        stop(msg)
     }
 
     if (length(dim(lambdas_ref)) == 1 | is.null(dim(lambdas_ref))) {
@@ -1704,78 +1708,6 @@ get_clone_profile = function(joint_post, clone_post) {
 }
 
 ########################### Misc ############################
-
-log_mem = function() {
-    m = pryr::mem_used()
-    msg = paste0('Mem used: ', signif(m/1e9, 3), 'Gb')
-    log_message(msg)
-}
-
-log_message = function(msg, verbose = TRUE) {
-    log_info(msg)
-    if (verbose) {
-        message(msg)
-    }
-}
-
-log_err = function(msg) {
-    log_error(msg)
-    stop(msg)
-}
-
-#' check the format of a count matrix
-#' @keywords internal
-check_matrix = function(count_mat) {
-    if ('matrix' %in% class(count_mat)) {
-        count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
-    }
-    if (!('dgCMatrix' %in% class(count_mat))) {
-        log_err("count_mat is not of class dgCMatrix or matrix")
-    }
-    if (!is.numeric(count_mat@x)) {
-        log_err("The parameter 'count_mat' must be of type 'integer'. Please fix.")
-    }
-    if (all(count_mat@x != as.integer(count_mat@x))) {
-        log_err("The parameter 'count_mat' must be of type 'integer'. Please fix.")
-    }
-    if (any(duplicated(rownames(count_mat)))) {
-        log_err("Please remove duplicated genes in count matrix")
-    }
-    return(count_mat)
-}
-
-#' check the format of a allele dataframe
-#' @keywords internal
-check_allele_df = function(df) {
-
-    snps = df %>% 
-        filter(GT != '') %>% 
-        group_by(snp_id) %>%
-        summarise(
-            n = length(unique(GT))
-        )
-    
-    if (any(snps$n > 1)) {
-        log_err('Inconsistent SNP genotypes; Are cells from two different individuals mixed together?')
-    }
-
-    df = df %>% mutate(CHROM = factor(CHROM, 1:22))
-
-    return(df)
-
-}
-
-#' check the format of lambdas_ref
-#' @keywords internal
-check_exp_ref = function(lambdas_ref) {
-
-    if (!is.matrix(lambdas_ref)) {
-        lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
-    }
-
-    return(lambdas_ref)
-
-}
 
 #' Calculate simes' p
 #' @keywords internal

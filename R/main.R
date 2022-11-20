@@ -261,13 +261,17 @@ run_numbat = function(
             )
         }
 
+        # diagnostics
+        bulk_subtrees %>% filter(sample == 0) %>% check_contam()
+        bulk_subtrees %>% filter(sample == 0) %>% check_exp_noise()
+
         # find consensus CNVs
         segs_consensus = bulk_subtrees %>% 
             get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = TRUE)
 
         # check termination
         if (all(segs_consensus$cnv_state_post == 'neu')) {
-            msg = 'No CNV remains after filtering - terminating.'
+            msg = 'No CNV remains after filtering by LLR in pseudobulks. Consider reducing min_LLR.'
             log_message(msg)
             return(msg)
         }
@@ -289,7 +293,7 @@ run_numbat = function(
 
         # check termination again
         if (all(segs_consensus$cnv_state_post == 'neu')) {
-            msg = 'No CNV remains after filtering - terminating.'
+            msg = 'No CNV remains after filtering by LLR in pseudobulks. Consider reducing min_LLR.'
             log_message(msg)
             return(msg)
         }
@@ -402,7 +406,7 @@ run_numbat = function(
             filter(avg_entropy < max_entropy & LLR > min_LLR)
 
         if (nrow(joint_post_filtered) == 0) {
-            msg = 'No CNV remains after filtering - terminating.'
+            msg = 'No CNV remains after filtering by entropy in single cells. Consider increasing max_entropy.'
             log_message(msg)
             return(msg)
         } else {
