@@ -1,3 +1,11 @@
+# numbat 1.0.4 - 11/20/2022
+
+* Improving error handling and removing python dependency (argparse) in `pileup_and_phase.R`
+
+* Allow plotting of mutliple annotations in `plot_phylo_heatmap`
+
+* Adding diagnostic messages
+
 # numbat 1.0.3 - 10/09/2022
 
 * Fail gracefully when no CNV remains after `retest_bulks`
