@@ -78,7 +78,7 @@ check_contam = function(bulk) {
     hom_rate = bulk %>% filter(DP >= 8) %>%
         {mean(na.omit(.$AR == 0 | .$AR == 1))}
 
-    if (hom_rate > 0.15) {
+    if (hom_rate > 0.5) {
         msg = paste0(
             'High SNP contamination detected ',
             '(', round(hom_rate*100, 1), '%)',
