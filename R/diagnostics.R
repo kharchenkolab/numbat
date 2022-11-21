@@ -78,11 +78,11 @@ check_contam = function(bulk) {
     hom_rate = bulk %>% filter(DP >= 8) %>%
         {mean(na.omit(.$AR == 0 | .$AR == 1))}
 
-    if (hom_rate > 0.5) {
+    if (hom_rate > 0.4) {
         msg = paste0(
             'High SNP contamination detected ',
             '(', round(hom_rate*100, 1), '%)',
-            '. Are cells from only one individual included in genotyping step?')
+            '. Please make sure that cells from only one individual are included in genotyping step.')
         message(msg)
         log_warn(msg)
     }
