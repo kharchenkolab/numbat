@@ -84,7 +84,7 @@ check_contam = function(bulk) {
             '(', round(hom_rate*100, 1), '%)',
             '. Are cells from only one individual included in genotyping step?')
         message(msg)
-        stop(msg)
+        log_warn(msg)
     }
 
 }
