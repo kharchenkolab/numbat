@@ -8,15 +8,13 @@
 #' @import tidygraph
 #' @import ggplot2
 #' @import ggraph
+#' @importFrom scistreer perform_nni get_mut_graph score_tree annotate_tree mut_to_tree to_phylo
 #' @importFrom ggtree %<+%
 #' @importFrom methods is as
-#' @importFrom parallel mclapply
 #' @importFrom igraph vcount ecount E V V<- E<-
 #' @import patchwork
-#' @importFrom RcppParallel RcppParallelLibs
 #' @importFrom grDevices colorRampPalette
 #' @importFrom stats as.dendrogram as.dist cor cutree dbinom dnbinom dnorm dpois end hclust integrate model.matrix na.omit optim p.adjust pnorm reorder rnorm setNames start t.test as.ts complete.cases is.leaf na.contiguous
-#' @import stringr
 #' @import tibble
 #' @importFrom utils combn
 #' @useDynLib numbat
@@ -420,9 +418,8 @@ run_numbat = function(
         p_min = 1e-10
 
         P = joint_post_filtered %>%
-            mutate(p_n = 1 - p_cnv) %>%
-            mutate(p_n = pmax(pmin(p_n, 1-p_min), p_min)) %>%
-            reshape2::dcast(cell ~ seg, value.var = 'p_n', fill = 0.5) %>%
+            mutate(p_cnv = pmax(pmin(p_cnv, 1-p_min), p_min)) %>%
+            reshape2::dcast(cell ~ seg, value.var = 'p_cnv', fill = 0.5) %>%
             tibble::column_to_rownames('cell') %>%
             as.matrix
 
@@ -433,7 +430,7 @@ run_numbat = function(
         )
 
         # contruct initial tree
-        dist_mat = parallelDist::parDist(rbind(P, 'outgroup' = 1), threads = ncores)
+        dist_mat = parallelDist::parDist(rbind(P, 'outgroup' = 0), threads = ncores)
 
         treeUPGMA = upgma(dist_mat) %>%
             ape::root(outgroup = 'outgroup') %>%
@@ -474,7 +471,7 @@ run_numbat = function(
         saveRDS(tree_post, glue('{out_dir}/tree_post_{i}.rds'))
 
         # simplify mutational history
-        G_m = get_mut_tree(tree_post$gtree, tree_post$mut_nodes)  %>% 
+        G_m = get_mut_graph(tree_post$gtree)  %>% 
             simplify_history(tree_post$l_matrix, max_cost = max_cost) %>% 
             label_genotype()
 
