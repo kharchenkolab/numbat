@@ -19,7 +19,7 @@ Numbat can be used to:
 
 Numbat does not require paired DNA or genotype data and operates solely on the donor scRNA-data data (for example, 10x Cell Ranger output). For details of the method, please checkout our paper:
 
-[Teng Gao, Ruslan Soldatov, Hirak Sarkar, Adam Kurkiewicz, Evan Biederstedt, Po-Ru Loh, Peter Kharchenko. Haplotype-aware analysis of somatic copy number variations from single-cell transcriptomes. Nat Biotechnol (2022).](https://www.nature.com/articles/s41587-022-01468-y)
+> [Teng Gao, Ruslan Soldatov, Hirak Sarkar, Adam Kurkiewicz, Evan Biederstedt, Po-Ru Loh, Peter Kharchenko. Haplotype-aware analysis of somatic copy number variations from single-cell transcriptomes. Nat Biotechnol (2022).](https://www.nature.com/articles/s41587-022-01468-y)
 
 # User Guide
 For a complete guide, please see [Numbat User Guide](https://kharchenkolab.github.io/numbat/).

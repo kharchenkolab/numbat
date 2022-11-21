@@ -155,17 +155,23 @@ Run SNP pileup and phasing with 1000G
 
 Arguments:
   -h, --help           show this help message and exit
-  --label LABEL        Individual label
-  --samples SAMPLES    Sample names, comma delimited
-  --bams BAMS          BAM files, one per sample, comma delimited
-  --barcodes BARCODES  Cell barcode files, one per sample, comma delimited
+  --label LABEL        Individual label. One per run.
+  --samples SAMPLES    Sample name(s); comma delimited if multiple. 
+                       All samples must belong to the same individual.
+  --bams BAMS          BAM file(s); one per sample, comma delimited if multiple.
+  --barcodes BARCODES  Cell barcode file(s); one per sample, 
+                       comma delimited if multiple.
   --gmap GMAP          Path to genetic map provided by Eagle2 (e.g.
                        Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)
   --eagle EAGLE        Path to Eagle2 binary file
   --snpvcf SNPVCF      SNP VCF for pileup
   --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
   --outdir OUTDIR      Output directory
-  --ncores NCORES      Number of cores</code></pre>
+  --ncores NCORES      Number of cores
+  --smartseq           Running with SMART-seq mode; Supply a txt file containing 
+                       directories of BAM files to --bams and a txt file 
+                       containing cell names to --barcodes (each entry on its 
+                       own line for both; ordering must match).</code></pre>
 <p>For example, within the Numbat Docker <a href="#docker">container</a> you can run the preprocessing script like this:</p>
 <pre><code>Rscript /numbat/inst/bin/pileup_and_phase.R \
     --label {sample} \
@@ -177,6 +183,7 @@ Arguments:
     --snpvcf /data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf \
     --paneldir /data/1000G_hg38 \
     --ncores ncores</code></pre>
+<p><strong>Important</strong>: If your 10x bam is <em>multiplexed</em> (containing cells from multiple individuals), please only provide cell barcodes for a single individual in each genotyping run.</p>
 <p>This will produce a file named <code>{sample}_allele_counts.tsv.gz</code> under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under <code>phasing/</code> folder and raw pileup counts under <code>pileup/</code>.</p>
 <ol start="2" style="list-style-type: decimal">
 <li><p>Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.</p></li>
