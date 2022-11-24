@@ -171,8 +171,7 @@ bulk = get_bulk(
     count_mat = count_mat,
     lambdas_ref = ref_hca,
     df_allele = df_allele,
-    gtf = gtf_hg38,
-    genetic_map = genetic_map_hg38
+    gtf = gtf_hg38
 )
 
 segs_loh = bulk %>% detect_clonal_loh(t = 1e-4)
