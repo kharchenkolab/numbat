@@ -37,7 +37,7 @@ Imports:
     R.utils,
     reshape2,
     scales,
-    scistreer,
+    scistreer (>= 1.0.1),
     stats4,
     stringr,
     tibble,
