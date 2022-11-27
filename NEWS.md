@@ -2,7 +2,7 @@
 
 * Improving error handling and removing python dependency (argparse) in `pileup_and_phase.R`
 
-* Allow plotting of mutliple annotations in `plot_phylo_heatmap`
+* Allow plotting of mutliple annotations in `plot_phylo_heatmap` (thanks to @whtns)
 
 * Adding diagnostic messages
 
