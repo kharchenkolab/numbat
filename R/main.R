@@ -422,7 +422,8 @@ run_numbat = function(
         P = joint_post_filtered %>%
             mutate(p_n = 1 - p_cnv) %>%
             mutate(p_n = pmax(pmin(p_n, 1-p_min), p_min)) %>%
-            reshape2::dcast(cell ~ seg, value.var = 'p_n', fill = 0.5) %>%
+            as.data.table %>%
+            data.table::dcast(cell ~ seg, value.var = 'p_n', fill = 0.5) %>%
             tibble::column_to_rownames('cell') %>%
             as.matrix
 
@@ -734,6 +735,8 @@ run_group_hmms = function(
     segs_loh = NULL, exclude_neu = TRUE, ncores = 1, verbose = FALSE, debug = FALSE
 ) {
 
+    # drop samples with no allele data
+    bulks = bulks %>% group_by(sample) %>% filter(sum(!is.na(DP)) > 0) %>% ungroup()
 
     if (nrow(bulks) == 0) {
         return(data.frame())
@@ -1670,7 +1673,8 @@ expand_states = function(sc_post, segs_consensus) {
                 segs_consensus %>% select(seg = seg_cons, cnv_states, n_states),
                 by = 'seg'
             ) %>%
-            reshape2::melt(
+            as.data.table %>% 
+            data.table::melt(
                 measure.vars = c('p_amp', 'p_loh', 'p_del', 'p_bamp', 'p_bdel'),
                 variable.name = 'cnv_state_expand',
                 value.name = 'p_cnv_expand'

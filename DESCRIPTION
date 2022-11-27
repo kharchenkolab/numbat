@@ -36,7 +36,6 @@ Imports:
     RcppParallel,
     RhpcBLASctl,
     R.utils,
-    reshape2,
     scales,
     stats4,
     stringr,

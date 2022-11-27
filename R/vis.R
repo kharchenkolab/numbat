@@ -116,7 +116,8 @@ plot_psbulk = function(
         mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
         mutate(pBAF = ifelse(DP >= min_depth, pBAF, NA)) %>%
         mutate(pHF = pBAF) %>%
-        reshape2::melt(measure.vars = c('logFC', 'pHF'))
+        as.data.table %>%
+        data.table::melt(measure.vars = c('logFC', 'pHF'))
 
     if (allele_only) {
         D = D %>% filter(variable == 'pHF')
@@ -823,9 +824,9 @@ plot_consensus = function(segs) {
 plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, reverse = TRUE, plot_tree = TRUE) {
 
     gexp_norm_long = gexp_roll_wide %>%
-        as.data.frame() %>%
+        as.data.table() %>%
         tibble::rownames_to_column('cell') %>%
-        reshape2::melt(id.var = 'cell', variable.name = 'gene', value.name = 'exp_rollmean') %>%
+        data.table::melt(id.var = 'cell', variable.name = 'gene', value.name = 'exp_rollmean') %>%
         left_join(gtf, by = 'gene') %>%
         arrange(CHROM, gene_start) %>%
         mutate(gene_index = as.integer(factor(gene, unique(gene))))
