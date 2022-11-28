@@ -1699,7 +1699,7 @@ detect_clonal_loh = function(bulk, t = 1e-5, min_depth = 0) {
         select(CHROM, seg, seg_start, seg_end, snp_rate, loh)
 
     if (nrow(segs_loh) == 0) {
-        segs_loh = data.frame()
+        segs_loh = NULL
     }
     
     return(segs_loh)
