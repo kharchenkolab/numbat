@@ -609,7 +609,7 @@ plot_phylo_heatmap = function(
         guides(
             alpha = 'none',
             # alpha = guide_legend(),
-            color = guide_legend(override.aes = c(size = 1), title = 'CNV state')
+            color = guide_legend(override.aes = c(size = 3), title = 'CNV state')
         ) +
         scale_color_manual(
             values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = cnv_colors[['bamp']], 'loh' = 'darkgreen', 'bdel' = 'blue'),
