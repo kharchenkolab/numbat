@@ -673,6 +673,7 @@ exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101,
 #' @keywords internal 
 make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_depth = 0, ncores = NULL) {
     
+
     if (length(groups) == 0) {
         return(data.frame())
     }
@@ -1552,7 +1553,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
 #' @keywords internal 
 retest_bulks = function(bulks, segs_consensus = NULL,
     t = 1e-5, min_genes = 10, gamma = 20, 
-    use_loh = FALSE, diploid_chroms = NULL, ncores = 1, exclude_neu = TRUE, min_LLR = 5) {
+    segs_loh = NULL, use_loh = FALSE, diploid_chroms = NULL, ncores = 1, exclude_neu = TRUE, min_LLR = 5) {
 
     if (is.null(segs_consensus)) {
         segs_consensus = get_segs_consensus(bulks)
