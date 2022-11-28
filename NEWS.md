@@ -1,8 +1,8 @@
 # numbat 1.0.5 - 11/27/2022
 
-* Fixing bugs #65, #66, #67, #68
+* Fixing bugs #65, #66, #67
 
-* Retiring dependency on `reshape2`
+* Retire dependency on `reshape2`
 
 # numbat 1.0.4 - 11/20/2022
 
