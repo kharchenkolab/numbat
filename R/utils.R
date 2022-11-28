@@ -230,11 +230,21 @@ get_allele_bulk = function(df_allele, nu = 1, min_depth = 0) {
         group_by(CHROM) %>%
         filter(n() > 1) %>%
         mutate(
-            inter_snp_cm = c(NA, cM[2:length(cM)] - cM[1:(length(cM)-1)]),
+            inter_snp_cm = get_inter_cm(cM),
             p_s = switch_prob_cm(inter_snp_cm, nu = nu)
         ) %>%
         ungroup() %>%
-        mutate(gene = ifelse(gene == '', NA, gene))
+        mutate(gene = ifelse(gene == '', NA, gene)) %>% 
+        mutate(gene = as.character(gene))
+}
+
+#' Helper function to get inter-SNP distance
+get_inter_cm = function(d) {
+    if (length(d) <= 1) {
+        return(NA)
+    } else {
+        return(c(NA, d[2:length(d)] - d[1:(length(d)-1)]))
+    }
 }
 
 #' Combine allele and expression pseudobulks
@@ -472,12 +482,14 @@ analyze_bulk = function(
 ) {
     
     if (!is.numeric(t)) {
-        stop('transition probability is not numeric')
+        stop('Transition probability is not numeric')
     }
 
-    if ('gamma' %in% colnames(bulk)) {
-        bulk = bulk %>% select(-gamma)
+    if (all(is.na(bulk$DP))) {
+        stop('No allele data')
     }
+
+    bulk = bulk %>% select(-any_of(c('gamma')))
 
     # update transition probablity
     bulk = bulk %>% mutate(p_s = switch_prob_cm(inter_snp_cm, nu = UQ(nu)))
@@ -1104,7 +1116,8 @@ find_common_diploid = function(
     } else {
         test_dat = bulks_bal %>%
             select(gene, seg, lnFC, sample) %>%
-            reshape2::dcast(seg+gene ~ sample, value.var = 'lnFC') %>%
+            as.data.table %>%
+            data.table::dcast(seg+gene ~ sample, value.var = 'lnFC') %>%
             na.omit() %>%
             mutate(seg = as.character(seg)) %>%
             select(-gene)
@@ -1161,7 +1174,8 @@ find_common_diploid = function(
                     lnFC = mean(lnFC, na.rm = TRUE),
                     .groups = 'drop'
                 ) %>%
-                reshape2::dcast(sample ~ component, value.var = 'lnFC') %>%
+                as.data.table %>%
+                data.table::dcast(sample ~ component, value.var = 'lnFC') %>%
                 tibble::column_to_rownames('sample')
 
         } else {
@@ -1685,7 +1699,7 @@ detect_clonal_loh = function(bulk, t = 1e-5, min_depth = 0) {
         select(CHROM, seg, seg_start, seg_end, snp_rate, loh)
 
     if (nrow(segs_loh) == 0) {
-        segs_loh = data.frame()
+        segs_loh = NULL
     }
     
     return(segs_loh)

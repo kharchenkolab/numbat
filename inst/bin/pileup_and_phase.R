@@ -215,7 +215,7 @@ for (sample in samples) {
     vcf_phased = lapply(1:22, function(chr) {
             vcf_file = glue('{outdir}/phasing/{label}_chr{chr}.phased.vcf.gz')
             if (file.exists(vcf_file)) {
-                fread(vcf_file) %>%
+                fread(vcf_file, skip = '#CHROM') %>%
                     rename(CHROM = `#CHROM`) %>%
                     mutate(CHROM = str_remove(CHROM, 'chr'))   
             } else {

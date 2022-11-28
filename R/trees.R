@@ -698,7 +698,8 @@ get_move_opt = function(G, l_matrix) {
         ungroup() %>%
         # prevent a down move if branching. Technically it's fine but graph has to be modified correctly
         mutate(down = ifelse(n_sibling > 1, Inf, down)) %>%
-        reshape2::melt(measure.vars = c('up', 'down'), variable.name = 'direction', value.name = 'cost') %>%
+        as.data.table %>%
+        data.table::melt(measure.vars = c('up', 'down'), variable.name = 'direction', value.name = 'cost') %>%
         arrange(cost) %>%
         head(1)
 
