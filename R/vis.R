@@ -824,8 +824,9 @@ plot_consensus = function(segs) {
 plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, reverse = TRUE, plot_tree = TRUE) {
 
     gexp_norm_long = gexp_roll_wide %>%
-        as.data.table() %>%
+        as.data.frame %>%
         tibble::rownames_to_column('cell') %>%
+        as.data.table %>%
         data.table::melt(id.var = 'cell', variable.name = 'gene', value.name = 'exp_rollmean') %>%
         left_join(gtf, by = 'gene') %>%
         arrange(CHROM, gene_start) %>%
