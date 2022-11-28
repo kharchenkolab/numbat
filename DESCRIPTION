@@ -35,7 +35,6 @@ Imports:
     Rcpp, 
     RhpcBLASctl,
     R.utils,
-    reshape2,
     scales,
     scistreer (>= 1.0.1),
     stats4,

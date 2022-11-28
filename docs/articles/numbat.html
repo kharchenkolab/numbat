@@ -184,7 +184,7 @@ Arguments:
     --paneldir /data/1000G_hg38 \
     --ncores ncores</code></pre>
 <p><strong>Important</strong>: If your 10x bam is <em>multiplexed</em> (containing cells from multiple individuals), please only provide cell barcodes for a single individual in each genotyping run.</p>
-<p>This will produce a file named <code>{sample}_allele_counts.tsv.gz</code> under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual was provided, there will be one allele count file for each sample. Other outputs include phased vcfs under <code>phasing/</code> folder and raw pileup counts under <code>pileup/</code>.</p>
+<p>This will produce a file named <code>{sample}_allele_counts.tsv.gz</code> under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual were provided, there will be one allele count file for each sample. Other outputs include phased vcfs under <code>phasing/</code> folder and raw pileup counts under <code>pileup/</code>.</p>
 <ol start="2" style="list-style-type: decimal">
 <li><p>Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.</p></li>
 <li><p>Prepare the expression reference, which is a gene by cell type matrix of normalized expression values (raw gene counts divided by total counts). For a quick start, you may use a our HCA collection (<code>ref_hca</code>) that ships with the package. If you have matched normal cells (ideally, of various cell type) from the same patient or dataset and would like to make your own references, you may use this utility function:</p></li>
@@ -267,8 +267,7 @@ Arguments:
     count_mat <span class="op">=</span> <span class="va">count_mat</span>,
     lambdas_ref <span class="op">=</span> <span class="va">ref_hca</span>,
     df_allele <span class="op">=</span> <span class="va">df_allele</span>,
-    gtf <span class="op">=</span> <span class="va">gtf_hg38</span>,
-    genetic_map <span class="op">=</span> <span class="va">genetic_map_hg38</span>
+    gtf <span class="op">=</span> <span class="va">gtf_hg38</span>
 <span class="op">)</span>
 
 <span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op">%&gt;%</span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></code></pre>
