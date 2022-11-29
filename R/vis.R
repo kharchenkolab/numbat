@@ -187,10 +187,9 @@ plot_psbulk = function(
         # scale_x_continuous(expand = expansion(add = 5)) +
         scale_color_manual(
             values = cnv_colors,
-            # limits = legend_breaks,
-            limits = force,
-            # breaks = legend_breaks,
-            labels = cnv_labels,
+            limits = names(cnv_colors),
+            breaks = legend_breaks,
+            labels = cnv_labels[legend_breaks],
             na.translate = FALSE
         ) +
         guides(
@@ -724,34 +723,18 @@ plot_phylo_heatmap = function(
     }
 
     # external annotation
-    if (!is.null(annot)) {
+    if ((!is.null(annot)) & is.data.frame(annot)) {
 
-        if (!is.data.frame(annot)) {
-            annot = data.frame(
-    			cell = names(annot),
-    			Annotation = unname(annot)
-    		)
-        }
-
-        annot_names = names(annot)[!names(annot) == "cell"]
-
-        annot_list = purrr::map(annot_names, function(col) {
-                annot[,c('cell', col)] %>% setNames(c('cell', 'annot'))
-            }) %>%
-            purrr::set_names(annot_names)
-
-        make_annot_bar = function(annot, annot_title){
-            annot %>%
-                filter(cell %in% cell_order) %>%
-                mutate(cell = factor(cell, cell_order)) %>%
-                mutate(annot = factor(annot)) %>%
-                annot_bar(
-                    transpose = TRUE, pal_annot = pal_annot, legend_title = annot_title,
-                    label_size = bar_label_size, size = size, annot_scale = annot_scale, raster = raster
-                )
-        }
-
-        p_annot = wrap_plots(purrr::imap(annot_list, make_annot_bar))
+        p_annot = annot %>% as.data.table %>% 
+            data.table::melt(id.var = 'cell', value.name = 'annot', value.factor = TRUE) %>%
+            filter(cell %in% cell_order) %>%
+            mutate(cell = factor(cell, cell_order)) %>%
+            split(.$variable) %>% 
+            lapply(function(annot) {
+                annot_bar(annot, transpose = TRUE, pal_annot = pal_annot, legend_title = unique(annot$variable),
+                    label_size = bar_label_size, size = size, annot_scale = annot_scale, raster = raster)
+            }) %>% 
+            wrap_plots()
 
         if (clone_bar) {
             (p_tree | p_clone | p_annot | p_segs) + plot_layout(widths = c(tree_height, clone_bar_width, annot_bar_width, 15), guides = 'collect')
