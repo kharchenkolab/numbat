@@ -187,9 +187,10 @@ plot_psbulk = function(
         # scale_x_continuous(expand = expansion(add = 5)) +
         scale_color_manual(
             values = cnv_colors,
-            limits = names(legend_breaks),
-            breaks = legend_breaks,
-            labels = cnv_labels[legend_breaks],
+            # limits = legend_breaks,
+            limits = force,
+            # breaks = legend_breaks,
+            labels = cnv_labels,
             na.translate = FALSE
         ) +
         guides(
