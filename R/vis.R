@@ -187,7 +187,7 @@ plot_psbulk = function(
         # scale_x_continuous(expand = expansion(add = 5)) +
         scale_color_manual(
             values = cnv_colors,
-            # limits = force,
+            limits = names(legend_breaks),
             breaks = legend_breaks,
             labels = cnv_labels[legend_breaks],
             na.translate = FALSE
@@ -623,7 +623,7 @@ plot_phylo_heatmap = function(
         guides(
             alpha = 'none',
             # alpha = guide_legend(),
-            color = guide_legend(override.aes = c(size = 3), title = 'CNV state')
+            color = guide_legend(override.aes = c(size = 3, linewidth = 3), title = 'CNV state')
         ) +
         scale_color_manual(
             values = c('amp' = 'darkred', 'del' = 'darkblue', 'bamp' = cnv_colors[['bamp']], 'loh' = 'darkgreen', 'bdel' = 'blue'),
