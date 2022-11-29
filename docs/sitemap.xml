@@ -100,6 +100,12 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/check_allele_df.html</loc>
   </url>
   <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/check_contam.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/check_exp_noise.html</loc>
+  </url>
+  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/check_exp_ref.html</loc>
   </url>
   <url>
@@ -218,6 +224,9 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/get_haplotype_post.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_inter_cm.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/get_internal_nodes.html</loc>

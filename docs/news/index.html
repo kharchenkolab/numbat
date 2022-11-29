@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,8 +54,18 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.1.0" id="numbat-1-1-0---11282022">numbat 1.1.0 - 11/28/2022<a class="anchor" aria-label="anchor" href="#numbat-1-1-0---11282022"></a></h2>
+<ul><li><p>Externalize phylogeny module as separate package (<code>scistreer</code>)</p></li>
+<li><p>Prepare for new CRAN version</p></li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.5" id="numbat-1-0-5---11272022">numbat 1.0.5 - 11/27/2022<a class="anchor" aria-label="anchor" href="#numbat-1-0-5---11272022"></a></h2>
+<ul><li><p>Fixing bugs <a href="https://github.com/kharchenkolab/numbat/issues/65" class="external-link">#65</a>, <a href="https://github.com/kharchenkolab/numbat/issues/66" class="external-link">#66</a>, <a href="https://github.com/kharchenkolab/numbat/issues/67" class="external-link">#67</a></p></li>
+<li><p>Retire dependency on <code>reshape2</code></p></li>
+</ul></div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.4" id="numbat-1-0-4---11202022">numbat 1.0.4 - 11/20/2022<a class="anchor" aria-label="anchor" href="#numbat-1-0-4---11202022"></a></h2>
-<ul><li><p>Improving error handling and removing python dependency (argparse) in <code>pileup_and_phase.R</code></p></li>
+<ul><li><p>Improving error handling and removing python dependency (<code>argparse</code>) in <code>pileup_and_phase.R</code></p></li>
 <li><p>Allow plotting of mutliple annotations in <code>plot_phylo_heatmap</code> (thanks to <a href="https://github.com/whtns" class="external-link">@whtns</a>)</p></li>
 <li><p>Adding diagnostic messages</p></li>
 </ul></div>
@@ -68,7 +78,7 @@
 <h2 class="pkg-version" data-toc-text="1.0.2" id="numbat-1-0-2---09072022">numbat 1.0.2 - 09/07/2022<a class="anchor" aria-label="anchor" href="#numbat-1-0-2---09072022"></a></h2><p class="text-muted">CRAN release: 2022-09-15</p>
 <ul><li><p>Conform to CRAN guidelines</p></li>
 <li><p>Removed ATC2 examples from package data - users can download from lab server link instead</p></li>
-<li><p>New option to specify genome version (genome = ‘hg38’ or ‘hg19’). Support plotting of centromeres and gap regions for hg19.</p></li>
+<li><p>New option to specify genome version (<code>genome = 'hg38' or 'hg19'</code>). Support plotting of centromeres and gap regions for hg19.</p></li>
 <li><p>Removed genetic maps from package data and they are no longer provided as input to <code>run_numbat</code>. Annotation of genetic distance is performed in <code>pileup_and_phase.R</code> script instead, using the genetic map included in Eagle2.</p></li>
 </ul></div>
     <div class="section level2">

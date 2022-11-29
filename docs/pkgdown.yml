@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   numbat: numbat.html
   results: results.html
-last_built: 2022-11-21T05:07Z
+last_built: 2022-11-29T16:40Z
 urls:
   reference: https://kharchenkolab.github.io/numbat/reference
   article: https://kharchenkolab.github.io/numbat/articles
