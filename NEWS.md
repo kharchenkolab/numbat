@@ -1,3 +1,9 @@
+# numbat 1.1.0 - 11/28/2022
+
+* Externalize phylogeny module as separate package (`scistreer`)
+
+* Prepare for new CRAN version
+
 # numbat 1.0.5 - 11/27/2022
 
 * Fixing bugs #65, #66, #67

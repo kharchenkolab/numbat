@@ -4,7 +4,7 @@
 \alias{plot_bulks}
 \title{Plot a group of pseudobulk HMM profiles}
 \usage{
-plot_bulks(bulks, ..., ncol = 1, title = TRUE)
+plot_bulks(bulks, ..., ncol = 1, title = TRUE, title_size = 8)
 }
 \arguments{
 \item{bulks}{dataframe Pseudobulk profiles annotated with "sample" column}
@@ -14,6 +14,8 @@ plot_bulks(bulks, ..., ncol = 1, title = TRUE)
 \item{ncol}{integer Number of columns}
 
 \item{title}{logical Whether to add titles to individual plots}
+
+\item{title_size}{numeric Size of titles}
 }
 \value{
 a ggplot object

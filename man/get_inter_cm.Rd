@@ -6,6 +6,13 @@
 \usage{
 get_inter_cm(d)
 }
+\arguments{
+\item{d}{numeric vector Genetic positions in centimorgan (cM)}
+}
+\value{
+numeric vector Inter-SNP genetic distances
+}
 \description{
 Helper function to get inter-SNP distance
 }
+\keyword{internal}

@@ -255,7 +255,7 @@ run_numbat = function(
             p = plot_bulks(bulk_subtrees, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
             ggsave(
                 glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
-                width = 12, height = 2*length(unique(bulk_subtrees$sample)), dpi = 250
+                width = 13, height = 2*length(unique(bulk_subtrees$sample)), dpi = 250
             )
         }
 
@@ -338,7 +338,7 @@ run_numbat = function(
             p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
             ggsave(
                 glue('{out_dir}/bulk_clones_{i}.png'), p, 
-                width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 250
+                width = 13, height = 2*length(unique(bulk_clones$sample)), dpi = 250
             )
         }
 
@@ -591,7 +591,7 @@ run_numbat = function(
         p = plot_bulks(bulk_clones, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
         ggsave(
             glue('{out_dir}/bulk_clones_final.png'), p, 
-            width = 12, height = 2*length(unique(bulk_clones$sample)), dpi = 250
+            width = 13, height = 2*length(unique(bulk_clones$sample)), dpi = 250
         )
     }
     

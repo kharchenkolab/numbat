@@ -56,6 +56,7 @@ cnv_labels = names(cnv_colors) %>%
 #' @param legend logical Whether to show legend
 #' @param exclude_gap logical Whether to mark gap regions and centromeres
 #' @param genome character Genome build, either 'hg38' or 'hg19'
+#' @param text_size numeric Size of text in the plot
 #' @param raster logical Whether to raster images
 #' @return ggplot Plot of pseudobulk HMM profile
 #' @examples
@@ -63,8 +64,8 @@ cnv_labels = names(cnv_colors) %>%
 #' @export
 plot_psbulk = function(
         bulk, use_pos = TRUE, allele_only = FALSE, min_LLR = 5, min_depth = 8, exp_limit = 2,
-        phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = FALSE,
-        exclude_gap = TRUE, genome = 'hg38', raster = FALSE
+        phi_mle = TRUE, theta_roll = FALSE, dot_size = 0.8, dot_alpha = 0.5, legend = TRUE,
+        exclude_gap = TRUE, genome = 'hg38', text_size = 10, raster = FALSE
     ) {
 
     if (!all(c('state_post', 'cnv_state_post') %in% colnames(bulk))) {
@@ -154,6 +155,8 @@ plot_psbulk = function(
         }
     }
 
+    legend_breaks = c("neu", "loh_up", "loh_down", "del_up", "del_down", "amp_up", "amp_down", "bamp", "bdel")
+
     p = p + geom_point(
             aes(shape = str_detect(state_post, '_2'), alpha = str_detect(state_post, '_2')),
             size = dot_size,
@@ -173,17 +176,26 @@ plot_psbulk = function(
             panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
             strip.background = element_blank(),
             axis.text.x = element_blank(),
-            axis.ticks.x = element_blank()
+            axis.ticks.x = element_blank(),
+            legend.title = element_text(size = text_size),
+            strip.text = element_text(size = text_size),
+            axis.title = element_text(size = text_size),
+            legend.text = element_text(size = text_size),
+            plot.margin = margin(t = 1, r = 0, b = 1, l = 0, 'cm')
         ) +
         facet_grid(variable ~ CHROM, scales = 'free', space = 'free_x') +
         # scale_x_continuous(expand = expansion(add = 5)) +
         scale_color_manual(
             values = cnv_colors,
-            limits = force,
-            labels = cnv_labels,
+            # limits = force,
+            breaks = legend_breaks,
+            labels = cnv_labels[legend_breaks],
             na.translate = FALSE
         ) +
-        guides(color = guide_legend(title = "", override.aes = aes(size = 3)), fill = 'none', alpha = 'none', shape = 'none') +
+        guides(
+            color = guide_legend(title = "CNV state", override.aes = aes(size = 3), ncol = 1),
+            fill = 'none', alpha = 'none', shape = 'none'
+        ) +
         xlab(marker) +
         ylab('')
 
@@ -263,13 +275,14 @@ plot_psbulk = function(
 #' @param bulks dataframe Pseudobulk profiles annotated with "sample" column
 #' @param ncol integer Number of columns
 #' @param title logical Whether to add titles to individual plots
+#' @param title_size numeric Size of titles
 #' @param ... additional parameters passed to plot_psbulk()
 #' @return a ggplot object
 #' @examples
 #' p = plot_bulks(bulk_example)
 #' @export
 plot_bulks = function(
-    bulks, ..., ncol = 1, title = TRUE
+    bulks, ..., ncol = 1, title = TRUE, title_size = 8
     ) {
 
     if (!'sample' %in% colnames(bulks)) {
@@ -288,9 +301,10 @@ plot_bulks = function(
                         bulk, ...
                     ) +
                     theme(
-                        title = element_text(size = 8),
+                        title = element_text(size = title_size),
                         axis.text.x = element_blank(),
-                        axis.title = element_blank()
+                        axis.title = element_blank(),
+                        plot.margin = margin(t = 0, r = 0, b = 0.25, l = 0, 'cm')
                     )
 
                 if (title) {

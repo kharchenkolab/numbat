@@ -49,7 +49,9 @@ check_allele_df = function(df) {
         )
     
     if (any(snps$n > 1)) {
-        log_err('Inconsistent SNP genotypes; Are cells from two different individuals mixed together?')
+        msg = 'Inconsistent SNP genotypes; Are cells from two different individuals mixed together?'
+        log_error(msg)
+        stop(msg)
     }
 
     df = df %>% mutate(CHROM = factor(CHROM, 1:22))

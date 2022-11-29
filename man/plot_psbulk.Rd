@@ -15,9 +15,10 @@ plot_psbulk(
   theta_roll = FALSE,
   dot_size = 0.8,
   dot_alpha = 0.5,
-  legend = FALSE,
+  legend = TRUE,
   exclude_gap = TRUE,
   genome = "hg38",
+  text_size = 10,
   raster = FALSE
 )
 }
@@ -47,6 +48,8 @@ plot_psbulk(
 \item{exclude_gap}{logical Whether to mark gap regions and centromeres}
 
 \item{genome}{character Genome build, either 'hg38' or 'hg19'}
+
+\item{text_size}{numeric Size of text in the plot}
 
 \item{raster}{logical Whether to raster images}
 }

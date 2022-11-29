@@ -36,7 +36,7 @@ wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
 
 You can install the numbat R package via CRAN:
 ```
-install.packages('numbat')
+install.packages('numbat', dependencies = TRUE)
 ```
 Alternatively, you can install the GitHub version:
 ```

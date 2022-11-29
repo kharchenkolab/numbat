@@ -239,6 +239,9 @@ get_allele_bulk = function(df_allele, nu = 1, min_depth = 0) {
 }
 
 #' Helper function to get inter-SNP distance
+#' @param d numeric vector Genetic positions in centimorgan (cM)
+#' @return numeric vector Inter-SNP genetic distances 
+#' @keywords internal
 get_inter_cm = function(d) {
     if (length(d) <= 1) {
         return(NA)
