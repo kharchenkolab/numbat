@@ -486,9 +486,9 @@ plot_mut_history = function(
 #'     segs_consensus = segs_example)
 #' @export
 plot_phylo_heatmap = function(
-        gtree, joint_post, segs_consensus, p_min = 0.9, 
+        gtree, joint_post, segs_consensus, clone_post = NULL, p_min = 0.9, 
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
-        clone_dict = NULL, clone_bar = FALSE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE,
+        clone_dict = NULL, clone_bar = TRUE, clone_stack = TRUE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE,
         line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2,
         annot_bar_width = 0.25, clone_bar_width = 0.25, bar_label_size = 7, 
         clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, raster = FALSE, show_phylo = TRUE
@@ -680,7 +680,15 @@ plot_phylo_heatmap = function(
 
     }
 
-    p_clone = data.frame(
+    if (!is.null(clone_post) & clone_stack) {
+
+        p_clone = clone_post %>% 
+            mutate(cell = factor(cell, cell_order)) %>%
+            plot_stack_bar(title = clone_title, pal = pal_clone, legend = clone_legend)
+        
+    } else {
+
+        p_clone = data.frame(
             cell = names(clone_dict),
             annot = unname(clone_dict)
         ) %>%
@@ -690,6 +698,7 @@ plot_phylo_heatmap = function(
             transpose = TRUE, legend = clone_legend, pal_annot = pal_clone,
             legend_title = clone_title, label_size = bar_label_size, size = size, raster = raster
         )
+    }
 
     # add clone lines
     if (clone_line) {
@@ -747,6 +756,108 @@ plot_phylo_heatmap = function(
         (p_tree | p_segs) + plot_layout(widths = c(tree_height, 15), guides = 'collect')
     }
 }
+
+plot_stack_bar = function(clone_post, title = 'Genotype', legend = TRUE, pal = NULL, label_size = 5) {
+
+    p = clone_post %>%
+        select(cell, matches('p_[[:digit:]]$')) %>%
+        data.table::melt(id.vars = 'cell', variable.name = 'clone', value = 'p') %>%
+        mutate(clone = str_remove(clone, 'p_')) %>%
+        ggplot(
+            aes(x = p, y = cell, fill = clone)
+        ) +
+        geom_col() +
+        theme_void() +
+        scale_y_discrete(expand = expansion(0)) +
+        scale_x_continuous(expand = expansion(0), breaks = c(0.5), labels = c('Genotype')) +
+        theme(
+            panel.spacing = unit(0.1, 'mm'),
+            panel.border = element_rect(size = 0, color = 'black', fill = NA),
+            panel.background = element_rect(fill = 'gray90'),
+            strip.background = element_blank(),
+            strip.text = element_blank(),
+            axis.text.y = element_blank(),
+            axis.text.x = element_text(angle = 30, size = label_size, hjust = 1, vjust = 1),
+            plot.margin = margin(0.5,0,0.5,0, unit = 'mm')
+        ) 
+
+        if (legend) {
+            p = p + guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = title))
+        } else {
+            p = p + guides(fill = 'none')
+        }
+
+        if (!is.null(pal)) {
+            p = p + scale_fill_manual(values = pal, na.value = 'gray90', limits = force)
+        }
+
+    return(p)
+}
+
+# expect columns cell and annot
+#' @keywords internal
+annot_bar = function(
+    D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, label_size = 5,
+    pal_annot = NULL, annot_scale = NULL, raster = FALSE
+) {
+
+    D = D %>% mutate(cell_index = as.integer(cell))
+
+    index_max = length(levels(D$cell))
+
+    p = ggplot(
+        D,
+        aes(x = cell_index, y = legend_title, fill = annot)
+    ) +
+    geom_tile(width=1, height=0.9, size = 0) +
+    # geom_segment(
+    #     aes(x = cell, xend = cell, y = -0.5, yend = 0.5, color = annot),
+    #     size = size
+    # ) +
+    theme_void() +
+    scale_y_discrete(expand = expansion(0)) +
+    scale_x_continuous(expand = expansion(0), limits = c(1,index_max)) +
+    theme(
+        panel.spacing = unit(0.1, 'mm'),
+        panel.border = element_rect(size = 0, color = 'black', fill = NA),
+        panel.background = element_rect(fill = 'gray90'),
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        # axis.text = element_text(size = 8),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle = 30, size = label_size, hjust = 1, vjust = 1),
+        plot.margin = margin(0.5,0,0.5,0, unit = 'mm')
+    )
+
+    if (!is.null(annot_scale)) {
+        p = p + annot_scale
+    } else {
+        if (is.null(pal_annot)) {
+            pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
+            getPalette = colorRampPalette(pal)
+            pal_annot = getPalette(length(unique(D$annot)))
+        }
+        p = p + scale_fill_manual(values = pal_annot, na.value = 'gray90')
+    }
+
+    if (transpose) {
+        p = p + coord_flip() +
+            theme(plot.margin = margin(0,0.5,0,0.5, unit = 'mm'))
+    }
+
+    if (legend) {
+        p = p + guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = legend_title))
+    } else {
+        p = p + guides(fill = 'none')
+    }
+
+    if (raster) {
+        p = ggrastr::rasterize(p, layers = 'Tile', dpi = 300)
+    }
+
+    return(p)
+}
+
 
 
 #' Plot consensus CNVs
@@ -1065,70 +1176,6 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
 
 }
 
-
-# expect columns cell and annot
-#' @keywords internal
-annot_bar = function(
-    D, transpose = FALSE, legend = TRUE, legend_title = '', size = 0.05, label_size = 5,
-    pal_annot = NULL, annot_scale = NULL, raster = FALSE
-) {
-
-    D = D %>% mutate(cell_index = as.integer(cell))
-
-    index_max = length(levels(D$cell))
-
-    p = ggplot(
-        D,
-        aes(x = cell_index, y = legend_title, fill = annot)
-    ) +
-    geom_tile(width=1, height=0.9, size = 0) +
-    # geom_segment(
-    #     aes(x = cell, xend = cell, y = -0.5, yend = 0.5, color = annot),
-    #     size = size
-    # ) +
-    theme_void() +
-    scale_y_discrete(expand = expansion(0)) +
-    scale_x_continuous(expand = expansion(0), limits = c(1,index_max)) +
-    theme(
-        panel.spacing = unit(0.1, 'mm'),
-        panel.border = element_rect(size = 0, color = 'black', fill = NA),
-        panel.background = element_rect(fill = 'gray90'),
-        strip.background = element_blank(),
-        strip.text = element_blank(),
-        # axis.text = element_text(size = 8),
-        axis.text.y = element_blank(),
-        axis.text.x = element_text(angle = 30, size = label_size, hjust = 1, vjust = 1),
-        plot.margin = margin(0.5,0,0.5,0, unit = 'mm')
-    )
-
-    if (!is.null(annot_scale)) {
-        p = p + annot_scale
-    } else {
-        if (is.null(pal_annot)) {
-            pal = c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF")
-            getPalette = colorRampPalette(pal)
-            pal_annot = getPalette(length(unique(D$annot)))
-        }
-        p = p + scale_fill_manual(values = pal_annot, na.value = 'gray90')
-    }
-
-    if (transpose) {
-        p = p + coord_flip() +
-            theme(plot.margin = margin(0,0.5,0,0.5, unit = 'mm'))
-    }
-
-    if (legend) {
-        p = p + guides(fill = guide_legend(keywidth = unit(3, 'mm'), keyheight = unit(1, 'mm'), title = legend_title))
-    } else {
-        p = p + guides(fill = 'none')
-    }
-
-    if (raster) {
-        p = ggrastr::rasterize(p, layers = 'Tile', dpi = 300)
-    }
-
-    return(p)
-}
 
 
 ########################### Functions for internal use ############################

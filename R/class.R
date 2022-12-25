@@ -72,6 +72,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             gtree = self$gtree,
             joint_post = self$joint_post,
             segs_consensus = self$segs_consensus,
+            clone_post = self$clone_post,
             ...
         )
         return(p)
