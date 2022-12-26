@@ -1306,7 +1306,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
     bad = sapply(results, inherits, what = "try-error")
 
     if (any(bad)) {
-        if (verbose) {log_warn(glue('{sum(bad)} jobs failed'))}
+        if (verbose) {log_warn(glue('{sum(bad)} cell(s) failed'))}
         log_warn(results[bad][1])
         log_warn(cells[bad][1])
     } else {
