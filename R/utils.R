@@ -1741,7 +1741,7 @@ simes_p = function(p.vals, n_dim) {
 #' T-test wrapper, handles error for insufficient observations
 #' @keywords internal
 t.test.pval = function(x, y) {
-    if (length(x) == 1 | length(y) == 1) {
+    if (length(x) <= 1 | length(y) <= 1) {
         return(1)
     } else {
         return(t.test(x,y)$p.value)
