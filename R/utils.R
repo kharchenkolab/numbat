@@ -21,8 +21,7 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf) {
         return(best_refs)
     }
     
-    genes_annotated = gtf %>% 
-        pull(gene) %>% 
+    genes_annotated = gtf$gene %>% 
         intersect(rownames(count_mat)) %>%
         intersect(rownames(lambdas_ref))
 
@@ -32,9 +31,16 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf) {
     exp_mat = scale_counts(count_mat)
     # keep highly expressed genes in at least one of the references
     exp_mat = exp_mat[rowSums(lambdas_ref * 1e6 > 2) > 0,,drop=FALSE]
+
+    zero_cov = colnames(exp_mat)[colSums(exp_mat) == 0]
+
+    if (length(zero_cov) > 0) {
+        log_message(glue('Cannot choose reference for {length(zero_cov)} cells due to low coverage'))
+        exp_mat = exp_mat[,!colnames(exp_mat) %in% zero_cov, drop=FALSE]
+    }
     
     cors = cor(as.matrix(log(exp_mat * 1e6 + 1)), log(lambdas_ref * 1e6 + 1)[rownames(exp_mat),])
-    best_refs = apply(cors, 1, function(x) {colnames(cors)[which.max(x)]})
+    best_refs = apply(cors, 1, function(x) {colnames(cors)[which.max(x)]}) %>% unlist()
     
     return(best_refs)
 }
@@ -255,7 +261,7 @@ get_inter_cm = function(d) {
 #' @param exp_bulk dataframe Bulk expression profile
 #' @return dataframe Pseudobulk allele and expression profile
 #' @keywords internal
-combine_bulk = function(allele_bulk, exp_bulk, genome = 'hg38') {
+combine_bulk = function(allele_bulk, exp_bulk) {
     
     bulk = allele_bulk %>% 
         full_join(

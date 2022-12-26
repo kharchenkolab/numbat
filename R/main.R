@@ -72,10 +72,13 @@ run_numbat = function(
     ######### Basic checks #########
     if (genome == 'hg38') {
         gtf = gtf_hg38
+        prephased = FALSE
     } else if (genome == 'hg19') {
         gtf = gtf_hg19
+        prephased = FALSE
     } else if (genome == 'mm10') {
         gtf = gtf_mm10
+        prephased = TRUE
     } else {
         stop('Genome version must be hg38, hg19, or mm10')
     }
@@ -367,7 +370,8 @@ run_numbat = function(
 
         haplotype_post = get_haplotype_post(
             bulk_subtrees,
-            segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post))
+            segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
+            prephased = prephased
         )
 
         allele_post = get_allele_post(
@@ -1378,9 +1382,10 @@ compute_posterior = function(PL) {
 #' @param bulks dataframe Subtree pseudobulk profiles
 #' @param segs_consensus dataframe Consensus CNV segments
 #' @param naive logical Whether to use naive haplotype classification
+#' @param prephased logical Whether SNPs were already perfectly phased
 #' @return dataframe Posterior haplotypes
 #' @keywords internal
-get_haplotype_post = function(bulks, segs_consensus, naive = FALSE) {
+get_haplotype_post = function(bulks, segs_consensus, naive = FALSE, prephased = FALSE) {
     
     # add sample column if only one sample
     if ((!'sample' %in% colnames(bulks)) | (!'sample' %in% colnames(segs_consensus))) {
@@ -1405,6 +1410,16 @@ get_haplotype_post = function(bulks, segs_consensus, naive = FALSE) {
             by = c('sample', 'CHROM', 'seg')
         ) %>%
         select(CHROM, seg = seg_cons, cnv_state, snp_id, haplo_post)
+
+    if (prephased) {
+        # if prephased, do majority vote
+        haplotype_post = haplotype_post %>% 
+            group_by(seg) %>% 
+            mutate(
+                haplo_post = names(which.max(table(na.omit(haplo_post))))
+            ) %>%
+            ungroup()
+    }
     
     return(haplotypes)
 }
