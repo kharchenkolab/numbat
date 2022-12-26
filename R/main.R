@@ -366,6 +366,7 @@ run_numbat = function(
             use_loh = use_loh,
             segs_loh = segs_loh,
             gtf = gtf,
+            sc_refs = sc_refs,
             ncores = ncores)
 
         haplotype_post = get_haplotype_post(
@@ -1278,11 +1279,11 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
         log_message('Including LOH in baseline as specified')
     }
     
-    cells = colnames(count_mat)
-
     if (is.null(sc_refs)) {
         sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
     }
+
+    cells = names(sc_refs)
 
     results = mclapply(
         cells,
@@ -1312,7 +1313,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
     bad = sapply(results, inherits, what = "try-error")
 
     if (any(bad)) {
-        if (verbose) {log_warn(glue('{sum(bad)} jobs failed'))}
+        if (verbose) {log_warn(glue('{sum(bad)} cell(s) failed'))}
         log_warn(results[bad][1])
         log_warn(cells[bad][1])
     } else {
