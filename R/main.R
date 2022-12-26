@@ -48,7 +48,6 @@ NULL
 #' @param eps numeric Convergence threshold for ML tree search
 #' @param multi_allelic logical Whether to call multi-allelic CNVs
 #' @param p_multi numeric P value cutoff for calling multi-allelic CNVs
-#' @param prephased logical Whether SNPs were already perfectly phased
 #' @param use_loh logical Whether to include LOH regions in the expression baseline
 #' @param skip_nj logical Whether to skip NJ tree construction and only use UPGMA
 #' @param diploid_chroms vector Known diploid chromosomes
@@ -67,7 +66,7 @@ run_numbat = function(
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
-        skip_nj = FALSE, multi_allelic = TRUE, p_multi = 1-alpha, prephased = FALSE,
+        skip_nj = FALSE, multi_allelic = TRUE, p_multi = 1-alpha,
         plot = TRUE, check_convergence = FALSE, exclude_neu = TRUE
     ) {
 
@@ -374,8 +373,7 @@ run_numbat = function(
 
         haplotype_post = get_haplotype_post(
             bulk_subtrees,
-            segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post)),
-            prephased = prephased
+            segs_consensus %>% mutate(cnv_state = ifelse(cnv_state == 'neu', cnv_state, cnv_state_post))
         )
 
         allele_post = get_allele_post(
@@ -1390,10 +1388,9 @@ compute_posterior = function(PL) {
 #' @param bulks dataframe Subtree pseudobulk profiles
 #' @param segs_consensus dataframe Consensus CNV segments
 #' @param naive logical Whether to use naive haplotype classification
-#' @param prephased logical Whether SNPs were already perfectly phased
 #' @return dataframe Posterior haplotypes
 #' @keywords internal
-get_haplotype_post = function(bulks, segs_consensus, naive = FALSE, prephased = FALSE) {
+get_haplotype_post = function(bulks, segs_consensus, naive = FALSE) {
     
     # add sample column if only one sample
     if ((!'sample' %in% colnames(bulks)) | (!'sample' %in% colnames(segs_consensus))) {
@@ -1418,16 +1415,6 @@ get_haplotype_post = function(bulks, segs_consensus, naive = FALSE, prephased = 
             by = c('sample', 'CHROM', 'seg')
         ) %>%
         select(CHROM, seg = seg_cons, cnv_state, snp_id, haplo_post)
-
-    if (prephased) {
-        # if prephased, do majority vote
-        haplotypes = haplotypes %>% 
-            group_by(seg) %>% 
-            mutate(
-                haplo_post = names(which.max(table(na.omit(haplo_post))))
-            ) %>%
-            ungroup()
-    }
     
     return(haplotypes)
 }
