@@ -69,7 +69,10 @@ check_allele_df = function(df) {
 }
 
 #' Annotate genes on allele dataframe
-#' @keywords internal
+#' @param df dataframe Allele count dataframe 
+#' @param gtf dataframe Gene gtf
+#' @return dataframe Allele dataframe with gene column 
+#' @export
 annotate_genes = function(df, gtf) {
 
     snps = df %>% distinct(snp_id, CHROM, POS)
