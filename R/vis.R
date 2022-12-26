@@ -133,18 +133,20 @@ plot_psbulk = function(
     if (use_pos & exclude_gap) {
 
         if (genome == 'hg38') {
-            gaps = gaps_hg38
+            gaps = gaps_hg38 %>% filter(end - start > 1e+06)
             acen = acen_hg38
         } else if (genome == 'hg19') {
-            gaps = gaps_hg19
+            gaps = gaps_hg19 %>% filter(end - start > 1e+06)
             acen = acen_hg19
+        } else if (genome == 'mm10') {
+            gaps = data.frame(CHROM = 1, start = 1, end = 1)
+            acen = data.frame()
         } else {
-            stop("Genome version must be hg38 or hg19")
+            stop("Genome version must hg38, hg19 or mm10")
         }
 
-        segs_exclude = gaps %>%
-            filter(end - start > 1e+06) %>%
-            rbind(acen) %>%
+        segs_exclude = rbind(gaps, acen) %>%
+            mutate(CHROM = factor(as.integer(CHROM))) %>%
             rename(seg_start = start, seg_end = end) %>%
             filter(CHROM %in% bulk$CHROM)
 

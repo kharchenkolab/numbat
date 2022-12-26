@@ -255,7 +255,7 @@ get_inter_cm = function(d) {
 #' @param exp_bulk dataframe Bulk expression profile
 #' @return dataframe Pseudobulk allele and expression profile
 #' @keywords internal
-combine_bulk = function(allele_bulk, exp_bulk) {
+combine_bulk = function(allele_bulk, exp_bulk, genome = 'hg38') {
     
     bulk = allele_bulk %>% 
         full_join(

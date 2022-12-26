@@ -25,7 +25,7 @@ NULL
 #' @param count_mat dgCMatrix Raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref matrix Either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe Allele counts per cell, produced by preprocess_allele
-#' @param genome character Genome version (hg38 or hg19) 
+#' @param genome character Genome version (hg38, hg19, or mm10) 
 #' @param out_dir string Output directory
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param t numeric Transition probability
@@ -74,11 +74,14 @@ run_numbat = function(
         gtf = gtf_hg38
     } else if (genome == 'hg19') {
         gtf = gtf_hg19
+    } else if (genome == 'mm10') {
+        gtf = gtf_mm10
     } else {
-        stop('Genome version must be hg38 or hg19')
+        stop('Genome version must be hg38, hg19, or mm10')
     }
 
     count_mat = check_matrix(count_mat)
+    df_allele = annotate_genes(df_allele, gtf)
     df_allele = check_allele_df(df_allele)
     lambdas_ref = check_exp_ref(lambdas_ref)
 
