@@ -472,7 +472,7 @@ switch_prob_cm = function(d, nu = 1, min_p = 1e-10) {
 #' @param phasing logical Whether to use phasing information (internal use only)
 #' @param verbose logical Verbosity
 #' @examples
-#' bulk_analyzed = analyze_bulk(bulk_example, t = 1e-5)
+#' bulk_analyzed = analyze_bulk(bulk_example, t = 1e-5, find_diploid = FALSE, retest = FALSE)
 #' @return a pseudobulk profile dataframe with called CNV information
 #' @export
 analyze_bulk = function(

@@ -4,6 +4,8 @@
 
 * Prepare for new CRAN version
 
+* Better CNV state legends for `plot_bulks`
+
 # numbat 1.0.5 - 11/27/2022
 
 * Fixing bugs #65, #66, #67
