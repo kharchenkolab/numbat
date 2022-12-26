@@ -763,6 +763,7 @@ plot_stack_bar = function(clone_post, title = 'Genotype', legend = TRUE, pal = N
 
     p = clone_post %>%
         select(cell, matches('p_[[:digit:]]$')) %>%
+        as.data.table() %>%
         data.table::melt(id.vars = 'cell', variable.name = 'clone', value = 'p') %>%
         mutate(clone = str_remove(clone, 'p_')) %>%
         ggplot(
