@@ -360,6 +360,7 @@ run_numbat = function(
             use_loh = use_loh,
             segs_loh = segs_loh,
             gtf = gtf,
+            sc_refs = sc_refs,
             ncores = ncores)
 
         haplotype_post = get_haplotype_post(

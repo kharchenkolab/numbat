@@ -21,8 +21,7 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf) {
         return(best_refs)
     }
     
-    genes_annotated = gtf %>% 
-        pull(gene) %>% 
+    genes_annotated = gtf$gene %>% 
         intersect(rownames(count_mat)) %>%
         intersect(rownames(lambdas_ref))
 
@@ -34,7 +33,7 @@ choose_ref_cor = function(count_mat, lambdas_ref, gtf) {
     exp_mat = exp_mat[rowSums(lambdas_ref * 1e6 > 2) > 0,,drop=FALSE]
     
     cors = cor(as.matrix(log(exp_mat * 1e6 + 1)), log(lambdas_ref * 1e6 + 1)[rownames(exp_mat),])
-    best_refs = apply(cors, 1, function(x) {colnames(cors)[which.max(x)]})
+    best_refs = apply(cors, 1, function(x) {colnames(cors)[which.max(x)]}) %>% unlist()
     
     return(best_refs)
 }
