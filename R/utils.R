@@ -1140,10 +1140,10 @@ find_common_diploid = function(
             bind_rows() %>%
             rowwise() %>%
             mutate(
-                p = t.test(
+                p = t.test.pval(
                     x = bulks_bal$lnFC[bulks_bal$seg == i & bulks_bal$sample == s],
                     y = bulks_bal$lnFC[bulks_bal$seg == j & bulks_bal$sample == s]
-                )$p.value,
+                ),
                 lnFC_i = mean(bulks_bal$lnFC[bulks_bal$seg == i & bulks_bal$sample == s]),
                 lnFC_j = mean(bulks_bal$lnFC[bulks_bal$seg == j & bulks_bal$sample == s])
             ) %>%
@@ -1730,6 +1730,16 @@ get_clone_profile = function(joint_post, clone_post) {
 #' @keywords internal
 simes_p = function(p.vals, n_dim) {
     n_dim * min(sort(p.vals)/seq_along(p.vals))
+}
+
+#' T-test wrapper, handles error for insufficient observations
+#' @keywords internal
+t.test.pval = function(x, y) {
+    if (length(x) == 1 | length(y) == 1) {
+        return(1)
+    } else {
+        return(t.test(x,y)$p.value)
+    }
 }
 
 ## https://github.com/cran/VGAM/blob/391729a24a7b520df09ae857e2098b3e95cb6fca/R/family.others.R
