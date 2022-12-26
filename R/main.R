@@ -34,6 +34,7 @@ NULL
 #' @param min_genes integer Minimum number of genes to call a segment
 #' @param max_cost numeric Likelihood threshold to collapse internal branches
 #' @param tau numeric Factor to determine max_cost as a function of the number of cells (0-1)
+#' @param nu numeric Phase switch rate
 #' @param alpha numeric P value cutoff for diploid finding
 #' @param min_overlap numeric Minimum CNV overlap threshold
 #' @param max_iter integer Maximum number of iterations to run the phyologeny optimization
@@ -47,6 +48,7 @@ NULL
 #' @param eps numeric Convergence threshold for ML tree search
 #' @param multi_allelic logical Whether to call multi-allelic CNVs
 #' @param p_multi numeric P value cutoff for calling multi-allelic CNVs
+#' @param prephased logical Whether SNPs were already perfectly phased
 #' @param use_loh logical Whether to include LOH regions in the expression baseline
 #' @param skip_nj logical Whether to skip NJ tree construction and only use UPGMA
 #' @param diploid_chroms vector Known diploid chromosomes
@@ -61,24 +63,21 @@ NULL
 run_numbat = function(
         count_mat, lambdas_ref, df_allele, genome = 'hg38', 
         out_dir = tempdir(), max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
-        alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3,
+        alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3, nu = 1,
         max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
-        skip_nj = FALSE, multi_allelic = TRUE, p_multi = 1-alpha, 
+        skip_nj = FALSE, multi_allelic = TRUE, p_multi = 1-alpha, prephased = FALSE,
         plot = TRUE, check_convergence = FALSE, exclude_neu = TRUE
     ) {
 
     ######### Basic checks #########
     if (genome == 'hg38') {
         gtf = gtf_hg38
-        prephased = FALSE
     } else if (genome == 'hg19') {
         gtf = gtf_hg19
-        prephased = FALSE
     } else if (genome == 'mm10') {
         gtf = gtf_mm10
-        prephased = TRUE
     } else {
         stop('Genome version must be hg38, hg19, or mm10')
     }
@@ -241,6 +240,7 @@ run_numbat = function(
                 lambdas_ref = lambdas_ref,
                 gtf = gtf,
                 min_depth = min_depth,
+                nu = nu,
                 ncores = ncores)
 
         bulk_subtrees = bulk_subtrees %>%
@@ -248,6 +248,7 @@ run_numbat = function(
                 t = t,
                 gamma = gamma,
                 alpha = alpha,
+                nu = nu,
                 min_genes = min_genes,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
@@ -314,6 +315,7 @@ run_numbat = function(
                 lambdas_ref = lambdas_ref,
                 gtf = gtf,
                 min_depth = min_depth,
+                nu = nu,
                 ncores = ncores)
 
         bulk_clones = bulk_clones %>% 
@@ -321,6 +323,7 @@ run_numbat = function(
                 t = t,
                 gamma = gamma,
                 alpha = alpha,
+                nu = nu,
                 min_genes = min_genes,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
@@ -510,6 +513,7 @@ run_numbat = function(
                     gtree,
                     joint_post,
                     segs_consensus,
+                    clone_post,
                     tip_length = 0.2,
                     branch_width = 0.2,
                     line_width = 0.1,
@@ -569,6 +573,7 @@ run_numbat = function(
         lambdas_ref = lambdas_ref,
         gtf = gtf,
         min_depth = min_depth,
+        nu = nu,
         ncores = ncores)
 
     bulk_clones = bulk_clones %>% 
@@ -576,6 +581,7 @@ run_numbat = function(
             t = t,
             gamma = gamma,
             alpha = alpha,
+            nu = nu,
             min_genes = min_genes,
             common_diploid = FALSE,
             diploid_chroms = diploid_chroms,
@@ -676,9 +682,8 @@ exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101,
 #' @param ncores integer Number of cores
 #' @return dataframe Pseudobulk profiles
 #' @keywords internal 
-make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_depth = 0, ncores = NULL) {
+make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_depth = 0, nu = 1, ncores = NULL) {
     
-
     if (length(groups) == 0) {
         return(data.frame())
     }
@@ -695,7 +700,8 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_
                     subset = g$cells,
                     lambdas_ref = lambdas_ref,
                     gtf = gtf,
-                    min_depth = min_depth
+                    min_depth = min_depth,
+                    nu = nu
                 ) %>%
                 mutate(
                     n_cells = g$size,
@@ -735,7 +741,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_
 #' @param allele_only logical Whether only use allele data to run HMM
 #' @keywords internal
 run_group_hmms = function(
-    bulks, t = 1e-4, gamma = 20, alpha = 1e-4, min_genes = 10,
+    bulks, t = 1e-4, gamma = 20, alpha = 1e-4, min_genes = 10, nu = 1,
     common_diploid = TRUE, diploid_chroms = NULL, allele_only = FALSE, retest = TRUE, run_hmm = TRUE,
     segs_loh = NULL, exclude_neu = TRUE, ncores = 1, verbose = FALSE, debug = FALSE
 ) {
@@ -770,6 +776,7 @@ run_group_hmms = function(
             bulk %>% analyze_bulk(
                 t = t,
                 gamma = gamma, 
+                nu = nu,
                 find_diploid = find_diploid, 
                 run_hmm = run_hmm,
                 allele_only = allele_only, 
@@ -1414,7 +1421,7 @@ get_haplotype_post = function(bulks, segs_consensus, naive = FALSE, prephased = 
 
     if (prephased) {
         # if prephased, do majority vote
-        haplotype_post = haplotype_post %>% 
+        haplotypes = haplotypes %>% 
             group_by(seg) %>% 
             mutate(
                 haplo_post = names(which.max(table(na.omit(haplo_post))))
@@ -1568,7 +1575,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
 #' @return dataframe Retested pseudobulks 
 #' @keywords internal 
 retest_bulks = function(bulks, segs_consensus = NULL,
-    t = 1e-5, min_genes = 10, gamma = 20, 
+    t = 1e-5, min_genes = 10, gamma = 20, nu = 1,
     segs_loh = NULL, use_loh = FALSE, diploid_chroms = NULL, ncores = 1, exclude_neu = TRUE, min_LLR = 5) {
 
     if (is.null(segs_consensus)) {
@@ -1605,6 +1612,7 @@ retest_bulks = function(bulks, segs_consensus = NULL,
         run_group_hmms(
             t = t, 
             gamma = gamma, 
+            nu = nu,
             min_genes = min_genes,
             run_hmm = FALSE,
             exclude_neu = exclude_neu,

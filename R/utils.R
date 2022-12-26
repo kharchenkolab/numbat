@@ -448,9 +448,16 @@ fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FAL
 #' @return numeric vector Phase switch probability
 #' @keywords internal
 switch_prob_cm = function(d, nu = 1, min_p = 1e-10) {
-    p = (1-exp(-2*nu*d))/2
-    p = pmax(p, min_p)
+
+    if (nu == 0) {
+        p = rep(0, length(d))
+    } else {
+        p = (1-exp(-2*nu*d))/2
+        p = pmax(p, min_p)
+    }
+
     p = ifelse(is.na(d), 0, p)
+
     return(p)
 }
 
