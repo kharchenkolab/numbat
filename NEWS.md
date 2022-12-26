@@ -1,3 +1,9 @@
+# numbat 1.1.1 - 12/26/2022
+
+* Fix bugs #80, #82
+
+* Offer stacked clone bars in `plot_phylo_heatmap`
+
 # numbat 1.1.0 - 11/28/2022
 
 * Externalize phylogeny module as separate package (`scistreer`)
