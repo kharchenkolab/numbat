@@ -1272,11 +1272,11 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
         log_message('Including LOH in baseline as specified')
     }
     
-    cells = colnames(count_mat)
-
     if (is.null(sc_refs)) {
         sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
     }
+
+    cells = names(sc_refs)
 
     results = mclapply(
         cells,
