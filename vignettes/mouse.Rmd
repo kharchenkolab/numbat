@@ -16,9 +16,9 @@ output:
 # Introduction
 The mouse is a major model system for studying cancer and many other areas of biology. According to the 10x [website](https://www.10xgenomics.com/resources/publications?refinementList%5BproductGroups%5D%5B0%5D=Single%20Cell%20Gene%20Expression&refinementList%5Btags%5D%5B0%5D=Cancer%20Research&page=1), there are almost as many cancer single-cell studies on mouse subjects as on humans. 
 
-Previously, we have shown that with prior haplotype information, Numbat can detect allele-specific CNVs at a much higher accuracy [[1]](#references). Although we don't usually know the haplotype of a given human subject *a priori*, it can be "guessed" statistically using [population-based phasing](https://en.wikipedia.org/wiki/Haplotype_estimation). The resulting haplotypes are reasonably accurate within short blocks (<1Mb), but are subject to switch errors over a longer range. The mouse is a special case because the haplotypes of most common laboratory strains are fully known (thanks to the mouse genome projects [[2,3]](#references)). This means that all heterozygous SNPs in a F1 hybrid mouse of two inbred strains are *fully phased* at whole-genome level. In addition, the SNP density in a F1 hybrid mouse can be many times higher than in humans [[4]](#references). As we will see, these factors provide a huge advantage for haplotype-aware CNV analysis. 
+Previously, we have shown that with prior haplotype information, Numbat can detect allele-specific CNVs at a much higher accuracy [[1]](#references). Although we don't usually know the haplotype of a given human subject *a priori*, it can be "guessed" statistically using [population-based phasing](https://en.wikipedia.org/wiki/Haplotype_estimation). The resulting haplotypes are reasonably accurate within short blocks (<1Mb), but are subject to switch errors over a longer range. The mouse is a special case because the haplotypes of most common laboratory strains are fully known (thanks to the mouse genome projects [[2,3]](#references)). This means that all heterozygous SNPs in a F1 hybrid mouse of two inbred strains are *fully phased* at whole-genome level. In addition, the SNP density in a F1 hybrid mouse can be many times higher than in humans [[2]](#references). As we will see, these factors provide a huge advantage for haplotype-aware CNV analysis. 
 
-The most updated version of Numbat (v1.2.0) now accepts (F1 hybrid) mouse data. The input format is the same as usual (expression counts in a matrix, allele counts in a long dataframe), but some bioinformatics is required to prepare the phased allele counts. This tutorial will walk through data prepration to analyze a mouse PDAC scRNA-seq dataset provided by [Pitter et al](https://doi.org/10.1158/0008-5472.CAN-22-1742) [[5]](#references). 
+The most updated version of Numbat (v1.2.0) now accepts (F1 hybrid) mouse data. The input format is the same as usual (expression counts in a matrix, allele counts in a long dataframe), but some bioinformatics is required to prepare the phased allele counts. This tutorial will walk through data prepration to analyze a mouse PDAC scRNA-seq dataset provided by [Pitter et al](https://doi.org/10.1158/0008-5472.CAN-22-1742) [[4]](#references). 
 
 # Preparing input
 
@@ -192,10 +192,8 @@ Haplotype-aware CNV analysis is espcially powerful for model systems (the mouse 
 
 1. Gao, T., Soldatov, R., Sarkar, H. et al. Haplotype-aware analysis of somatic copy number variations from single-cell transcriptomes. Nat Biotechnol (2022). https://doi.org/10.1038/s41587-022-01468-y
 
-1. Keane, T., Goodstadt, L., Danecek, P. et al. Mouse genomic variation and its effect on phenotypes and gene regulation. Nature 477, 289–294 (2011). https://doi.org/10.1038/nature10413
+2. Keane, T., Goodstadt, L., Danecek, P. et al. Mouse genomic variation and its effect on phenotypes and gene regulation. Nature 477, 289–294 (2011). https://doi.org/10.1038/nature10413
 
-1. Lilue, J., Doran, A.G., Fiddes, I.T. et al. Sixteen diverse laboratory mouse reference genomes define strain-specific haplotypes and novel functional loci. Nat Genet 50, 1574–1583 (2018). https://doi.org/10.1038/s41588-018-0223-8
+3. Lilue, J., Doran, A.G., Fiddes, I.T. et al. Sixteen diverse laboratory mouse reference genomes define strain-specific haplotypes and novel functional loci. Nat Genet 50, 1574–1583 (2018). https://doi.org/10.1038/s41588-018-0223-8
 
-1. Markowski, J. et al. GAMIBHEAR: whole-genome haplotype reconstruction from Genome Architecture Mapping data, Bioinformatics, Volume 37, Issue 19, 1 October 2021, Pages 3128–3135, https://doi.org/10.1093/bioinformatics/btab238
-
-1. Kenneth L. Pitter, et al. Systematic Comparison of Pancreatic Ductal Adenocarcinoma Models Identifies a Conserved Highly Plastic Basal Cell State. Cancer Res 1 October 2022; 82 (19): 3549–3560. https://doi.org/10.1158/0008-5472.CAN-22-1742
+4. Kenneth L. Pitter, et al. Systematic Comparison of Pancreatic Ductal Adenocarcinoma Models Identifies a Conserved Highly Plastic Basal Cell State. Cancer Res 1 October 2022; 82 (19): 3549–3560. https://doi.org/10.1158/0008-5472.CAN-22-1742
