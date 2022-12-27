@@ -673,9 +673,7 @@ plot_phylo_heatmap = function(
     if (is.null(pal_clone)) {
 
         getPalette = colorRampPalette(c("#9E0142", "#D53E4F", "#F46D43", "#FDAE61", "#FEE08B", "#E6F598", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2"))
-
         pal_clone = c('gray', getPalette(length(unique(clone_dict))))
-
         pal_clone = setNames(pal_clone, as.character(1:length(pal_clone)))
 
     }
@@ -760,10 +758,10 @@ plot_phylo_heatmap = function(
 plot_stack_bar = function(clone_post, title = 'Genotype', legend = TRUE, pal = NULL, label_size = 5) {
 
     p = clone_post %>%
-        select(cell, matches('p_[[:digit:]]$')) %>%
+        select(cell, matches('p_[[:digit:]]+$')) %>%
         as.data.table() %>%
         data.table::melt(id.vars = 'cell', variable.name = 'clone', value = 'p') %>%
-        mutate(clone = str_remove(clone, 'p_')) %>%
+        mutate(clone = factor(as.integer(str_remove(clone, 'p_')))) %>%
         ggplot(
             aes(x = p, y = cell, fill = clone)
         ) +
