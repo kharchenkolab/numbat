@@ -184,7 +184,7 @@ We see haplotype-specific differences with remarkable resolution. For example, t
 
 # Conclusion
 
-Haplotype-aware CNV analysis is espcially powerful for model systems (mice in particular) where the haplotypes are fully known. Luckily, the Numbat analysis framework is written generically enough so that minimal tweaking is required (simply setting phase switch rate to be zero is sufficient). The main limitation is that Numbat is only applicable to F1 hybrid mice with mixed genetic backgrounds, whereas many mouse tumor models are conducted on a inbred (pure) genetic background, which lacks heterozygous SNPs.
+Haplotype-aware CNV analysis is espcially powerful for model systems (the mouse in particular) where the haplotypes are fully known. Luckily, the logic in Numbat are written generically enough such that minimal tweaking to the algorithm is required (simply setting phase switch rate to be zero is sufficient, making it a special case). The main limitation is that Numbat is only applicable to F1 hybrid mice with mixed genetic backgrounds, whereas many mouse tumor models are conducted on a inbred (pure) genetic background, which lacks heterozygous SNPs. Nonetheless, this extension opens up many oppurtunities for integrative single-cell analysis in a genetically manipulatable mammalian system.
 
 # References
 
