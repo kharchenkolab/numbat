@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -28,6 +28,7 @@
   <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false" aria-haspopup="true" id="dropdown-articles">Articles</a>
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
     <a class="dropdown-item" href="../articles/results.html">Interpreting Numbat results</a>
+    <a class="dropdown-item" href="../articles/mouse.html">Mice tutorial</a>
   </div>
 </li>
 <li class="nav-item">
@@ -77,6 +78,7 @@
   init_k <span class="op">=</span> <span class="fl">3</span>,
   min_cells <span class="op">=</span> <span class="fl">50</span>,
   tau <span class="op">=</span> <span class="fl">0.3</span>,
+  nu <span class="op">=</span> <span class="fl">1</span>,
   max_cost <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">count_mat</span><span class="op">)</span> <span class="op">*</span> <span class="va">tau</span>,
   min_depth <span class="op">=</span> <span class="fl">0</span>,
   common_diploid <span class="op">=</span> <span class="cn">TRUE</span>,
@@ -107,7 +109,7 @@
 <dt>df_allele</dt>
 <dd><p>dataframe Allele counts per cell, produced by preprocess_allele</p></dd>
 <dt>genome</dt>
-<dd><p>character Genome version (hg38 or hg19)</p></dd>
+<dd><p>character Genome version (hg38, hg19, or mm10)</p></dd>
 <dt>out_dir</dt>
 <dd><p>string Output directory</p></dd>
 <dt>max_iter</dt>
@@ -132,6 +134,8 @@
 <dd><p>integer Minimum number of cells to run HMM on</p></dd>
 <dt>tau</dt>
 <dd><p>numeric Factor to determine max_cost as a function of the number of cells (0-1)</p></dd>
+<dt>nu</dt>
+<dd><p>numeric Phase switch rate</p></dd>
 <dt>max_cost</dt>
 <dd><p>numeric Likelihood threshold to collapse internal branches</p></dd>
 <dt>min_depth</dt>

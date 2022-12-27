@@ -21,6 +21,7 @@ run_numbat(
   init_k = 3,
   min_cells = 50,
   tau = 0.3,
+  nu = 1,
   max_cost = ncol(count_mat) * tau,
   min_depth = 0,
   common_diploid = TRUE,
@@ -48,7 +49,7 @@ run_numbat(
 
 \item{df_allele}{dataframe Allele counts per cell, produced by preprocess_allele}
 
-\item{genome}{character Genome version (hg38 or hg19)}
+\item{genome}{character Genome version (hg38, hg19, or mm10)}
 
 \item{out_dir}{string Output directory}
 
@@ -73,6 +74,8 @@ run_numbat(
 \item{min_cells}{integer Minimum number of cells to run HMM on}
 
 \item{tau}{numeric Factor to determine max_cost as a function of the number of cells (0-1)}
+
+\item{nu}{numeric Phase switch rate}
 
 \item{max_cost}{numeric Likelihood threshold to collapse internal branches}
 

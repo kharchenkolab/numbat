@@ -11,6 +11,7 @@ make_group_bulks(
   lambdas_ref,
   gtf,
   min_depth = 0,
+  nu = 1,
   ncores = NULL
 )
 }

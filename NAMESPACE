@@ -3,6 +3,7 @@
 export(Numbat)
 export(aggregate_counts)
 export(analyze_bulk)
+export(annotate_genes)
 export(cnv_heatmap)
 export(detect_clonal_loh)
 export(get_bulk)

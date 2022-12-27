@@ -10,6 +10,7 @@ retest_bulks(
   t = 1e-05,
   min_genes = 10,
   gamma = 20,
+  nu = 1,
   segs_loh = NULL,
   use_loh = FALSE,
   diploid_chroms = NULL,

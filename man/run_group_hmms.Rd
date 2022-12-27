@@ -10,6 +10,7 @@ run_group_hmms(
   gamma = 20,
   alpha = 1e-04,
   min_genes = 10,
+  nu = 1,
   common_diploid = TRUE,
   diploid_chroms = NULL,
   allele_only = FALSE,
