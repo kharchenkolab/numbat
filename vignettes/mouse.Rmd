@@ -1,5 +1,5 @@
 ---
-title: "Mice tutorial"
+title: "Mouse tutorial"
 description: "Haplotype-aware CNV analysis for mouse scRNA-seq"
 documentclass: book
 output:
@@ -12,11 +12,11 @@ knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 ```
 
 # Introduction
-The mouse is a major model system for studying cancer and many other areas of biology. According to the 10x [website](https://www.10xgenomics.com/resources/publications?refinementList%5BproductGroups%5D%5B0%5D=Single%20Cell%20Gene%20Expression&refinementList%5Btags%5D%5B0%5D=Cancer%20Research&page=1), there are currently 259 cancer single-cell studies on mouse subjects, as compared to 362 on humans. 
+The mouse is a major model system for studying cancer and many other areas of biology. According to the 10x [website](https://www.10xgenomics.com/resources/publications?refinementList%5BproductGroups%5D%5B0%5D=Single%20Cell%20Gene%20Expression&refinementList%5Btags%5D%5B0%5D=Cancer%20Research&page=1), there are almost as many cancer single-cell studies on mouse subjects as on humans. 
 
-Previously, we have shown that with prior haplotype information, Numbat can detect allele-specific CNVs at a much higher accuracy [1]. Although we don't usually know the haplotype of a given human subject *a priori*, it can be guessed using [population-based phasing](https://en.wikipedia.org/wiki/Haplotype_estimation). The mouse is a special case because the haplotypes of most common laboratory strains are fully known (thanks to the mouse genome projects [2-3]). This means that all heterozygous SNPs in a F1 hybrid mouse of two inbred strains are *fully phased* at whole-genome level. In addition, the SNP density in a F1 hybrid mouse can be many times higher than in humans [4]. As we will see, these factors provide a huge advantage for haplotype-aware CNV analysis. 
+Previously, we have shown that with prior haplotype information, Numbat can detect allele-specific CNVs at a much higher accuracy [1]. Although we don't usually know the haplotype of a given human subject *a priori*, it can be "guessed" statistically using [population-based phasing](https://en.wikipedia.org/wiki/Haplotype_estimation). The resulting haplotypes are reasonably accurate within short blocks (<1Mb), but are subject to switch errors over a longer range. The mouse is a special case because the haplotypes of most common laboratory strains are fully known (thanks to the mouse genome projects [2-3]). This means that all heterozygous SNPs in a F1 hybrid mouse of two inbred strains are *fully phased* at whole-genome level. In addition, the SNP density in a F1 hybrid mouse can be many times higher than in humans [4]. As we will see, these factors provide a huge advantage for haplotype-aware CNV analysis. 
 
-The most updated version of Numbat (v1.2) now accepts (F1 hybrid) mouse data. The input format is the same (expression counts in a matrix, allele counts in a long dataframe), but some bioinformatics is required to prepare the phased allele counts. This tutorial will walk through data prepration to analyze a mouse PDAC scRNA-seq dataset provided by [Pitter et al](https://doi.org/10.1158/0008-5472.CAN-22-1742) [5].
+The most updated version of Numbat (v1.2.0) now accepts (F1 hybrid) mouse data. The input format is the same as usual (expression counts in a matrix, allele counts in a long dataframe), but some bioinformatics is required to prepare the phased allele counts. This tutorial will walk through data prepration to analyze a mouse PDAC scRNA-seq dataset provided by [Pitter et al](https://doi.org/10.1158/0008-5472.CAN-22-1742) [5]. 
 
 # Preparing input
 
@@ -35,7 +35,7 @@ We can then use `129S1_SvImJ.sites.vcf.gz` as the VCF for our F1 mouse (except t
 *Note*: This is slightly more complicated if neither parental strain is C57BL/6. One would have to find the SNPs that are homozygous only in one parent but not both.
 
 ## 2. Run pileup
-Now we can generate single-cell allele counts for the SNP positions in the above VCF using `cellsnp-lite`. 
+For samples in this study, I downloaded raw FASTQs from the [SRA](https://www.ebi.ac.uk/ena/browser/view/PRJNA861311) and processed them by `cellranger`. Now we can generate single-cell allele counts for the SNP positions in the above VCF using `cellsnp-lite`. 
 ```shell
 cellsnp-lite \
     -s $cellrangerout/outs/possorted_genome_bam.bam \
