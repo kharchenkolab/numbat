@@ -5,7 +5,7 @@
 \alias{gtf_hg38}
 \title{gene model (hg38)}
 \format{
-An object of class \code{data.table} (inherits from \code{data.frame}) with 26807 rows and 6 columns.
+An object of class \code{data.table} (inherits from \code{data.frame}) with 26807 rows and 5 columns.
 }
 \usage{
 gtf_hg38
