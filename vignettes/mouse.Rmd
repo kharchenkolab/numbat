@@ -157,7 +157,7 @@ run_numbat(
 ```
 
 # Results
-Let's look at the results for sample KPT_062521 (SRR20462475), where we see tumor subclones with distinct copy number profiles. 
+Let's look at the results for sample KPT_062521 (SRR20462475), where we see tumor subclones with distinct copy number profiles (mostly copy-neutral LOH!). 
 
 ```r
 nb = Numbat$new(glue('./results/{sample}'))
@@ -176,7 +176,7 @@ Let's compare the copy number profiles of the two major subclones (clone 4 and 5
 ```
 options(repr.plot.width = 10, repr.plot.height = 4.5, repr.plot.res = 200)
 
-nb$bulk_clones %>% filter(sample %in% c(4,6)) %>% 
+nb$bulk_clones %>% filter(sample %in% c(4,5)) %>% 
 filter(CHROM %in% c(3, 4, 9)) %>%
 plot_bulks(min_depth = 15, use_pos = F, exp_limit = 2.5, min_LLR = 20)
 ```
