@@ -157,10 +157,10 @@ run_numbat(
 ```
 
 # Results
-Let's look at the results for sample KPT_062521 (SRR20462475), where we see normal diploid cells and two tumor subclones with distinct copy number profiles. 
+Let's look at the results for sample KPT_062521 (SRR20462475), where we see tumor subclones with distinct copy number profiles. 
 
 ```r
-nb = Numbat$new(glue('./results/{sample}'), i = 2)
+nb = Numbat$new(glue('./results/{sample}'))
 ```
 
 ```r
@@ -168,21 +168,21 @@ options(repr.plot.width = 8, repr.plot.height = 4, repr.plot.res = 200)
 
 clone_pal = c('1' = 'gray', setNames(numbat:::pal, as.character(2:9)))
 
-nb$plot_phylo_heatmap(pal_clone = clone_pal, clone_stack = T, p_min = 0.9)
+nb$plot_phylo_heatmap(pal_clone = clone_pal, clone_stack = TRUE, p_min = 0.9)
 ```
-![](https://i.imgur.com/VXsuJaP.png)
+![](https://i.imgur.com/WKllLHd.png)
 
-Let's compare the copy number profiles of the two subclones (clone 4 and 6) in a pseudobulk HMM view.
+Let's compare the copy number profiles of the two major subclones (clone 4 and 5) in a pseudobulk HMM view.
 ```
 options(repr.plot.width = 10, repr.plot.height = 4.5, repr.plot.res = 200)
 
 nb$bulk_clones %>% filter(sample %in% c(4,6)) %>% 
-filter(CHROM %in% c(2, 4, 8, 9)) %>%
-plot_bulks(min_depth = 15, use_pos = F, exp_limit = 2.5, min_LLR = 10)
+filter(CHROM %in% c(3, 4, 9)) %>%
+plot_bulks(min_depth = 15, use_pos = F, exp_limit = 2.5, min_LLR = 20)
 ```
-![](https://i.imgur.com/2BG5LOY.png)
+![](https://i.imgur.com/tdtW7DY.png)
 
-We see haplotype-specific differences with remarkable resolution. For example, the subclonal copy number profiles for chr2 and chr8 largely agree, whereas chr9 and chr4 have distinct breakpoints and mirorred CNLOH (chr4, middle segment). All alleles collapse to one side in a CNV region, thanks to the perfect phasing. 
+We see haplotype-specific differences with remarkable resolution. For example, the subclonal copy number profiles for chr3 largely agree, whereas chr4 and chr9 have distinct breakpoints and mirorred CNLOH (chr4, middle segment). All alleles collapse to one side in a CNV region, thanks to the perfect phasing. 
 
 # Conclusion
 
