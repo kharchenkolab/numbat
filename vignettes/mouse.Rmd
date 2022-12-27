@@ -7,9 +7,11 @@ output:
     split_by: rmd
 ---
 
-```{r, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
-```
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@tGaoTeng" />
+<meta name="twitter:title" content="Numbat mouse tutorial" />
+<meta name="twitter:description" content="Haplotype-aware CNV analysis for mouse scRNA-seq" />
+<meta name="twitter:image" content="https://www.jax.org/-/media/jaxweb/images/news-and-insights/black-6-mama.jpg" />
 
 # Introduction
 The mouse is a major model system for studying cancer and many other areas of biology. According to the 10x [website](https://www.10xgenomics.com/resources/publications?refinementList%5BproductGroups%5D%5B0%5D=Single%20Cell%20Gene%20Expression&refinementList%5Btags%5D%5B0%5D=Cancer%20Research&page=1), there are almost as many cancer single-cell studies on mouse subjects as on humans. 
