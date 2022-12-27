@@ -674,11 +674,9 @@ plot_phylo_heatmap = function(
 
         getPalette = colorRampPalette(c("#9E0142", "#D53E4F", "#F46D43", "#FDAE61", "#FEE08B", "#E6F598", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2"))
 
-        pal_clone = getPalette(length(unique(clone_dict)))
+        pal_clone = c('gray', getPalette(length(unique(clone_dict))))
 
-        if ('1' %in% unique(clone_dict)) {
-            pal_clone = c('gray', pal_clone)
-        }
+        pal_clone = setNames(pal_clone, as.character(1:length(pal_clone)))
 
     }
 
@@ -840,7 +838,7 @@ annot_bar = function(
             getPalette = colorRampPalette(pal)
             pal_annot = getPalette(length(unique(D$annot)))
         }
-        p = p + scale_fill_manual(values = pal_annot, na.value = 'gray90')
+        p = p + scale_fill_manual(values = pal_annot, na.value = 'gray90', limits = force)
     }
 
     if (transpose) {
