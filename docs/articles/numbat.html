@@ -98,6 +98,7 @@
 <li><a href="#running-numbat">Running Numbat</a></li>
 <li><a href="#understanding-results">Understanding results</a></li>
 <li><a href="#phasing-options">Advanced phasing options</a></li>
+<li><a href="#mouse-data">Mouse data</a></li>
 <li><a href="#faq">FAQ</a></li>
 </ul>
 </div>
@@ -271,7 +272,7 @@ Arguments:
     gtf <span class="op">=</span> <span class="va">gtf_hg38</span>
 <span class="op">)</span>
 
-<span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></code></pre>
+<span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op">%&gt;%</span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></code></pre>
 <p>Then pass <code>segs_loh</code> to the Numbat run for those regions to be excluded from baseline during analysis.</p>
 <pre><code><span class="va">out</span> <span class="op">=</span> <span class="fu"><a href="../reference/run_numbat.html">run_numbat</a></span><span class="op">(</span>
     <span class="va">....</span>,
@@ -330,6 +331,11 @@ Arguments:
 </ul>
 </div>
 <div class="section level2">
+<h2 id="mouse-data">Mouse data<a class="anchor" aria-label="anchor" href="#mouse-data"></a>
+</h2>
+<p>Numbat (v1.2.0) now works for a F1 hybrid mouse bred from two known lab mice strains. More details are available in the <a href="https://kharchenkolab.github.io/numbat/articles/mouse.html">mouse tutorial</a>.</p>
+</div>
+<div class="section level2">
 <h2 id="faq">FAQ<a class="anchor" aria-label="anchor" href="#faq"></a>
 </h2>
 <p><strong>Q</strong>: We expect a certain CNV to be in a particular sample, but it is not detected by Numbat.</p>
@@ -341,8 +347,6 @@ Arguments:
 </ol>
 <p><strong>Q</strong>: Numbat predicts most of the genome to be amplified, and there are gaps in the pseudobulk allele profile with no heterozygous SNPs.</p>
 <p><strong>A</strong>: This is a sign that the sample consists mostly of tumor (with very few normal cells), and clonal deletions are present. The heterozygous SNPs cannot be identified in these regions, therefore leaving gaps. You can identify these clonally deleted regions via the SNP-density HMM prior to running the main <code>run_numbat</code> workflow (see section <a href="#detecting-clonal-loh">Detecting Clonal LOH</a>).</p>
-<p><strong>Q</strong>: Does Numbat run on mouse data?</p>
-<p><strong>A</strong>: In principle, Numbat should work for a hybrid F1 mouse bred from two known lab mice strains. Since the parental haplotypes are known, you can just supply a VCF containing heterozygous sites and run <code>cell-snp-lite</code> to create the allele count dataframe.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>

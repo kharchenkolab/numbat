@@ -149,6 +149,7 @@ run_numbat(
     t = 1e-5,
     ncores = 20,
     skip_nj = TRUE,
+    min_LLR = 30,
     out_dir = './results',
     # mouse specific settings
     genome = "mm10",

@@ -5,6 +5,7 @@
 - [Running Numbat](#running-numbat)
 - [Understanding results](#understanding-results)
 - [Advanced phasing options](#phasing-options)
+- [Mouse data](#mouse-data)
 - [FAQ](#faq)
 
 # Installation
@@ -216,6 +217,10 @@ The CNV detection power of Numbat can be further enhanced by conducting populati
 
 - TOPMed panel (n=97,256). You can upload your VCF to the [TOPMed imputation server](https://imputation.biodatacatalyst.nhlbi.nih.gov).
 
+# Mouse data
+
+Numbat (v1.2.0) now works for a F1 hybrid mouse bred from two known lab mice strains. More details are available in the [mouse tutorial](https://kharchenkolab.github.io/numbat/articles/mouse.html).
+
 # FAQ
 
 **Q**: We expect a certain CNV to be in a particular sample, but it is not detected by Numbat.
@@ -231,7 +236,3 @@ The CNV detection power of Numbat can be further enhanced by conducting populati
 **Q**: Numbat predicts most of the genome to be amplified, and there are gaps in the pseudobulk allele profile with no heterozygous SNPs. 
 
 **A**: This is a sign that the sample consists mostly of tumor (with very few normal cells), and clonal deletions are present. The heterozygous SNPs cannot be identified in these regions, therefore leaving gaps. You can identify these clonally deleted regions via the SNP-density HMM prior to running the main `run_numbat` workflow (see section [Detecting Clonal LOH](#detecting-clonal-loh)).
-
-**Q**: Does Numbat run on mouse data?
-
-**A**: In principle, Numbat should work for a hybrid F1 mouse bred from two known lab mice strains. Since the parental haplotypes are known, you can just supply a VCF containing heterozygous sites and run `cell-snp-lite` to create the allele count dataframe.
