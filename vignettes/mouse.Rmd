@@ -157,7 +157,7 @@ run_numbat(
 ```
 
 # Results
-Let's look at the results for sample KPT_062521 (SRR20462475), where we see tumor subclones with distinct copy number profiles (mostly copy-neutral LOH!). 
+Let's look at the results for sample KPT_062521 (SRR20462475), where we see tumor subclones with distinct copy number profiles (the majority of the events are copy-neutral LOH). 
 
 ```r
 nb = Numbat$new(glue('./results/{sample}'))
@@ -166,11 +166,12 @@ nb = Numbat$new(glue('./results/{sample}'))
 ```r
 options(repr.plot.width = 8, repr.plot.height = 4, repr.plot.res = 200)
 
-clone_pal = c('1' = 'gray', setNames(numbat:::pal, as.character(2:9)))
+clone_pal = c(`1` = 'gray', `2` = "#E41A1C", `3` = "#377EB8",
+    `4` = "#4DAF4A", `5` = "#984EA3", `6` = 'bisque3')
 
 nb$plot_phylo_heatmap(pal_clone = clone_pal, clone_stack = TRUE, p_min = 0.9)
 ```
-![](https://i.imgur.com/WKllLHd.png)
+![](https://i.imgur.com/UWuz9MT.png)
 
 Let's compare the copy number profiles of the two major subclones (clone 4 and 5) in a pseudobulk HMM view.
 ```
