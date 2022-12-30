@@ -165,16 +165,11 @@ vcfs = lapply(samples, function(sample) {
     }
 })
 
-# Check for chr prefix
-chr_prefix = any(grepl("chr", vcfs[[1]]@fix[,1]))
-
 # Remove chr prefix if present
-if (chr_prefix) {
-    vcfs = lapply(vcfs, function(vcf){
-        vcf@fix[,1] <- gsub("chr", "", vcf@fix[,1])
-        return(vcf)
-    })
-}
+vcfs = lapply(vcfs, function(vcf){
+    vcf@fix[,1] <- gsub("chr", "", vcf@fix[,1])
+    return(vcf)
+})
 
 numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'), chr_prefix = TRUE)
 
@@ -231,7 +226,7 @@ for (sample in samples) {
             if (file.exists(vcf_file)) {
                 fread(vcf_file, skip = '#CHROM') %>%
                     rename(CHROM = `#CHROM`) %>%   
-                    mutate(CHROM = ifelse(chr_prefix, str_remove(CHROM, 'chr'), .))
+                    mutate(CHROM = str_remove(CHROM, 'chr'))
             } else {
                 stop('Phased VCF not found')
             }
@@ -242,9 +237,9 @@ for (sample in samples) {
     pu_dir = glue('{outdir}/pileup/{sample}')
 
     # pileup VCF
-    vcf_pu = fread(glue('{pu_dir}/cellSNP.base.vcf')) %>% 
-    rename(CHROM = `#CHROM`) %>% 
-    mutate(CHROM = ifelse(chr_prefix, str_remove(CHROM, 'chr'), .))
+    vcf_pu = fread(glue('{pu_dir}/cellSNP.base.vcf'), skip = '#CHROM') %>% 
+        rename(CHROM = `#CHROM`) %>%
+        mutate(CHROM = str_remove(CHROM, 'chr'))
 
     # count matrices
     AD = readMM(glue('{pu_dir}/cellSNP.tag.AD.mtx'))

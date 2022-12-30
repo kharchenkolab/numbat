@@ -474,8 +474,8 @@ plot_mut_history = function(
 #' @param clone_bar_width numeric Width of clone genotype bar
 #' @param bar_label_size numeric Size of sidebar text labels
 #' @param clone_line logical Whether to display borders for clones in the heatmap
-#' @param superclone logical Wehether to display superclones in the clone bar
 #' @param pal_clone named vector Clone colors
+#' @param tvn_line logical Whether to draw line separating tumor and normal cells
 #' @param root_edge logical Whether to plot root edge
 #' @param exclude_gap logical Whether to mark gap regions
 #' @param show_phylo logical Whether to display phylogeny on y axis
@@ -492,8 +492,8 @@ plot_phylo_heatmap = function(
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = TRUE, clone_stack = TRUE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE,
         line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2,
-        annot_bar_width = 0.25, clone_bar_width = 0.25, bar_label_size = 7, 
-        clone_line = FALSE, superclone = FALSE, exclude_gap = FALSE, root_edge = TRUE, raster = FALSE, show_phylo = TRUE
+        annot_bar_width = 0.25, clone_bar_width = 0.25, bar_label_size = 7, tvn_line = TRUE,
+        clone_line = FALSE, exclude_gap = FALSE, root_edge = TRUE, raster = FALSE, show_phylo = TRUE
     ) {
 
     # make sure chromosomes are in order
@@ -516,24 +516,20 @@ plot_phylo_heatmap = function(
             mutate(cnv_state = ifelse(n_states > 1, cnv_state_map, cnv_state))
     }
 
-    if (!'clone' %in% colnames(data.frame(activate(gtree, 'nodes')))) {
-        gtree = gtree %>%
-            activate(nodes) %>%
-            mutate(clone = as.integer(factor(GT)))
+    # inspect gtree object
+    if (is(gtree, "tbl_graph")) {
+        gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, tip_length, length))
+        tree_obj = gtree %>% to_phylo()
+    } else {
+        tree_obj = gtree
+        tvn_line = FALSE
+        clone_bar = FALSE
     }
-
-    if (superclone) {
-        gtree = gtree %>% activate(nodes) %>% mutate(clone = superclone)
-    }
-
-    gtree = mark_tumor_lineage(gtree)
-
-    gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, tip_length, length))
 
     # plot phylogeny
-    if (show_phylo){
-    	p_tree = gtree %>%
-    		to_phylo() %>%
+    if (show_phylo) {
+
+    	p_tree = tree_obj %>%
     		ggtree::ggtree(ladderize = TRUE, size = branch_width) +
     		theme(
     			plot.margin = margin(0,1,0,0, unit = 'mm'),
@@ -569,15 +565,6 @@ plot_phylo_heatmap = function(
         mutate(cell = factor(cell, cell_order)) %>%
         mutate(cell_index = as.integer(droplevels(cell)))
 
-    # add tumor vs normal line
-    tumor_cells = gtree %>%
-        activate(nodes) %>% filter(leaf) %>%
-        as.data.frame() %>%
-        filter(compartment == 'tumor') %>%
-        pull(name)
-
-    first_tumor_index = which(cell_order %in% tumor_cells)[1]
-
     chrom_labeller <- function(chr) {
         chr[chr %in% c(19, 21, 22)] = ''
         return(chr)
@@ -602,7 +589,6 @@ plot_phylo_heatmap = function(
             aes(x = seg_start, xend = seg_end, y = 1, yend = 1),
             data = segs_consensus, size = 0, color = 'white', alpha = 0
         ) +
-        geom_hline(yintercept = first_tumor_index, color = 'royalblue', size = 0.5, linetype = 'dashed') +
         theme(
             panel.spacing = unit(0, 'mm'),
             panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
@@ -635,6 +621,23 @@ plot_phylo_heatmap = function(
         ) +
         xlab('Genomic position')
 
+    # add tumor vs normal line
+    if (tvn_line) {
+
+        gtree = mark_tumor_lineage(gtree)
+
+        tumor_cells = gtree %>%
+            activate(nodes) %>% filter(leaf) %>%
+            as.data.frame() %>%
+            filter(compartment == 'tumor') %>%
+            pull(name)
+
+        first_tumor_index = which(cell_order %in% tumor_cells)[1]
+
+        p_segs = p_segs + geom_hline(yintercept = first_tumor_index, color = 'royalblue', size = 0.5, linetype = 'dashed')
+
+    }
+
     if (exclude_gap) {
 
         segs_exclude = gaps_hg38 %>%
@@ -656,46 +659,49 @@ plot_phylo_heatmap = function(
             )
     }
 
-    # clone annotation
-    if (is.null(clone_dict)) {
-        clone_dict = gtree %>%
-            activate(nodes) %>%
-            data.frame %>%
-            mutate(
-                GT = ifelse(compartment == 'normal', '', GT),
-                GT = factor(GT),
-                clone = ifelse(compartment == 'normal', 1, clone),
-                clone = factor(clone)
-            ) %>%
-            {setNames(.$clone, .$name)}
-    }
-
-    if (is.null(pal_clone)) {
-
-        getPalette = colorRampPalette(c("#9E0142", "#D53E4F", "#F46D43", "#FDAE61", "#FEE08B", "#E6F598", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2"))
-        pal_clone = c('gray', getPalette(length(unique(clone_dict))))
-        pal_clone = setNames(pal_clone, as.character(1:length(pal_clone)))
-
-    }
-
-    if (!is.null(clone_post) & clone_stack) {
-
-        p_clone = clone_post %>% 
-            mutate(cell = factor(cell, cell_order)) %>%
-            plot_stack_bar(title = clone_title, pal = pal_clone, legend = clone_legend)
+    if (clone_bar) {
         
-    } else {
+        # clone annotation
+        if (is.null(clone_dict)) {
+            clone_dict = gtree %>%
+                activate(nodes) %>%
+                data.frame %>%
+                mutate(
+                    GT = ifelse(compartment == 'normal', '', GT),
+                    GT = factor(GT),
+                    clone = ifelse(compartment == 'normal', 1, clone),
+                    clone = factor(clone)
+                ) %>%
+                {setNames(.$clone, .$name)}
+        }
 
-        p_clone = data.frame(
-            cell = names(clone_dict),
-            annot = unname(clone_dict)
-        ) %>%
-        mutate(cell = factor(cell, cell_order)) %>%
-        filter(!is.na(cell)) %>%
-        annot_bar(
-            transpose = TRUE, legend = clone_legend, pal_annot = pal_clone,
-            legend_title = clone_title, label_size = bar_label_size, size = size, raster = raster
-        )
+        if (is.null(pal_clone)) {
+
+            getPalette = colorRampPalette(c("#9E0142", "#D53E4F", "#F46D43", "#FDAE61", "#FEE08B", "#E6F598", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2"))
+            pal_clone = c('gray', getPalette(length(unique(clone_dict))))
+            pal_clone = setNames(pal_clone, as.character(1:length(pal_clone)))
+
+        }
+
+        if (!is.null(clone_post) & clone_stack) {
+
+            p_clone = clone_post %>% 
+                mutate(cell = factor(cell, cell_order)) %>%
+                plot_stack_bar(title = clone_title, pal = pal_clone, legend = clone_legend)
+            
+        } else {
+
+            p_clone = data.frame(
+                cell = names(clone_dict),
+                annot = unname(clone_dict)
+            ) %>%
+            mutate(cell = factor(cell, cell_order)) %>%
+            filter(!is.na(cell)) %>%
+            annot_bar(
+                transpose = TRUE, legend = clone_legend, pal_annot = pal_clone,
+                legend_title = clone_title, label_size = bar_label_size, size = size, raster = raster
+            )
+        }
     }
 
     # add clone lines
