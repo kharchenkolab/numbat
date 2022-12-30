@@ -174,7 +174,7 @@ if (chr_prefix) {
     })
 }
 
-numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'), chr_prefix = chr_prefix)
+numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'), chr_prefix = TRUE)
 
 ## phasing
 eagle_cmd = function(chr) {

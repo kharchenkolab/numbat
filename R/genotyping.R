@@ -8,7 +8,7 @@
 #' @param chr_prefix logical Whether to add chr prefix
 #' @return integer Status code
 #' @keywords internal
-genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = FALSE) {
+genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE) {
 
     snps = lapply(
             vcfs, function(vcf){get_snps(vcf)}
@@ -65,7 +65,7 @@ get_snps = function(vcf) {
 
 ## per chrom function
 #' @keywords internal 
-make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE, chr_prefix = FALSE) {
+make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE, chr_prefix = TRUE) {
     
     chr_snps = snps %>%
         filter(CHROM == chr) %>%
