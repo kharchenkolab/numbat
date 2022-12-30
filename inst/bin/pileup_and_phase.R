@@ -149,6 +149,8 @@ warning = function(w){
 
 ## VCF creation
 cat('Creating VCFs\n')
+
+# read in the pileup VCF
 vcfs = lapply(samples, function(sample) {
     vcf_file = glue('{outdir}/pileup/{sample}/cellSNP.base.vcf')
     if (file.exists(vcf_file)) {
@@ -177,6 +179,7 @@ if (chr_prefix) {
 numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'), chr_prefix = TRUE)
 
 ## phasing
+cat('Running phasing\n')
 eagle_cmd = function(chr) {
     paste(eagle, 
         glue('--numThreads {ncores}'), 
