@@ -123,7 +123,6 @@ make_vcf_chr = function(chr, snps, vcf_original, label, outdir, het_only = FALSE
         vcf_chr@fix[,1] = paste0('chr', vcf_chr@fix[,1])
     }
       
-
     file_name = glue('{outdir}/{label}_chr{chr}.vcf.gz')
     
     write.vcf(vcf_chr, file_name)

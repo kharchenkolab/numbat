@@ -163,15 +163,15 @@ vcfs = lapply(samples, function(sample) {
     }
 })
 
-# Check for chr_prefix
-chr_prefix = all(grepl("chr",vcfs[[1]]@fix[,1])==T)
+# Check for chr prefix
+chr_prefix = any(grepl("chr", vcfs[[1]]@fix[,1]))
 
 # Remove chr prefix if present
-if(chr_prefix){
+if (chr_prefix) {
     vcfs = lapply(vcfs, function(vcf){
-    vcf@fix[,1] <- gsub("chr","",vcf@fix[,1])
-    return(vcf)
-    })    
+        vcf@fix[,1] <- gsub("chr", "", vcf@fix[,1])
+        return(vcf)
+    })
 }
 
 numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'), chr_prefix = chr_prefix)
