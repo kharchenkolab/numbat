@@ -165,10 +165,10 @@ spots[[sample]] %>%
     scale_y_continuous(expand = expansion(add = 1), limits = c(0,127))
 ```
 
-![](https://i.imgur.com/HbsqVzl.jpg)
+![](https://i.imgur.com/aAylHMO.jpg)
 **Figure 3. Probabilities of specific CNV events.** Red represents high probability of event presence, blue represents low probability of event presence, and white represents mixture/uncertain.
 
-We see that there is substantial heterogeneity among CNV events in their spatial distribution. In particular, deletions on chromosomes 9, 14, 16, 17, and 19 seem to mark specific patches of the tissue section.
+We see that there is substantial heterogeneity among CNV events in their spatial distribution. In particular, deletions on chromosomes 9, 14, 16, 17, 19 and 22 seem to mark specific patches of the tissue section.
 
 ## Tumor subclones
 Finally, we can visualize the tumor subclonal structure inferred by Numbat in spatial coordinates. First, let's look at the usual phylo-heatmap which provides a summary of the clonal structure.
@@ -176,12 +176,12 @@ Finally, we can visualize the tumor subclonal structure inferred by Numbat in sp
 ```
 nb[['BRCA0']]$plot_phylo_heatmap()
 ```
-![](https://i.imgur.com/sD4DIki.png)
+![](https://i.imgur.com/wVjnjpf.png)
 **Figure 4. Tumor phylogeny and CNV heatmap of BRCA0.** The stacked color bars on the left reflect clonal assignment probabilities.
 
-From the phylo-heatmap, we can see that clone 6 in particular harbors significantly more CNV events than the rest of the tumor cells. Let's visualize the spatial distribution of clone 6 (clone_post$p_6) and overlap with tissue image.
+From the phylo-heatmap, we can see that clone 5 in particular harbors significantly more CNV events than the rest of the tumor cells. Let's visualize the spatial distribution of subclones (clone_post$clone_opt) and overlap with tissue image.
 ```
-options(repr.plot.width = 5, repr.plot.height = 4, repr.plot.res = 300)
+options(repr.plot.width = 5, repr.plot.height = 4.2, repr.plot.res = 250)
 
 sample = 'BRCA0'
 
@@ -193,25 +193,28 @@ spots[[sample]] %>%
         by = c('barcode' = 'cell')
     ) %>%
     filter(in_tissue == 1) %>%
+    mutate(clone_opt = factor(clone_opt)) %>%
     ggplot(
         aes(x = array_row, y = array_col)
     ) +
     background_image(img) +
     geom_point(
-        aes(color = p_6), size = 0.3, stroke = 0.3, alpha = 0.8, pch = 21
+        aes(color = clone_opt), size = 0.3, stroke = 0.3, alpha = 0.8, pch = 21
     ) +
-    scale_color_gradient(
-        low = 'white', high = 'red3', limits = c(0,1)
+    scale_color_manual(values = pal, limits = force) +
+    guides(
+        color = guide_legend(title = "Clone", override.aes = aes(size = 3, pch = 16))
     ) +
     theme_bw() +
     scale_x_continuous(expand = expansion(add = 1), limits = c(0,77)) +
-    scale_y_continuous(expand = expansion(add = 1), limits = c(0,127))
+    scale_y_continuous(expand = expansion(add = 1), limits = c(0,127)) +
+    ggtitle(sample)
 ```
 
-![](https://i.imgur.com/QT8g6b1.jpg)
-**Figure 4. Probabilities of assignment to clone 6.** Opacity of spots corresponds to the probability of the spot belonging to clone 6.
+![](https://i.imgur.com/shtqgqo.jpg)
+**Figure 4. Clonal assignments in BRCA0.** The maximum-a-posteriori clonal assignment of each spot is shown.
 
-Interestingly, if you zoom in close enough, you can see that the distribution of clone 6 corresponds to visible foci that are clearly distinct from the surrounding tumor cells. Taken together, these observations suggest that clone 6 is the most evolved tumor subpopulation that is actively invading the diseased tissue.
+Interestingly, if you zoom in close enough, you can see that the distribution of clone 5 corresponds to visible foci that are clearly distinct from the surrounding tumor cells. Taken together, these observations suggest that clone 6 is the most evolved tumor subpopulation that is actively invading the diseased tissue.
 
 # Conclusion
 Like for scRNA-seq, allele-specific CNV analysis can be applied to spatial transcriptomics to interrogate genetic heterogeneity in a tumor. We have shown that Numbat can be used to differentiate (aneuploid) tumor and stromal compartments, evaluate the presence/absence of specific CNV events in spatial locations, and elucidate the spatial distributions of tumor subclones. Because Visium data is even sparser than scRNA-seq, the added information provided by phased allele counts is especially valuable for CNV calling. The key assumption we have to keep in mind is that cells contained in a spot are assumed to be largely genetically homogenous. However, this assumption is not that limiting in practice because cell mixtures are reflected as uncertainty in the posterior probability of CNV presence as well as clonal assignments. Newer generations of ST technologies that provide single-cell resolution can help overcome this limitation in the future.
