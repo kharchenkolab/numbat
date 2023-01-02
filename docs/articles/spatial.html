@@ -90,7 +90,7 @@
 
     
     
-<p><meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@tGaoTeng"><meta name="twitter:title" content="Numbat spatial"><meta name="twitter:description" content="Allele-specific CNV analysis from spatial transcriptomics"><meta name="twitter:image" content="https://i.imgur.com/hZpNWVJ.jpg"></p>
+<p><meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@tGaoTeng"><meta name="twitter:title" content="Numbat spatial"><meta name="twitter:description" content="Allele-specific CNV analysis from spatial transcriptomics"><meta name="twitter:image" content="https://i.imgur.com/6n2m6AS.png"></p>
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
@@ -241,7 +241,12 @@
 <h3 id="tumor-subclones">Tumor subclones<a class="anchor" aria-label="anchor" href="#tumor-subclones"></a>
 </h3>
 <p>Finally, we can visualize the tumor subclonal structure inferred by Numbat in spatial coordinates. First, let's look at the usual phylo-heatmap which provides a summary of the clonal structure.</p>
-<pre><code><span class="va">nb</span><span class="op">[[</span><span class="st">'BRCA0'</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">plot_phylo_heatmap</span><span class="op">(</span><span class="op">)</span></code></pre>
+<pre><code><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>repr.plot.width <span class="op">=</span> <span class="fl">8</span>, repr.plot.height <span class="op">=</span> <span class="fl">4</span>, repr.plot.res <span class="op">=</span> <span class="fl">200</span><span class="op">)</span>
+
+<span class="va">pal</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>`1` <span class="op">=</span> <span class="st">"gray"</span>, `2` <span class="op">=</span> <span class="st">"#9E0142"</span>, `3` <span class="op">=</span> <span class="st">"#F67D4A"</span>,
+        `4` <span class="op">=</span> <span class="st">"#F2EA91"</span>, `5` <span class="op">=</span> <span class="st">"#77C8A4"</span>, `6` <span class="op">=</span> <span class="st">"#5E4FA2"</span><span class="op">)</span>
+
+<span class="va">nb</span><span class="op">[[</span><span class="st">'BRCA0'</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">plot_phylo_heatmap</span><span class="op">(</span>pal_clone <span class="op">=</span> <span class="va">pal</span><span class="op">)</span></code></pre>
 <p><img src="https://i.imgur.com/wVjnjpf.png"><strong>Figure 4. Tumor phylogeny and CNV heatmap of BRCA0.</strong> The stacked color bars on the left reflect clonal assignment probabilities.</p>
 <p>From the phylo-heatmap, we can see that clone 5 in particular harbors significantly more CNV events than the rest of the tumor cells. Let's visualize the spatial distribution of subclones (clone_post$clone_opt) and overlap with tissue image.</p>
 <pre><code><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>repr.plot.width <span class="op">=</span> <span class="fl">5</span>, repr.plot.height <span class="op">=</span> <span class="fl">4.2</span>, repr.plot.res <span class="op">=</span> <span class="fl">250</span><span class="op">)</span>
@@ -273,7 +278,7 @@
     <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_continuous.html" class="external-link">scale_y_continuous</a></span><span class="op">(</span>expand <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/expansion.html" class="external-link">expansion</a></span><span class="op">(</span>add <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, limits <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">127</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span>
     <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="va">sample</span><span class="op">)</span></code></pre>
 <p><img src="https://i.imgur.com/shtqgqo.jpg"><strong>Figure 4. Clonal assignments in BRCA0.</strong> The maximum-a-posteriori clonal assignment of each spot is shown.</p>
-<p>Interestingly, if you zoom in close enough, you can see that the distribution of clone 5 corresponds to visible foci that are clearly distinct from the surrounding tumor cells. Taken together, these observations suggest that clone 6 is the most evolved tumor subpopulation that is actively invading the diseased tissue.</p>
+<p>Interestingly, if you zoom in close enough, you can see that the distribution of clone 5 corresponds to visible foci that are clearly distinct from the surrounding tumor cells. Taken together, these observations suggest that clone 5 represents a further evolved tumor subpopulation that is actively invading the diseased tissue.</p>
 </div>
 </div>
 <div class="section level2">

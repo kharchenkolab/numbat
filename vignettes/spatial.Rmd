@@ -11,7 +11,7 @@ output:
 <meta name="twitter:site" content="@tGaoTeng" />
 <meta name="twitter:title" content="Numbat spatial" />
 <meta name="twitter:description" content="Allele-specific CNV analysis from spatial transcriptomics" />
-<meta name="twitter:image" content="https://i.imgur.com/hZpNWVJ.jpg" />
+<meta name="twitter:image" content="https://i.imgur.com/6n2m6AS.png" />
 
 # Introduction
 Spatial transcriptomics (ST) assays provide an ideal opportunity to characterize the spatial architecture of a tumor as well as the cell-cell interactions within the tumor microenvironment. From transcriptomic information, CNV analysis can be applied to resolve genetic subclones in a spatial context [[1,2]](#references). In particular, many sequencing-based ST assays (e.g. Visium for fresh frozen and Slide-seq) capture both expression and allele information, and are thus amenable to allele-specific CNV analysis.
@@ -174,7 +174,12 @@ We see that there is substantial heterogeneity among CNV events in their spatial
 Finally, we can visualize the tumor subclonal structure inferred by Numbat in spatial coordinates. First, let's look at the usual phylo-heatmap which provides a summary of the clonal structure.
 
 ```
-nb[['BRCA0']]$plot_phylo_heatmap()
+options(repr.plot.width = 8, repr.plot.height = 4, repr.plot.res = 200)
+
+pal = c(`1` = "gray", `2` = "#9E0142", `3` = "#F67D4A",
+        `4` = "#F2EA91", `5` = "#77C8A4", `6` = "#5E4FA2")
+
+nb[['BRCA0']]$plot_phylo_heatmap(pal_clone = pal)
 ```
 ![](https://i.imgur.com/wVjnjpf.png)
 **Figure 4. Tumor phylogeny and CNV heatmap of BRCA0.** The stacked color bars on the left reflect clonal assignment probabilities.
@@ -214,7 +219,7 @@ spots[[sample]] %>%
 ![](https://i.imgur.com/shtqgqo.jpg)
 **Figure 4. Clonal assignments in BRCA0.** The maximum-a-posteriori clonal assignment of each spot is shown.
 
-Interestingly, if you zoom in close enough, you can see that the distribution of clone 5 corresponds to visible foci that are clearly distinct from the surrounding tumor cells. Taken together, these observations suggest that clone 6 is the most evolved tumor subpopulation that is actively invading the diseased tissue.
+Interestingly, if you zoom in close enough, you can see that the distribution of clone 5 corresponds to visible foci that are clearly distinct from the surrounding tumor cells. Taken together, these observations suggest that clone 5 represents a further evolved tumor subpopulation that is actively invading the diseased tissue.
 
 # Conclusion
 Like for scRNA-seq, allele-specific CNV analysis can be applied to spatial transcriptomics to interrogate genetic heterogeneity in a tumor. We have shown that Numbat can be used to differentiate (aneuploid) tumor and stromal compartments, evaluate the presence/absence of specific CNV events in spatial locations, and elucidate the spatial distributions of tumor subclones. Because Visium data is even sparser than scRNA-seq, the added information provided by phased allele counts is especially valuable for CNV calling. The key assumption we have to keep in mind is that cells contained in a spot are assumed to be largely genetically homogenous. However, this assumption is not that limiting in practice because cell mixtures are reflected as uncertainty in the posterior probability of CNV presence as well as clonal assignments. Newer generations of ST technologies that provide single-cell resolution can help overcome this limitation in the future.
