@@ -217,7 +217,7 @@ spots[[sample]] %>%
 ```
 
 ![](https://i.imgur.com/shtqgqo.jpg)
-**Figure 4. Clonal assignments in BRCA0.** The maximum-a-posteriori clonal assignment of each spot is shown.
+**Figure 5. Clonal assignments in BRCA0.** The maximum a posteriori clonal assignments of individual spots are shown.
 
 Interestingly, if you zoom in close enough, you can see that the distribution of clone 5 corresponds to visible foci that are clearly distinct from the surrounding tumor cells. Taken together, these observations suggest that clone 5 represents a further evolved tumor subpopulation that is actively invading the diseased tissue.
 
