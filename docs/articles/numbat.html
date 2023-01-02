@@ -54,6 +54,7 @@
   <div class="dropdown-menu" aria-labelledby="dropdown-articles">
     <a class="dropdown-item" href="../articles/results.html">Interpreting Numbat results</a>
     <a class="dropdown-item" href="../articles/mouse.html">Mouse tutorial</a>
+    <a class="dropdown-item" href="../articles/spatial.html">Spatial transcriptomics</a>
   </div>
 </li>
 <li class="nav-item">
@@ -272,7 +273,7 @@ Arguments:
     gtf <span class="op">=</span> <span class="va">gtf_hg38</span>
 <span class="op">)</span>
 
-<span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op">%&gt;%</span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></code></pre>
+<span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></code></pre>
 <p>Then pass <code>segs_loh</code> to the Numbat run for those regions to be excluded from baseline during analysis.</p>
 <pre><code><span class="va">out</span> <span class="op">=</span> <span class="fu"><a href="../reference/run_numbat.html">run_numbat</a></span><span class="op">(</span>
     <span class="va">....</span>,
