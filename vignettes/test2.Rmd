@@ -9,9 +9,9 @@ output:
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:site" content="@tGaoTeng" />
-<meta name="twitter:title" content="Allele-specific CNV analysis from spatial transcriptomics" />
+<meta name="twitter:title" content="Numbat spatial" />
 <meta name="twitter:description" content="Allele-specific CNV analysis from spatial transcriptomics" />
-<meta name="twitter:image" content="https://i.imgur.com/hZpNWVJ.jpg" />
+<meta name="twitter:image" content="https://www.jax.org/-/media/jaxweb/images/news-and-insights/black-6-mama.jpg" />
 
 # Introduction
 Spatial transcriptomics (ST) assays provide an ideal opportunity to characterize the spatial architecture of a tumor as well as the cell-cell interactions within the tumor microenvironment. From transcriptomic information, CNV analysis can be applied to resolve genetic subclones in a spatial context [[1,2]](#references). In particular, many sequencing-based ST assays (e.g. Visium for fresh frozen and Slide-seq) capture both expression and allele information, and are thus amenable to allele-specific CNV analysis.

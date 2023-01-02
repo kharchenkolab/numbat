@@ -9,7 +9,7 @@ output:
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:site" content="@tGaoTeng" />
-<meta name="twitter:title" content="Allele-specific CNV analysis from spatial transcriptomics" />
+<meta name="twitter:title" content="Numbat spatial" />
 <meta name="twitter:description" content="Allele-specific CNV analysis from spatial transcriptomics" />
 <meta name="twitter:image" content="https://i.imgur.com/hZpNWVJ.jpg" />
 
