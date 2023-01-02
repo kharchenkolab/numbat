@@ -14,60 +14,6 @@ upgma <- function(D, method = "average", ...) {
   result
 }
 
-#' from ape
-#' @keywords internal
-ladderize <- function(phy, right = TRUE) {
-    desc_fun <- function(x) {
-        parent <- x[, 1]
-        children <- x[, 2]
-        res <- vector("list", max(x))
-        for (i in seq_along(parent)) res[[parent[i]]] <- c(res[[parent[i]]], children[i])
-        return(res)
-    }
-
-    if(!is.null(phy$edge.length)){
-        el <- numeric(max(phy$edge))
-        el[phy$edge[, 2]] <- phy$edge.length
-    }
-
-    nb.tip <- length(phy$tip.label)
-    nb.node <- phy$Nnode
-    nb.edge <- dim(phy$edge)[1]
-
-    phy <- reorder(phy, "postorder")
-    N <- node_depth(as.integer(nb.tip), as.integer(phy$edge[, 1]), as.integer(phy$edge[, 2]),
-            as.integer(nb.edge), double(nb.tip + nb.node), 1L)
-
-    ii <- order(x <- phy$edge[,1], y <- N[phy$edge[,2]], decreasing = right)
-    desc <- desc_fun(phy$edge[ii,])
-
-    tmp <- integer(nb.node)
-    new_anc <- integer(nb.node)
-    new_anc[1] <- tmp[1] <- nb.tip + 1L
-    k <- nb.node
-    pos <- 1L
-
-    while(pos > 0L && k > 0){
-        current <- tmp[pos]
-        new_anc[k] <- current
-        k <- k - 1L
-        dc <- desc[[current]]
-        ind <- (dc > nb.tip)
-        if(any(ind)){
-            l <- sum(ind)
-            tmp[pos -1L + seq_len(l)] <-  dc[ind]
-            pos <- pos + l - 1L
-        }
-        else pos <- pos - 1L
-    }
-    edge <- cbind(rep(new_anc, lengths(desc[new_anc])), unlist(desc[new_anc]))
-    phy$edge <- edge
-    if(!is.null(phy$edge.length)) phy$edge.length <- el[edge[,2]]
-    attr(phy, "order") <- "postorder"
-    phy <- reorder(phy, "cladewise")
-    phy
-}
-
 #' Mark the tumor lineage of a phylogeny
 #' @param gtree tbl_graph Single-cell phylogeny
 #' @return tbl_graph Phylogeny annotated with tumor versus normal compartment
@@ -356,4 +302,12 @@ get_move_opt = function(G, l_matrix) {
         head(1)
 
     return(move_opt)
+}
+
+#' Get ordered tips from a tree
+#' @keywords internal
+get_ordered_tips = function(tree) {
+    is_tip <- tree$edge[,2] <= length(tree$tip.label)
+    ordered_tips <- tree$edge[is_tip, 2]
+    tree$tip.label[ordered_tips]
 }

@@ -98,22 +98,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// node_depth
-NumericVector node_depth(int ntip, NumericVector e1, NumericVector e2, int nedge, NumericVector xx, int method);
-RcppExport SEXP _numbat_node_depth(SEXP ntipSEXP, SEXP e1SEXP, SEXP e2SEXP, SEXP nedgeSEXP, SEXP xxSEXP, SEXP methodSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type ntip(ntipSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type e1(e1SEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type e2(e2SEXP);
-    Rcpp::traits::input_parameter< int >::type nedge(nedgeSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type xx(xxSEXP);
-    Rcpp::traits::input_parameter< int >::type method(methodSEXP);
-    rcpp_result_gen = Rcpp::wrap(node_depth(ntip, e1, e2, nedge, xx, method));
-    return rcpp_result_gen;
-END_RCPP
-}
 // roman2int_internal
 int roman2int_internal(Rcpp::StringVector letters, int nchar);
 RcppExport SEXP _numbat_roman2int_internal(SEXP lettersSEXP, SEXP ncharSEXP) {
@@ -176,7 +160,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_numbat_likelihood_compute", (DL_FUNC) &_numbat_likelihood_compute, 5},
     {"_numbat_forward_backward_compute", (DL_FUNC) &_numbat_forward_backward_compute, 5},
     {"_numbat_viterbi_compute", (DL_FUNC) &_numbat_viterbi_compute, 7},
-    {"_numbat_node_depth", (DL_FUNC) &_numbat_node_depth, 6},
     {"_numbat_roman2int_internal", (DL_FUNC) &_numbat_roman2int_internal, 2},
     {"_numbat_fit_lnpois_cpp", (DL_FUNC) &_numbat_fit_lnpois_cpp, 3},
     {"_numbat_poilog1", (DL_FUNC) &_numbat_poilog1, 3},

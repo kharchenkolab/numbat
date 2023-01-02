@@ -519,46 +519,46 @@ plot_phylo_heatmap = function(
     # inspect gtree object
     if (is(gtree, "tbl_graph")) {
         gtree = gtree %>% activate(edges) %>% mutate(length = ifelse(leaf, tip_length, length))
-        tree_obj = gtree %>% to_phylo()
+        tree_obj = gtree %>% to_phylo() %>% ladderize(right = FALSE)
     } else {
         tree_obj = gtree
         tvn_line = FALSE
         clone_bar = FALSE
     }
 
-    # plot phylogeny
+    cell_order = get_ordered_tips(tree_obj)
+
     if (show_phylo) {
+        p_tree = tryCatch(expr = {
+            p_tree = tree_obj %>%
+                ggtree::ggtree(ladderize = FALSE, size = branch_width) +
+                theme(
+                    plot.margin = margin(0,1,0,0, unit = 'mm'),
+                    axis.title.x = element_blank(),
+                    axis.ticks.x = element_blank(),
+                    axis.text.x = element_blank(),
+                    axis.line.y = element_blank(),
+                    axis.ticks.y = element_blank(),
+                    axis.text.y = element_blank(),
+                    panel.background = element_rect(fill = "transparent",colour = NA),
+                    plot.background = element_rect(fill = "transparent", color = NA)
+                ) +
+                guides(color = 'none')
 
-    	p_tree = tree_obj %>%
-    		ggtree::ggtree(ladderize = TRUE, size = branch_width) +
-    		theme(
-    			plot.margin = margin(0,1,0,0, unit = 'mm'),
-    			axis.title.x = element_blank(),
-    			axis.ticks.x = element_blank(),
-    			axis.text.x = element_blank(),
-    			axis.line.y = element_blank(),
-    			axis.ticks.y = element_blank(),
-    			# axis.text.y = element_text(size = 5)
-    			axis.text.y = element_blank(),
-    			panel.background = element_rect(fill = "transparent",colour = NA),
-    			plot.background = element_rect(fill = "transparent", color = NA)
-    		) +
-    		guides(color = 'none')
+            if (root_edge) {
+                p_tree = p_tree + ggtree::geom_rootedge(size = branch_width)
+            }
+        },
+        error = function(e) {
+            print(e)
+            log_warn("Plotting phylogeny failed, continuing..")
 
-    	if (root_edge) {
-    		p_tree = p_tree + ggtree::geom_rootedge(size = branch_width)
-    	}
+            p_tree = ggplot() + theme_void()
 
-    	# order the cells
-    	cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
+            return(p_tree)
+        })
     } else {
-    	p_tree = gtree %>%
-    		ape::as.phylo() %>%
-    		ape::ladderize(right = FALSE)
-
-    	cell_order = rev(p_tree$tip.label)
-
-    	p_tree = ggplot() + theme_void()
+        p_tree = ggplot() + theme_void()
     }
 
     joint_post = joint_post %>%

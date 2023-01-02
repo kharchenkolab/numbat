@@ -25,10 +25,6 @@ viterbi_compute <- function(log_delta, logprob, logPi, n, m, nu, z) {
     .Call('_numbat_viterbi_compute', PACKAGE = 'numbat', log_delta, logprob, logPi, n, m, nu, z)
 }
 
-node_depth <- function(ntip, e1, e2, nedge, xx, method) {
-    .Call('_numbat_node_depth', PACKAGE = 'numbat', ntip, e1, e2, nedge, xx, method)
-}
-
 roman2int_internal <- function(letters, nchar) {
     .Call('_numbat_roman2int_internal', PACKAGE = 'numbat', letters, nchar)
 }

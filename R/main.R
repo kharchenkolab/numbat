@@ -8,7 +8,7 @@
 #' @import tidygraph
 #' @import ggplot2
 #' @import ggraph
-#' @importFrom scistreer perform_nni get_mut_graph score_tree annotate_tree mut_to_tree to_phylo
+#' @importFrom scistreer perform_nni get_mut_graph score_tree annotate_tree mut_to_tree ladderize to_phylo
 #' @importFrom ggtree %<+%
 #' @importFrom methods is as
 #' @importFrom igraph vcount ecount E V V<- E<-

@@ -27,12 +27,11 @@ plot_phylo_heatmap(
   annot_bar_width = 0.25,
   clone_bar_width = 0.25,
   bar_label_size = 7,
+  tvn_line = TRUE,
   clone_line = FALSE,
-  superclone = FALSE,
   exclude_gap = FALSE,
   root_edge = TRUE,
-  raster = FALSE,
-  show_phylo = TRUE
+  raster = FALSE
 )
 }
 \arguments{
@@ -76,17 +75,15 @@ plot_phylo_heatmap(
 
 \item{bar_label_size}{numeric Size of sidebar text labels}
 
-\item{clone_line}{logical Whether to display borders for clones in the heatmap}
+\item{tvn_line}{logical Whether to draw line separating tumor and normal cells}
 
-\item{superclone}{logical Wehether to display superclones in the clone bar}
+\item{clone_line}{logical Whether to display borders for clones in the heatmap}
 
 \item{exclude_gap}{logical Whether to mark gap regions}
 
 \item{root_edge}{logical Whether to plot root edge}
 
 \item{raster}{logical Whether to raster images}
-
-\item{show_phylo}{logical Whether to display phylogeny on y axis}
 }
 \value{
 ggplot panel
