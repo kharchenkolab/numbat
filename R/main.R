@@ -505,26 +505,18 @@ run_numbat = function(
 
         if (plot) {
 
-            tryCatch(expr = {
-
-                panel = plot_phylo_heatmap(
-                    gtree,
-                    joint_post,
-                    segs_consensus,
-                    clone_post,
-                    tip_length = 0.2,
-                    branch_width = 0.2,
-                    line_width = 0.1,
-                    clone_bar = TRUE
-                )
-            
-                ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 7.5, height = 3.75, dpi = 250)
-            
-            },
-            error = function(e) { 
-                print(e)
-                log_warn("Plotting phylo-heatmap failed, continuing..")
-            })
+            panel = plot_phylo_heatmap(
+                gtree,
+                joint_post,
+                segs_consensus,
+                clone_post,
+                tip_length = 0.2,
+                branch_width = 0.2,
+                line_width = 0.1,
+                clone_bar = TRUE
+            )
+        
+            ggsave(glue('{out_dir}/panel_{i}.png'), panel, width = 7.5, height = 3.75, dpi = 250)
 
         }
 
