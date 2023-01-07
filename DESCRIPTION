@@ -36,7 +36,7 @@ Imports:
     RhpcBLASctl,
     R.utils,
     scales,
-    scistreer (>= 1.0.1),
+    scistreer (>= 1.1.0),
     stats4,
     stringr,
     tibble,
