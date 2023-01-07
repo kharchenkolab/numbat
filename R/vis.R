@@ -666,20 +666,22 @@ plot_phylo_heatmap = function(
             clone_dict = gtree %>%
                 activate(nodes) %>%
                 data.frame %>%
-                mutate(
-                    GT = ifelse(compartment == 'normal', '', GT),
-                    GT = factor(GT),
-                    clone = ifelse(compartment == 'normal', 1, clone),
-                    clone = factor(clone)
-                ) %>%
+                mutate(clone = factor(clone)) %>%
                 {setNames(.$clone, .$name)}
+
+            normal_clones = gtree %>%
+                activate(nodes) %>%
+                data.frame %>%
+                filter(compartment == 'normal') %>%
+                pull(clone) %>% unique
         }
 
         if (is.null(pal_clone)) {
 
             getPalette = colorRampPalette(c("#9E0142", "#D53E4F", "#F46D43", "#FDAE61", "#FEE08B", "#E6F598", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2"))
-            pal_clone = c('gray', getPalette(length(unique(clone_dict))))
+            pal_clone = getPalette(max(as.integer(levels(clone_dict))))
             pal_clone = setNames(pal_clone, as.character(1:length(pal_clone)))
+            pal_clone[c(normal_clones,1)] = 'gray'
 
         }
 

@@ -184,7 +184,7 @@ nb[['BRCA0']]$plot_phylo_heatmap(pal_clone = pal)
 ![](https://i.imgur.com/wVjnjpf.png)
 **Figure 4. Tumor phylogeny and CNV heatmap of BRCA0.** The stacked color bars on the left reflect clonal assignment probabilities.
 
-From the phylo-heatmap, we can see that clone 5 in particular harbors significantly more CNV events than the rest of the tumor cells. Let's visualize the spatial distribution of subclones (clone_post$clone_opt) and overlap with tissue image.
+From the phylo-heatmap, we can see that clone 5 in particular harbors significantly more CNV events than the rest of the tumor cells. Let's visualize the spatial distribution of subclones (clone_post$clone_opt) and overlay with tissue image.
 ```
 options(repr.plot.width = 5, repr.plot.height = 4.2, repr.plot.res = 250)
 
