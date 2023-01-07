@@ -34,7 +34,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -158,7 +158,7 @@
             <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="va">sample</span><span class="op">)</span>
     <span class="op">}</span>
 <span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> 
-<span class="fu">wrap_plots</span><span class="op">(</span>guides <span class="op">=</span> <span class="st">'collect'</span><span class="op">)</span></code></pre>
+<span class="fu"><a href="https://patchwork.data-imaginist.com/reference/wrap_plots.html" class="external-link">wrap_plots</a></span><span class="op">(</span>guides <span class="op">=</span> <span class="st">'collect'</span><span class="op">)</span></code></pre>
 <div class="figure">
 <img src="https://i.imgur.com/hZpNWVJ.jpg">
 </div>
@@ -196,7 +196,7 @@
             <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="va">sample</span><span class="op">)</span>
     <span class="op">}</span>
 <span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> 
-<span class="fu">wrap_plots</span><span class="op">(</span>guides <span class="op">=</span> <span class="st">'collect'</span><span class="op">)</span></code></pre>
+<span class="fu"><a href="https://patchwork.data-imaginist.com/reference/wrap_plots.html" class="external-link">wrap_plots</a></span><span class="op">(</span>guides <span class="op">=</span> <span class="st">'collect'</span><span class="op">)</span></code></pre>
 <p><img src="https://i.imgur.com/NsBjisZ.jpg"><strong>Figure 2. Mutant versus normal probabilities overlayed with tissue images.</strong> Red represents mutant (aneuploid), green represents normal, and yellow represents mixture/uncertain.</p>
 </div>
 <div class="section level3">
@@ -248,7 +248,7 @@
 
 <span class="va">nb</span><span class="op">[[</span><span class="st">'BRCA0'</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="fu">plot_phylo_heatmap</span><span class="op">(</span>pal_clone <span class="op">=</span> <span class="va">pal</span><span class="op">)</span></code></pre>
 <p><img src="https://i.imgur.com/wVjnjpf.png"><strong>Figure 4. Tumor phylogeny and CNV heatmap of BRCA0.</strong> The stacked color bars on the left reflect clonal assignment probabilities.</p>
-<p>From the phylo-heatmap, we can see that clone 5 in particular harbors significantly more CNV events than the rest of the tumor cells. Let's visualize the spatial distribution of subclones (clone_post$clone_opt) and overlap with tissue image.</p>
+<p>From the phylo-heatmap, we can see that clone 5 in particular harbors significantly more CNV events than the rest of the tumor cells. Let's visualize the spatial distribution of subclones (clone_post$clone_opt) and overlay with tissue image.</p>
 <pre><code><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>repr.plot.width <span class="op">=</span> <span class="fl">5</span>, repr.plot.height <span class="op">=</span> <span class="fl">4.2</span>, repr.plot.res <span class="op">=</span> <span class="fl">250</span><span class="op">)</span>
 
 <span class="va">sample</span> <span class="op">=</span> <span class="st">'BRCA0'</span>
