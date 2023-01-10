@@ -1927,7 +1927,7 @@ if (getRversion() >= "2.15.1"){
     "down", "edges", "end_x", "end_y", "exp_rollmean", "expected_colnames", "extract",
     "frac_overlap_x", "frac_overlap_y", "from", "from_label", "from_node", "gaps_hg19",
     "gaps_hg38", "gene", "gene_end", "gene_index", "gene_length", "gene_snps", "gene_start",
-    "group", "groupOTU", "gtf_hg19", "gtf_hg38", "haplo", "haplo_naive", "haplo_post",
+    "group", "groupOTU", "gtf_hg19", "gtf_hg38", "gtf_mm10", "haplo", "haplo_naive", "haplo_post",
     "haplo_theta_min", "het", "hom_alt", "i", "inter_snp_cm", "inter_snp_dist", "isTip",
     "is_desc", "j", "keep", "l", "l00", "l00_x", "l00_y", "l10", "l10_x", "l10_y", "l11", "l11_x",
     "l11_y", "l20", "l20_x", "l20_y", "l21", "l21_x", "l21_y", "l22", "l22_x", "l22_y", "l31",
