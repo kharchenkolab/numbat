@@ -457,6 +457,7 @@ plot_mut_history = function(
 #' @param gtree tbl_graph The single-cell phylogeny
 #' @param joint_post dataframe Joint single cell CNV posteriors
 #' @param segs_consensus datatframe Consensus segment dataframe
+#' @param clone_post dataframe Clone assignment posteriors
 #' @param p_min numeric Probability threshold to display CNV calls
 #' @param annot dataframe Cell annotations, dataframe with 'cell' and additional annotation columns
 #' @param pal_annot named vector Colors for cell annotations
@@ -464,6 +465,7 @@ plot_mut_history = function(
 #' @param annot_scale ggplot scale Color scale for the annotation bar
 #' @param clone_dict named vector Clone annotations, mapping from cell name to clones
 #' @param clone_bar logical Whether to display clone bar plot
+#' @param clone_stack character Whether to plot clone assignment probabilities as stacked bar
 #' @param clone_title character Legend title for the clone bar
 #' @param clone_legend logical Whether to display the clone legend
 #' @param tree_height numeric Relative height of the phylogeny plot

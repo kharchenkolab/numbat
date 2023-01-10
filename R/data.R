@@ -6,6 +6,10 @@
 #' 
 "gtf_hg19"
 
+#' gene model (mm10)
+#' 
+"gtf_mm10"
+
 #' chromosome sizes (hg38)
 #' 
 "chrom_sizes_hg38"
