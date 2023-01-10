@@ -31,7 +31,8 @@ plot_phylo_heatmap(
   clone_line = FALSE,
   exclude_gap = FALSE,
   root_edge = TRUE,
-  raster = FALSE
+  raster = FALSE,
+  show_phylo = TRUE
 )
 }
 \arguments{
@@ -40,6 +41,8 @@ plot_phylo_heatmap(
 \item{joint_post}{dataframe Joint single cell CNV posteriors}
 
 \item{segs_consensus}{datatframe Consensus segment dataframe}
+
+\item{clone_post}{dataframe Clone assignment posteriors}
 
 \item{p_min}{numeric Probability threshold to display CNV calls}
 
@@ -54,6 +57,8 @@ plot_phylo_heatmap(
 \item{clone_dict}{named vector Clone annotations, mapping from cell name to clones}
 
 \item{clone_bar}{logical Whether to display clone bar plot}
+
+\item{clone_stack}{character Whether to plot clone assignment probabilities as stacked bar}
 
 \item{pal_clone}{named vector Clone colors}
 
@@ -84,6 +89,8 @@ plot_phylo_heatmap(
 \item{root_edge}{logical Whether to plot root edge}
 
 \item{raster}{logical Whether to raster images}
+
+\item{show_phylo}{logical Whether to display phylogeny on y axis}
 }
 \value{
 ggplot panel
