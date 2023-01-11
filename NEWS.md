@@ -1,3 +1,7 @@
+# numbat 1.2.1 - 01/11/2023
+
+* Fix bugs #30, #79, #89
+
 # numbat 1.2.0 - 12/26/2022
 
 * Numbat now works for F1 hybrid mice! Check out the new tutorial under `Articles`.
