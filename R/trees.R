@@ -84,10 +84,38 @@ get_tree_post = function(tree, P) {
     rownames(l_matrix) = c(tree$tip.label, paste0('Node', 1:tree$Nnode))
 
     gtree = annotate_tree(tree, P)
-    # annotate the tree
-    gtree = mark_tumor_lineage(gtree)
 
     return(list('gtree' = gtree, 'l_matrix' = l_matrix))
+}
+
+#' Get a tidygraph tree with simplified mutational history
+#' @param tree phylo Single-cell phylogenetic tree
+#' @param P matrix Genotype probability matrix
+#' @param max_cost numeric Likelihood threshold to collapse internal branches
+#' @param n_cut integer Number of cuts on the phylogeny (resulting in n_cut + 1 clones)
+#' @return tbl_graph Phylogeny annotated with branch lengths and mutation events
+#' @examples
+#' gtree = get_gtree(tree_small, P_small, n_cut = 4)
+#' @export
+get_gtree = function(tree, P, n_cut = 0, max_cost = 0) {
+    
+    # calculate L matrix and create tidygraph object
+    tree_post = get_tree_post(tree, P)
+
+    # simplify mutational history
+    G_m = get_mut_graph(tree_post$gtree)  %>% 
+        simplify_history(tree_post$l_matrix, max_cost = max_cost, n_cut = n_cut) %>% 
+        label_genotype()
+
+    mut_nodes = G_m %>% igraph::as_data_frame('vertices') %>% 
+        select(name = node, site = label, clone = clone, GT = GT)
+
+    # update tree
+    gtree = mut_to_tree(tree_post$gtree, mut_nodes)
+    gtree = mark_tumor_lineage(gtree)
+    
+    return(gtree)
+    
 }
 
 #' Annotate the direct upstream or downstream node on the edges
@@ -226,15 +254,17 @@ contract_nodes = function(G, vset, node_tar = NULL, debug = FALSE) {
 #' @param l_matrix matrix Mutation placement likelihood matrix (node by mutation)
 #' @return igraph Mutation graph
 #' @keywords internal
-simplify_history = function(G, l_matrix, max_cost = 150, verbose = TRUE) {
+simplify_history = function(G, l_matrix, max_cost = 150, n_cut = 0, verbose = TRUE) {
 
-    # moves = data.frame()
+    if (n_cut > 0) {
+        max_cost = Inf
+    }
 
     for (i in 1:ecount(G)) {
     
         move_opt = get_move_opt(G, l_matrix)
 
-        if (move_opt$cost < max_cost) {
+        if (move_opt$cost < max_cost & ecount(G) > n_cut) {
 
             if (move_opt$direction == 'up') {
                 G = G %>% contract_nodes(c(move_opt$from_label, move_opt$to_label), move_opt$from_node) %>% transfer_links()
@@ -244,10 +274,8 @@ simplify_history = function(G, l_matrix, max_cost = 150, verbose = TRUE) {
                 msg = glue('opt_move:{move_opt$from_label}->{move_opt$to_label}, cost={signif(move_opt$cost,3)}')
             }
 
-            # moves = moves %>% rbind(move_opt %>% mutate(i = i))
-
             log_info(msg)
-            # if (verbose) {display(msg)}
+            
         } else {
             break()
         }

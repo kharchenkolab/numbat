@@ -38,6 +38,10 @@ Used to allow users to plot results
 
 \item{\code{gexp_roll_wide}}{matrix Smoothed expression of single cells}
 
+\item{\code{P}}{matrix Genotype probability matrix}
+
+\item{\code{treeML}}{matrix Maximum likelihood tree as phylo object}
+
 \item{\code{hc}}{hclust Initial hierarchical clustering}
 }
 \if{html}{\out{</div>}}

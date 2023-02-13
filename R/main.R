@@ -33,6 +33,7 @@ NULL
 #' @param min_cells integer Minimum number of cells to run HMM on
 #' @param min_genes integer Minimum number of genes to call a segment
 #' @param max_cost numeric Likelihood threshold to collapse internal branches
+#' @param n_cut integer Number of cuts on the phylogeny (resulting in n_cut+1 tumor subclones)
 #' @param tau numeric Factor to determine max_cost as a function of the number of cells (0-1)
 #' @param nu numeric Phase switch rate
 #' @param alpha numeric P value cutoff for diploid finding
@@ -63,7 +64,7 @@ run_numbat = function(
         count_mat, lambdas_ref, df_allele, genome = 'hg38', 
         out_dir = tempdir(), max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3, nu = 1,
-        max_cost = ncol(count_mat) * tau, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
+        max_cost = ncol(count_mat) * tau, n_cut = 0, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
         ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
         skip_nj = FALSE, multi_allelic = TRUE, p_multi = 1-alpha,
@@ -114,6 +115,7 @@ run_numbat = function(
     log_appender(appender_file(logfile))
 
     log_message(paste(
+        glue('Numbat version: ', as.character(packageVersion("numbat"))),
         'Running under parameters:',
         glue('t = {t}'), 
         glue('alpha = {alpha}'),
@@ -121,6 +123,7 @@ run_numbat = function(
         glue('min_cells = {min_cells}'), 
         glue('init_k = {init_k}'),
         glue('max_cost = {max_cost}'),
+        glue('n_cut = {n_cut}'),
         glue('max_iter = {max_iter}'),
         glue('max_nni = {max_nni}'),
         glue('min_depth = {min_depth}'),
@@ -476,27 +479,15 @@ run_numbat = function(
         # maximum likelihood tree search with NNI
         tree_list = perform_nni(tree_init, P, ncores = ncores_nni, eps = eps, max_iter = max_nni)
         saveRDS(tree_list, glue('{out_dir}/tree_list_{i}.rds'))
+        treeML = tree_list[[length(tree_list)]]
+        saveRDS(treeML, glue('{out_dir}/treeML_{i}.rds'))
 
-        tree_post = get_tree_post(tree_list[[length(tree_list)]], P)
-        saveRDS(tree_post, glue('{out_dir}/tree_post_{i}.rds'))
-
-        # simplify mutational history
-        G_m = get_mut_graph(tree_post$gtree)  %>% 
-            simplify_history(tree_post$l_matrix, max_cost = max_cost) %>% 
-            label_genotype()
-
-        mut_nodes = G_m %>% igraph::as_data_frame('vertices') %>% 
-            select(name = node, site = label, clone = clone, GT = GT)
-
-        # update tree
-        gtree = mut_to_tree(tree_post$gtree, mut_nodes)
-        gtree = mark_tumor_lineage(gtree)
-
+        gtree = get_gtree(treeML, P, n_cut = n_cut, max_cost = max_cost)
         saveRDS(gtree, glue('{out_dir}/tree_final_{i}.rds'))
+        G_m = get_mut_graph(gtree) %>% label_genotype()
         saveRDS(G_m, glue('{out_dir}/mut_graph_{i}.rds'))
 
         clone_post = get_clone_post(gtree, exp_post, allele_post)
-
         fwrite(clone_post, glue('{out_dir}/clone_post_{i}.tsv'), sep = '\t')
 
         normal_cells = clone_post %>% filter(p_cnv < 0.5) %>% pull(cell)

@@ -235,6 +235,9 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/get_exp_sc.html</loc>
   </url>
   <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_gtree.html</loc>
+  </url>
+  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/get_haplotype_post.html</loc>
   </url>
   <url>
@@ -262,6 +265,9 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/get_nodes_celltree.html</loc>
   </url>
   <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/get_ordered_tips.html</loc>
+  </url>
+  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/get_segs_consensus.html</loc>
   </url>
   <url>
@@ -284,6 +290,9 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/gtf_hg38.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/gtf_mm10.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/hc_example.html</loc>

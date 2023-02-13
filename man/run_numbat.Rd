@@ -23,6 +23,7 @@ run_numbat(
   tau = 0.3,
   nu = 1,
   max_cost = ncol(count_mat) * tau,
+  n_cut = 0,
   min_depth = 0,
   common_diploid = TRUE,
   min_overlap = 0.45,
@@ -78,6 +79,8 @@ run_numbat(
 \item{nu}{numeric Phase switch rate}
 
 \item{max_cost}{numeric Likelihood threshold to collapse internal branches}
+
+\item{n_cut}{integer Number of cuts on the phylogeny (resulting in n_cut+1 tumor subclones)}
 
 \item{min_depth}{integer Minimum allele depth}
 

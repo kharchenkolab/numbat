@@ -22,7 +22,41 @@ reference:
 - title: "Visualizing results"
   contents:
   - Numbat
+  - get_gtree
   - starts_with("plot_")
+  - cnv_heatmap
+- title: "Example data"
+  contents:
+  - df_allele_example
+  - count_mat_example
+  - ref_hca
+  - ref_hca_counts
+  - bulk_example
+  - annot_ref
+  - count_mat_ref
+  - gexp_roll_example
+  - hc_example
+  - joint_post_example
+  - mut_graph_example
+  - phylogeny_example
+  - pre_likelihood_hmm
+  - segs_example
+- title: "Genome annotations"
+  contents:
+  - acen_hg19
+  - acen_hg38
+  - chrom_sizes_hg19
+  - chrom_sizes_hg38
+  - gaps_hg19
+  - gaps_hg38
+  - gtf_hg19
+  - gtf_hg38
+  - gtf_mm10
+  - vcf_meta
+- title: "Misc"
+  contents:
+  - annotate_genes
+  - upgma
 articles:
 - title: "Tutorials"
   navbar: ~

@@ -45,6 +45,12 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
     #' @field gexp_roll_wide matrix Smoothed expression of single cells
     gexp_roll_wide = NULL,
 
+    #' @field P matrix Genotype probability matrix
+    P = NULL,
+
+    #' @field treeML matrix Maximum likelihood tree as phylo object
+    treeML = NULL,
+
     #' @field hc hclust Initial hierarchical clustering
     hc = NULL,
 
@@ -183,7 +189,9 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             self$gtree = read_file(inputfile=glue('{out_dir}/tree_final_{i}.rds'), filetype="rds")
             self$clone_post = read_file(inputfile=glue('{out_dir}/clone_post_{i}.tsv'), filetype="tsv")
             
-            self$hc = read_hc_rds(inputfile=glue('{out_dir}/hc.rds'))
+            self$treeML = read_file(inputfile=glue('{out_dir}/treeML_{i}.rds'), filetype="rds")
+
+            self$P = read_file(inputfile=glue('{out_dir}/geno_{i}.tsv')) %>% tibble::column_to_rownames('cell') %>% as.matrix
             
     })
 )
