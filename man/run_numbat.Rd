@@ -80,7 +80,7 @@ run_numbat(
 
 \item{max_cost}{numeric Likelihood threshold to collapse internal branches}
 
-\item{n_cut}{integer Number of cuts on the phylogeny (resulting in n_cut+1 tumor subclones)}
+\item{n_cut}{integer Number of cuts on the phylogeny to define subclones}
 
 \item{min_depth}{integer Minimum allele depth}
 

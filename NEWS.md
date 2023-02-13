@@ -1,3 +1,9 @@
+# numbat 1.2.2 - 02/13/2023
+
+* Introduce `n_cut` parameter to specify the number of clones to define from the phylogeny 
+
+* Allows users to redefine subclones from the phylogeny via `get_gtree`
+
 # numbat 1.2.1 - 01/11/2023
 
 * Fix bugs #30, #79, #89

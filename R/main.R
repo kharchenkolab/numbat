@@ -33,7 +33,7 @@ NULL
 #' @param min_cells integer Minimum number of cells to run HMM on
 #' @param min_genes integer Minimum number of genes to call a segment
 #' @param max_cost numeric Likelihood threshold to collapse internal branches
-#' @param n_cut integer Number of cuts on the phylogeny (resulting in n_cut+1 tumor subclones)
+#' @param n_cut integer Number of cuts on the phylogeny to define subclones
 #' @param tau numeric Factor to determine max_cost as a function of the number of cells (0-1)
 #' @param nu numeric Phase switch rate
 #' @param alpha numeric P value cutoff for diploid finding
