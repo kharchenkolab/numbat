@@ -94,8 +94,6 @@ get_tree_post = function(tree, P) {
 #' @param max_cost numeric Likelihood threshold to collapse internal branches
 #' @param n_cut integer Number of cuts on the phylogeny (resulting in n_cut + 1 clones)
 #' @return tbl_graph Phylogeny annotated with branch lengths and mutation events
-#' @examples
-#' gtree = get_gtree(tree_small, P_small, n_cut = 4)
 #' @export
 get_gtree = function(tree, P, n_cut = 0, max_cost = 0) {
     

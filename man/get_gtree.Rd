@@ -21,6 +21,3 @@ tbl_graph Phylogeny annotated with branch lengths and mutation events
 \description{
 Get a tidygraph tree with simplified mutational history
 }
-\examples{
-gtree = get_gtree(tree_small, P_small, n_cut = 4)
-}
