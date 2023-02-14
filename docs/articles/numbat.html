@@ -275,7 +275,7 @@ Arguments:
 <span>    gtf <span class="op">=</span> <span class="va">gtf_hg38</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op">%&gt;%</span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></span></code></pre>
+<span><span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></span></code></pre>
 <p>Then pass <code>segs_loh</code> to the Numbat run for those regions to be excluded from baseline during analysis.</p>
 <pre><code><span><span class="va">out</span> <span class="op">=</span> <span class="fu"><a href="../reference/run_numbat.html">run_numbat</a></span><span class="op">(</span></span>
 <span>    <span class="va">....</span>,</span>
@@ -359,7 +359,7 @@ Arguments:
 
     <footer><div class="pkgdown-footer-left">
   <p></p>
-<p>Developed by Teng Gao, Hirak Sarkar, Evan Biederstedt, Peter Kharchenko.</p>
+<p>Developed by Teng Gao, Ruslan Soldatov, Hirak Sarkar, Evan Biederstedt, Peter Kharchenko.</p>
 </div>
 
 <div class="pkgdown-footer-right">
