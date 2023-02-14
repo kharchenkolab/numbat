@@ -88,11 +88,14 @@ get_tree_post = function(tree, P) {
     return(list('gtree' = gtree, 'l_matrix' = l_matrix))
 }
 
-#' Get a tidygraph tree with simplified mutational history
+#' Get a tidygraph tree with simplified mutational history. 
+#' Specify either max_cost or n_cut. 
+#' max_cost works similarly as h and n_cut works similarly as k in stats::cutree.
+#' The top-level normal diploid clone is always included.
 #' @param tree phylo Single-cell phylogenetic tree
 #' @param P matrix Genotype probability matrix
 #' @param max_cost numeric Likelihood threshold to collapse internal branches
-#' @param n_cut integer Number of cuts on the phylogeny (resulting in n_cut + 1 clones)
+#' @param n_cut integer Number of cuts on the phylogeny to define subclones
 #' @return tbl_graph Phylogeny annotated with branch lengths and mutation events
 #' @export
 get_gtree = function(tree, P, n_cut = 0, max_cost = 0) {

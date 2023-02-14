@@ -56,6 +56,7 @@ Used to allow users to plot results
 \item \href{#method-Numbat-plot_sc_tree}{\code{Numbat$plot_sc_tree()}}
 \item \href{#method-Numbat-plot_consensus}{\code{Numbat$plot_consensus()}}
 \item \href{#method-Numbat-plot_clone_profile}{\code{Numbat$plot_clone_profile()}}
+\item \href{#method-Numbat-cutree}{\code{Numbat$cutree()}}
 \item \href{#method-Numbat-clone}{\code{Numbat$clone()}}
 }
 }
@@ -187,6 +188,25 @@ Plot clone cnv profiles
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{...}}{additional parameters passed to plot_clone_profile()}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Numbat-cutree"></a>}}
+\if{latex}{\out{\hypertarget{method-Numbat-cutree}{}}}
+\subsection{Method \code{cutree()}}{
+Re-define subclones on the phylogeny.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Numbat$cutree(max_cost = 0, n_cut = 0)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{max_cost}}{numeric Likelihood threshold to collapse internal branches}
+
+\item{\code{n_cut}}{integer Number of cuts on the phylogeny to define subclones}
 }
 \if{html}{\out{</div>}}
 }

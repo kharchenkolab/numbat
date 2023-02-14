@@ -133,7 +133,10 @@ Rcommended for cell lines or tumor samples with no normal cells.</dd>
           
           <code><a href="get_gtree.html">get_gtree()</a></code> 
         </dt>
-        <dd>Get a tidygraph tree with simplified mutational history</dd>
+        <dd>Get a tidygraph tree with simplified mutational history. 
+Specify either max_cost or n_cut. 
+max_cost works similarly as h and n_cut works similarly as k in stats::cutree.
+The top-level normal diploid clone is always included.</dd>
       </dl><dl><dt>
           
           <code><a href="plot_bulks.html">plot_bulks()</a></code> 

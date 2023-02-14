@@ -46,7 +46,29 @@ nb$plot_phylo_heatmap(
   pal_clone = mypal
 )
 ```
-In this visualization, the single-cell phylogeny (left) is juxtaposed with a heatmap of single-cell CNV calls (right). The CNV calls are colored by the type of alterations (AMP, amplification, BAMP, balanced amplification, DEL, deletion, CNLoH, copy-neutral loss of heterozygosity). The colorbar in-between differentiates the distinct genetic populations (genotype). The dashed blue line separates the predicted tumor versus normal cells. This tells us that the dataset mainly consists of three cell populations, a normal population (gray) and two tumor subclones (green and yellow). 
+In this visualization, the single-cell phylogeny (left) is juxtaposed with a heatmap of single-cell CNV calls (right). The CNV calls are colored by the type of alterations (AMP, amplification, BAMP, balanced amplification, DEL, deletion, CNLoH, copy-neutral loss of heterozygosity). The colorbar in-between differentiates the distinct genetic populations (genotype). The dashed blue line separates the predicted tumor versus normal cells. This tells us that the dataset mainly consists of three cell populations, a normal population (gray) and two tumor subclones (green and purple). 
+
+### Refine subclones on the phylogeny
+Note that the number of subclones determined by the initial run parameters in `run_numbat` can be re-adjusted using `nb$cutree()`:
+
+```{r, fig.width = 10, fig.height = 6, dpi=250}
+plots = lapply(
+    1:4,
+    function(k) {
+        nb$cutree(n_cut = k)
+        nb$plot_phylo_heatmap() + ggtitle(paste0('n_cut=', k))
+    }
+)
+
+wrap_plots(plots)
+```
+
+In `cutree` one can either specify `n_cut` or `max_cost`, which work similarly as `k` and `h` in `stats::cutree`. Note that `n` cuts should result in `n+1` clones (the top-level normal diploid clone is always included). First cut should separate out the tumor cells as a single clone, second cut gives two tumor subclones, and so on. Alternatively, one can specify a `max_cost`, which is the maximum likelihood cost threshold with which to reduce the phylogeny (higher `max_cost` leads to fewer clones).
+
+```{r}
+# restore to original number of cuts
+nb$cutree(n_cut = 3)
+```
 
 ## Consensus copy number segments
 Let's take a look at the consensus segments.

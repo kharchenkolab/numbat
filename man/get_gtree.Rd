@@ -2,7 +2,10 @@
 % Please edit documentation in R/trees.R
 \name{get_gtree}
 \alias{get_gtree}
-\title{Get a tidygraph tree with simplified mutational history}
+\title{Get a tidygraph tree with simplified mutational history. 
+Specify either max_cost or n_cut. 
+max_cost works similarly as h and n_cut works similarly as k in stats::cutree.
+The top-level normal diploid clone is always included.}
 \usage{
 get_gtree(tree, P, n_cut = 0, max_cost = 0)
 }
@@ -11,7 +14,7 @@ get_gtree(tree, P, n_cut = 0, max_cost = 0)
 
 \item{P}{matrix Genotype probability matrix}
 
-\item{n_cut}{integer Number of cuts on the phylogeny (resulting in n_cut + 1 clones)}
+\item{n_cut}{integer Number of cuts on the phylogeny to define subclones}
 
 \item{max_cost}{numeric Likelihood threshold to collapse internal branches}
 }
@@ -19,5 +22,8 @@ get_gtree(tree, P, n_cut = 0, max_cost = 0)
 tbl_graph Phylogeny annotated with branch lengths and mutation events
 }
 \description{
-Get a tidygraph tree with simplified mutational history
+Get a tidygraph tree with simplified mutational history. 
+Specify either max_cost or n_cut. 
+max_cost works similarly as h and n_cut works similarly as k in stats::cutree.
+The top-level normal diploid clone is always included.
 }
