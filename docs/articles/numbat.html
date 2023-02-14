@@ -240,7 +240,11 @@ Arguments:
 <p><em>Phylogeny</em></p>
 <ul>
 <li>
-<code>tau</code>: Stringency to simplify the mutational history (0-1). A higher <code>tau</code> produces less clones and a more simplified evolutionary history.</li>
+<code>n_cut</code>: Number of cuts on the phylogeny to define subclones. Note that <code>n</code> cuts should result in <code>n+1</code> clones (the top-level normal diploid clone is always included). Alternatively, one can specify <code>max_cost</code> or <code>tau</code> to control the number of subclones.</li>
+<li>
+<code>max_cost</code>: Likelihood threshold to collapse internal branches. Higher <code>max_cost</code> generally leads to fewer clones.</li>
+<li>
+<code>tau</code>: Stringency to simplify the mutational history (0-1). Basically sets <code>max_cost</code> as <code>tau</code> times the number of cells.</li>
 </ul>
 <p><em>Iterative optimization</em></p>
 <ul>
@@ -271,7 +275,7 @@ Arguments:
 <span>    gtf <span class="op">=</span> <span class="va">gtf_hg38</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></span></code></pre>
+<span><span class="va">segs_loh</span> <span class="op">=</span> <span class="va">bulk</span> <span class="op">%&gt;%</span> <span class="fu"><a href="../reference/detect_clonal_loh.html">detect_clonal_loh</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">1e-4</span><span class="op">)</span></span></code></pre>
 <p>Then pass <code>segs_loh</code> to the Numbat run for those regions to be excluded from baseline during analysis.</p>
 <pre><code><span><span class="va">out</span> <span class="op">=</span> <span class="fu"><a href="../reference/run_numbat.html">run_numbat</a></span><span class="op">(</span></span>
 <span>    <span class="va">....</span>,</span>

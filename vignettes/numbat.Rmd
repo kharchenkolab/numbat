@@ -152,7 +152,9 @@ There are a few parameters you can consider tuning to a specific dataset.
   
 *Phylogeny*
 
-- `tau`: Stringency to simplify the mutational history (0-1). A higher `tau` produces less clones and a more simplified evolutionary history.
+- `n_cut`: Number of cuts on the phylogeny to define subclones. Note that `n` cuts should result in `n+1` clones (the top-level normal diploid clone is always included). Alternatively, one can specify `max_cost` or `tau` to control the number of subclones.
+- `max_cost`: Likelihood threshold to collapse internal branches. Higher `max_cost` generally leads to fewer clones.
+- `tau`: Stringency to simplify the mutational history (0-1). Basically sets `max_cost` as `tau` times the number of cells. 
 
 *Iterative optimization*
 
