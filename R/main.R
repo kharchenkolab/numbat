@@ -115,7 +115,7 @@ run_numbat = function(
     log_appender(appender_file(logfile))
 
     log_message(paste(
-        glue('Numbat version: ', as.character(packageVersion("numbat"))),
+        glue('Numbat version: ', as.character(utils::packageVersion("numbat"))),
         'Running under parameters:',
         glue('t = {t}'), 
         glue('alpha = {alpha}'),
