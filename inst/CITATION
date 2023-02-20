@@ -1,15 +1,14 @@
-citHeader("To cite Numbat in publications use:")
+citHeader("To cite numbat in publications use:")
 
-citEntry(entry = "Article",
-  title        = "Haplotype-enhanced inference of somatic copy number profiles from single-cell transcriptomes.",
-  author       = personList(as.person("Teng Gao"),
-                   as.person("Ruslan Soldatov"), as.person("Hirak Sarkar"), 
-                   as.person("Adam Kurkiewicz"), as.person("Evan Biederstedt"),
-                   as.person("Po-Ru Loh"), as.person("Peter Kharchenko")),
-  journal      = "bioRxiv",
-  year         = "2022",
-  url          = "https://doi.org/10.1101/2022.02.07.479314",
-
-  textVersion  =
-  paste("Teng Gao, Ruslan Soldatov, Hirak Sarkar, Adam Kurkiewicz, Evan Biederstedt, Po-Ru Loh, Peter Kharchenko. Haplotype-enhanced inference of somatic copy number profiles from single-cell transcriptomes. bioRxiv 2022.")
+bibentry(
+  bibtype    = "Article",
+  title    = "Haplotype-aware analysis of somatic copy number variations from single-cell transcriptomes",
+  author   = c(person("Teng Gao"),
+              person("Ruslan", "Soldatov"), person("Hirak", "Sarkar"), 
+              person("Adam", "Kurkiewicz"), person("Evan", "Biederstedt"),
+              person("Po-Ru", "Loh"), person("Peter", "Kharchenko")),
+  journal  = "Nature Biotechnology",
+  year     = "2022",
+  url      = "https://www.nature.com/articles/s41587-022-01468-y",
+  textVersion = paste("Gao, T., Soldatov, R., Sarkar, H. et al. Haplotype-aware analysis of somatic copy number variations from single-cell transcriptomes. Nat Biotechnol (2022). https://doi.org/10.1038/s41587-022-01468-y")
 )

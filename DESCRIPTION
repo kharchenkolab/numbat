@@ -53,7 +53,7 @@ Suggests:
 Config/testthat/edition: 3
 LinkingTo: Rcpp, RcppArmadillo, roptim
 NeedsCompilation: yes
-SystemRequirements: C++11, GNU make
+SystemRequirements: GNU make
 Author: Teng Gao [cre, aut], Ruslan Soldatov [aut], Hirak Sarkar [aut], Evan Biederstedt [aut], Peter Kharchenko [aut]
 Maintainer: Teng Gao <tgao@g.harvard.edu>
 RoxygenNote: 7.2.3
