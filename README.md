@@ -25,4 +25,4 @@ Numbat does not require paired DNA or genotype data and operates solely on the d
 For a complete guide, please see [Numbat User Guide](https://kharchenkolab.github.io/numbat/).
 
 # Questions?
-We appreciate your feedback! Please raise a github [issue](https://github.com/kharchenkolab/numbat/issues) for bugs, questions and new feature requests. For bug reports, please attach full log and input parameters, and ideally a reproducible example if possible. 
+We appreciate your feedback! Please raise a github [issue](https://github.com/kharchenkolab/numbat/issues) for bugs, questions and new feature requests. For bug reports, please attach full log, error message, input parameters, and ideally a reproducible example (if possible).
