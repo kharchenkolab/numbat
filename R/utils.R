@@ -331,6 +331,7 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #' @param subset vector Subset of cells to aggregate
 #' @param min_depth integer Minimum coverage to filter SNPs
 #' @param nu numeric Phase switch rate
+#' @param segs_loh dataframe Segments with clonal LOH to be excluded
 #' @param verbose logical Verbosity
 #' @return dataframe Pseudobulk gene expression and allele profile
 #' @examples
@@ -340,7 +341,7 @@ get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 #'     df_allele = df_allele_example,
 #'     gtf = gtf_hg38)
 #' @export
-get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, subset = NULL, min_depth = 0, nu = 1, verbose = TRUE) {
+get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, subset = NULL, min_depth = 0, nu = 1, segs_loh = NULL, verbose = TRUE) {
 
     count_mat = check_matrix(count_mat)
 
@@ -385,6 +386,15 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, subset = NULL, min_d
         mutate(CHROM = as.character(CHROM)) %>%
         mutate(CHROM = ifelse(CHROM == 'X', 23, CHROM)) %>%
         mutate(CHROM = factor(as.integer(CHROM)))
+
+    # annotate clonal LOH regions
+    if (is.null(segs_loh)) {
+        bulk = bulk %>% mutate(loh = FALSE)
+    } else {
+        bulk = bulk %>% 
+            annot_consensus(segs_loh, join_mode = 'left') %>%
+            mutate(loh = ifelse(is.na(loh), FALSE, TRUE))
+    }
 }
 
 #' Fit a reference profile from multiple references using constrained least square
@@ -477,7 +487,6 @@ switch_prob_cm = function(d, nu = 1, min_p = 1e-10) {
 #' @param retest logical Whether to retest CNVs after Viterbi decoding
 #' @param find_diploid logical Whether to run diploid region identification routine
 #' @param diploid_chroms character vector User-given chromosomes that are known to be in diploid state
-#' @param segs_loh dataframe Segments with clonal LOH to be excluded
 #' @param classify_allele logical Whether to only classify allele (internal use only)
 #' @param run_hmm logical Whether to run HMM (internal use only)
 #' @param prior numeric vector Prior probabilities of states (internal use only)
@@ -492,7 +501,7 @@ analyze_bulk = function(
     bulk, t = 1e-5, gamma = 20, theta_min = 0.08, logphi_min = 0.25,
     nu = 1, min_genes = 10,
     exp_only = FALSE, allele_only = FALSE, bal_cnv = TRUE, retest = TRUE, 
-    find_diploid = TRUE, diploid_chroms = NULL, segs_loh = NULL,
+    find_diploid = TRUE, diploid_chroms = NULL, 
     classify_allele = FALSE, run_hmm = TRUE, prior = NULL, exclude_neu = TRUE,
     phasing = TRUE, verbose = TRUE
 ) {
@@ -518,13 +527,9 @@ analyze_bulk = function(
     } else if (find_diploid) {
         bulk = find_common_diploid(
             bulk, gamma = gamma, t = t, theta_min = theta_min, 
-            min_genes = min_genes, fc_min = 2^logphi_min, segs_loh = segs_loh)
+            min_genes = min_genes, fc_min = 2^logphi_min)
     } else if (!'diploid' %in% colnames(bulk)) {
         stop('Must define diploid region if not given')
-    }
-
-    if (is.null(segs_loh)) {
-        bulk = bulk %>% mutate(loh = FALSE)
     }
 
     if (!allele_only) {
@@ -1038,7 +1043,7 @@ annot_consensus = function(bulk, segs_consensus, join_mode = 'inner') {
 #' @keywords internal
 find_common_diploid = function(
     bulks, grouping = 'clique', gamma = 20, theta_min = 0.08, t = 1e-5, fc_min = 2^0.25, alpha = 1e-4, min_genes = 10, 
-    ncores = 1, segs_loh = NULL, debug = FALSE, verbose = TRUE) {
+    ncores = 1, debug = FALSE, verbose = TRUE) {
 
     if (!'sample' %in% colnames(bulks)) {
         bulks$sample = '1'
@@ -1063,22 +1068,17 @@ find_common_diploid = function(
                     )
                 ) %>% ungroup() %>%
                 mutate(cnv_state = str_remove(state, '_down|_up')) %>%
-                annot_segs() %>%
+                annot_segs(var = 'cnv_state') %>%
                 smooth_segs(min_genes = min_genes) %>%
-                annot_segs()
+                annot_segs(var = 'cnv_state')
 
         }) %>%
         bind_rows()
 
-    # annotate clonal LOH regions
-    if (!is.null(segs_loh)) {
-        bulks = bulks %>% 
-            annot_consensus(segs_loh, join_mode = 'left') %>%
-            mutate(loh = ifelse(is.na(loh), FALSE, TRUE)) %>%
-            mutate(cnv_state = ifelse(loh, 'loh', cnv_state)) %>%
+    # always exclude clonal LOH regions if any
+    if (any(bulks$loh)) {
+        bulks = bulks %>% mutate(cnv_state = ifelse(loh, 'loh', cnv_state)) %>%
             annot_segs(var = 'cnv_state')
-    } else {
-        bulks = bulks %>% mutate(loh = FALSE)
     }
 
     # unionize imbalanced segs

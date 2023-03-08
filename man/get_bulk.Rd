@@ -12,6 +12,7 @@ get_bulk(
   subset = NULL,
   min_depth = 0,
   nu = 1,
+  segs_loh = NULL,
   verbose = TRUE
 )
 }
@@ -29,6 +30,8 @@ get_bulk(
 \item{min_depth}{integer Minimum coverage to filter SNPs}
 
 \item{nu}{numeric Phase switch rate}
+
+\item{segs_loh}{dataframe Segments with clonal LOH to be excluded}
 
 \item{verbose}{logical Verbosity}
 }

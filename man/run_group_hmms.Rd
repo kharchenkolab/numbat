@@ -16,7 +16,6 @@ run_group_hmms(
   allele_only = FALSE,
   retest = TRUE,
   run_hmm = TRUE,
-  segs_loh = NULL,
   exclude_neu = TRUE,
   ncores = 1,
   verbose = FALSE,

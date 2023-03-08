@@ -11,7 +11,6 @@ retest_bulks(
   min_genes = 10,
   gamma = 20,
   nu = 1,
-  segs_loh = NULL,
   use_loh = FALSE,
   diploid_chroms = NULL,
   ncores = 1,

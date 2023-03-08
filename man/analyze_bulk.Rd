@@ -18,7 +18,6 @@ analyze_bulk(
   retest = TRUE,
   find_diploid = TRUE,
   diploid_chroms = NULL,
-  segs_loh = NULL,
   classify_allele = FALSE,
   run_hmm = TRUE,
   prior = NULL,
@@ -53,8 +52,6 @@ analyze_bulk(
 \item{find_diploid}{logical Whether to run diploid region identification routine}
 
 \item{diploid_chroms}{character vector User-given chromosomes that are known to be in diploid state}
-
-\item{segs_loh}{dataframe Segments with clonal LOH to be excluded}
 
 \item{classify_allele}{logical Whether to only classify allele (internal use only)}
 

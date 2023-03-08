@@ -12,6 +12,7 @@ make_group_bulks(
   gtf,
   min_depth = 0,
   nu = 1,
+  segs_loh = NULL,
   ncores = NULL
 )
 }
@@ -27,6 +28,8 @@ make_group_bulks(
 \item{gtf}{dataframe Transcript GTF}
 
 \item{min_depth}{integer Minimum allele depth to include}
+
+\item{segs_loh}{dataframe Segments with clonal LOH to be excluded}
 
 \item{ncores}{integer Number of cores}
 }

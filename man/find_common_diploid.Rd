@@ -14,7 +14,6 @@ find_common_diploid(
   alpha = 1e-04,
   min_genes = 10,
   ncores = 1,
-  segs_loh = NULL,
   debug = FALSE,
   verbose = TRUE
 )

@@ -243,6 +243,7 @@ run_numbat = function(
                 gtf = gtf,
                 min_depth = min_depth,
                 nu = nu,
+                segs_loh = segs_loh,
                 ncores = ncores)
 
         bulk_subtrees = bulk_subtrees %>%
@@ -254,7 +255,6 @@ run_numbat = function(
                 min_genes = min_genes,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
-                segs_loh = segs_loh,
                 ncores = ncores,
                 verbose = verbose)
 
@@ -318,6 +318,7 @@ run_numbat = function(
                 gtf = gtf,
                 min_depth = min_depth,
                 nu = nu,
+                segs_loh = segs_loh,
                 ncores = ncores)
 
         bulk_clones = bulk_clones %>% 
@@ -329,7 +330,6 @@ run_numbat = function(
                 min_genes = min_genes,
                 common_diploid = common_diploid,
                 diploid_chroms = diploid_chroms,
-                segs_loh = segs_loh,
                 ncores = ncores,
                 verbose = verbose,
                 retest = FALSE)
@@ -555,6 +555,7 @@ run_numbat = function(
         gtf = gtf,
         min_depth = min_depth,
         nu = nu,
+        segs_loh = segs_loh,
         ncores = ncores)
 
     bulk_clones = bulk_clones %>% 
@@ -566,7 +567,6 @@ run_numbat = function(
             min_genes = min_genes,
             common_diploid = FALSE,
             diploid_chroms = diploid_chroms,
-            segs_loh = segs_loh,
             ncores = ncores,
             verbose = verbose,
             retest = FALSE)
@@ -660,10 +660,11 @@ exp_hclust = function(count_mat, lambdas_ref, gtf, sc_refs = NULL, window = 101,
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf dataframe Transcript GTF
 #' @param min_depth integer Minimum allele depth to include
+#' @param segs_loh dataframe Segments with clonal LOH to be excluded
 #' @param ncores integer Number of cores
 #' @return dataframe Pseudobulk profiles
 #' @keywords internal 
-make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_depth = 0, nu = 1, ncores = NULL) {
+make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_depth = 0, nu = 1, segs_loh = NULL, ncores = NULL) {
     
     if (length(groups) == 0) {
         return(data.frame())
@@ -682,7 +683,8 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_
                     lambdas_ref = lambdas_ref,
                     gtf = gtf,
                     min_depth = min_depth,
-                    nu = nu
+                    nu = nu,
+                    segs_loh = segs_loh
                 ) %>%
                 mutate(
                     n_cells = g$size,
@@ -724,7 +726,7 @@ make_group_bulks = function(groups, count_mat, df_allele, lambdas_ref, gtf, min_
 run_group_hmms = function(
     bulks, t = 1e-4, gamma = 20, alpha = 1e-4, min_genes = 10, nu = 1,
     common_diploid = TRUE, diploid_chroms = NULL, allele_only = FALSE, retest = TRUE, run_hmm = TRUE,
-    segs_loh = NULL, exclude_neu = TRUE, ncores = 1, verbose = FALSE, debug = FALSE
+    exclude_neu = TRUE, ncores = 1, verbose = FALSE, debug = FALSE
 ) {
 
     # drop samples with no allele data
@@ -744,7 +746,7 @@ run_group_hmms = function(
     if (!run_hmm) {
         find_diploid = FALSE
     } else if (common_diploid & is.null(diploid_chroms)) {
-        bulks = find_common_diploid(bulks, gamma = gamma, alpha = alpha, ncores = ncores, segs_loh = segs_loh)
+        bulks = find_common_diploid(bulks, gamma = gamma, alpha = alpha, ncores = ncores)
         find_diploid = FALSE
     } else {
         find_diploid = TRUE
@@ -765,7 +767,6 @@ run_group_hmms = function(
                 min_genes = min_genes,
                 retest = retest, 
                 verbose = verbose,
-                segs_loh = segs_loh,
                 exclude_neu = exclude_neu
             )
     })
@@ -1546,7 +1547,7 @@ get_joint_post = function(exp_post, allele_post, segs_consensus) {
 #' @keywords internal 
 retest_bulks = function(bulks, segs_consensus = NULL,
     t = 1e-5, min_genes = 10, gamma = 20, nu = 1,
-    segs_loh = NULL, use_loh = FALSE, diploid_chroms = NULL, ncores = 1, exclude_neu = TRUE, min_LLR = 5) {
+    use_loh = FALSE, diploid_chroms = NULL, ncores = 1, exclude_neu = TRUE, min_LLR = 5) {
 
     if (is.null(segs_consensus)) {
         segs_consensus = get_segs_consensus(bulks)
