@@ -34,7 +34,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.3</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -172,7 +172,7 @@
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'OVCA1'</span>, <span class="st">'OVCA3'</span>, <span class="st">'GIST1'</span>, <span class="st">'BRCA1'</span><span class="op">)</span>,</span>
 <span>    <span class="kw">function</span><span class="op">(</span><span class="va">sample</span><span class="op">)</span> <span class="op">{</span></span>
 <span>        </span>
-<span>        <span class="va">img</span> <span class="op">&lt;-</span> <span class="fu">jpeg</span><span class="fu">::</span><span class="fu">readJPEG</span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"~/visium/nyu/images/{sample}_cropped.jpg"</span><span class="op">)</span><span class="op">)</span></span>
+<span>        <span class="va">img</span> <span class="op">&lt;-</span> <span class="fu">jpeg</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/jpeg/man/readJPEG.html" class="external-link">readJPEG</a></span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"~/visium/nyu/images/{sample}_cropped.jpg"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span>        <span class="va">spots</span><span class="op">[[</span><span class="va">sample</span><span class="op">]</span><span class="op">]</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>            <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">left_join</a></span><span class="op">(</span></span>
@@ -209,7 +209,7 @@
 <span></span>
 <span><span class="va">sample</span> <span class="op">=</span> <span class="st">'BRCA0'</span></span>
 <span></span>
-<span><span class="va">img</span> <span class="op">&lt;-</span> <span class="fu">jpeg</span><span class="fu">::</span><span class="fu">readJPEG</span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"~/visium/nyu/images/{sample}_cropped.jpg"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">img</span> <span class="op">&lt;-</span> <span class="fu">jpeg</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/jpeg/man/readJPEG.html" class="external-link">readJPEG</a></span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"~/visium/nyu/images/{sample}_cropped.jpg"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">spots</span><span class="op">[[</span><span class="va">sample</span><span class="op">]</span><span class="op">]</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>    <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">left_join</a></span><span class="op">(</span></span>
@@ -255,7 +255,7 @@
 <span></span>
 <span><span class="va">sample</span> <span class="op">=</span> <span class="st">'BRCA0'</span></span>
 <span></span>
-<span><span class="va">img</span> <span class="op">&lt;-</span> <span class="fu">jpeg</span><span class="fu">::</span><span class="fu">readJPEG</span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"~/visium/nyu/images/{sample}_cropped.jpg"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">img</span> <span class="op">&lt;-</span> <span class="fu">jpeg</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/jpeg/man/readJPEG.html" class="external-link">readJPEG</a></span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"~/visium/nyu/images/{sample}_cropped.jpg"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">spots</span><span class="op">[[</span><span class="va">sample</span><span class="op">]</span><span class="op">]</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>    <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">left_join</a></span><span class="op">(</span></span>
