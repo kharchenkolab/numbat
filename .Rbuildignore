@@ -21,3 +21,4 @@ logo.png
 index.md
 ^vignettes$
 vignettes
+^\.github$
