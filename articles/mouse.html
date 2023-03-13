@@ -245,7 +245,7 @@ reference expression profile (<code>ref_pancreas</code>).</p>
 <span><span class="va">count_mat</span> <span class="op">=</span> <span class="fu">as</span><span class="op">(</span><span class="va">count_mat</span>, <span class="st">"dgCMatrix"</span><span class="op">)</span></span>
 <span><span class="va">count_mat_ref</span> <span class="op">=</span> <span class="va">count_mat</span></span>
 <span></span>
-<span><span class="va">p2</span> <span class="op">=</span> <span class="fu">pagoda2</span><span class="fu">::</span><span class="fu">basicP2proc</span><span class="op">(</span><span class="va">count_mat_ref</span>, n.cores <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
+<span><span class="va">p2</span> <span class="op">=</span> <span class="fu">pagoda2</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/pagoda2/man/basicP2proc.html" class="external-link">basicP2proc</a></span><span class="op">(</span><span class="va">count_mat_ref</span>, n.cores <span class="op">=</span> <span class="fl">30</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">clusters</span> <span class="op">=</span> <span class="va">p2</span><span class="op">$</span><span class="va">clusters</span><span class="op">$</span><span class="va">PCA</span><span class="op">$</span><span class="va">multilevel</span></span>
 <span></span>
