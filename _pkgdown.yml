@@ -7,6 +7,9 @@ home:
   title: Numbat Guide
   description: >
     Haplotype-aware CNV detection and phylogeny reconstruction from single-cell RNA-seq
+footer:
+  structure: 
+    left: developed_by
 reference:
 - title: "Preparing data"
   contents: 
@@ -64,8 +67,3 @@ articles:
   - results
   - mouse
   - spatial-rna
-footer:
-  structure: 
-    left: developed_by
-    right: last_built
-
