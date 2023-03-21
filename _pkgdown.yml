@@ -64,4 +64,8 @@ articles:
   - results
   - mouse
   - spatial-rna
+footer:
+  structure: 
+    left: developed_by
+    right: last_built
 
