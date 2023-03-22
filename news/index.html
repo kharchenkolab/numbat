@@ -38,7 +38,13 @@
       </ul><form class="form-inline my-2 my-lg-0" role="search">
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off"></form>
 
-      <ul class="navbar-nav"></ul></div>
+      <ul class="navbar-nav"><li class="nav-item">
+  <a class="external-link nav-link" href="https://github.com/kharchenkolab/numbat/" aria-label="github">
+    <span class="fab fa fab fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul></div>
 
     
   </div>
@@ -46,7 +52,7 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Changelog</h1>
-      
+      <small>Source: <a href="https://github.com/kharchenkolab/numbat/blob/HEAD/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
@@ -56,12 +62,12 @@
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.2.1" id="numbat-121---01112023">numbat 1.2.1 - 01/11/2023<a class="anchor" aria-label="anchor" href="#numbat-121---01112023"></a></h2><p class="text-muted">CRAN release: 2023-01-10</p>
-<ul><li>Fix bugs #30, #79, #89</li>
+<ul><li>Fix bugs <a href="https://github.com/kharchenkolab/numbat/issues/30" class="external-link">#30</a>, <a href="https://github.com/kharchenkolab/numbat/issues/79" class="external-link">#79</a>, <a href="https://github.com/kharchenkolab/numbat/issues/89" class="external-link">#89</a></li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.2.0" id="numbat-120---12262022">numbat 1.2.0 - 12/26/2022<a class="anchor" aria-label="anchor" href="#numbat-120---12262022"></a></h2>
 <ul><li><p>Numbat now works for F1 hybrid mice! Check out the new tutorial under <code>Articles</code>.</p></li>
-<li><p>Fix bugs #80, #82</p></li>
+<li><p>Fix bugs <a href="https://github.com/kharchenkolab/numbat/issues/80" class="external-link">#80</a>, <a href="https://github.com/kharchenkolab/numbat/issues/82" class="external-link">#82</a></p></li>
 <li><p>Offer stacked clone bars in <code>plot_phylo_heatmap</code></p></li>
 </ul></div>
     <div class="section level2">
@@ -72,13 +78,13 @@
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.5" id="numbat-105---11272022">numbat 1.0.5 - 11/27/2022<a class="anchor" aria-label="anchor" href="#numbat-105---11272022"></a></h2>
-<ul><li><p>Fixing bugs #65, #66, #67</p></li>
+<ul><li><p>Fixing bugs <a href="https://github.com/kharchenkolab/numbat/issues/65" class="external-link">#65</a>, <a href="https://github.com/kharchenkolab/numbat/issues/66" class="external-link">#66</a>, <a href="https://github.com/kharchenkolab/numbat/issues/67" class="external-link">#67</a></p></li>
 <li><p>Retire dependency on <code>reshape2</code></p></li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.4" id="numbat-104---11202022">numbat 1.0.4 - 11/20/2022<a class="anchor" aria-label="anchor" href="#numbat-104---11202022"></a></h2>
 <ul><li><p>Improving error handling and removing python dependency (<code>argparse</code>) in <code>pileup_and_phase.R</code></p></li>
-<li><p>Allow plotting of mutliple annotations in <code>plot_phylo_heatmap</code> (thanks to @whtns)</p></li>
+<li><p>Allow plotting of mutliple annotations in <code>plot_phylo_heatmap</code> (thanks to <a href="https://github.com/whtns" class="external-link">@whtns</a>)</p></li>
 <li><p>Adding diagnostic messages</p></li>
 </ul></div>
     <div class="section level2">
@@ -99,7 +105,7 @@
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.3" id="numbat-013---07022022">numbat 0.1.3 - 07/02/2022<a class="anchor" aria-label="anchor" href="#numbat-013---07022022"></a></h2>
-<ul><li><p>Speed up of NNI using RcppParallel (#34). 10x faster and much more memory efficient (memory requirement is constant with respect to the number of threads).</p></li>
+<ul><li><p>Speed up of NNI using RcppParallel (<a href="https://github.com/kharchenkolab/numbat/issues/34" class="external-link">#34</a>). 10x faster and much more memory efficient (memory requirement is constant with respect to the number of threads).</p></li>
 <li><p>Speed up of expression single-cell testing using roptim. Approximately 2x speedup.</p></li>
 <li><p>New LLR metric for CNV filtering that is not inflated (default: 5).</p></li>
 <li><p>Only keep heterozygous SNPs in alelle dataframe to reduce memory usage</p></li>

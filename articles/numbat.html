@@ -65,7 +65,14 @@
         <input type="search" class="form-control me-sm-2" aria-label="Toggle navigation" name="search-input" data-search-index="../search.json" id="search-input" placeholder="Search for" autocomplete="off">
 </form>
 
-      <ul class="navbar-nav"></ul>
+      <ul class="navbar-nav">
+<li class="nav-item">
+  <a class="external-link nav-link" href="https://github.com/kharchenkolab/numbat/" aria-label="github">
+    <span class="fab fa fab fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
 </div>
 
     
@@ -80,7 +87,7 @@
       <img src="../logo.png" class="logo" alt=""><h1></h1>
             
       
-      
+      <small class="dont-index">Source: <a href="https://github.com/kharchenkolab/numbat/blob/HEAD/vignettes/numbat.Rmd" class="external-link"><code>vignettes/numbat.Rmd</code></a></small>
       <div class="d-none name"><code>numbat.Rmd</code></div>
     </div>
 
@@ -226,7 +233,7 @@ utility function:</p></li>
 <p>In this example (ATC2 from <a href="https://www.nature.com/articles/s41587-020-00795-2" class="external-link">Gao et
 al</a>), the gene expression count matrix and allele dataframe are
 already prepared for you.</p>
-<pre><code><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://kharchenkolab.github.io/numbat">numbat</a></span><span class="op">)</span></span>
+<pre><code><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/kharchenkolab/numbat" class="external-link">numbat</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">count_mat_ATC2</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/connections.html" class="external-link">url</a></span><span class="op">(</span><span class="st">'http://pklab.med.harvard.edu/teng/data/count_mat_ATC2.rds'</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">df_allele_ATC2</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/connections.html" class="external-link">url</a></span><span class="op">(</span><span class="st">'http://pklab.med.harvard.edu/teng/data/df_allele_ATC2.rds'</span><span class="op">)</span><span class="op">)</span></span>
