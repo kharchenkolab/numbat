@@ -281,11 +281,12 @@ run_numbat = function(
             bulk_subtrees %>% filter(sample == 0) %>% check_exp_noise()
         }
 
-        # find consensus CNVs
+        # define consensus CNVs
         if (is.null(segs_consensus_fix)) {
             segs_consensus = bulk_subtrees %>% 
                 get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = TRUE)
         } else {
+            log_message('Using fixed consensus CNVs')
             segs_consensus = segs_consensus_fix
         }
     

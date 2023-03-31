@@ -1,6 +1,6 @@
 # numbat 1.3.0 - 03/31/2023
 
-* Allow users to use prior segmentations (e.g. from bulk WGS/WES CNV analysis) in `run_numbat` via `segs_consensus_fix` parameter
+* Allow users to supply existing CNV profiles (e.g. from bulk WGS/WES analysis) via `segs_consensus_fix` parameter
 
 * Fixing bug #81
 
