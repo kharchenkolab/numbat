@@ -154,7 +154,7 @@ There are a few parameters you can consider tuning to a specific dataset.
 
 - `n_cut`: Number of cuts on the phylogeny to define subclones. Note that `n` cuts should result in `n+1` clones (the top-level normal diploid clone is always included). Alternatively, one can specify `max_cost` or `tau` to control the number of subclones.
 - `max_cost`: Likelihood threshold to collapse internal branches. Higher `max_cost` generally leads to fewer clones.
-- `tau`: Stringency to simplify the mutational history (0-1). Basically sets `max_cost` as `tau` times the number of cells. 
+- `tau`: Stringency to simplify the mutational history. Basically sets `max_cost` as `tau` times the number of cells. 
 
 *Iterative optimization*
 
@@ -166,6 +166,10 @@ There are a few parameters you can consider tuning to a specific dataset.
 
 - `ncores`: number of cores to use for single-cell CNV testing
 - `ncores_nni`: number of cores to use for phylogeny inference
+
+*Others*
+- `segs_loh`: a dataframe of regions of clonal LOH to exclude from baseline during analysis. See [Detecting clonal LOH](#detecting-clonal-loh) for details.
+- `segs_consensus_fix`: a dataframe of pre-determined consensus CNVs (for example, from bulk WGS/WES analysis) that will stay fixed during analysis. See [Using prior segmentation](#using-prior-segmentation) for details.
 
 ## Detecting clonal LOH
 For cell line data and high-purity tumors, we recommend running the below procedure to identify and exclude regions of clonal deletions/LOH before running Numbat. To do so, aggregate all cells into a pseudobulk, and run the SNP-density HMM:
@@ -188,6 +192,17 @@ out = run_numbat(
     segs_loh = segs_loh
 )
 ```
+
+## Using prior segmentation
+Sometimes users have access to prior segmentation data (e.g. from bulk WGS/WES analysis). In this case, we recommend using the `segs_consensus_fix` parameter to fix the CNV calls in those regions. To do so, you may provide a dataframe with the following columns:
+
+- `CHROM`: integer; chromosome (1-22)
+- `seg`: character; segment ID (e.g. 1a, 1b, 2a, 2b, etc.)
+- `seg_start`: integer; segment start position
+- `seg_end`: integer; segment end position
+- `cnv_state`: character; copy number state (neu, del, amp, loh, bamp, bdel)
+
+Please note that diploid segments (`cnv_state = "neu"`) should also be included.
 
 # Understanding results
 A detailed vignette on how to interpret and visualize Numbat results is available:  

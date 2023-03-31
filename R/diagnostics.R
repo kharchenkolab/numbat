@@ -183,7 +183,7 @@ check_segs_fix = function(segs_consensus_fix) {
         return(NULL)
     }
 
-    if (!all(c('cnv_state', 'seg', 'seg_start', 'seg_end') %in% colnames(segs_consensus_fix))) {
+    if (!all(c('CHROM', 'seg', 'seg_start', 'seg_end', 'cnv_state') %in% colnames(segs_consensus_fix))) {
         stop('The consensus segment dataframe appears to be malformed. Please fix.')
     }
 
