@@ -31,6 +31,7 @@ run_numbat(
   ncores_nni = ncores,
   random_init = FALSE,
   segs_loh = NULL,
+  segs_consensus_fix = NULL,
   verbose = TRUE,
   diploid_chroms = NULL,
   use_loh = NULL,
@@ -95,6 +96,8 @@ run_numbat(
 \item{random_init}{logical Whether to initiate phylogney using a random tree (internal use only)}
 
 \item{segs_loh}{dataframe Segments of clonal LOH to be excluded}
+
+\item{segs_consensus_fix}{dataframe Pre-determined segmentation of consensus CNVs}
 
 \item{verbose}{logical Verbosity}
 

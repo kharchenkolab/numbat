@@ -174,6 +174,36 @@ check_exp_noise = function(bulk) {
     log_message(msg)
 }
 
+# check the format of a given consensus segment dataframe
+check_segs_fix = function(segs_consensus_fix) {
+
+    if (is.null(segs_consensus_fix)) {
+        return(NULL)
+    }
+
+    if (!all(c('cnv_state', 'seg', 'seg_start', 'seg_end') %in% colnames(segs_consensus_fix))) {
+        stop('The consensus segment dataframe appears to be malformed. Please fix.')
+    }
+
+    segs_consensus_fix = segs_consensus_fix %>% 
+        mutate(
+            cnv_state_post = cnv_state,
+            seg_cons = seg,
+            p_amp = ifelse(cnv_state == 'amp', 1, 0),
+            p_del = ifelse(cnv_state == 'del', 1, 0),
+            p_loh = ifelse(cnv_state == 'loh', 1, 0),
+            p_bamp = ifelse(cnv_state == 'bamp', 1, 0),
+            p_bdel = ifelse(cnv_state == 'bdel', 1, 0),
+            seg_length = seg_end - seg_start,
+            LLR = Inf
+        ) %>%
+        relevel_chrom() %>%
+        as.data.frame()
+
+    return(segs_consensus_fix)
+    
+}
+
 #' @keywords internal
 return_missing_columns = function(file, expected_colnames = NULL) {
     ## if user sets expected_colnames = NULL, return NULL

@@ -53,6 +53,7 @@ NULL
 #' @param skip_nj logical Whether to skip NJ tree construction and only use UPGMA
 #' @param diploid_chroms vector Known diploid chromosomes
 #' @param segs_loh dataframe Segments of clonal LOH to be excluded
+#' @param segs_consensus_fix dataframe Pre-determined segmentation of consensus CNVs
 #' @param check_convergence logical Whether to terminate iterations based on consensus CNV convergence 
 #' @param random_init logical Whether to initiate phylogney using a random tree (internal use only)
 #' @param exclude_neu logical Whether to exclude neutral segments from CNV retesting (internal use only)
@@ -65,7 +66,7 @@ run_numbat = function(
         out_dir = tempdir(), max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3, nu = 1,
         max_cost = ncol(count_mat) * tau, n_cut = 0, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
-        ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL,
+        ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL, segs_consensus_fix = NULL,
         verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
         skip_nj = FALSE, multi_allelic = TRUE, p_multi = 1-alpha,
         plot = TRUE, check_convergence = FALSE, exclude_neu = TRUE
@@ -108,6 +109,12 @@ run_numbat = function(
         stop('No matching cell names between count_mat and df_allele')
     }
 
+    if ((!is.null(segs_loh)) & (!is.null(segs_consensus_fix))) {
+        stop('Cannot specify both segs_loh and segs_consensus_fix')
+    }
+
+    segs_consensus_fix = check_segs_fix(segs_consensus_fix)
+
     ######### Log parameters #########
     dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
     logfile = glue('{out_dir}/log.txt')
@@ -128,6 +135,8 @@ run_numbat = function(
         glue('max_nni = {max_nni}'),
         glue('min_depth = {min_depth}'),
         glue('use_loh = {ifelse(is.null(use_loh), "auto", use_loh)}'),
+        glue('segs_loh = {ifelse(is.null(segs_loh), "None", "Given")}'),
+        glue('segs_consensus_fix = {ifelse(is.null(segs_consensus_fix), "None", "Given")}'),
         glue('multi_allelic = {multi_allelic}'),
         glue('min_LLR = {min_LLR}'),
         glue('min_overlap = {min_overlap}'),
@@ -231,8 +240,6 @@ run_numbat = function(
         log_message(glue('Iteration {i}'), verbose = verbose)
         log_mem()
 
-        ######## Run HMMs ########
-
         subtrees = purrr::keep(subtrees, function(x) x$size > min_cells)
 
         bulk_subtrees = make_group_bulks(
@@ -268,16 +275,14 @@ run_numbat = function(
             )
         }
 
-        # diagnostics
-        if (i == 1) {
-            bulk_subtrees %>% filter(sample == 0) %>% check_contam()
-            bulk_subtrees %>% filter(sample == 0) %>% check_exp_noise()
-        }
-
         # find consensus CNVs
-        segs_consensus = bulk_subtrees %>% 
-            get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = TRUE)
-
+        if (is.null(segs_consensus_fix)) {
+            segs_consensus = bulk_subtrees %>% 
+                get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = TRUE)
+        } else {
+            segs_consensus = segs_consensus_fix
+        }
+    
         # check termination
         if (all(segs_consensus$cnv_state_post == 'neu')) {
             msg = 'No CNV remains after filtering by LLR in pseudobulks. Consider reducing min_LLR.'
@@ -297,19 +302,28 @@ run_numbat = function(
 
         fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_retest_{i}.tsv.gz'), sep = '\t')
         
-        segs_consensus = bulk_subtrees %>%
-            get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = FALSE)
+        if (is.null(segs_consensus_fix)) {
+            # find consensus CNVs again
+            segs_consensus = bulk_subtrees %>%
+                get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = FALSE)
 
-        # check termination again
-        if (all(segs_consensus$cnv_state_post == 'neu')) {
-            msg = 'No CNV remains after filtering by LLR in pseudobulks. Consider reducing min_LLR.'
-            log_message(msg)
-            return(msg)
+            # check termination again
+            if (all(segs_consensus$cnv_state_post == 'neu')) {
+                msg = 'No CNV remains after filtering by LLR in pseudobulks. Consider reducing min_LLR.'
+                log_message(msg)
+                return(msg)
+            }
         }
 
         # retest on clones
         clones = purrr::keep(clones, function(x) x$size > min_cells)
-        
+
+        if (length(clones) == 0) {
+            msg = 'No clones remain after filtering by size. Consider reducing min_cells.'
+            log_message(msg)
+            return(msg)
+        }
+
         bulk_clones = make_group_bulks(
                 groups = clones,
                 count_mat = count_mat,
