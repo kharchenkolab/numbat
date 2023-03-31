@@ -175,6 +175,8 @@ check_exp_noise = function(bulk) {
 }
 
 # check the format of a given consensus segment dataframe
+#' @param segs_consensus_fix dataframe Consensus segment dataframe
+#' @keywords internal
 check_segs_fix = function(segs_consensus_fix) {
 
     if (is.null(segs_consensus_fix)) {

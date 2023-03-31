@@ -275,6 +275,12 @@ run_numbat = function(
             )
         }
 
+        # diagnostics
+        if (i == 1) {
+            bulk_subtrees %>% filter(sample == 0) %>% check_contam()
+            bulk_subtrees %>% filter(sample == 0) %>% check_exp_noise()
+        }
+
         # find consensus CNVs
         if (is.null(segs_consensus_fix)) {
             segs_consensus = bulk_subtrees %>% 
