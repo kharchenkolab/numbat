@@ -61,6 +61,9 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/annot_segs.html</loc>
   </url>
   <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/annot_theta_mle.html</loc>
+  </url>
+  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/annot_theta_roll.html</loc>
   </url>
   <url>
@@ -110,6 +113,9 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/check_matrix.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/check_segs_fix.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/choose_ref_cor.html</loc>
@@ -191,6 +197,9 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/gaps_hg38.html</loc>
+  </url>
+  <url>
+    <loc>https://kharchenkolab.github.io/numbat/reference/generate_postfix.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/genotype.html</loc>

@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -89,6 +89,7 @@
 <span>  ncores_nni <span class="op">=</span> <span class="va">ncores</span>,</span>
 <span>  random_init <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  segs_loh <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  segs_consensus_fix <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  diploid_chroms <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  use_loh <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -206,6 +207,10 @@
 
 <dt>segs_loh</dt>
 <dd><p>dataframe Segments of clonal LOH to be excluded</p></dd>
+
+
+<dt>segs_consensus_fix</dt>
+<dd><p>dataframe Pre-determined segmentation of consensus CNVs</p></dd>
 
 
 <dt>verbose</dt>

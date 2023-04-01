@@ -34,7 +34,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.2.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.3.0</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -206,11 +206,15 @@ you can run the preprocessing script like this:</p>
 barcodes for a single individual in each genotyping run.</p>
 <p>This will produce a file named
 <code>{sample}_allele_counts.tsv.gz</code> under the specified output
-directory, which contains cell-level phased allele counts. If multiple
-samples from the same individual were provided, there will be one allele
-count file for each sample. Other outputs include phased vcfs under
-<code>phasing/</code> folder and raw pileup counts under
-<code>pileup/</code>.</p>
+directory, which contains cell-level phased allele counts. It contains
+columns <code>cell</code>, <code>snp_id</code>, <code>CHROM</code>,
+<code>POS</code>, <code>cM</code> (genetic distance in centimorgan),
+<code>REF</code>, <code>ALT</code>, <code>AD</code> (ALT allele count),
+<code>DP</code> (total allele count), <code>GT</code> (phased genotype),
+<code>gene</code>. If multiple samples from the same individual were
+provided, there will be one allele count file for each sample. Other
+outputs include phased vcfs under <code>phasing/</code> folder and raw
+pileup counts under <code>pileup/</code>.</p>
 <ol start="2" style="list-style-type: decimal">
 <li><p>Prepare the expression data. Numbat takes a gene by cell integer
 UMI count matrix as input. You can directly use results from upstream
@@ -308,9 +312,9 @@ included). Alternatively, one can specify <code>max_cost</code> or
 branches. Higher <code>max_cost</code> generally leads to fewer
 clones.</li>
 <li>
-<code>tau</code>: Stringency to simplify the mutational history
-(0-1). Basically sets <code>max_cost</code> as <code>tau</code> times
-the number of cells.</li>
+<code>tau</code>: Stringency to simplify the mutational history.
+Basically sets <code>max_cost</code> as <code>tau</code> times the
+number of cells.</li>
 </ul>
 <p><em>Iterative optimization</em></p>
 <ul>
@@ -340,14 +344,22 @@ testing</li>
 <code>ncores_nni</code>: number of cores to use for phylogeny
 inference</li>
 </ul>
+<p><em>Others</em> - <code>segs_loh</code>: a dataframe of regions of
+clonal LOH to exclude from baseline during analysis. See <a href="#detecting-clonal-loh">Detecting clonal LOH</a> for details. -
+<code>segs_consensus_fix</code>: a dataframe of pre-determined consensus
+CNVs (for example, from bulk WGS/WES analysis) that will stay fixed
+during analysis. See <a href="#using-existing-cnv-calls">Using existing
+CNV calls</a> for details.</p>
 </div>
 <div class="section level3">
 <h3 id="detecting-clonal-loh">Detecting clonal LOH<a class="anchor" aria-label="anchor" href="#detecting-clonal-loh"></a>
 </h3>
-<p>For cell line data and high-purity tumors, we recommend running the
-below procedure to identify and exclude regions of clonal deletions/LOH
-before running Numbat. To do so, aggregate all cells into a pseudobulk,
-and run the SNP-density HMM:</p>
+<p>In samples with high tumor purity (e.g., tumor cell lines) without
+matched normal cells, heterozygous SNPs are challenging to identify in
+regions of LoH, leading to decreased power of CNV detection. In these
+cases, we recommend running the below procedure to identify and exclude
+regions of clonal deletions/LOH before running Numbat. To do so,
+aggregate all cells into a pseudobulk, and run the SNP-density HMM:</p>
 <pre><code><span><span class="va">bulk</span> <span class="op">=</span> <span class="fu"><a href="../reference/get_bulk.html">get_bulk</a></span><span class="op">(</span></span>
 <span>    count_mat <span class="op">=</span> <span class="va">count_mat</span>,</span>
 <span>    lambdas_ref <span class="op">=</span> <span class="va">ref_hca</span>,</span>
@@ -362,6 +374,35 @@ to be excluded from baseline during analysis.</p>
 <span>    <span class="va">....</span>,</span>
 <span>    segs_loh <span class="op">=</span> <span class="va">segs_loh</span></span>
 <span><span class="op">)</span></span></code></pre>
+<p>Alternatively, if you have matched DNA data (e.g. WGS/WES) of the
+same individual, you can directly use the SNP profile genotyped from
+DNA, which should avoid the above problem. See <a href="#using-prephased-snp-profiles">Using prephased SNP profiles</a>
+for details.</p>
+</div>
+<div class="section level3">
+<h3 id="using-existing-cnv-calls">Using existing CNV calls<a class="anchor" aria-label="anchor" href="#using-existing-cnv-calls"></a>
+</h3>
+<p>Sometimes users already have CNV calls from bulk WGS, WES, or array
+analysis. In this case, you can supply the existing CNV profile via
+<code>segs_consensus_fix</code> parameter to fix the CNV boundaries and
+states. To do so, you may provide a dataframe with the following
+columns:</p>
+<ul>
+<li>
+<code>CHROM</code>: integer; chromosome (1-22)</li>
+<li>
+<code>seg</code>: character; segment ID (e.g. 1a, 1b, 2a, 2b,
+etc.)</li>
+<li>
+<code>seg_start</code>: integer; segment start position</li>
+<li>
+<code>seg_end</code>: integer; segment end position</li>
+<li>
+<code>cnv_state</code>: character; copy number state (neu, del, amp,
+loh, bamp, bdel)</li>
+</ul>
+<p>Please note that diploid segments (<code>cnv_state = "neu"</code>)
+should also be included.</p>
 </div>
 </div>
 <div class="section level2">
@@ -439,6 +480,18 @@ files using <a href="https://cloud.google.com/storage/docs/gsutil" class="extern
 <li><p>TOPMed panel (n=97,256). You can upload your VCF to the <a href="https://imputation.biodatacatalyst.nhlbi.nih.gov" class="external-link">TOPMed
 imputation server</a>.</p></li>
 </ul>
+<div class="section level3">
+<h3 id="using-prephased-snp-profiles">Using prephased SNP profiles<a class="anchor" aria-label="anchor" href="#using-prephased-snp-profiles"></a>
+</h3>
+<p>Using DNA-derived genotype information is another way to improve SNP
+density and phasing. If you have SNP calls from DNA genotyping
+(e.g. WGS/WES), you can first perform phasing on the DNA-derived VCF.
+Then run <code>cellsnp-lite</code> on scRNA-seq BAMs against the
+DNA-derived VCF to generate allele counts (only include heterozygous
+SNPs). Finally, merge the phased GT fields (from phased DNA-derived VCF)
+with the obtained allele counts to produce an allele dataframe in the
+format of <code>df_allele</code> (see section <a href="#preparing-data">Preparing data</a>).</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="mouse-data">Mouse data<a class="anchor" aria-label="anchor" href="#mouse-data"></a>
