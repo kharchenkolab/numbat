@@ -1110,7 +1110,12 @@ find_common_diploid = function(
     # always exclude clonal LOH regions if any
     if (any(bulks$loh)) {
         bulks = bulks %>% mutate(cnv_state = ifelse(loh, 'loh', cnv_state)) %>%
-            annot_segs(var = 'cnv_state')
+            split(.$sample) %>%
+            lapply(
+                function(bulk) {bulk %>% annot_segs(var = 'cnv_state')}
+            ) %>%
+            bind_rows() %>%
+            ungroup()
     }
 
     # unionize imbalanced segs
