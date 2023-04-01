@@ -253,63 +253,59 @@ run_numbat = function(
                 segs_loh = segs_loh,
                 ncores = ncores)
 
-        bulk_subtrees = bulk_subtrees %>%
-            run_group_hmms(
-                t = t,
-                gamma = gamma,
-                alpha = alpha,
-                nu = nu,
-                min_genes = min_genes,
-                common_diploid = common_diploid,
-                diploid_chroms = diploid_chroms,
-                ncores = ncores,
-                verbose = verbose)
-
-        fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
-        
-        if (plot) {
-            p = plot_bulks(bulk_subtrees, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
-            ggsave(
-                glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
-                width = 13, height = 2*length(unique(bulk_subtrees$sample)), dpi = 250
-            )
-        }
-
-        # diagnostics
-        if (i == 1) {
-            bulk_subtrees %>% filter(sample == 0) %>% check_contam()
-            bulk_subtrees %>% filter(sample == 0) %>% check_exp_noise()
-        }
-
-        # define consensus CNVs
         if (is.null(segs_consensus_fix)) {
+
+            bulk_subtrees = bulk_subtrees %>%
+                run_group_hmms(
+                    t = t,
+                    gamma = gamma,
+                    alpha = alpha,
+                    nu = nu,
+                    min_genes = min_genes,
+                    common_diploid = common_diploid,
+                    diploid_chroms = diploid_chroms,
+                    ncores = ncores,
+                    verbose = verbose)
+
+            fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_{i}.tsv.gz'), sep = '\t')
+            
+            if (plot) {
+                p = plot_bulks(bulk_subtrees, min_LLR = min_LLR, use_pos = TRUE, genome = genome)
+                ggsave(
+                    glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
+                    width = 13, height = 2*length(unique(bulk_subtrees$sample)), dpi = 250
+                )
+            }
+
+            # diagnostics
+            if (i == 1) {
+                bulk_subtrees %>% filter(sample == 0) %>% check_contam()
+                bulk_subtrees %>% filter(sample == 0) %>% check_exp_noise()
+            }
+
+            # define consensus CNVs
             segs_consensus = bulk_subtrees %>% 
                 get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = TRUE)
-        } else {
-            log_message('Using fixed consensus CNVs')
-            segs_consensus = segs_consensus_fix
-        }
-    
-        # check termination
-        if (all(segs_consensus$cnv_state_post == 'neu')) {
-            msg = 'No CNV remains after filtering by LLR in pseudobulks. Consider reducing min_LLR.'
-            log_message(msg)
-            return(msg)
-        }
+            
+            # check termination
+            if (all(segs_consensus$cnv_state_post == 'neu')) {
+                msg = 'No CNV remains after filtering by LLR in pseudobulks. Consider reducing min_LLR.'
+                log_message(msg)
+                return(msg)
+            }
 
-        # retest all segments on subtrees
-        bulk_subtrees = retest_bulks(
-                bulk_subtrees,
-                segs_consensus, 
-                diploid_chroms = diploid_chroms, 
-                gamma = gamma,
-                min_LLR = min_LLR,
-                ncores = ncores
-            )
+            # retest all segments on subtrees
+            bulk_subtrees = retest_bulks(
+                    bulk_subtrees,
+                    segs_consensus, 
+                    diploid_chroms = diploid_chroms, 
+                    gamma = gamma,
+                    min_LLR = min_LLR,
+                    ncores = ncores
+                )
 
-        fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_retest_{i}.tsv.gz'), sep = '\t')
-        
-        if (is.null(segs_consensus_fix)) {
+            fwrite(bulk_subtrees, glue('{out_dir}/bulk_subtrees_retest_{i}.tsv.gz'), sep = '\t')
+            
             # find consensus CNVs again
             segs_consensus = bulk_subtrees %>%
                 get_segs_consensus(min_LLR = min_LLR, min_overlap = min_overlap, retest = FALSE)
@@ -320,6 +316,17 @@ run_numbat = function(
                 log_message(msg)
                 return(msg)
             }
+
+        } else {
+
+            log_message('Using fixed consensus CNVs')
+            segs_consensus = segs_consensus_fix
+
+            bulk_subtrees = bulk_subtrees %>% 
+                annot_consensus(segs_consensus) %>%
+                annot_theta_mle() %>%
+                classify_alleles()
+
         }
 
         # retest on clones
@@ -904,7 +911,7 @@ get_segs_consensus = function(bulks, min_LLR = 5, min_overlap = 0.45, retest = T
             arrange(CHROM) %>%
             group_by(CHROM) %>%
             mutate(
-                seg = paste0(CHROM, letters_all[1:n()]),
+                seg = paste0(CHROM, generate_postfix(1:n())),
                 cnv_state = 'neu', 
                 cnv_state_post = 'neu'
             ) %>% 
@@ -954,7 +961,7 @@ fill_neu_segs = function(segs_consensus, segs_neu) {
         mutate(cnv_state = tidyr::replace_na(cnv_state, 'neu')) %>%
         arrange(CHROM, seg_start) %>%
         group_by(CHROM) %>%
-        mutate(seg_cons = paste0(CHROM, letters_all[1:n()])) %>%
+        mutate(seg_cons = paste0(CHROM, generate_postfix(1:n()))) %>%
         ungroup() %>%
         mutate(CHROM = factor(CHROM, 1:22)) %>%
         arrange(CHROM)

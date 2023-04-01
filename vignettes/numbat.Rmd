@@ -100,7 +100,7 @@ Rscript /numbat/inst/bin/pileup_and_phase.R \
 
 **Important**: If your 10x bam is *multiplexed* (containing cells from multiple individuals), please only provide cell barcodes for a single individual in each genotyping run.
 
-This will produce a file named `{sample}_allele_counts.tsv.gz` under the specified output directory, which contains cell-level phased allele counts. If multiple samples from the same individual were provided, there will be one allele count file for each sample. Other outputs include phased vcfs under `phasing/` folder and raw pileup counts under `pileup/`.
+This will produce a file named `{sample}_allele_counts.tsv.gz` under the specified output directory, which contains cell-level phased allele counts. It contains columns `cell`, `snp_id`, `CHROM`, `POS`, `cM` (genetic distance in centimorgan), `REF`, `ALT`, `AD` (ALT allele count), `DP` (total allele count), `GT` (phased genotype), `gene`. If multiple samples from the same individual were provided, there will be one allele count file for each sample. Other outputs include phased vcfs under `phasing/` folder and raw pileup counts under `pileup/`.
 
 2. Prepare the expression data. Numbat takes a gene by cell integer UMI count matrix as input. You can directly use results from upstream transcriptome quantification pipelines such as 10x CellRanger.
   
@@ -172,7 +172,7 @@ There are a few parameters you can consider tuning to a specific dataset.
 - `segs_consensus_fix`: a dataframe of pre-determined consensus CNVs (for example, from bulk WGS/WES analysis) that will stay fixed during analysis. See [Using existing CNV calls](#using-existing-cnv-calls) for details.
 
 ## Detecting clonal LOH
-For cell line data and high-purity tumors, we recommend running the below procedure to identify and exclude regions of clonal deletions/LOH before running Numbat. To do so, aggregate all cells into a pseudobulk, and run the SNP-density HMM:
+In samples with high tumor purity (e.g., tumor cell lines) without matched normal cells, heterozygous SNPs are challenging to identify in regions of LoH, leading to decreased power of CNV detection. In these cases, we recommend running the below procedure to identify and exclude regions of clonal deletions/LOH before running Numbat. To do so, aggregate all cells into a pseudobulk, and run the SNP-density HMM:
 ```
 bulk = get_bulk(
     count_mat = count_mat,
@@ -193,6 +193,8 @@ out = run_numbat(
 )
 ```
 
+Alternatively, if you have matched DNA data (e.g. WGS/WES) of the same individual, you can directly use the SNP profile genotyped from DNA, which should avoid the above problem. See [Using prephased SNP profiles](#using-prephased-snp-profiles) for details.
+
 ## Using existing CNV calls
 Sometimes users already have CNV calls from bulk WGS, WES, or array analysis. In this case, you can supply the existing CNV profile via `segs_consensus_fix` parameter to fix the CNV boundaries and states. To do so, you may provide a dataframe with the following columns:
 
@@ -202,7 +204,7 @@ Sometimes users already have CNV calls from bulk WGS, WES, or array analysis. In
 - `seg_end`: integer; segment end position
 - `cnv_state`: character; copy number state (neu, del, amp, loh, bamp, bdel)
 
-Please note that diploid segments (`cnv_state = "neu"`) should also be included.
+Please note that diploid segments (`cnv_state = "neu"`) should also be included. 
 
 # Understanding results
 A detailed vignette on how to interpret and visualize Numbat results is available:  
@@ -233,6 +235,9 @@ The CNV detection power of Numbat can be further enhanced by conducting populati
 - gnomAD HGDP + 1KG panel (n=4,099). You can download the reference files using [gsutil](https://cloud.google.com/storage/docs/gsutil): `gs://gcp-public-data--gnomad/resources/hgdp_1kg/phased_haplotypes`. 
 
 - TOPMed panel (n=97,256). You can upload your VCF to the [TOPMed imputation server](https://imputation.biodatacatalyst.nhlbi.nih.gov).
+
+## Using prephased SNP profiles
+Using DNA-derived genotype information is another way to improve SNP density and phasing. If you have SNP calls from DNA genotyping (e.g. WGS/WES), you can first perform phasing on the DNA-derived VCF. Then run `cellsnp-lite` on scRNA-seq BAMs against the DNA-derived VCF to generate allele counts (only include heterozygous SNPs). Finally, merge the phased GT fields (from phased DNA-derived VCF) with the obtained allele counts to produce an allele dataframe in the format of `df_allele` (see section [Preparing data](#preparing-data)). 
 
 # Mouse data
 

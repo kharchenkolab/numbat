@@ -900,10 +900,23 @@ phi_hat_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
     )
 }
 
+#' Generate alphabetical postfixes
+#' @param n vector of integers
+#' @return vector of alphabetical postfixes
 #' @keywords internal
-letters_all = c(letters, paste0(letters, letters), paste0(letters, letters, letters))
-
-
+generate_postfix <- function(n) {
+  alphabet <- letters
+  postfixes <- sapply(n, function(i) {
+    postfix <- character(0)
+    while (i > 0) {
+      remainder <- (i - 1) %% 26
+      i <- (i - 1) %/% 26
+      postfix <- c(alphabet[remainder + 1], postfix)
+    }
+    paste(postfix, collapse = "")
+  })
+  return(postfixes)
+}
 
 #' Annotate copy number segments after HMM decoding 
 #' @param bulk dataframe Pseudobulk profile
@@ -916,7 +929,7 @@ annot_segs = function(bulk, var = 'cnv_state') {
             arrange(CHROM, snp_index) %>%
             mutate(boundary = c(0, get(var)[2:length(get(var))] != get(var)[1:(length(get(var))-1)])) %>%
             group_by(CHROM) %>%
-            mutate(seg = paste0(CHROM, letters_all[cumsum(boundary)+1])) %>%
+            mutate(seg = paste0(CHROM, generate_postfix(cumsum(boundary)+1))) %>%
             arrange(CHROM) %>%
             mutate(seg = factor(seg, unique(seg))) %>%
             ungroup() %>%
@@ -1027,6 +1040,25 @@ annot_consensus = function(bulk, segs_consensus, join_mode = 'inner') {
         mutate(seg = seg_cons) %>%
         mutate(seg = factor(seg, mixedsort(unique(seg)))) 
 
+    return(bulk)
+}
+
+#' Annotate the theta parameter for each segment
+#' @param bulk dataframe Pseudobulk profile
+#' @return dataframe Pseudobulk profile
+#' @keywords internal
+annot_theta_mle = function(bulk) {
+    
+    theta_est = bulk %>% 
+        group_by(CHROM, seg) %>%
+        filter(cnv_state != 'neu') %>%
+        summarise(
+            approx_theta_post(pAD[!is.na(pAD)], DP[!is.na(pAD)], p_s[!is.na(pAD)], gamma = 30, start = 0.1),
+            .groups = 'drop'
+        )
+    
+    bulk = bulk %>% left_join(theta_est, by = c('CHROM', 'seg'))
+    
     return(bulk)
 }
 

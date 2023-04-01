@@ -188,6 +188,18 @@ check_segs_fix = function(segs_consensus_fix) {
     }
 
     segs_consensus_fix = segs_consensus_fix %>% 
+        relevel_chrom() %>%
+        arrange(CHROM, seg_start)
+
+    if (is.integer(segs_consensus_fix$seg)) {
+        segs_consensus_fix = segs_consensus_fix %>%
+            group_by(CHROM) %>%
+            mutate(seg = paste0(CHROM, generate_postfix(1:n()))) %>%
+            ungroup()
+    }
+
+    segs_consensus_fix = segs_consensus_fix %>%
+        arrange(CHROM) %>%
         mutate(
             cnv_state_post = cnv_state,
             seg_cons = seg,
@@ -197,9 +209,8 @@ check_segs_fix = function(segs_consensus_fix) {
             p_bamp = ifelse(cnv_state == 'bamp', 1, 0),
             p_bdel = ifelse(cnv_state == 'bdel', 1, 0),
             seg_length = seg_end - seg_start,
-            LLR = Inf
+            LLR = ifelse(cnv_state == 'neu', NA, Inf)
         ) %>%
-        relevel_chrom() %>%
         as.data.frame()
 
     return(segs_consensus_fix)
@@ -236,9 +247,9 @@ relevel_chrom = function(df) {
 }
 
 #' @keywords internal
-check_fread_works = function(input) {
+check_fread_works = function(input, ...) {
     tryCatch({
-        return(data.table::fread(input))
+        return(data.table::fread(input, ...))
     },
     error = function(e){
         message(paste0("Could not read the input file ", input, " with data.table::fread(). Please check that the file is valid."))
@@ -259,11 +270,11 @@ check_rds_works = function(input) {
 
 
 #' @keywords internal
-read_file = function(inputfile, expected_colnames = NULL, filetype="tsv") {
+read_file = function(inputfile, expected_colnames = NULL, filetype="tsv", ...) {
     if (filetype == "tsv") {
-        file = check_fread_works(inputfile)
+        file = check_fread_works(inputfile, ...)
     } else if (filetype == "rds") {
-        file = check_rds_works(inputfile)       
+        file = check_rds_works(inputfile)      
     } else {
         stop("The parameter 'filetype' must be either 'tsv' or 'rds'. Please fix.")
     }
