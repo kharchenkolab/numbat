@@ -6,6 +6,13 @@
 \usage{
 get_internal_nodes(den, node, labels)
 }
+\arguments{
+\item{den}{dendrogram}
+
+\item{node}{character Node name}
+
+\item{labels}{character vector Leaf labels}
+}
 \description{
 Helper function to get the internal nodes of a dendrogram and the leafs in each subtree
 }

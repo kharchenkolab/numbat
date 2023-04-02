@@ -2,11 +2,17 @@
 % Please edit documentation in R/diagnostics.R
 \name{check_matrix}
 \alias{check_matrix}
-\title{check the format of a count matrix}
+\title{Check the format of a count matrix}
 \usage{
 check_matrix(count_mat)
 }
+\arguments{
+\item{count_mat}{matrix Count matrix}
+}
+\value{
+matrix Count matrix
+}
 \description{
-check the format of a count matrix
+Check the format of a count matrix
 }
 \keyword{internal}

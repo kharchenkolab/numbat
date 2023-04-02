@@ -2,11 +2,17 @@
 % Please edit documentation in R/diagnostics.R
 \name{check_allele_df}
 \alias{check_allele_df}
-\title{check the format of a allele dataframe}
+\title{Check the format of a allele dataframe}
 \usage{
 check_allele_df(df)
 }
+\arguments{
+\item{df}{dataframe Allele dataframe}
+}
+\value{
+dataframe Allele dataframe
+}
 \description{
-check the format of a allele dataframe
+Check the format of a allele dataframe
 }
 \keyword{internal}

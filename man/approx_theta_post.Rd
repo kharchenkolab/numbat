@@ -14,6 +14,21 @@ approx_theta_post(
   gamma = 20
 )
 }
+\arguments{
+\item{pAD}{numeric vector Variant allele depth}
+
+\item{DP}{numeric vector Total allele depth}
+
+\item{p_s}{numeric vector Variant allele frequency}
+
+\item{lower}{numeric Lower bound of theta}
+
+\item{upper}{numeric Upper bound of theta}
+
+\item{start}{numeric Starting value of theta}
+
+\item{gamma}{numeric Gamma parameter of the beta-binomial distribution}
+}
 \description{
 Laplace approximation of the posterior of allelic imbalance theta
 }

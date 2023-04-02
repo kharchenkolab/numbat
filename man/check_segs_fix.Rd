@@ -9,6 +9,9 @@ check_segs_fix(segs_consensus_fix)
 \arguments{
 \item{segs_consensus_fix}{dataframe Consensus segment dataframe}
 }
+\value{
+dataframe Consensus segment dataframe
+}
 \description{
 check the format of a given consensus segment dataframe
 }

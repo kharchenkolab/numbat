@@ -1,9 +1,19 @@
+
+#' Log memory usage
+#' @param msg string Message to log
+#' @return NULL
+#' @keywords internal
 log_mem = function() {
     m = pryr::mem_used()
     msg = paste0('Mem used: ', signif(m/1e9, 3), 'Gb')
     log_message(msg)
 }
 
+#' Log a message
+#' @param msg string Message to log
+#' @param verbose boolean Whether to print message to console
+#' @return NULL
+#' @keywords internal
 log_message = function(msg, verbose = TRUE) {
     log_info(msg)
     if (verbose) {
@@ -11,7 +21,9 @@ log_message = function(msg, verbose = TRUE) {
     }
 }
 
-#' check the format of a count matrix
+#' Check the format of a count matrix
+#' @param count_mat matrix Count matrix
+#' @return matrix Count matrix
 #' @keywords internal
 check_matrix = function(count_mat) {
 
@@ -37,7 +49,9 @@ check_matrix = function(count_mat) {
     }
 }
 
-#' check the format of a allele dataframe
+#' Check the format of a allele dataframe
+#' @param df dataframe Allele dataframe
+#' @return dataframe Allele dataframe
 #' @keywords internal
 check_allele_df = function(df) {
 
@@ -116,6 +130,8 @@ annotate_genes = function(df, gtf) {
 }
 
 #' check the format of lambdas_ref
+#' @param lambdas_ref matrix Expression reference profile
+#' @return matrix Expression reference profile
 #' @keywords internal
 check_exp_ref = function(lambdas_ref) {
 
@@ -129,6 +145,7 @@ check_exp_ref = function(lambdas_ref) {
 
 #' check inter-individual contamination
 #' @param bulk dataframe Pseudobulk profile
+#' @return NULL
 #' @keywords internal
 check_contam = function(bulk) {
 
@@ -148,15 +165,16 @@ check_contam = function(bulk) {
 
 #' check noise level
 #' @param bulk dataframe Pseudobulk profile
+#' @return NULL
 #' @keywords internal
 check_exp_noise = function(bulk) {
 
-    sig = unique(na.omit(bulk$sig))
+    mse = unique(na.omit(bulk$mse))
 
-    if (sig > 1) {
+    if (mse > 1.5) {
         noise_level  = 'high'
         noise_msg = 'Consider using a custom expression reference profile.'
-    } else if (sig > 0.5) {
+    } else if (mse > 0.5) {
         noise_level = 'medium'
         noise_msg = ''
     } else {
@@ -165,9 +183,9 @@ check_exp_noise = function(bulk) {
     }
 
     msg = paste0(
-        'Expression noise level: ',
+        'Expression noise level (MSE): ',
         noise_level,
-        ' (', signif(sig, 2), '). ',
+        ' (', signif(mse, 2), '). ',
         noise_msg)
 
     # message(msg)
@@ -176,6 +194,7 @@ check_exp_noise = function(bulk) {
 
 #' check the format of a given consensus segment dataframe
 #' @param segs_consensus_fix dataframe Consensus segment dataframe
+#' @return dataframe Consensus segment dataframe
 #' @keywords internal
 check_segs_fix = function(segs_consensus_fix) {
 
@@ -217,6 +236,7 @@ check_segs_fix = function(segs_consensus_fix) {
     
 }
 
+#' Check the format of a given file
 #' @keywords internal
 return_missing_columns = function(file, expected_colnames = NULL) {
     ## if user sets expected_colnames = NULL, return NULL
@@ -238,7 +258,9 @@ return_missing_columns = function(file, expected_colnames = NULL) {
     }
 }
 
-
+#' Relevel chromosome column
+#' @param df dataframe Dataframe with chromosome column
+#' @keywords internal 
 relevel_chrom = function(df) {
     if (!is.null(df)) {
         df = df %>% mutate(CHROM = factor(CHROM, 1:22))
