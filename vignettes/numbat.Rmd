@@ -231,6 +231,10 @@ Numbat (v1.2.0) now works for a F1 hybrid mouse bred from two known lab mice str
 
 # FAQ
 
+**Q**: What is the expression reference for and how does it impact analysis?
+
+**A**: The expression reference (`lambdas_ref`) is used to regress out any cell-type-specific expression differences that are unrelated to CNVs. It is used in both single-cell testing and pseudobulk CNV calling using HMM. Ideally, expression reference should be created from a normal (non-tumor) dataset closely matching the biological and technical conditions of the target dataset (e.g., same tissue types, cell types, sequencing platforms). A closely matching reference can help reduce the noise in the expression-based CNV signal (logFC) during pseudobulk and single-cell analysis.
+
 **Q**: We expect a certain CNV to be in a particular sample, but it is not detected by Numbat.
 
 **A**: In general, there are three scenarios that a CNV is not called. 
