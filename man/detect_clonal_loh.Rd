@@ -5,12 +5,14 @@
 \title{Call clonal LOH using SNP density. 
 Rcommended for cell lines or tumor samples with no normal cells.}
 \usage{
-detect_clonal_loh(bulk, t = 1e-05, min_depth = 0)
+detect_clonal_loh(bulk, t = 1e-05, snp_rate_loh = 5, min_depth = 0)
 }
 \arguments{
 \item{bulk}{dataframe Pseudobulk profile}
 
 \item{t}{numeric Transition probability}
+
+\item{snp_rate_loh}{numeric The assumed SNP density in clonal LOH regions}
 
 \item{min_depth}{integer Minimum coverage to filter SNPs}
 }

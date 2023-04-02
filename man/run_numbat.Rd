@@ -31,9 +31,10 @@ run_numbat(
   ncores_nni = ncores,
   random_init = FALSE,
   segs_loh = NULL,
-  segs_consensus_fix = NULL,
+  call_clonal_loh = FALSE,
   verbose = TRUE,
   diploid_chroms = NULL,
+  segs_consensus_fix = NULL,
   use_loh = NULL,
   min_genes = 10,
   skip_nj = FALSE,
@@ -97,11 +98,13 @@ run_numbat(
 
 \item{segs_loh}{dataframe Segments of clonal LOH to be excluded}
 
-\item{segs_consensus_fix}{dataframe Pre-determined segmentation of consensus CNVs}
+\item{call_clonal_loh}{logical Whether to call segments with clonal LOH}
 
 \item{verbose}{logical Verbosity}
 
 \item{diploid_chroms}{vector Known diploid chromosomes}
+
+\item{segs_consensus_fix}{dataframe Pre-determined segmentation of consensus CNVs}
 
 \item{use_loh}{logical Whether to include LOH regions in the expression baseline}
 
