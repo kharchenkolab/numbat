@@ -5,6 +5,7 @@
 - [Running Numbat](#running-numbat)
 - [Understanding results](#understanding-results)
 - [Advanced phasing options](#phasing-options)
+- [Spatial data](#spatial-data)
 - [Mouse data](#mouse-data)
 - [FAQ](#faq)
 
@@ -220,6 +221,9 @@ The CNV detection power of Numbat can be further enhanced by conducting populati
 
 ## Using prephased SNP profiles
 Using DNA-derived genotype information is another way to improve SNP density and phasing. If you have SNP calls from DNA genotyping (e.g. WGS/WES), you can first perform phasing on the DNA-derived VCF. Then run `cellsnp-lite` on scRNA-seq BAMs against the DNA-derived VCF to generate allele counts (only include heterozygous SNPs). Finally, merge the phased GT fields (from phased DNA-derived VCF) with the obtained allele counts to produce an allele dataframe in the format of `df_allele` (see section [Preparing data](#preparing-data)). 
+
+# Spatial data
+Numbat can also be used to analyze spatial transcriptomics (e.g. 10x Visium) data. Please see the [spatial tutorial](https://kharchenkolab.github.io/numbat/articles/spatial-rna.html) for details.
 
 # Mouse data
 
