@@ -192,6 +192,31 @@ check_exp_noise = function(bulk) {
     log_message(msg)
 }
 
+#' Check the format of a given clonal LOH segment dataframe
+#' @param segs_loh dataframe Clonal LOH segment dataframe
+check_segs_loh = function(segs_loh) {
+    
+        if (is.null(segs_loh)) {
+            return(NULL)
+        }
+    
+        if (!all(c('CHROM', 'seg', 'seg_start', 'seg_end') %in% colnames(segs_loh))) {
+            stop('The clonal LOH segment dataframe appears to be malformed. Please fix.')
+        }
+
+        if (is.integer(segs_loh$seg)) {
+            segs_loh = segs_loh %>% mutate(seg = paste0(CHROM, '_', seg))
+        }
+
+        segs_loh = segs_loh %>% 
+            mutate(loh = TRUE) %>%
+            relevel_chrom() %>%
+            arrange(CHROM, seg_start)
+    
+        return(segs_loh)
+
+}
+
 #' check the format of a given consensus segment dataframe
 #' @param segs_consensus_fix dataframe Consensus segment dataframe
 #' @return dataframe Consensus segment dataframe
@@ -211,10 +236,7 @@ check_segs_fix = function(segs_consensus_fix) {
         arrange(CHROM, seg_start)
 
     if (is.integer(segs_consensus_fix$seg)) {
-        segs_consensus_fix = segs_consensus_fix %>%
-            group_by(CHROM) %>%
-            mutate(seg = paste0(CHROM, generate_postfix(1:n()))) %>%
-            ungroup()
+        segs_consensus_fix = segs_consensus_fix %>% mutate(seg = paste0(CHROM, '_', seg))
     }
 
     segs_consensus_fix = segs_consensus_fix %>%

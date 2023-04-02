@@ -1710,12 +1710,13 @@ calc_exp_LLR = function(Y_obs, lambda_ref, d, phi_mle, mu = NULL, sig = NULL, al
 #' Rcommended for cell lines or tumor samples with no normal cells.
 #' @param bulk dataframe Pseudobulk profile
 #' @param t numeric Transition probability
+#' @param snp_rate_loh numeric The assumed SNP density in clonal LOH regions
 #' @param min_depth integer Minimum coverage to filter SNPs
 #' @return dataframe LOH segments
 #' @examples
 #' segs_loh = detect_clonal_loh(bulk_example)
 #' @export
-detect_clonal_loh = function(bulk, t = 1e-5, min_depth = 0) {
+detect_clonal_loh = function(bulk, t = 1e-5, snp_rate_loh = 5, min_depth = 0) {
 
     bulk_snps = bulk %>% 
         filter(!is.na(gene)) %>%
@@ -1738,7 +1739,7 @@ detect_clonal_loh = function(bulk, t = 1e-5, min_depth = 0) {
     sig = fit@coef[2]
 
     snp_fit = fit_snp_rate(bulk_snps$gene_snps, bulk_snps$gene_length)
-    snp_ref = snp_fit[1]
+    snp_rate_ref = snp_fit[1]
     snp_sig = snp_fit[2]
 
     n = nrow(bulk_snps)
@@ -1749,7 +1750,7 @@ detect_clonal_loh = function(bulk, t = 1e-5, min_depth = 0) {
         x = bulk_snps$gene_snps, 
         Pi = As, 
         delta = c(1-t,t), 
-        pm = c(snp_ref, 5),
+        pm = c(snp_rate_ref, snp_rate_loh),
         pn = bulk_snps$gene_length/1e6,
         snp_sig = snp_sig,
         y = bulk_snps$Y_obs,

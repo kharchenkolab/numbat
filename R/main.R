@@ -53,6 +53,7 @@ NULL
 #' @param skip_nj logical Whether to skip NJ tree construction and only use UPGMA
 #' @param diploid_chroms vector Known diploid chromosomes
 #' @param segs_loh dataframe Segments of clonal LOH to be excluded
+#' @param call_clonal_loh logical Whether to call segments with clonal LOH
 #' @param segs_consensus_fix dataframe Pre-determined segmentation of consensus CNVs
 #' @param check_convergence logical Whether to terminate iterations based on consensus CNV convergence 
 #' @param random_init logical Whether to initiate phylogney using a random tree (internal use only)
@@ -66,11 +67,17 @@ run_numbat = function(
         out_dir = tempdir(), max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3, nu = 1,
         max_cost = ncol(count_mat) * tau, n_cut = 0, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
-        ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL, segs_consensus_fix = NULL,
-        verbose = TRUE, diploid_chroms = NULL, use_loh = NULL, min_genes = 10,
-        skip_nj = FALSE, multi_allelic = TRUE, p_multi = 1-alpha,
+        ncores = 1, ncores_nni = ncores, random_init = FALSE, segs_loh = NULL, call_clonal_loh = FALSE, 
+        verbose = TRUE, diploid_chroms = NULL, segs_consensus_fix = NULL, use_loh = NULL, min_genes = 10,
+        skip_nj = FALSE, multi_allelic = TRUE, p_multi = 1-alpha, 
         plot = TRUE, check_convergence = FALSE, exclude_neu = TRUE
     ) {
+
+    ######### Setup output folder #########
+    dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+    logfile = glue('{out_dir}/log.txt')
+    if (file.exists(logfile)) {file.remove(logfile)}
+    log_appender(appender_file(logfile))
 
     ######### Basic checks #########
     if (genome == 'hg38') {
@@ -113,14 +120,18 @@ run_numbat = function(
         stop('Cannot specify both segs_loh and segs_consensus_fix')
     }
 
+    # check provided consensus CNVs
     segs_consensus_fix = check_segs_fix(segs_consensus_fix)
 
-    ######### Log parameters #########
-    dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
-    logfile = glue('{out_dir}/log.txt')
-    if (file.exists(logfile)) {file.remove(logfile)}
-    log_appender(appender_file(logfile))
+    # check clonal LOH
+    if (!is.null(segs_loh)) {
+        if (call_clonal_loh) {
+            stop('Cannot specify both segs_loh and call_clonal_loh')
+        }
+        segs_loh = check_segs_loh(segs_loh)
+    }
 
+    ######### Log parameters #########
     log_message(paste(
         glue('Numbat version: ', as.character(utils::packageVersion("numbat"))),
         'Running under parameters:',
@@ -136,6 +147,7 @@ run_numbat = function(
         glue('min_depth = {min_depth}'),
         glue('use_loh = {ifelse(is.null(use_loh), "auto", use_loh)}'),
         glue('segs_loh = {ifelse(is.null(segs_loh), "None", "Given")}'),
+        glue('call_clonal_loh = {call_clonal_loh}'),
         glue('segs_consensus_fix = {ifelse(is.null(segs_consensus_fix), "None", "Given")}'),
         glue('multi_allelic = {multi_allelic}'),
         glue('min_LLR = {min_LLR}'),
@@ -162,6 +174,28 @@ run_numbat = function(
     data.table::setDTthreads(1)
 
     ######## Initialization ########
+
+    if (call_clonal_loh) {
+        
+        log_message('Calling segments with clonal LOH')
+
+        bulk = get_bulk(
+            count_mat = count_mat,
+            lambdas_ref = lambdas_ref,
+            df_allele = df_allele,
+            gtf = gtf,
+            min_depth = min_depth,
+            nu = nu
+        )
+
+        segs_loh = bulk %>% detect_clonal_loh(t = t, min_depth = min_depth)
+
+        if (!is.null(segs_loh)) {
+            fwrite(segs_loh, glue('{out_dir}/segs_loh.tsv'), sep = '\t')
+        } else {
+            log_message('No segments with clonal LOH detected')
+        }
+    }
 
     sc_refs = choose_ref_cor(count_mat, lambdas_ref, gtf)
     saveRDS(sc_refs, glue('{out_dir}/sc_refs.rds'))

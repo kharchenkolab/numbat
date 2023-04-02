@@ -2,6 +2,8 @@
 
 * Allows users to supply existing CNV profiles (e.g. from bulk WGS/WES analysis) via `segs_consensus_fix` parameter
 
+* Adding `call_clonal_loh` option to call clonal LOH events within `run_numbat`
+
 * Fixing bug #81
 
 * Fixing oversegmentation issue in `find_common_diploid` caused by `annot_segs`
