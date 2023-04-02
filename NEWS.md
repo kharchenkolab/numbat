@@ -1,8 +1,10 @@
 # numbat 1.3.0 - 03/31/2023
 
-* Allow users to supply existing CNV profiles (e.g. from bulk WGS/WES analysis) via `segs_consensus_fix` parameter
+* Allows users to supply existing CNV profiles (e.g. from bulk WGS/WES analysis) via `segs_consensus_fix` parameter
 
 * Fixing bug #81
+
+* Fixing oversegmentation issue in `find_common_diploid` caused by `annot_segs`
 
 # numbat 1.2.2 - 02/13/2023
 
@@ -12,15 +14,15 @@
 
 # numbat 1.2.1 - 01/11/2023
 
-* Fix bugs #30, #79, #89
+* Fixing bugs #30, #79, #89
 
 # numbat 1.2.0 - 12/26/2022
 
 * Numbat now works for F1 hybrid mice! Check out the new tutorial under `Articles`.
 
-* Fix bugs #80, #82
+* Fixing bugs #80, #82
 
-* Offer stacked clone bars in `plot_phylo_heatmap`
+* Offers stacked clone bars in `plot_phylo_heatmap`
 
 # numbat 1.1.0 - 11/28/2022
 
@@ -40,7 +42,7 @@
 
 * Improving error handling and removing python dependency (`argparse`) in `pileup_and_phase.R`
 
-* Allow plotting of mutliple annotations in `plot_phylo_heatmap` (thanks to @whtns)
+* Allows plotting of mutliple annotations in `plot_phylo_heatmap` (thanks to @whtns)
 
 * Adding diagnostic messages
 
