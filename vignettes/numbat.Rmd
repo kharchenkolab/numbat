@@ -168,14 +168,13 @@ There are a few parameters you can consider tuning to a specific dataset.
 - `ncores`: number of cores to use for single-cell CNV testing
 - `ncores_nni`: number of cores to use for phylogeny inference
 
-*Others*
+*Other run modes*
 
 - `call_clonal_loh`: whether to call clonal LOH regions. Recommended for samples with high purity without matched normal cells. See [Detecting clonal LOH](#detecting-clonal-loh) for details.
-- `segs_loh`: a dataframe of regions of clonal LOH to exclude from baseline during analysis; either produced by `detect_clonal_loh` or user-provided. Note that `call_clonal_loh` is now recommended over this option. 
 - `segs_consensus_fix`: a dataframe of pre-determined consensus CNVs (for example, from bulk WGS/WES analysis) that will stay fixed during analysis. See [Using existing CNV calls](#using-existing-cnv-calls) for details.
 
 ## Detecting clonal LOH
-In samples with high tumor purity (e.g., tumor cell lines) without matched normal cells, heterozygous SNPs are challenging to identify in regions of LoH, leading to decreased power of CNV detection. In these cases, we recommend setting `call_clonal_loh = TRUE` to identify and exclude regions of clonal deletions/LOH. It enables Numbat to run the `detect_clonal_loh` function inside the main workflow.
+In samples with high tumor purity (e.g., tumor cell lines) without matched normal cells, heterozygous SNPs are challenging to identify in regions of LoH, leading to decreased power of CNV detection. Regions of clonal LoH have decreased SNP density and can be identified by a specialized HMM (see `detect_clonal_loh` in function reference). You can set `call_clonal_loh = TRUE` to automatically identify and exclude regions of clonal deletions/LoH in the main workflow. Alternatively, you can manually run `detect_clonal_loh` and provide the detected segments as a dataframe (with columns `CHROM`, `seg`, `seg_start`, `seg_end`) via the `segs_loh` argument.
 
 Alternatively, if you have matched DNA data (e.g. WGS/WES) of the same individual, you can directly use the SNP profile genotyped from DNA, which should avoid the above problem. See [Using prephased SNP profiles](#using-prephased-snp-profiles) for details.
 
