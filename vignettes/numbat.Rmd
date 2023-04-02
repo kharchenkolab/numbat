@@ -169,6 +169,7 @@ There are a few parameters you can consider tuning to a specific dataset.
 - `ncores_nni`: number of cores to use for phylogeny inference
 
 *Others*
+
 - `call_clonal_loh`: whether to call clonal LOH regions. Recommended for samples with high purity without matched normal cells. See [Detecting clonal LOH](#detecting-clonal-loh) for details.
 - `segs_loh`: a dataframe of regions of clonal LOH to exclude from baseline during analysis; either produced by `detect_clonal_loh` or user-provided. Note that `call_clonal_loh` is now recommended over this option. 
 - `segs_consensus_fix`: a dataframe of pre-determined consensus CNVs (for example, from bulk WGS/WES analysis) that will stay fixed during analysis. See [Using existing CNV calls](#using-existing-cnv-calls) for details.
