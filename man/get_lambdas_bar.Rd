@@ -6,6 +6,13 @@
 \usage{
 get_lambdas_bar(lambdas_ref, sc_refs, verbose = TRUE)
 }
+\arguments{
+\item{lambdas_ref}{matrix Reference expression profiles}
+
+\item{sc_refs}{vector Single-cell reference choices}
+
+\item{verbose}{logical Print messages}
+}
 \description{
 Get average reference expressio profile based on single-cell ref choices
 }

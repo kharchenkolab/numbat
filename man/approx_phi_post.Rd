@@ -17,6 +17,30 @@ approx_phi_post(
   start = 1
 )
 }
+\arguments{
+\item{Y_obs}{numeric vector Gene expression counts}
+
+\item{lambda_ref}{numeric vector Reference expression levels}
+
+\item{d}{numeric Total library size}
+
+\item{alpha}{numeric Shape parameter of the gamma distribution}
+
+\item{beta}{numeric Rate parameter of the gamma distribution}
+
+\item{mu}{numeric Mean of the normal distribution}
+
+\item{sig}{numeric Standard deviation of the normal distribution}
+
+\item{lower}{numeric Lower bound of phi}
+
+\item{upper}{numeric Upper bound of phi}
+
+\item{start}{numeric Starting value of phi}
+}
+\value{
+numeric MLE of phi and its standard deviation
+}
 \description{
 Laplace approximation of the posterior of expression fold change phi
 }

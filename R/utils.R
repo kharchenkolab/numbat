@@ -307,6 +307,9 @@ combine_bulk = function(allele_bulk, exp_bulk) {
 }
 
 #' Get average reference expressio profile based on single-cell ref choices
+#' @param lambdas_ref matrix Reference expression profiles
+#' @param sc_refs vector Single-cell reference choices
+#' @param verbose logical Print messages
 #' @keywords internal
 get_lambdas_bar = function(lambdas_ref, sc_refs, verbose = TRUE) {
 
@@ -363,7 +366,7 @@ get_bulk = function(count_mat, lambdas_ref, df_allele, gtf, subset = NULL, min_d
             verbose = verbose
         ) %>%
         filter((logFC < 5 & logFC > -5) | Y_obs == 0) %>%
-        mutate(sse = fit$sse)
+        mutate(mse = fit$mse)
 
     allele_bulk = get_allele_bulk(
         df_allele,
@@ -448,7 +451,7 @@ fit_ref_sse = function(Y_obs, lambdas_ref, gtf, min_lambda = 2e-6, verbose = FAL
 
     lambdas_bar = lambdas_ref %*% w %>% {setNames(as.vector(.), rownames(.))}
 
-    return(list('w' = w, 'lambdas_bar' = lambdas_bar, 'sse' = fit$value/length(Y_obs)))
+    return(list('w' = w, 'lambdas_bar' = lambdas_bar, 'mse' = fit$value/length(Y_obs)))
 }
 
 #' predict phase switch probablity as a function of genetic distance
@@ -1361,6 +1364,7 @@ fit_gamma = function(AD, DP, start = 20) {
     return(gamma)
 }
 
+#' Density function for a gamma-poisson distribution
 #' @keywords internal
 dgpois <- function(x, shape, rate, scale = 1/rate, log = FALSE) {
   cpp_dgpois(x, shape, scale, log[1L])
@@ -1460,6 +1464,13 @@ calc_phi_mle_lnpois = function (Y_obs, lambda_ref, d, mu, sig, lower = 0.1, uppe
 }
 
 #' Laplace approximation of the posterior of allelic imbalance theta
+#' @param pAD numeric vector Variant allele depth
+#' @param DP numeric vector Total allele depth
+#' @param p_s numeric vector Variant allele frequency
+#' @param lower numeric Lower bound of theta
+#' @param upper numeric Upper bound of theta
+#' @param start numeric Starting value of theta
+#' @param gamma numeric Gamma parameter of the beta-binomial distribution
 #' @keywords internal
 approx_theta_post = function(pAD, DP, p_s, lower = 0.001, upper = 0.499, start = 0.25, gamma = 20) {
 
@@ -1507,6 +1518,17 @@ theta_mle_naive = function(MAD, DP, lower = 0.0001, upper = 0.4999, start = 0.25
 }
 
 #' Laplace approximation of the posterior of expression fold change phi
+#' @param Y_obs numeric vector Gene expression counts
+#' @param lambda_ref numeric vector Reference expression levels
+#' @param d numeric Total library size
+#' @param alpha numeric Shape parameter of the gamma distribution
+#' @param beta numeric Rate parameter of the gamma distribution
+#' @param mu numeric Mean of the normal distribution
+#' @param sig numeric Standard deviation of the normal distribution
+#' @param lower numeric Lower bound of phi
+#' @param upper numeric Upper bound of phi
+#' @param start numeric Starting value of phi
+#' @return numeric MLE of phi and its standard deviation
 #' @keywords internal
 approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu = NULL, sig = NULL, lower = 0.2, upper = 10, start = 1) {
     
@@ -1541,6 +1563,9 @@ approx_phi_post = function(Y_obs, lambda_ref, d, alpha = NULL, beta = NULL, mu =
 }
 
 #' Helper function to get the internal nodes of a dendrogram and the leafs in each subtree 
+#' @param den dendrogram
+#' @param node character Node name
+#' @param labels character vector Leaf labels
 #' @keywords internal
 get_internal_nodes = function(den, node, labels) {
 
@@ -1963,7 +1988,8 @@ snp_rate_roll = function(gene_snps, gene_length, h) {
     )
 }
 
-# negative binomial model
+#' negative binomial model
+#' @keywords internal
 fit_snp_rate = function(gene_snps, gene_length) {
     
     n = length(gene_snps)

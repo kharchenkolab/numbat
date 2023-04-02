@@ -253,6 +253,12 @@ run_numbat = function(
                 segs_loh = segs_loh,
                 ncores = ncores)
 
+        # diagnostics
+        if (i == 1) {
+            bulk_subtrees %>% filter(sample == 0) %>% check_contam()
+            bulk_subtrees %>% filter(sample == 0) %>% check_exp_noise()
+        }
+
         if (is.null(segs_consensus_fix)) {
 
             bulk_subtrees = bulk_subtrees %>%
@@ -275,12 +281,6 @@ run_numbat = function(
                     glue('{out_dir}/bulk_subtrees_{i}.png'), p, 
                     width = 13, height = 2*length(unique(bulk_subtrees$sample)), dpi = 250
                 )
-            }
-
-            # diagnostics
-            if (i == 1) {
-                bulk_subtrees %>% filter(sample == 0) %>% check_contam()
-                bulk_subtrees %>% filter(sample == 0) %>% check_exp_noise()
             }
 
             # define consensus CNVs

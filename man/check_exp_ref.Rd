@@ -6,6 +6,12 @@
 \usage{
 check_exp_ref(lambdas_ref)
 }
+\arguments{
+\item{lambdas_ref}{matrix Expression reference profile}
+}
+\value{
+matrix Expression reference profile
+}
 \description{
 check the format of lambdas_ref
 }
