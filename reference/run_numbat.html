@@ -89,9 +89,10 @@
 <span>  ncores_nni <span class="op">=</span> <span class="va">ncores</span>,</span>
 <span>  random_init <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  segs_loh <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  segs_consensus_fix <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  call_clonal_loh <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  diploid_chroms <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  segs_consensus_fix <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  use_loh <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  min_genes <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  skip_nj <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -209,8 +210,8 @@
 <dd><p>dataframe Segments of clonal LOH to be excluded</p></dd>
 
 
-<dt>segs_consensus_fix</dt>
-<dd><p>dataframe Pre-determined segmentation of consensus CNVs</p></dd>
+<dt>call_clonal_loh</dt>
+<dd><p>logical Whether to call segments with clonal LOH</p></dd>
 
 
 <dt>verbose</dt>
@@ -219,6 +220,10 @@
 
 <dt>diploid_chroms</dt>
 <dd><p>vector Known diploid chromosomes</p></dd>
+
+
+<dt>segs_consensus_fix</dt>
+<dd><p>dataframe Pre-determined segmentation of consensus CNVs</p></dd>
 
 
 <dt>use_loh</dt>

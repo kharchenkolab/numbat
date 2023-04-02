@@ -57,8 +57,10 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.3.0" id="numbat-130---03312023">numbat 1.3.0 - 03/31/2023<a class="anchor" aria-label="anchor" href="#numbat-130---03312023"></a></h2>
-<ul><li><p>Allow users to supply existing CNV profiles (e.g. from bulk WGS/WES analysis) via <code>segs_consensus_fix</code> parameter</p></li>
+<ul><li><p>Allows users to supply existing CNV profiles (e.g. from bulk WGS/WES analysis) via <code>segs_consensus_fix</code> parameter</p></li>
+<li><p>Adding <code>call_clonal_loh</code> option to call clonal LOH events within <code>run_numbat</code></p></li>
 <li><p>Fixing bug <a href="https://github.com/kharchenkolab/numbat/issues/81" class="external-link">#81</a></p></li>
+<li><p>Fixing oversegmentation issue in <code>find_common_diploid</code> caused by <code>annot_segs</code></p></li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.2.2" id="numbat-122---02132023">numbat 1.2.2 - 02/13/2023<a class="anchor" aria-label="anchor" href="#numbat-122---02132023"></a></h2><p class="text-muted">CRAN release: 2023-02-14</p>
@@ -67,13 +69,13 @@
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.2.1" id="numbat-121---01112023">numbat 1.2.1 - 01/11/2023<a class="anchor" aria-label="anchor" href="#numbat-121---01112023"></a></h2><p class="text-muted">CRAN release: 2023-01-10</p>
-<ul><li>Fix bugs <a href="https://github.com/kharchenkolab/numbat/issues/30" class="external-link">#30</a>, <a href="https://github.com/kharchenkolab/numbat/issues/79" class="external-link">#79</a>, <a href="https://github.com/kharchenkolab/numbat/issues/89" class="external-link">#89</a></li>
+<ul><li>Fixing bugs <a href="https://github.com/kharchenkolab/numbat/issues/30" class="external-link">#30</a>, <a href="https://github.com/kharchenkolab/numbat/issues/79" class="external-link">#79</a>, <a href="https://github.com/kharchenkolab/numbat/issues/89" class="external-link">#89</a></li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.2.0" id="numbat-120---12262022">numbat 1.2.0 - 12/26/2022<a class="anchor" aria-label="anchor" href="#numbat-120---12262022"></a></h2>
 <ul><li><p>Numbat now works for F1 hybrid mice! Check out the new tutorial under <code>Articles</code>.</p></li>
-<li><p>Fix bugs <a href="https://github.com/kharchenkolab/numbat/issues/80" class="external-link">#80</a>, <a href="https://github.com/kharchenkolab/numbat/issues/82" class="external-link">#82</a></p></li>
-<li><p>Offer stacked clone bars in <code>plot_phylo_heatmap</code></p></li>
+<li><p>Fixing bugs <a href="https://github.com/kharchenkolab/numbat/issues/80" class="external-link">#80</a>, <a href="https://github.com/kharchenkolab/numbat/issues/82" class="external-link">#82</a></p></li>
+<li><p>Offers stacked clone bars in <code>plot_phylo_heatmap</code></p></li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.1.0" id="numbat-110---11282022">numbat 1.1.0 - 11/28/2022<a class="anchor" aria-label="anchor" href="#numbat-110---11282022"></a></h2><p class="text-muted">CRAN release: 2022-11-29</p>
@@ -89,7 +91,7 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.4" id="numbat-104---11202022">numbat 1.0.4 - 11/20/2022<a class="anchor" aria-label="anchor" href="#numbat-104---11202022"></a></h2>
 <ul><li><p>Improving error handling and removing python dependency (<code>argparse</code>) in <code>pileup_and_phase.R</code></p></li>
-<li><p>Allow plotting of mutliple annotations in <code>plot_phylo_heatmap</code> (thanks to <a href="https://github.com/whtns" class="external-link">@whtns</a>)</p></li>
+<li><p>Allows plotting of mutliple annotations in <code>plot_phylo_heatmap</code> (thanks to <a href="https://github.com/whtns" class="external-link">@whtns</a>)</p></li>
 <li><p>Adding diagnostic messages</p></li>
 </ul></div>
     <div class="section level2">
