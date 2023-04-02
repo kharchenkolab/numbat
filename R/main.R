@@ -154,7 +154,7 @@ run_numbat = function(
         glue('min_overlap = {min_overlap}'),
         glue('max_entropy = {max_entropy}'),
         glue('skip_nj = {skip_nj}'),
-        glue('diploid_chroms = {paste0(diploid_chroms, collapse = ",")}'),
+        glue('diploid_chroms = {ifelse(is.null(diploid_chroms), "None", "Given")}'),
         glue('ncores = {ncores}'),
         glue('ncores_nni = {ncores_nni}'),
         glue('common_diploid = {common_diploid}'),
