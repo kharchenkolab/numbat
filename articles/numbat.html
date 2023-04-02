@@ -345,17 +345,24 @@ testing</li>
 <code>ncores_nni</code>: number of cores to use for phylogeny
 inference</li>
 </ul>
-<p><em>Others</em> - <code>call_clonal_loh</code>: whether to call
-clonal LOH regions. Recommended for samples with high purity without
-matched normal cells. See <a href="#detecting-clonal-loh">Detecting
-clonal LOH</a> for details. - <code>segs_loh</code>: a dataframe of
-regions of clonal LOH to exclude from baseline during analysis; either
-produced by <code>detect_clonal_loh</code> or user-provided. Note that
-<code>call_clonal_loh</code> is now recommended over this option. -
-<code>segs_consensus_fix</code>: a dataframe of pre-determined consensus
-CNVs (for example, from bulk WGS/WES analysis) that will stay fixed
-during analysis. See <a href="#using-existing-cnv-calls">Using existing
-CNV calls</a> for details.</p>
+<p><em>Others</em></p>
+<ul>
+<li>
+<code>call_clonal_loh</code>: whether to call clonal LOH regions.
+Recommended for samples with high purity without matched normal cells.
+See <a href="#detecting-clonal-loh">Detecting clonal LOH</a> for
+details.</li>
+<li>
+<code>segs_loh</code>: a dataframe of regions of clonal LOH to
+exclude from baseline during analysis; either produced by
+<code>detect_clonal_loh</code> or user-provided. Note that
+<code>call_clonal_loh</code> is now recommended over this option.</li>
+<li>
+<code>segs_consensus_fix</code>: a dataframe of pre-determined
+consensus CNVs (for example, from bulk WGS/WES analysis) that will stay
+fixed during analysis. See <a href="#using-existing-cnv-calls">Using
+existing CNV calls</a> for details.</li>
+</ul>
 </div>
 <div class="section level3">
 <h3 id="detecting-clonal-loh">Detecting clonal LOH<a class="anchor" aria-label="anchor" href="#detecting-clonal-loh"></a>
