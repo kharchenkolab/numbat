@@ -608,6 +608,10 @@ analyze_bulk = function(
                 cnv_state_post = ifelse(is.na(cnv_state_post), 'neu', cnv_state_post),
                 cnv_state = ifelse(is.na(cnv_state), 'neu', cnv_state)
             ) %>%
+            mutate(
+                cnv_state_post = ifelse(loh, 'del', cnv_state_post),
+                cnv_state = ifelse(loh, 'del', cnv_state)
+            ) %>%
             mutate(state_post = ifelse(
                 cnv_state_post %in% c('amp', 'del', 'loh') & (!cnv_state %in% c('bamp', 'bdel')),
                 paste0(cnv_state_post, '_', str_extract(state, 'up_1|down_1|up_2|down_2|up|down|1_up|2_up|1_down|2_down')),
