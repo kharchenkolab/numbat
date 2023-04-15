@@ -580,7 +580,7 @@ analyze_bulk = function(
                     phasing = phasing
                 )
             ) %>% 
-            mutate(state = ifelse(loh, 'del_2_up', state)) %>%
+            mutate(state = ifelse(loh, 'del_up', state)) %>%
             mutate(cnv_state = str_remove(state, '_down|_up')) %>%
             annot_segs(var = 'cnv_state') %>%
             smooth_segs(min_genes = min_genes) %>%

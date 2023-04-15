@@ -1,3 +1,7 @@
+# numbat 1.3.1 - 04/14/2023
+
+* Fixing bug #68 - the changes cause slight numerical difference for NCI-N87 compared to the paper
+
 # numbat 1.3.0 - 03/31/2023
 
 * Allows users to supply existing CNV profiles (e.g. from bulk WGS/WES analysis) via `segs_consensus_fix` parameter
