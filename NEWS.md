@@ -1,6 +1,6 @@
 # numbat 1.3.1 - 04/14/2023
 
-* Fixing bug #68 - the changes cause slight numerical difference for NCI-N87 compared to the paper
+* Fixing bug #68 - this may cause slight changes in the results for runs with `segs_loh`/`call_segs_loh` enabled.
 
 # numbat 1.3.0 - 03/31/2023
 

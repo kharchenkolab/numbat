@@ -599,6 +599,7 @@ analyze_bulk = function(
             logphi_min = logphi_min, exclude_neu = exclude_neu,
             allele_only = allele_only)
         
+        # annotate posterior CNV state
         bulk = bulk %>% 
             select(-any_of(colnames(segs_post)[!colnames(segs_post) %in% c('seg', 'CHROM', 'seg_start', 'seg_end')])) %>%
             left_join(
@@ -607,12 +608,23 @@ analyze_bulk = function(
             mutate(
                 cnv_state_post = ifelse(is.na(cnv_state_post), 'neu', cnv_state_post),
                 cnv_state = ifelse(is.na(cnv_state), 'neu', cnv_state)
-            ) %>%
+            )
+
+        # Force segments with clonal LOH to be deletion
+        bulk = bulk %>% 
             mutate(
                 cnv_state_post = ifelse(loh, 'del', cnv_state_post),
-                cnv_state = ifelse(loh, 'del', cnv_state)
-            ) %>%
-            mutate(state_post = ifelse(
+                cnv_state = ifelse(loh, 'del', cnv_state),
+                p_del = ifelse(loh, 1, p_del),
+                p_amp = ifelse(loh, 0, p_amp),
+                p_neu = ifelse(loh, 0, p_neu),
+                p_loh = ifelse(loh, 0, p_loh),
+                p_bdel = ifelse(loh, 0, p_bdel),
+                p_bamp = ifelse(loh, 0, p_bamp)
+            )
+        
+        # propagate posterior CNV state to allele states
+        bulk = bulk %>% mutate(state_post = ifelse(
                 cnv_state_post %in% c('amp', 'del', 'loh') & (!cnv_state %in% c('bamp', 'bdel')),
                 paste0(cnv_state_post, '_', str_extract(state, 'up_1|down_1|up_2|down_2|up|down|1_up|2_up|1_down|2_down')),
                 cnv_state_post
