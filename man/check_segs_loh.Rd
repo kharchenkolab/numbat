@@ -9,6 +9,10 @@ check_segs_loh(segs_loh)
 \arguments{
 \item{segs_loh}{dataframe Clonal LOH segment dataframe}
 }
+\value{
+dataframe Clonal LOH segment dataframe
+}
 \description{
 Check the format of a given clonal LOH segment dataframe
 }
+\keyword{internal}

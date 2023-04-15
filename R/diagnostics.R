@@ -194,6 +194,8 @@ check_exp_noise = function(bulk) {
 
 #' Check the format of a given clonal LOH segment dataframe
 #' @param segs_loh dataframe Clonal LOH segment dataframe
+#' @return dataframe Clonal LOH segment dataframe
+#' @keywords internal
 check_segs_loh = function(segs_loh) {
     
         if (is.null(segs_loh)) {
