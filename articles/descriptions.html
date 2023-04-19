@@ -101,18 +101,18 @@
 names are post-fixed with the <code>i</code>th iteration of phylogeny
 optimization. Here is a detailed list:</p>
 <div class="section level5">
-<h5 id="source-data-files">Source data files<a class="anchor" aria-label="anchor" href="#source-data-files"></a>
+<h5 id="analysis-results">Analysis results<a class="anchor" aria-label="anchor" href="#analysis-results"></a>
 </h5>
 <ul>
 <li>
 <a href="#pseudobulk-profiles"><code>bulk_subtrees_{i}.tsv.gz</code></a>:
-subtree pseudobulk data based on current cell lineage tree</li>
+Subtree pseudobulk profiles based on current cell lineage tree</li>
 <li>
 <a href="#consensus-segments"><code>segs_consensus_{i}.tsv.gz</code></a>:
-consensus segments from subtree pseudobulk HMMs</li>
+Consensus segments from subtree pseudobulk HMMs</li>
 <li>
 <a href="#pseudobulk-profiles"><code>bulk_clones_{i}.tsv.gz</code></a>:
-clone-leve pseudobulk data based on current cell lineage tree</li>
+Clone-level pseudobulk profiles based on current cell lineage tree</li>
 <li>
 <a href="#exp_post"><code>exp_post_{i}.tsv</code></a>:
 Expression-based posterior probabilities of CNV states for each segment
@@ -127,17 +127,20 @@ Joint posterior probabilities of CNV states for each segment in each
 cell.</li>
 <li>
 <a href="#clone-assignments"><code>clone_post_{i}.tsv</code></a>:
-single-cell clone assignment and tumor versus normal classification
+Single-cell clone assignment and tumor versus normal classification
 posteriors</li>
 <li>
 <a href="#pseudobulk-profiles"><code>bulk_clones_final.tsv.gz</code></a>:
-clone-leve pseudobulk data based on final cell lineage tree</li>
+Clone-level pseudobulk profiles based on final cell lineage tree</li>
 <li>
-<code>segs_loh.tsv</code>: Clonal LoH segments; written if
-<code>call_clonal_loh</code> is enabled</li>
+<code>bulk_subtrees_retest_{i}.tsv.gz</code>: Subtree pseudobulk
+profiles after retesting CNV states</li>
 <li>
 <code>gexp_roll_wide.tsv.gz</code>: window-smoothed normalized
 expression profiles of single cells</li>
+<li>
+<code>segs_loh.tsv</code>: Clonal LoH segments; written if
+<code>call_clonal_loh</code> is enabled</li>
 </ul>
 </div>
 <div class="section level5">
@@ -190,9 +193,6 @@ format)</li>
 <li>
 <code>tree_final_{i}.rds</code>: final cell lineage tree with
 mutation and clone annotation (in tbl_graph format)</li>
-<li>
-<code>bulk_subtrees_retest_{i}.tsv.gz</code>: subtree pseudobulk
-after retesting CNV states</li>
 </ul>
 </div>
 <div class="section level5">
