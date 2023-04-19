@@ -1,0 +1,448 @@
+---
+title: "File descriptions"
+description: "Full list of output files and column descriptions"
+documentclass: book
+output:
+  bookdown::gitbook:
+    split_by: rmd
+---
+
+# List of output files
+Numbat generates a number of files in the output folder. The file names are post-fixed with the `i`th iteration of phylogeny optimization. Here is a detailed list:
+
+#### Source data files
+- [`bulk_subtrees_{i}.tsv.gz`](#pseudobulk-profiles): subtree pseudobulk data based on current cell lineage tree
+- [`segs_consensus_{i}.tsv.gz`](#consensus-segments): consensus segments from subtree pseudobulk HMMs
+- [`bulk_clones_{i}.tsv.gz`](#pseudobulk-profiles): clone-leve pseudobulk data based on current cell lineage tree
+- [`exp_post_{i}.tsv`](#exp_post): Expression-based posterior probabilities of CNV states for each segment in each cell.
+- [`allele_post_{i}.tsv`](#single-cell-posteriors): Allele-based posterior probabilities of CNV states for each segment in each cell.
+- [`joint_post_{i}.tsv`](#single-cell-posteriors): Joint posterior probabilities of CNV states for each segment in each cell.
+- [`clone_post_{i}.tsv`](#clone-assignments): single-cell clone assignment and tumor versus normal classification posteriors
+- [`bulk_clones_final.tsv.gz`](#pseudobulk-profiles): clone-leve pseudobulk data based on final cell lineage tree
+- `segs_loh.tsv`: Clonal LoH segments; written if `call_clonal_loh` is enabled
+- `gexp_roll_wide.tsv.gz`: window-smoothed normalized expression profiles of single cells
+
+#### Plots
+- `exp_roll_clust.png`: visualization of single-cell smoothed gene expression profiles
+- `bulk_subtrees_{i}.png`: visualization of subtree pseudobulk CNV profiles 
+- `bulk_clones_{i}.png`: visualization of clone pseudobulk CNV profiles
+- `bulk_clones_final.png`: visualization of final clone pseudobulk CNV profiles 
+- `tree_list_{i}.rds`: list of candidate phylogeneies in the maximum likelihood tree search
+- `panel_{i}.png`: integrated visualization of single-cell phylogeny and CNV landscape
+
+#### Lineage trees
+- `hc.rds`: initial hierarchical clustering result based on smoothed expression
+- `clones_{i}.rds`: list of candidate clones used to generate `bulk_clones_{i}.tsv.gz`
+- `subtrees_{i}.rds`: list of candidate subtrees used to generate `bulk_subtrees_{i}.tsv.gz`
+- `tree_NJ_{i}.rds`: neighbor joining tree
+- `mut_graph_{i}.rds`: mutation graph derived from the current cell lineage tree
+- `tree_ML_{i}.rds`: maximum likelihood tree (in ape::phylo format)
+- `tree_final_{i}.rds`: final cell lineage tree with mutation and clone annotation (in tbl_graph format)
+- `bulk_subtrees_retest_{i}.tsv.gz`: subtree pseudobulk after retesting CNV states
+
+#### Misc
+- `log.txt`: log file
+- `sc_refs.rds`: list of best reference match for each cell
+
+# Single-cell posteriors
+
+`cell`: character; Cell barcode
+
+`CHROM`: character; Chromosome
+
+`seg`: character; Segment ID
+
+`cnv_state`: character; CNV state estimated from pseudobulk HMM
+
+`n_snp`: numeric; Number of SNPs in segment
+
+`seg_start`: numeric; Segment start position
+
+`seg_end`: numeric; Segment end position
+
+`n_genes`: numeric; Number of genes in segment
+
+`n_snps`: numeric; Number of SNPs in segment
+
+`prior_loh`: numeric; Prior probability of CNLoH
+
+`prior_amp`: numeric; Prior probability of amplification
+
+`prior_del`: numeric; Prior probability of deletion
+
+`prior_bamp`: numeric; Prior probability of biallelic amplification
+
+`prior_bdel`: numeric; Prior probability of biallelic deletion
+
+`l11_x`: numeric; Log-likelihood of CNV state 1:1 (neutral) given expression data
+
+`l20_x`: numeric; Log-likelihood of CNV state 2:0 (CNLoH) given expression data
+
+`l10_x`: numeric; Log-likelihood of CNV state 1:0 (deletion) given expression data
+
+`l21_x`: numeric; Log-likelihood of CNV state 2:1 (amplification) given expression data
+
+`l31_x`: numeric; Log-likelihood of CNV state 3:1 (amplification) given expression data
+
+`l22_x`: numeric; Log-likelihood of CNV state 2:2 (biallelic amplification) given expression data
+
+`l00_x`: numeric; Log-likelihood of CNV state 0:0 (biallelic deletion) given expression data
+
+`Z_cnv_x`: numeric; Total log(likelihood * prior) of CNV states given expression data
+
+`Z_n_x`: numeric; Total log(likelihood * prior) of neutral state given expression data
+
+`logBF_x`: numeric; Log Bayes factor of CNV state vs. neutral state given expression data
+
+`l11_y`: numeric; Log-likelihood of CNV state 1:1 (neutral) given allele data
+
+`l20_y`: numeric; Log-likelihood of CNV state 2:0 (CNLoH) given allele data
+
+`l10_y`: numeric; Log-likelihood of CNV state 1:0 (deletion) given allele data
+
+`l21_y`: numeric; Log-likelihood of CNV state 2:1 (gain) given allele data
+
+`l31_y`: numeric; Log-likelihood of CNV state 3:1 (amplification) given allele data
+
+`l22_y`: numeric; Log-likelihood of CNV state 2:2 (biallelic amplification) given allele data
+
+`l00_y`: numeric; Log-likelihood of CNV state 0:0 (biallelic deletion) given allele data
+
+`Z_cnv_y`: numeric; Total log(likelihood * prior) of CNV states given allele data
+
+`Z_n_y`: numeric; Total log(likelihood * prior) of neutral state given allele data
+
+`logBF_y`: numeric; Log Bayes factor of CNV state vs. neutral state given allele data
+
+`LLR`: numeric; Log-likelihood ratio of CNV state vs. neutral state
+
+`LLR_x`: numeric; Log-likelihood ratio of CNV state vs. neutral state given expression data
+
+`LLR_y`: numeric; Log-likelihood ratio of CNV state vs. neutral state given allele data
+
+`l11`: numeric; Joint log-likelihood of CNV state 1:1 (neutral)
+
+`l20`: numeric; Joint log-likelihood of CNV state 2:0 (CNLoH)
+
+`l10`: numeric; Joint log-likelihood of CNV state 1:0 (deletion)
+
+`l21`: numeric; Joint log-likelihood of CNV state 2:1 (amplification)
+
+`l31`: numeric; Joint log-likelihood of CNV state 3:1 (amplification)
+
+`l22`: numeric; Joint log-likelihood of CNV state 2:2 (biallelic amplification)
+
+`l00`: numeric; Joint log-likelihood of CNV state 0:0 (biallelic deletion)
+
+`Z_amp`: numeric; Total log(likelihood * prior) of amplification state
+
+`Z_loh`: numeric; Total log(likelihood * prior) of CNLoH state
+
+`Z_del`: numeric; Total log(likelihood * prior) of deletion state
+
+`Z_bamp`: numeric; Total log(likelihood * prior) of biallelic amplification state
+
+`Z_bdel`: numeric; Total log(likelihood * prior) of biallelic deletion state
+
+`Z_n`: numeric; Total log(likelihood * prior) of neutral state
+
+`Z`: numeric; Total log(likelihood * prior) of all states
+
+`Z_cnv`: numeric; Total log(likelihood * prior) of CNV states
+
+`p_amp`: numeric; Joint posterior probability of amplification states (2:1, 3:1)
+
+`p_neu`: numeric; Joint posterior probability of neutral state
+
+`p_del`: numeric; Joint posterior probability of deletion state
+
+`p_loh`: numeric; Joint posterior probability of CNLoH state
+
+`p_bamp`: numeric; Joint posterior probability of biallelic amplification state
+
+`p_bdel`: numeric; Joint posterior probability of biallelic deletion state
+
+`logBF`: numeric; Joint log Bayes factor of CNV state vs. neutral state
+
+`p_cnv`: numeric; Joint posterior probability of CNV state
+
+`p_n`: numeric; Joint posterior probability of neutral state
+
+`p_cnv_x`: numeric; Joint posterior probability of CNV state given expression data
+
+`p_cnv_y`: numeric; Joint posterior probability of CNV state given allele data
+
+`cnv_state_mle`: character; Maximum likelihood CNV state
+
+`cnv_state_map`: character; Maximum a posteriori CNV state
+
+`seg_label`: character; Segment label
+
+`avg_entropy`: numeric; Average entropy of CNV posterior in single cells
+
+`phi_mle`: numeric; Maximum likelihood of total copy number ratio relative to diploid (phi)
+
+`mu`: numeric; Mean of expression count distribution in the cell (Poisson log-Normal)
+
+`sigma`: numeric; Standard deviation of expression count distribution in the cell (Poisson log-Normal)
+
+`ref`: character; Best-matching single-cell expression reference
+
+`major`: integer; Major allele count
+
+`minor`: integer; Minor allele count
+
+`total`: integer; Total allele count
+
+`MAF`: numeric; Major allele frequency
+
+# Pseudobulk profiles
+
+`snp_id`: character; SNP ID
+
+`CHROM`: character; Chromosome
+
+`POS`: integer; Genomic position
+
+`cM`: numeric; Genetic distance in cM
+
+`REF`: character; Reference allele
+
+`ALT`: character; Alternate allele
+
+`GT`: character; Phased genotype
+
+`gene`: character; Gene symbol
+
+`AD`: integer; Allelic depth
+
+`DP`: integer; Total depth
+
+`AR`: numeric; Allelic fraction
+
+`snp_index`: integer; SNP index
+
+`pBAF`: numeric; Phased BAF
+
+`pAD`: numeric; Phased allelic depth
+
+`inter_snp_cm`: numeric; Genetic distance in cM between adjacent SNPs
+
+`p_s`: numeric; Probability of phase switch based on inter-SNP distance
+
+`Y_obs`: integer; Observed gene expression counts (the X/Y notation is switched here..)
+
+`lambda_obs`: numeric; Observed gene expression magnitude
+
+`lambda_ref`: numeric; Reference gene expression magnitude
+
+`d_obs`: numeric; Total gene expression count in the cell
+
+`gene_start`: integer; Gene start position
+
+`gene_end`: integer; Gene end position
+
+`gene_length`: integer; Gene length
+
+`gene_index`: integer; Gene index
+
+`logFC`: numeric; Log2 fold change of gene expression
+
+`lnFC`: numeric; Natural log fold change of gene expression
+
+`mse`: numeric; Mean squared error of logFC
+
+`snp_rate`: numeric; SNP rate
+
+`loh`: logical; True if segment has a clonal LoH (deletion)
+
+`n_cells`: integer; Number of cells in the pseudobulk
+
+`members`: character; Cell groups included in the pseudobulk
+
+`sample`: character/integer; Sample ID
+
+`state`: character; CNV state
+
+`boundary`: logical; True if the marker is at CNV boundary 
+
+`seg_start_index`: integer; Segment start marker index
+
+`seg_end_index`: integer; Segment end marker index
+
+`seg_start`: integer; Segment start position
+
+`seg_end`: integer; Segment end position
+
+`seg_length`: integer; Segment length in bp
+
+`seg`: character; Segment ID
+
+`seg_cons`: character; Consensus segment ID
+
+`diploid`: logical; True if the segment is diploid
+
+`mu`: numeric; Mean of expression count distribution in the pseudobulk (Poisson log-Normal)
+
+`sig`: numeric; Standard deviation of expression count distribution in the pseudobulk (Poisson log-Normal)
+
+`cnv_state`: character; CNV state
+
+`n_genes`: integer; Number of genes in the segment
+
+`n_snps`: integer; Number of SNPs in the segment
+
+`theta_hat`: numeric; Crude estimate haplotype frequency based on MAF 
+
+`theta_mle`: numeric; Maximum likelihood estimate of haplotype frequency (theta)
+
+`theta_sigma`: numeric; Standard deviation of theta MLE
+
+`L_y_n`: numeric; Neutral log-likelihood of allele data
+
+`L_y_d`: numeric; Deletion log-likelihood of allele data
+
+`L_y_a`: numeric; Amplification log-likelihood of allele data
+
+`phi_mle`: numeric; Maximum likelihood of total copy number ratio relative to diploid (phi)
+
+`phi_sigma`: numeric; Standard deviation of phi MLE
+
+`L_x_n`: numeric; Neutral log-likelihood of expression data
+
+`L_x_d`: numeric; Deletion log-likelihood of expression data
+
+`L_x_a`: numeric; Amplification log-likelihood of expression data
+
+`Z_cnv`: numeric; Total log(likelihood * prior) of CNV states
+
+`Z_n`: numeric; Total log(likelihood * prior) of neutral state
+
+`Z`: numeric; Total log(likelihood * prior) of all states
+
+`logBF`: numeric; Joint log Bayes factor of CNV state vs. neutral state
+
+`p_neu`: numeric; Joint posterior probability of neutral state
+
+`p_loh`: numeric; Joint posterior probability of CNLoH state
+
+`p_amp`: numeric; Joint posterior probability of amplification states (2:1, 3:1)
+
+`p_del`: numeric; Joint posterior probability of deletion state
+
+`p_bamp`: numeric; Joint posterior probability of biallelic amplification state
+
+`p_bdel`: numeric; Joint posterior probability of biallelic deletion state
+
+`LLR_x`: numeric; Log-likelihood ratio of expression data
+
+`LLR_y`: numeric; Log-likelihood ratio of allele data
+
+`LLR`: numeric; Log-likelihood ratio of all data
+
+`cnv_state_post`: character; Maximum a posteriori (retest) CNV state
+
+`state_post`: character; Maximum a posteriori CNV allelic state
+
+`p_up`: numeric; HMM posterior probability of variant allele belonging to the major haplotype
+
+`haplo_post`: numeric; Maximum a posteriori haplotype state assignment
+
+`haplo_naive`: numeric; Naive haplotype state assignment (based on BAF)
+
+`major_count`: integer; Major allele count
+
+`minor_count`: integer; Minor allele count
+
+`theta_hat_roll`: numeric; Crude estimate haplotype frequency based on MAF (rolling window)
+
+`phi_mle_roll`: numeric; Maximum likelihood of total copy number ratio relative to diploid (phi, rolling window)
+
+`nu`: numeric; Phase-switch rate used in the HMM
+
+`gamma`: numeric; Allele inverse-overdispersion used in the HMM
+
+# Consensus segments
+consensus segments from subtree pseudobulk HMMs
+
+`sample`: character/integer; Sample ID
+
+`CHROM`: character; Chromosome
+
+`seg`: character; Segment ID
+
+`cnv_state`: character; CNV state
+
+`cnv_state_post`: character; Maximum a posteriori (retest) CNV state
+
+`seg_start`: integer; Segment start position
+
+`seg_end`: integer; Segment end position
+
+`seg_start_index`: integer; Segment start marker index
+
+`seg_end_index`: integer; Segment end marker index
+
+`theta_mle`: numeric; Maximum likelihood estimate of haplotype frequency (theta)
+
+`theta_sigma`: numeric; Standard deviation of theta MLE
+
+`phi_mle`: numeric; Maximum likelihood of total copy number ratio relative to diploid (phi)
+
+`phi_sigma`: numeric; Standard deviation of phi MLE
+
+`p_loh`: numeric; Joint posterior probability of CNLoH state
+
+`p_del`: numeric; Joint posterior probability of deletion state
+
+`p_amp`: numeric; Joint posterior probability of amplification states (2:1, 3:1)
+
+`p_bamp`: numeric; Joint posterior probability of biallelic amplification state
+
+`p_bdel`: numeric; Joint posterior probability of biallelic deletion state
+
+`LLR`: numeric; Log-likelihood ratio of all data
+
+`LLR_y`: numeric; Log-likelihood ratio of allele data
+
+`LLR_x`: numeric; Log-likelihood ratio of expression data
+
+`n_genes`: integer; Number of genes in the segment
+
+`n_snps`: integer; Number of SNPs in the segment
+
+`component`: integer; Component ID
+
+`LLR_sample`: numeric; Log-likelihood ratio in the sample where the CNV has the highest LLR
+
+`seg_length`: integer; Segment length in bp
+
+`seg_cons`: character; Consensus segment ID
+
+`n_states`: integer; Number of CNV states
+
+`cnv_states`: character; CNV states
+
+# Clone assignments
+
+`cell`: character; Cell ID
+
+`clone_opt`: integer; Maximum a posteriori clone assignment
+
+`GT_opt`: character; Maximum a posteriori genotype
+
+`p_opt`: numeric; Maximum a posteriori clone probability
+
+`p_{k}`: numeric; Posterior probability of cell beloning to clone k
+
+`p_x_{k}`: numeric; Posterior probability of cell belonging to clone k given expression data
+
+`p_y_{k}`: numeric; Posterior probability of cell belonging to clone k given allele data
+
+`p_cnv`: numeric; Posterior probability of cell belonging to an aneuploid clone
+
+`p_cnv_x`: numeric; Posterior probability of cell belonging to an aneuploid clone given expression data
+
+`p_cnv_y`: numeric; Posterior probability of cell belonging to an aneuploid clone given allele data
+
+`compartment_opt`: character; Maximum a posteriori compartment (tumor vs normal) assignment

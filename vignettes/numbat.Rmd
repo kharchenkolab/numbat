@@ -1,10 +1,15 @@
 # Table of contents
-  
+
 - [Installation](#installation)
+  - [Docker](#docker)
 - [Preparing data](#preparing-data)
 - [Running Numbat](#running-numbat)
+  - [Run parameters](#run-parameters)
+  - [Detecting clonal LOH](#detecting-clonal-loh)
+  - [Using existing CNV calls](#using-existing-cnv-calls)
 - [Understanding results](#understanding-results)
-- [Advanced phasing options](#phasing-options)
+- [Phasing options](#phasing-options)
+  - [Using prephased SNP profiles](#using-prephased-snp-profiles)
 - [Spatial data](#spatial-data)
 - [Mouse data](#mouse-data)
 - [FAQ](#faq)
@@ -193,24 +198,8 @@ Please note that diploid segments (`cnv_state = "neu"`) should also be included.
 A detailed vignette on how to interpret and visualize Numbat results is available:  
 - [Interpreting Numbat results](https://kharchenkolab.github.io/numbat/articles/results.html)
 
-Numbat generates a number of files in the output folder. The file names are post-fixed with the `i`th iteration of phylogeny optimization. Here is a detailed list:
-
-- `gexp_roll_wide.tsv.gz`: window-smoothed normalized expression profiles of single cells
-- `hc.rds`: initial hierarchical clustering result based on smoothed expression
-- `exp_roll_clust.png`: visualization of single-cell smoothed gene expression profiles
-- `bulk_subtrees_{i}.tsv.gz`: subtree pseudobulk data based on current cell lineage tree
-- `bulk_subtrees_{i}.png`: visualization of subtree pseudobulk CNV profiles 
-- `segs_consensus_{i}.tsv.gz`: consensus segments from subtree pseudobulk HMMs
-- `bulk_clones_{i}.tsv.gz`: clone-leve pseudobulk data based on current cell lineage tree
-- `bulk_clones_{i}.png`: visualization of clone pseudobulk CNV profiles
-- `bulk_clones_final.tsv.gz`: clone-leve pseudobulk data based on final cell lineage tree
-- `bulk_clones_final.png`: visualization of final clone pseudobulk CNV profiles 
-- `exp_post_{i}.tsv`: single-cell expression posteriors
-- `allele_post_{i}.tsv`: single-cell allele posteriors
-- `joint_post_{i}.tsv`: single-cell joint posteriors
-- `clone_post_{i}.tsv`: single-cell clone assignment and tumor versus normal classification posteriors
-- `tree_list_{i}.rds`: list of candidate phylogeneies in the maximum likelihood tree search
-- `panel_{i}.png`: integrated visualization of single-cell phylogeny and CNV landscape
+For a full list of output files and column descriptions, please see:
+- [Output descriptions](https://kharchenkolab.github.io/numbat/articles/descriptions.html)
 
 # Phasing options
 The CNV detection power of Numbat can be further enhanced by conducting population-based phasing with a larger and more diverse reference panel (i.e. reference haplotypes). The default pipeline above uses the [1000 Genome](https://www.internationalgenome.org) panel, which contains genotypes from 2,504 individuals. Larger reference panels include:
