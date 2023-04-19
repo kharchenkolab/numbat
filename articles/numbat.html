@@ -55,6 +55,7 @@
     <a class="dropdown-item" href="../articles/results.html">Interpreting Numbat results</a>
     <a class="dropdown-item" href="../articles/mouse.html">Mouse tutorial</a>
     <a class="dropdown-item" href="../articles/spatial-rna.html">Spatial transcriptomics</a>
+    <a class="dropdown-item" href="../articles/descriptions.html">File descriptions</a>
   </div>
 </li>
 <li class="nav-item">
@@ -97,11 +98,30 @@
 <h2 id="table-of-contents">Table of contents<a class="anchor" aria-label="anchor" href="#table-of-contents"></a>
 </h2>
 <ul>
-<li><a href="#installation">Installation</a></li>
+<li>
+<a href="#installation">Installation</a>
+<ul>
+<li><a href="#docker">Docker</a></li>
+</ul>
+</li>
 <li><a href="#preparing-data">Preparing data</a></li>
-<li><a href="#running-numbat">Running Numbat</a></li>
+<li>
+<a href="#running-numbat">Running Numbat</a>
+<ul>
+<li><a href="#run-parameters">Run parameters</a></li>
+<li><a href="#detecting-clonal-loh">Detecting clonal LOH</a></li>
+<li><a href="#using-existing-cnv-calls">Using existing CNV
+calls</a></li>
+</ul>
+</li>
 <li><a href="#understanding-results">Understanding results</a></li>
-<li><a href="#phasing-options">Advanced phasing options</a></li>
+<li>
+<a href="#phasing-options">Phasing options</a>
+<ul>
+<li><a href="#using-prephased-snp-profiles">Using prephased SNP
+profiles</a></li>
+</ul>
+</li>
 <li><a href="#spatial-data">Spatial data</a></li>
 <li><a href="#mouse-data">Mouse data</a></li>
 <li><a href="#faq">FAQ</a></li>
@@ -412,57 +432,9 @@ should also be included.</p>
 is available:<br>
 - <a href="https://kharchenkolab.github.io/numbat/articles/results.html">Interpreting
 Numbat results</a></p>
-<p>Numbat generates a number of files in the output folder. The file
-names are post-fixed with the <code>i</code>th iteration of phylogeny
-optimization. Here is a detailed list:</p>
-<ul>
-<li>
-<code>gexp_roll_wide.tsv.gz</code>: window-smoothed normalized
-expression profiles of single cells</li>
-<li>
-<code>hc.rds</code>: initial hierarchical clustering result based on
-smoothed expression</li>
-<li>
-<code>exp_roll_clust.png</code>: visualization of single-cell
-smoothed gene expression profiles</li>
-<li>
-<code>bulk_subtrees_{i}.tsv.gz</code>: subtree pseudobulk data based
-on current cell lineage tree</li>
-<li>
-<code>bulk_subtrees_{i}.png</code>: visualization of subtree
-pseudobulk CNV profiles</li>
-<li>
-<code>segs_consensus_{i}.tsv.gz</code>: consensus segments from
-subtree pseudobulk HMMs</li>
-<li>
-<code>bulk_clones_{i}.tsv.gz</code>: clone-leve pseudobulk data
-based on current cell lineage tree</li>
-<li>
-<code>bulk_clones_{i}.png</code>: visualization of clone pseudobulk
-CNV profiles</li>
-<li>
-<code>bulk_clones_final.tsv.gz</code>: clone-leve pseudobulk data
-based on final cell lineage tree</li>
-<li>
-<code>bulk_clones_final.png</code>: visualization of final clone
-pseudobulk CNV profiles</li>
-<li>
-<code>exp_post_{i}.tsv</code>: single-cell expression
-posteriors</li>
-<li>
-<code>allele_post_{i}.tsv</code>: single-cell allele posteriors</li>
-<li>
-<code>joint_post_{i}.tsv</code>: single-cell joint posteriors</li>
-<li>
-<code>clone_post_{i}.tsv</code>: single-cell clone assignment and
-tumor versus normal classification posteriors</li>
-<li>
-<code>tree_list_{i}.rds</code>: list of candidate phylogeneies in
-the maximum likelihood tree search</li>
-<li>
-<code>panel_{i}.png</code>: integrated visualization of single-cell
-phylogeny and CNV landscape</li>
-</ul>
+<p>For a full list of output files and column descriptions, please see:
+- <a href="https://kharchenkolab.github.io/numbat/articles/descriptions.html">Output
+descriptions</a></p>
 </div>
 <div class="section level2">
 <h2 id="phasing-options">Phasing options<a class="anchor" aria-label="anchor" href="#phasing-options"></a>
