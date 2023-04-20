@@ -1,5 +1,3 @@
-############ allele HMM ############
-
 #' Beta-binomial distribution density function
 #' A distribution is beta-binomial if p, the probability of success, 
 #' in a binomial distribution has a beta distribution with shape 
@@ -64,6 +62,10 @@ get_allele_hmm = function(pAD, DP, p_s, theta, gamma = 20) {
 }
 
 #' Viterbi algorithm for allele HMM
+#' @param hmm HMM object; expect variables x (allele depth), d (total depth),
+#' logPi (log transition prob matrix), delta (prior for each state), 
+#' alpha (alpha for each state), beta (beta for each state), 
+#' states (states), p_s (phase switch probs)
 #' @keywords internal
 viterbi_allele <- function(hmm) {
 
@@ -88,6 +90,10 @@ viterbi_allele <- function(hmm) {
 }
 
 #' Forward-backward algorithm for allele HMM
+#' @param hmm HMM object; expect variables x (allele depth), d (total depth),
+#' logPi (log transition prob matrix), delta (prior for each state), 
+#' alpha (alpha for each state), beta (beta for each state), 
+#' states (states), p_s (phase switch probs)
 #' @keywords internal
 forward_back_allele = function(hmm) {
 
@@ -119,6 +125,10 @@ forward_back_allele = function(hmm) {
 }
 
 # Only compute total log likelihood
+#' @param hmm HMM object; expect variables x (allele depth), d (total depth),
+#' logPi (log transition prob matrix), delta (prior for each state), 
+#' alpha (alpha for each state), beta (beta for each state), 
+#' states (states), p_s (phase switch probs)
 #' @keywords internal
 likelihood_allele = function(hmm) {
         
@@ -369,6 +379,12 @@ run_joint_hmm = function(
 
 
 #' Calculate the transition matrix for joint HMM
+#' @param t numeric; CNV state transition probability
+#' @param p_s numeric; phase switch probability
+#' @param w numeric; relative abundance of states
+#' @param states_cn character; CNV states
+#' @param states_phase character; haplotype phase states
+#' @return array; transition matrix
 #' @keywords internal
 calc_trans_mat = function(t, p_s, w, states_cn, states_phase) {
 
@@ -383,7 +399,15 @@ calc_trans_mat = function(t, p_s, w, states_cn, states_phase) {
 
 
 #' Helper function to calculate transition porbabilities
-# cn/phase are sclars, only p_s is vectorized
+#' cn/phase are sclars, only p_s is vectorized
+#' @param t numeric; CNV state transition probability
+#' @param p_s numeric; phase switch probability
+#' @param w numeric; relative abundance of states
+#' @param cn_from character; originating CNV state
+#' @param phase_from character; originating haplotype phase state
+#' @param cn_to character; destination CNV state
+#' @param phase_to character; destination haplotype phase state
+#' @return numeric; transition probability
 #' @keywords internal
 get_trans_probs = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
 
@@ -412,6 +436,10 @@ get_trans_probs = function(t, p_s, w, cn_from, phase_from, cn_to, phase_to) {
 }
 
 #' Generalized viterbi algorithm for joint HMM
+#' @param hmm HMM object; expect variables x (allele depth), d (total depth), y (expression count), l (cell total library size),
+#' lambda (reference expression rate), mu (global expression mean), sig (global expression standard deviation), 
+#' logPi (log transition prob matrix), phi (expression fold change for each state), delta (prior for each state), 
+#' alpha (alpha for each state), beta (beta for each state), states (states), p_s (phase switch probs)
 #' @keywords internal
 viterbi_joint <- function(hmm) {
 
@@ -460,6 +488,12 @@ viterbi_joint <- function(hmm) {
 ############ Clonal deletion HMM ############
 
 #' Viterbi for clonal LOH detection
+#' @param hmm HMM object; expect variables x (SNP count), snp_sig (snp rate standard deviation), 
+#' pm (snp density for ref and loh states), pn (gene lengths),
+#' d (total expression depth), y (expression count), lambda_star (reference expression rate), 
+#' mu (global expression mean), sig (global expression standard deviation),
+#' Pi (transition prob matrix), delta (prior for each state),
+#' phi (expression fold change for each state)
 #' @keywords internal
 viterbi_loh <- function (hmm, ...){
 
