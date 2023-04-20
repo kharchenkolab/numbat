@@ -6,6 +6,12 @@
 \usage{
 viterbi_joint(hmm)
 }
+\arguments{
+\item{hmm}{HMM object; expect variables x (allele depth), d (total depth), y (expression count), l (cell total library size),
+lambda (reference expression rate), mu (global expression mean), sig (global expression standard deviation), 
+logPi (log transition prob matrix), phi (expression fold change for each state), delta (prior for each state), 
+alpha (alpha for each state), beta (beta for each state), states (states), p_s (phase switch probs)}
+}
 \description{
 Generalized viterbi algorithm for joint HMM
 }

@@ -163,7 +163,7 @@ forward_back_allele = function(hmm) {
     return(marginals)
 }
 
-# Only compute total log likelihood
+#' Only compute total log likelihood from an allele HMM
 #' @param hmm HMM object; expect variables x (allele depth), d (total depth),
 #' logPi (log transition prob matrix), delta (prior for each state), 
 #' alpha (alpha for each state), beta (beta for each state), 

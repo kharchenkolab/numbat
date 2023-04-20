@@ -2,11 +2,31 @@
 % Please edit documentation in R/hmm.R
 \name{get_trans_probs}
 \alias{get_trans_probs}
-\title{Helper function to calculate transition porbabilities}
+\title{Helper function to calculate transition porbabilities
+cn/phase are sclars, only p_s is vectorized}
 \usage{
 get_trans_probs(t, p_s, w, cn_from, phase_from, cn_to, phase_to)
 }
+\arguments{
+\item{t}{numeric; CNV state transition probability}
+
+\item{p_s}{numeric; phase switch probability}
+
+\item{w}{numeric; relative abundance of states}
+
+\item{cn_from}{character; originating CNV state}
+
+\item{phase_from}{character; originating haplotype phase state}
+
+\item{cn_to}{character; destination CNV state}
+
+\item{phase_to}{character; destination haplotype phase state}
+}
+\value{
+numeric; transition probability
+}
 \description{
 Helper function to calculate transition porbabilities
+cn/phase are sclars, only p_s is vectorized
 }
 \keyword{internal}

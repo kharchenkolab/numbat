@@ -6,6 +6,20 @@
 \usage{
 calc_trans_mat(t, p_s, w, states_cn, states_phase)
 }
+\arguments{
+\item{t}{numeric; CNV state transition probability}
+
+\item{p_s}{numeric; phase switch probability}
+
+\item{w}{numeric; relative abundance of states}
+
+\item{states_cn}{character; CNV states}
+
+\item{states_phase}{character; haplotype phase states}
+}
+\value{
+array; transition matrix
+}
 \description{
 Calculate the transition matrix for joint HMM
 }
