@@ -192,7 +192,7 @@ Sometimes users already have CNV calls from bulk WGS, WES, or array analysis. In
 - `seg_end`: integer; segment end position
 - `cnv_state`: character; copy number state (neu, del, amp, loh, bamp, bdel)
 
-Please note that diploid segments (`cnv_state = "neu"`) should also be included. 
+Please note that diploid segments (`cnv_state = "neu"`) should also be included (i.e. `segs_consensus_fix` should be a complete copy number profile including all chromosomes).
 
 # Understanding results
 A detailed vignette on how to interpret and visualize Numbat results is available:
