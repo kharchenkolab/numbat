@@ -6,6 +6,12 @@
 \usage{
 viterbi_allele(hmm)
 }
+\arguments{
+\item{hmm}{HMM object; expect variables x (allele depth), d (total depth),
+logPi (log transition prob matrix), delta (prior for each state), 
+alpha (alpha for each state), beta (beta for each state), 
+states (states), p_s (phase switch probs)}
+}
 \description{
 Viterbi algorithm for allele HMM
 }

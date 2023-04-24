@@ -27,26 +27,31 @@ log_message = function(msg, verbose = TRUE) {
 #' @keywords internal
 check_matrix = function(count_mat) {
 
-    if ('dgCMatrix' %in% class(count_mat)) {
-        return(count_mat)
-    } else if ('matrix' %in% class(count_mat)) {
+    # Make sure that the count matrix is of class dgCMatrix
+    if ('matrix' %in% class(count_mat)) {
         count_mat <- as(Matrix(count_mat, sparse=TRUE), "dgCMatrix")
-        return(count_mat)
-    } else {
-
-        if (!('dgCMatrix' %in% class(count_mat))) {
-            msg = "count_mat is not of class dgCMatrix or matrix"
-        } else if (!is.numeric(count_mat@x)) {
-            msg = "The parameter 'count_mat' must be of type 'integer'. Please fix."
-        } else if (all(count_mat@x != as.integer(count_mat@x))) {
-            msg = "The parameter 'count_mat' must be of type 'integer'. Please fix."
-        } else if (any(duplicated(rownames(count_mat)))) {
-            msg = "Please remove duplicated genes in count matrix"
-        }
-
+    } else if (!('dgCMatrix' %in% class(count_mat))) {
+        msg = "count_mat should be of class dgCMatrix or matrix"
         log_error(msg)
         stop(msg)
     }
+
+    # Make sure that the count matrix is of type integer
+    if (!is.numeric(count_mat@x)) {
+        msg = "The parameter 'count_mat' should be of type 'integer'. Please fix."
+        log_error(msg)
+        stop(msg)
+    } else if (all(count_mat@x != as.integer(count_mat@x))) {
+        msg = "The parameter 'count_mat' should be of type 'integer'. Please fix."
+        log_error(msg)
+        stop(msg)
+    } else if (any(duplicated(rownames(count_mat)))) {
+        msg = "Please remove duplicated genes in count matrix"
+        log_error(msg)
+        stop(msg)
+    }
+
+    return(count_mat)
 }
 
 #' Check the format of a allele dataframe

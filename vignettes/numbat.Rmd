@@ -237,3 +237,7 @@ Numbat (v1.2.0) now works for a F1 hybrid mouse bred from two known lab mice str
 **Q**: Numbat predicts most of the genome to be amplified, and there are gaps in the pseudobulk allele profile with no heterozygous SNPs. 
 
 **A**: This is a sign that the sample consists mostly of tumor (with very few normal cells), and clonal deletions are present. The heterozygous SNPs cannot be identified in these regions, therefore leaving gaps. You can identify these clonally deleted regions via the SNP-density HMM prior to running the main `run_numbat` workflow (see section [Detecting Clonal LOH](#detecting-clonal-loh)).
+
+**Q**: There seems to be a global baseline shift in the CNV profile produced by Numbat as compared to my other CNV callers; specifically, Numbat calls gains for the segments that appear to be neutral in other analyses, and neutral for segments that appear to be losses.
+
+**A**: Many existing methods (e.g. InferCNV/CopyKAT) infer copy number variations relative to the median ploidy, which can dilute signals of aberrant regions or mistake neutral regions for aberrant due to baseline shifts caused by hyperdiploidy or hypodiploidy. Instead, Numbat first tries to identify diploid regions based on allele evidence (balanced allelic frequencies), and uses these regions as baseline for CNV calling. For more information, please refer to the publications describing [Numbat](https://www.nature.com/articles/s41587-022-01468-y) and [FACETS](https://academic.oup.com/nar/article/44/16/e131/2460163?login=false).
