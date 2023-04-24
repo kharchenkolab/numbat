@@ -10,17 +10,18 @@ output:
 # List of output files
 Numbat generates a number of files in the output folder. The file names are post-fixed with the `i`th iteration of phylogeny optimization. Here is a detailed list:
 
-#### Source data files
-- [`bulk_subtrees_{i}.tsv.gz`](#pseudobulk-profiles): subtree pseudobulk data based on current cell lineage tree
-- [`segs_consensus_{i}.tsv.gz`](#consensus-segments): consensus segments from subtree pseudobulk HMMs
-- [`bulk_clones_{i}.tsv.gz`](#pseudobulk-profiles): clone-leve pseudobulk data based on current cell lineage tree
+#### Analysis results
+- [`bulk_subtrees_{i}.tsv.gz`](#pseudobulk-profiles): Subtree pseudobulk profiles based on current cell lineage tree
+- [`segs_consensus_{i}.tsv.gz`](#consensus-segments): Consensus segments from subtree pseudobulk HMMs
+- [`bulk_clones_{i}.tsv.gz`](#pseudobulk-profiles): Clone-level pseudobulk profiles based on current cell lineage tree
 - [`exp_post_{i}.tsv`](#exp_post): Expression-based posterior probabilities of CNV states for each segment in each cell.
 - [`allele_post_{i}.tsv`](#single-cell-posteriors): Allele-based posterior probabilities of CNV states for each segment in each cell.
 - [`joint_post_{i}.tsv`](#single-cell-posteriors): Joint posterior probabilities of CNV states for each segment in each cell.
-- [`clone_post_{i}.tsv`](#clone-assignments): single-cell clone assignment and tumor versus normal classification posteriors
-- [`bulk_clones_final.tsv.gz`](#pseudobulk-profiles): clone-leve pseudobulk data based on final cell lineage tree
-- `segs_loh.tsv`: Clonal LoH segments; written if `call_clonal_loh` is enabled
+- [`clone_post_{i}.tsv`](#clone-assignments): Single-cell clone assignment and tumor versus normal classification posteriors
+- [`bulk_clones_final.tsv.gz`](#pseudobulk-profiles): Clone-level pseudobulk profiles based on final cell lineage tree
+- `bulk_subtrees_retest_{i}.tsv.gz`: Subtree pseudobulk profiles after retesting CNV states
 - `gexp_roll_wide.tsv.gz`: window-smoothed normalized expression profiles of single cells
+- `segs_loh.tsv`: Clonal LoH segments; written if `call_clonal_loh` is enabled
 
 #### Plots
 - `exp_roll_clust.png`: visualization of single-cell smoothed gene expression profiles
@@ -38,7 +39,6 @@ Numbat generates a number of files in the output folder. The file names are post
 - `mut_graph_{i}.rds`: mutation graph derived from the current cell lineage tree
 - `tree_ML_{i}.rds`: maximum likelihood tree (in ape::phylo format)
 - `tree_final_{i}.rds`: final cell lineage tree with mutation and clone annotation (in tbl_graph format)
-- `bulk_subtrees_retest_{i}.tsv.gz`: subtree pseudobulk after retesting CNV states
 
 #### Misc
 - `log.txt`: log file

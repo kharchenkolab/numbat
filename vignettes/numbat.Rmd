@@ -195,10 +195,12 @@ Sometimes users already have CNV calls from bulk WGS, WES, or array analysis. In
 Please note that diploid segments (`cnv_state = "neu"`) should also be included. 
 
 # Understanding results
-A detailed vignette on how to interpret and visualize Numbat results is available:  
+A detailed vignette on how to interpret and visualize Numbat results is available:
+
 - [Interpreting Numbat results](https://kharchenkolab.github.io/numbat/articles/results.html)
 
 For a full list of output files and column descriptions, please see:
+
 - [Output descriptions](https://kharchenkolab.github.io/numbat/articles/descriptions.html)
 
 # Phasing options
