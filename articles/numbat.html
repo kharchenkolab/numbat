@@ -535,6 +535,20 @@ leaving gaps. You can identify these clonally deleted regions via the
 SNP-density HMM prior to running the main <code>run_numbat</code>
 workflow (see section <a href="#detecting-clonal-loh">Detecting Clonal
 LOH</a>).</p>
+<p><strong>Q</strong>: There seems to be a global baseline shift in the
+CNV profile produced by Numbat as compared to my other CNV callers;
+specifically, Numbat calls gains for the segments that appear to be
+neutral in other analyses, and neutral for segments that appear to be
+losses.</p>
+<p><strong>A</strong>: Many existing methods (e.g. InferCNV/CopyKAT)
+infer copy number variations relative to the median ploidy, which can
+dilute signals of aberrant regions or mistake neutral regions for
+aberrant due to baseline shifts caused by hyperdiploidy or hypodiploidy.
+Instead, Numbat first tries to identify diploid regions based on allele
+evidence (balanced allelic frequencies), and uses these regions as
+baseline for CNV calling. For more information, please refer to the
+publications describing <a href="https://www.nature.com/articles/s41587-022-01468-y" class="external-link">Numbat</a> and
+<a href="https://academic.oup.com/nar/article/44/16/e131/2460163?login=false" class="external-link">FACETS</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>
