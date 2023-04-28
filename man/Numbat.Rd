@@ -74,7 +74,7 @@ initialize Numbat class
 \describe{
 \item{\code{out_dir}}{character string Output directory}
 
-\item{\code{i}}{integer Get results from which iteration (either 1 or 2) (default=2)}
+\item{\code{i}}{integer Get results from which iteration (default=2)}
 
 \item{\code{gtf}}{dataframe Transcript gtf (default=gtf_hg38)}
 

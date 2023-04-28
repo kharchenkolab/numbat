@@ -56,7 +56,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
 
     #' @description initialize Numbat class
     #' @param out_dir character string Output directory
-    #' @param i integer Get results from which iteration (either 1 or 2) (default=2)
+    #' @param i integer Get results from which iteration (default=2)
     #' @param gtf dataframe Transcript gtf (default=gtf_hg38)
     #' @param verbose logical Whether to output verbose results (default=TRUE)
     #' @return a new 'Numbat' object
