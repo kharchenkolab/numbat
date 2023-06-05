@@ -1,3 +1,9 @@
+# numbat 1.3.2 - 06/05/2023
+
+* Adding better checks for input files
+
+* Improve error handling (#122, #127)
+
 # numbat 1.3.1 - 04/14/2023
 
 * Fixing bug #68 - this may cause slight changes in the results for runs with `segs_loh`/`call_segs_loh` enabled.
