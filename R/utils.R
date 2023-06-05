@@ -924,17 +924,24 @@ phi_hat_roll = function(Y_obs, lambda_ref, d_obs, mu, sig, h) {
 #' @return vector of alphabetical postfixes
 #' @keywords internal
 generate_postfix <- function(n) {
-  alphabet <- letters
-  postfixes <- sapply(n, function(i) {
-    postfix <- character(0)
-    while (i > 0) {
-      remainder <- (i - 1) %% 26
-      i <- (i - 1) %/% 26
-      postfix <- c(alphabet[remainder + 1], postfix)
+
+    if (any(is.na(n))) {
+        stop("Segment number cannot contain NA")
     }
-    paste(postfix, collapse = "")
-  })
-  return(postfixes)
+
+    alphabet <- letters
+
+    postfixes <- sapply(n, function(i) {
+        postfix <- character(0)
+        while (i > 0) {
+            remainder <- (i - 1) %% 26
+            i <- (i - 1) %/% 26
+            postfix <- c(alphabet[remainder + 1], postfix)
+        }
+        paste(postfix, collapse = "")
+    })
+
+    return(postfixes)
 }
 
 #' Annotate copy number segments after HMM decoding 
@@ -997,7 +1004,8 @@ annot_haplo_segs = function(bulk) {
 #' @return dataframe Pseudobulk profile
 #' @keywords internal
 smooth_segs = function(bulk, min_genes = 10) {
-    bulk %>% group_by(seg) %>%
+
+    bulk = bulk %>% group_by(seg) %>%
         mutate(
             cnv_state = ifelse(n_genes <= min_genes, NA, cnv_state)
         ) %>%
@@ -1006,6 +1014,17 @@ smooth_segs = function(bulk, min_genes = 10) {
         mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = FALSE, na.rm=FALSE)) %>%
         mutate(cnv_state = zoo::na.locf(cnv_state, fromLast = TRUE, na.rm=FALSE)) %>%
         ungroup()
+
+    chrom_na = bulk %>% group_by(CHROM) %>% summarise(all_na = all(is.na(cnv_state)))
+
+    if (any(chrom_na$all_na)) {
+        chroms_na = paste0(chrom_na$CHROM[chrom_na$all_na], collapse = ',')
+        msg = glue("No segments containing more than {min_genes} genes for CHROM {chroms_na}.")
+        log_error(msg)
+        stop(msg)
+    }
+
+    return(bulk)
 }
 
 #' Annotate a consensus segments on a pseudobulk dataframe

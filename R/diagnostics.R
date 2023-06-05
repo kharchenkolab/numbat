@@ -80,8 +80,15 @@ check_allele_df = function(df) {
         log_error(msg)
         stop(msg)
     }
+    
+    # check chrom prefix 
+    if (any(str_detect(df$CHROM[1], '^chr'))) {
+        df = df %>% mutate(CHROM = str_remove(CHROM, 'chr'))
+    } 
 
-    df = df %>% mutate(CHROM = factor(CHROM, 1:22))
+    df = df %>% 
+        filter(CHROM %in% 1:22) %>%
+        mutate(CHROM = factor(CHROM, 1:22))
 
     return(df)
 
@@ -143,10 +150,24 @@ check_exp_ref = function(lambdas_ref) {
     if (!is.matrix(lambdas_ref)) {
         lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
     }
+    
+    # check if all entries in the reference profile are integers
+    if (all(lambdas_ref == as.integer(lambdas_ref))) {
+        msg = "The reference expression matrix 'lambdas_ref' should be normalized gene expression magnitudes. Please use aggregate_counts() function to prepare the reference profile from raw counts."
+        log_error(msg)
+        stop(msg)
+    } else if (any(duplicated(rownames(lambdas_ref)))) {
+        msg = "Please remove duplicated genes in reference profile"
+        log_error(msg)
+        stop(msg)
+    }
+
 
     return(lambdas_ref)
 
 }
+
+
 
 #' check inter-individual contamination
 #' @param bulk dataframe Pseudobulk profile
