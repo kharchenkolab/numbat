@@ -836,9 +836,8 @@ run_group_hmms = function(
     bad = sapply(results, inherits, what = "try-error")
 
     if (any(bad)) {
-        log_error(glue('job {paste(which(bad), collapse = ",")} failed'))
         log_error(results[bad][[1]])
-        message(results[bad][[1]])
+        stop(results[bad][[1]])
     }
 
     bulks = results %>% bind_rows() %>%

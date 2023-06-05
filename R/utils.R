@@ -1120,7 +1120,7 @@ find_common_diploid = function(
     }
 
     # define balanced regions in each sample
-    bulks = mclapply(
+    results = mclapply(
         bulks %>% split(.$sample),
         mc.cores = ncores,
         function(bulk) {
@@ -1142,8 +1142,16 @@ find_common_diploid = function(
                 smooth_segs(min_genes = min_genes) %>%
                 annot_segs(var = 'cnv_state')
 
-        }) %>%
-        bind_rows()
+        })
+                    
+    bad = sapply(results, inherits, what = "try-error")
+
+    if (any(bad)) {
+        log_error(results[bad][[1]])
+        stop(results[bad][[1]])
+    } else {
+        bulks = results %>% bind_rows()
+    }
 
     # always exclude clonal LOH regions if any
     if (any(bulks$loh)) {
