@@ -1236,7 +1236,7 @@ find_common_diploid = function(
             bind_rows() %>%
             rowwise() %>%
             mutate(
-                p = t.test.pval(
+                p = t_test_pval(
                     x = bulks_bal$lnFC[bulks_bal$seg == i & bulks_bal$sample == s],
                     y = bulks_bal$lnFC[bulks_bal$seg == j & bulks_bal$sample == s]
                 ),
@@ -1853,7 +1853,7 @@ simes_p = function(p.vals, n_dim) {
 
 #' T-test wrapper, handles error for insufficient observations
 #' @keywords internal
-t.test.pval = function(x, y) {
+t_test_pval = function(x, y) {
     if (length(x) <= 1 | length(y) <= 1) {
         return(1)
     } else {
