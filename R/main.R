@@ -132,7 +132,7 @@ run_numbat = function(
     }
 
     ######### Log parameters #########
-    log_message(paste(
+    log_message(paste('\n',
         glue('Numbat version: ', as.character(utils::packageVersion("numbat"))),
         glue('Scistreer version: ', as.character(utils::packageVersion("scistreer"))),
         'Running under parameters:',
