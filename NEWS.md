@@ -1,3 +1,9 @@
+# numbat 1.3.3 - 08/15/2023
+
+* Fix plotting issue #135
+
+* Fix CRAN check compilation issues
+
 # numbat 1.3.2 - 06/05/2023
 
 * Adding better checks for input files
