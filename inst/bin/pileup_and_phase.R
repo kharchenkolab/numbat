@@ -16,7 +16,7 @@ parser = add_option(parser, '--ncores', default = 1, type = "integer", help = "N
 parser = add_option(parser, '--UMItag', default = "Auto", type = "character", help = "UMI tag in bam; should be Auto for 10x and XM for Slide-seq")
 parser = add_option(parser, '--cellTAG', default = "CB", type = "character", help = "Cell tag in bam; should be CB for 10x and XC for Slide-seq")
 parser = add_option(parser, '--smartseq', default = FALSE, action = 'store_true', help = "Running with SMART-seq mode; Supply a txt file containing directories of BAM files to --bams and a txt file containing cell names to --barcodes (each entry on its own line for both; ordering must match).")
-parser = add_option(parser, '--bulk', default = FALSE, action = 'store_true', help = "Running with bulk RNA-seq mode")
+parser = add_option(parser, '--bulk', default = FALSE, action = 'store_true', help = "Running with bulk RNA-seq mode; supply --bams and --samples but not --barcodes.")
 args <- parse_args(parser)
 
 suppressPackageStartupMessages({
