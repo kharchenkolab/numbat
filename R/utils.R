@@ -547,7 +547,7 @@ analyze_bulk = function(
             bulk_baseline = bulk %>% filter(!is.na(Y_obs))
         }
         
-        fit = bulk_baseline %>% {fit_lnpois_cpp(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+        fit = bulk_baseline %>% {hahmmr::fit_lnpois_cpp(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
         
         bulk = bulk %>% mutate(mu = fit[1], sig = fit[2])
     } else {
@@ -558,7 +558,7 @@ analyze_bulk = function(
         bulk = bulk %>% 
             group_by(CHROM) %>%
             mutate(state = 
-                run_joint_hmm(
+                run_joint_hmm_s15(
                     pAD = pAD,
                     DP = DP, 
                     p_s = p_s,
@@ -1128,7 +1128,7 @@ find_common_diploid = function(
             bulk %>% 
                 group_by(CHROM) %>%
                 mutate(state = 
-                    run_allele_hmm(
+                    run_allele_hmm_s5(
                         pAD = pAD,
                         DP = DP, 
                         p_s = p_s,
@@ -1355,17 +1355,6 @@ get_segs_neu = function(bulks) {
     return(segs_neu)
 }
 
-#' calculate joint likelihood of allele data
-#' @param AD numeric vector Variant allele depth
-#' @param DP numeric vector Total allele depth
-#' @param alpha numeric Alpha parameter of Beta-Binomial distribution
-#' @param beta numeric Beta parameter of Beta-Binomial distribution
-#' @return numeric Joint log likelihood
-#' @keywords internal
-l_bbinom = function(AD, DP, alpha, beta) {
-    sum(dbbinom(AD, DP, alpha, beta, log = TRUE))
-}
-
 #' fit a Beta-Binomial model by maximum likelihood
 #' @param AD numeric vector Variant allele depth
 #' @param DP numeric vector Total allele depth
@@ -1450,18 +1439,6 @@ fit_gpois = function(Y_obs, lambda_ref, d) {
     beta = fit@coef[2]
     
     return(fit)
-}
-
-#' calculate joint likelihood of a PLN model
-#' @param Y_obs numeric vector Gene expression counts
-#' @param lambda_ref numeric vector Reference expression levels
-#' @param d numeric Total library size
-#' @return numeric Joint log likelihood
-#' @keywords internal
-l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
-    if (any(sig <= 0)) {stop(glue('negative sigma. value: {sig}'))}
-    if (length(sig) == 1) {sig = rep(sig, length(Y_obs))}
-    sum(log(dpoilog(Y_obs, mu + log(phi * d * lambda_ref), sig)))
 }
 
 #' fit a PLN model by maximum likelihood

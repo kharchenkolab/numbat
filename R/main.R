@@ -15,6 +15,7 @@
 #' @import patchwork
 #' @importFrom grDevices colorRampPalette
 #' @importFrom stats as.dendrogram as.dist cor cutree dbinom dnbinom dnorm dpois end hclust integrate model.matrix na.omit optim p.adjust pnorm reorder rnorm setNames start t.test as.ts complete.cases is.leaf na.contiguous
+#' @importFrom hahmmr logSumExp dpoilog dbbinom l_lnpois l_bbinom fit_lnpois_cpp likelihood_allele forward_back_allele run_joint_hmm_s15 run_allele_hmm_s5
 #' @import tibble
 #' @importFrom utils combn
 #' @useDynLib numbat
@@ -133,8 +134,9 @@ run_numbat = function(
 
     ######### Log parameters #########
     log_message(paste('\n',
-        glue('Numbat version: ', as.character(utils::packageVersion("numbat"))),
-        glue('Scistreer version: ', as.character(utils::packageVersion("scistreer"))),
+        glue('numbat version: ', as.character(utils::packageVersion("numbat"))),
+        glue('scistreer version: ', as.character(utils::packageVersion("scistreer"))),
+        glue('hahmmr version: ', as.character(utils::packageVersion("hahmmr"))),
         'Running under parameters:',
         glue('t = {t}'), 
         glue('alpha = {alpha}'),
