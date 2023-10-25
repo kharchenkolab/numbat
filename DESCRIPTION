@@ -34,7 +34,6 @@ Imports:
     purrr,
     Rcpp,
     RhpcBLASctl,
-    R.utils,
     scales,
     scistreer (>= 1.1.0),
     stats4,

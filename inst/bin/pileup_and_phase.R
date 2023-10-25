@@ -11,6 +11,8 @@ parser = add_option(parser, '--gmap', default = NULL, type = "character", help =
 parser = add_option(parser, '--eagle', type = "character", default = 'eagle', help = "Path to Eagle2 binary file")
 parser = add_option(parser, '--snpvcf', default = NULL, type = "character", help = "SNP VCF for pileup")
 parser = add_option(parser, '--paneldir', default = NULL, type = "character", help = "Directory to phasing reference panel (BCF files)")
+parser = add_option(parser, '--genotype', type = "logical", default = TRUE, help = "Whether to perform genotyping; if FALSE, will only do pileup and phasing based on the given VCF")
+parser = add_option(parser, '--phase', type = "logical", default = TRUE, help = "Whether to perform phasing; if FALSE, will only do pileup based on the given phased VCF")
 parser = add_option(parser, '--outdir', default = './pileup_and_phase', type = "character", help = "Output directory")
 parser = add_option(parser, '--ncores', default = 1, type = "integer", help = "Number of cores")
 parser = add_option(parser, '--UMItag', default = "Auto", type = "character", help = "UMI tag in bam; should be Auto for 10x and XM for Slide-seq")
@@ -51,6 +53,8 @@ UMItag = args$UMItag
 cellTAG = args$cellTAG
 smartseq = args$smartseq
 bulk = args$bulk
+phase = args$phase
+genotype = args$genotype
 genome = ifelse(str_detect(args$gmap, 'hg19'), 'hg19', 'hg38')
 message(paste0('Using genome version: ', genome))
 
@@ -59,6 +63,43 @@ dir.create(glue('{outdir}/pileup'), showWarnings = FALSE)
 dir.create(glue('{outdir}/phasing'), showWarnings = FALSE)
 for (sample in samples) {
     dir.create(glue('{outdir}/pileup/{sample}'), showWarnings = FALSE)
+}
+
+# check if files exist
+for (bam in bams) {
+    if (!file.exists(bam)) {
+        stop('BAM file not found')
+    }
+}
+
+if (is.null(snpvcf)) {
+    stop('SNP VCF must be provided')
+}
+
+if (!file.exists(snpvcf)) {
+    stop('SNP VCF not found')
+}
+
+if (!is.null(barcodes)) {
+    for (barcode in barcodes) {
+        if (!file.exists(barcode)) {
+            stop('Barcode file not found')
+        }
+    }
+}
+
+if (phase) {
+    if (!file.exists(eagle)) {
+        stop('Eagle2 binary not found')
+    }
+
+    if (!file.exists(gmap)) {
+        stop('Genetic map not found')
+    }
+
+    if (!file.exists(paneldir)) {
+        stop('Phasing reference panel not found')
+    }
 }
 
 ## pileup
@@ -132,7 +173,7 @@ if (bulk) {
 
 }
 
-cat('Running pileup\n')
+cat('Running pileup...\n')
 
 script = glue('{outdir}/run_pileup.sh')
 
@@ -148,7 +189,7 @@ warning = function(w){
 })
 
 ## VCF creation
-cat('Creating VCFs\n')
+cat('Creating VCFs...\n')
 
 # read in the pileup VCF
 vcfs = lapply(samples, function(sample) {
@@ -171,34 +212,51 @@ vcfs = lapply(vcfs, function(vcf){
     return(vcf)
 })
 
-numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'), chr_prefix = TRUE)
-
-## phasing
-cat('Running phasing\n')
-eagle_cmd = function(chr) {
-    paste(eagle, 
-        glue('--numThreads {ncores}'), 
-        glue('--vcfTarget {outdir}/phasing/{label}_chr{chr}.vcf.gz'), 
-        glue('--vcfRef {paneldir}/chr{chr}.genotypes.bcf'), 
-        glue('--geneticMapFile={gmap}'), 
-        glue('--outPrefix {outdir}/phasing/{label}_chr{chr}.phased'),
-    sep = ' ')
+if (genotype) {
+    cat('Genotyping...\n')
+    numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'), chr_prefix = TRUE)
+} else {
+    cat('Skipping genotyping...\n')
+    for (chr in 1:22) {
+        cmd = glue('bcftools view {snpvcf} -r {chr} -Oz -o {outdir}/phasing/{label}_chr{chr}.vcf.gz')
+        system2(cmd, stdout = glue("{outdir}/phasing.log"))
+    }
 }
 
-cmds = lapply(1:22, function(chr){eagle_cmd(chr)})
+## phasing
+if (phase) {
+    cat('Running phasing...\n')
+    eagle_cmd = function(chr) {
+        paste(eagle, 
+            glue('--numThreads {ncores}'), 
+            glue('--vcfTarget {outdir}/phasing/{label}_chr{chr}.vcf.gz'), 
+            glue('--vcfRef {paneldir}/chr{chr}.genotypes.bcf'), 
+            glue('--geneticMapFile={gmap}'), 
+            glue('--outPrefix {outdir}/phasing/{label}_chr{chr}.phased'),
+        sep = ' ')
+    }
 
-script = glue('{outdir}/run_phasing.sh')
+    cmds = lapply(1:22, function(chr){eagle_cmd(chr)})
 
-list(cmds) %>% fwrite(script, sep = '\n')
+    script = glue('{outdir}/run_phasing.sh')
 
-system(glue('chmod +x {script}'))
+    list(cmds) %>% fwrite(script, sep = '\n')
 
-tryCatch({
-    system2(script, stdout = glue("{outdir}/phasing.log"))
-},
-warning = function(w){
-    stop('Phasing failed')
-})
+    system(glue('chmod +x {script}'))
+
+    tryCatch({
+        system2(script, stdout = glue("{outdir}/phasing.log"))
+    },
+    warning = function(w){
+        stop('Phasing failed')
+    })
+} else {
+    cat('Skipping phasing, assuming the VCF is already phased...\n')
+    for (chr in 1:22) {
+        cmd = glue('cp {outdir}/phasing/{label}_chr{chr}.vcf.gz {outdir}/phasing/{label}_chr{chr}.phased.vcf.gz')
+        system2(cmd, stdout = glue("{outdir}/phasing.log"))
+    }
+}
 
 ## Generate allele count dataframe
 cat('Generating allele count dataframes\n')
