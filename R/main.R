@@ -18,7 +18,7 @@
 #' @importFrom hahmmr logSumExp dpoilog dbbinom l_lnpois l_bbinom fit_lnpois_cpp likelihood_allele forward_back_allele run_joint_hmm_s15 run_allele_hmm_s5
 #' @import tibble
 #' @importFrom utils combn
-#' @useDynLib numbat
+#' @useDynLib numbat, .registration=TRUE
 NULL
 
 #' Run workflow to decompose tumor subclones

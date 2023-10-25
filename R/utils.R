@@ -547,7 +547,7 @@ analyze_bulk = function(
             bulk_baseline = bulk %>% filter(!is.na(Y_obs))
         }
         
-        fit = bulk_baseline %>% {hahmmr::fit_lnpois_cpp(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
+        fit = bulk_baseline %>% {fit_lnpois_cpp(.$Y_obs, .$lambda_ref, unique(.$d_obs))}
         
         bulk = bulk %>% mutate(mu = fit[1], sig = fit[2])
     } else {
@@ -1394,51 +1394,6 @@ fit_gamma = function(AD, DP, start = 20) {
     gamma = fit@coef[1]
 
     return(gamma)
-}
-
-#' Density function for a gamma-poisson distribution
-#' @keywords internal
-dgpois <- function(x, shape, rate, scale = 1/rate, log = FALSE) {
-  cpp_dgpois(x, shape, scale, log[1L])
-}
-
-
-#' calculate joint likelihood of a gamma-poisson model
-#' @param Y_obs numeric vector Gene expression counts
-#' @param lambda_ref numeric vector Reference expression levels
-#' @param d numeric Total library size
-#' @param alpha numeric Alpha parameter of Gamma-Poisson distribution
-#' @param beta numeric Beta parameter of Gamma-Poisson distribution
-#' @return numeric Joint log likelihood
-#' @keywords internal
-l_gpois = function(Y_obs, lambda_ref, d, alpha, beta, phi = 1) {
-    sum(dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE))
-}
-
-#' fit a Gamma-Poisson model by maximum likelihood
-#' @param Y_obs numeric vector Gene expression counts
-#' @param lambda_ref numeric vector Reference expression levels
-#' @param d numeric Total library size
-#' @return numeric MLE of alpha and beta
-#' @keywords internal
-fit_gpois = function(Y_obs, lambda_ref, d) {
-
-    Y_obs = Y_obs[lambda_ref > 0]
-    lambda_ref = lambda_ref[lambda_ref > 0]
-    
-    fit = stats4::mle(
-        minuslogl = function(alpha, beta) {
-            -l_gpois(Y_obs, lambda_ref, d, alpha, beta)
-        },
-        start = c(1, 1),
-        lower = c(0.01, 0.01),
-        control = list('trace' = FALSE)
-    )
-
-    alpha = fit@coef[1]
-    beta = fit@coef[2]
-    
-    return(fit)
 }
 
 #' fit a PLN model by maximum likelihood
