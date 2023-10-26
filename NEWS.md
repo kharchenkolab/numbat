@@ -1,3 +1,9 @@
+# numbat 1.4.0 - 08/15/2023
+
+* Integration with hahmmr 
+
+* Fix CRAN check compilation issues
+
 # numbat 1.3.3 - 08/15/2023
 
 * Fix plotting issue #135
