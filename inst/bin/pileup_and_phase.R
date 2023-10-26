@@ -47,14 +47,17 @@ if (args$smartseq) {
     if (any(sapply(list(args$barcodes), is.null))) {
         stop('Missing one or more required arguments for smartseq mode: --barcodes')
     }
+    mode = 'SMART-Seq'
 } else if (args$bulk) {
     if (any(sapply(list(args$samples), is.null))) {
         stop('Missing one or more required arguments for bulk mode: --samples')
     }
+    mode = 'Bulk'
 } else {
     if (any(sapply(list(args$samples, args$barcodes), is.null))) {
         stop('Missing one or more required arguments for 10x mode: --samples, --barcodes')
     }
+    mode = '10X'
 }
 
 if (!any(args$genome %in% c('hg38', 'hg19', 'mm10'))) {
@@ -84,7 +87,9 @@ phase = args$phase
 genotype = args$genotype
 genome = args$genome
 
+message(paste0('Running in ', mode, ' mode'))
 message(paste0('Using genome version: ', genome))
+message(glue('Phasing: {phase}; Genotyping: {genotype}'))
 
 if (genome == 'hg19') {
     gtf = gtf_hg19
@@ -110,6 +115,7 @@ if (!file.exists(snpvcf)) {
     stop('SNP VCF not found')
 }
 
+
 if (!is.null(barcodes)) {
     for (barcode in barcodes) {
         if (!file.exists(barcode)) {
@@ -127,6 +133,13 @@ if (phase) {
     if (!file.exists(paneldir)) {
         stop('Phasing reference panel not found')
     }
+}
+
+## check for chr prefix in SNP VCF
+contigs = system(glue('bcftools index -s {snpvcf} | cut -f1'), intern = TRUE)
+
+if (any(str_detect(contigs, 'chr'))) {
+    stop('SNP VCF has chr prefix, please remove it')
 }
 
 ## Set up directories
@@ -256,9 +269,12 @@ if (genotype) {
     if (!file.exists(glue('{snpvcf}.csi'))) {
         system(glue('bcftools index {snpvcf}'))
     }
+
     for (chr in 1:nchroms) {
-        cmd = glue('bcftools view {snpvcf} -r {chr} -Oz -o {outdir}/phasing/{label}_chr{chr}.vcf.gz')
+        file_name = glue('{outdir}/phasing/{label}_chr{chr}.vcf.gz')
+        cmd = glue('bcftools view {snpvcf} -r {chr} -Oz -o {file_name}')
         system(cmd)
+        system(glue('tabix {file_name}'))
     }
 }
 
@@ -292,8 +308,10 @@ if (phase) {
 } else {
     cat('Skipping phasing, assuming the VCF is already phased...\n')
     for (chr in 1:nchroms) {
-        cmd = glue('cp {outdir}/phasing/{label}_chr{chr}.vcf.gz {outdir}/phasing/{label}_chr{chr}.phased.vcf.gz')
+        file_name = glue('{outdir}/phasing/{label}_chr{chr}.phased.vcf.gz')
+        cmd = glue('cp {outdir}/phasing/{label}_chr{chr}.vcf.gz {file_name}')
         system(cmd)
+        system(glue('tabix {file_name}'))
     }
 }
 
@@ -309,6 +327,8 @@ if (!is.null(gmap)) {
             end = c(POS[2:length(POS)], POS[length(POS)])
         ) %>%
         ungroup()
+} else {
+    genetic_map = NULL
 }
 
 for (sample in samples) {

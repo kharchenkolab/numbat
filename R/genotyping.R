@@ -210,10 +210,7 @@ preprocess_allele = function(
     )
     
     # phased VCF
-    vcf_phased = vcf_phased %>% 
-        mutate(INFO = str_remove_all(INFO, '[:alpha:]|=')) %>%
-        tidyr::separate(col = 'INFO', into = c('AD', 'DP', 'OTH'), sep = ';') %>%
-        mutate_at(c('AD', 'DP', 'OTH'), as.integer) %>%
+    vcf_phased = vcf_phased %>%
         mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_')) %>%
         mutate(GT = get(sample))
 
