@@ -29,8 +29,8 @@ suppressPackageStartupMessages({
     library(numbat)
 })
 
-if (any(sapply(list(args$bams, args$snpvcf, args$outdir), is.null))) {
-    stop('Missing one or more always required arguments: --bams, --snpvcf, --outdir')
+if (any(sapply(list(args$bams, args$snpvcf, args$outdir, args$paneldir, args$gmap), is.null))) {
+    stop('Missing one or more always required arguments: --bams, --snpvcf, --outdir, --paneldir, --gmap')
 }
 
 if (args$smartseq) {
