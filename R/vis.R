@@ -133,11 +133,11 @@ plot_psbulk = function(
     if (use_pos & exclude_gap) {
 
         if (genome == 'hg38') {
-            gaps = hahmmr::gaps_hg38 %>% filter(end - start > 1e+06)
-            acen = hahmmr::acen_hg38
+            gaps = gaps_hg38 %>% filter(end - start > 1e+06)
+            acen = acen_hg38
         } else if (genome == 'hg19') {
-            gaps = hahmmr::gaps_hg19 %>% filter(end - start > 1e+06)
-            acen = hahmmr::acen_hg19
+            gaps = gaps_hg19 %>% filter(end - start > 1e+06)
+            acen = acen_hg19
         } else if (genome == 'mm10') {
             gaps = data.frame(CHROM = 1, start = 1, end = 1)
             acen = data.frame()
@@ -1100,10 +1100,10 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
     }
 
     if (genome == 'hg38') {
-        chrom_sizes = hahmmr::chrom_sizes_hg38
+        chrom_sizes = chrom_sizes_hg38
         gaps = gaps_hg38
     } else if (genome == 'hg19') {
-        chrom_sizes = hahmmr::chrom_sizes_hg19
+        chrom_sizes = chrom_sizes_hg19
         gaps = gaps_hg19
     } else {
         stop("Genome version must be hg38 or hg19")
@@ -1116,7 +1116,7 @@ cnv_heatmap = function(segs, var = 'group', label_group = TRUE, legend = TRUE, e
             aes(xmin = seg_start, xmax = seg_end, ymin = -0.5, ymax = 0.5, fill = cnv_state, alpha = p_cnv)
         ) +
         geom_rect(
-            data = chrom_sizes,
+            data = chrom_sizes_hg38,
             aes(xmin = 0, xmax = size, ymin = -0.5, ymax = 0.5, fill = NA)
         )
 

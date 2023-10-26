@@ -82,11 +82,11 @@ run_numbat = function(
 
     ######### Basic checks #########
     if (genome == 'hg38') {
-        gtf = hahmmr::gtf_hg38
+        gtf = gtf_hg38
     } else if (genome == 'hg19') {
-        gtf = hahmmr::gtf_hg19
+        gtf = gtf_hg19
     } else if (genome == 'mm10') {
-        gtf = hahmmr::gtf_mm10
+        gtf = gtf_mm10
     } else {
         stop('Genome version must be hg38, hg19, or mm10')
     }
