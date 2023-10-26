@@ -204,9 +204,9 @@ warning = function(w){
 cat('Generating allele count dataframes\n')
 
 if (genome == 'hg19') {
-    gtf = gtf_hg19
+    gtf = hahmmr::gtf_hg19
 } else {
-    gtf = gtf_hg38
+    gtf = hahmmr::gtf_hg38
 }
 
 genetic_map = fread(gmap) %>% 
