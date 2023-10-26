@@ -13,8 +13,9 @@ parser = add_option(parser, '--snpvcf', default = NULL, type = "character", help
 parser = add_option(parser, '--paneldir', default = NULL, type = "character", help = "Directory to phasing reference panel (BCF files)")
 parser = add_option(parser, '--genotype', type = "logical", default = TRUE, help = "Whether to perform genotyping; if FALSE, will only do pileup and phasing based on the given VCF")
 parser = add_option(parser, '--phase', type = "logical", default = TRUE, help = "Whether to perform phasing; if FALSE, will only do pileup based on the given phased VCF")
-parser = add_option(parser, '--outdir', default = './pileup_and_phase', type = "character", help = "Output directory")
+parser = add_option(parser, '--outdir', default = NULL, type = "character", help = "Output directory")
 parser = add_option(parser, '--ncores', default = 1, type = "integer", help = "Number of cores")
+parser = add_option(parser, '--genome', default = NULL, type = "character", help = "Genome version (hg38, hg19, or mm10); need to match phasing panel")
 parser = add_option(parser, '--UMItag', default = "Auto", type = "character", help = "UMI tag in bam; should be Auto for 10x and XM for Slide-seq")
 parser = add_option(parser, '--cellTAG', default = "CB", type = "character", help = "Cell tag in bam; should be CB for 10x and XC for Slide-seq")
 parser = add_option(parser, '--smartseq', default = FALSE, action = 'store_true', help = "Running with SMART-seq mode; Supply a txt file containing directories of BAM files to --bams and a txt file containing cell names to --barcodes (each entry on its own line for both; ordering must match).")
@@ -31,16 +32,42 @@ suppressPackageStartupMessages({
     library(numbat)
 })
 
-# required args
-if (any(is.null(c(args$bams, args$barcodes, args$gmap, args$snpvcf, args$paneldir)))) {
-    stop('Missing one or more required arguments: bams, barcodes, gmap, snpvcf, paneldir')
+## Check arguments
+if (any(sapply(list(args$bams, args$snpvcf, args$genome, args$outdir), is.null))) {
+    stop('Missing one or more always required arguments: --bams, --snpvcf, --genome, --outdir')
 }
 
+if (args$phase) {
+    if (any(sapply(list(args$gmap, args$eagle, args$paneldir), is.null))) {
+        stop('Missing one or more required arguments for phasing: --gmap, --eagle, --paneldir')
+    }
+}
+
+if (args$smartseq) {
+    if (any(sapply(list(args$barcodes), is.null))) {
+        stop('Missing one or more required arguments for smartseq mode: --barcodes')
+    }
+} else if (args$bulk) {
+    if (any(sapply(list(args$samples), is.null))) {
+        stop('Missing one or more required arguments for bulk mode: --samples')
+    }
+} else {
+    if (any(sapply(list(args$samples, args$barcodes), is.null))) {
+        stop('Missing one or more required arguments for 10x mode: --samples, --barcodes')
+    }
+}
+
+if (!any(args$genome %in% c('hg38', 'hg19', 'mm10'))) {
+    stop('Genome version not supported')
+}
+
+## Parse arguments
 label = args$label
 samples = str_split(args$samples, ',')[[1]]
 outdir = args$outdir
 bams = str_split(args$bams, ',')[[1]]
-if (!is.null(args$barcodes)) {
+barcodes = args$barcodes
+if (!is.null(barcodes)) {
     barcodes = str_split(args$barcodes, ',')[[1]]
 }
 n_samples = length(samples)
@@ -55,14 +82,21 @@ smartseq = args$smartseq
 bulk = args$bulk
 phase = args$phase
 genotype = args$genotype
-genome = ifelse(str_detect(args$gmap, 'hg19'), 'hg19', 'hg38')
+genome = args$genome
+
 message(paste0('Using genome version: ', genome))
 
-dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
-dir.create(glue('{outdir}/pileup'), showWarnings = FALSE)
-dir.create(glue('{outdir}/phasing'), showWarnings = FALSE)
-for (sample in samples) {
-    dir.create(glue('{outdir}/pileup/{sample}'), showWarnings = FALSE)
+if (genome == 'hg19') {
+    gtf = gtf_hg19
+    nchroms = 22
+} else if (genome == 'hg38') {
+    gtf = gtf_hg38
+    nchroms = 22
+} else if (genome == 'mm10') {
+    gtf = gtf_mm10
+    nchroms = 19
+} else {
+    stop('Genome version not supported')
 }
 
 # check if files exist
@@ -70,10 +104,6 @@ for (bam in bams) {
     if (!file.exists(bam)) {
         stop('BAM file not found')
     }
-}
-
-if (is.null(snpvcf)) {
-    stop('SNP VCF must be provided')
 }
 
 if (!file.exists(snpvcf)) {
@@ -89,9 +119,6 @@ if (!is.null(barcodes)) {
 }
 
 if (phase) {
-    if (!file.exists(eagle)) {
-        stop('Eagle2 binary not found')
-    }
 
     if (!file.exists(gmap)) {
         stop('Genetic map not found')
@@ -100,6 +127,14 @@ if (phase) {
     if (!file.exists(paneldir)) {
         stop('Phasing reference panel not found')
     }
+}
+
+## Set up directories
+dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
+dir.create(glue('{outdir}/pileup'), showWarnings = FALSE)
+dir.create(glue('{outdir}/phasing'), showWarnings = FALSE)
+for (sample in samples) {
+    dir.create(glue('{outdir}/pileup/{sample}'), showWarnings = FALSE)
 }
 
 ## pileup
@@ -188,38 +223,42 @@ warning = function(w){
     stop('Pileup failed')
 })
 
-## VCF creation
-cat('Creating VCFs...\n')
-
-# read in the pileup VCF
-vcfs = lapply(samples, function(sample) {
-    vcf_file = glue('{outdir}/pileup/{sample}/cellSNP.base.vcf')
-    if (file.exists(vcf_file)) {
-        if (file.size(vcf_file) != 0) {
-            vcf = vcfR::read.vcfR(vcf_file, verbose = F)
-            return(vcf)
-        } else {
-            stop('Pileup VCF is empty')
-        }
-    } else {
-        stop('Pileup VCF not found')
-    }
-})
-
-# Remove chr prefix if present
-vcfs = lapply(vcfs, function(vcf){
-    vcf@fix[,1] <- gsub("chr", "", vcf@fix[,1])
-    return(vcf)
-})
-
 if (genotype) {
+    ## VCF creation
+    cat('Creating VCFs...\n')
+
+    # read in the pileup VCF
+    vcfs = lapply(samples, function(sample) {
+        vcf_file = glue('{outdir}/pileup/{sample}/cellSNP.base.vcf')
+        if (file.exists(vcf_file)) {
+            if (file.size(vcf_file) != 0) {
+                vcf = vcfR::read.vcfR(vcf_file, verbose = F)
+                return(vcf)
+            } else {
+                stop('Pileup VCF is empty')
+            }
+        } else {
+            stop('Pileup VCF not found')
+        }
+    })
+
+    # Remove chr prefix if present
+    vcfs = lapply(vcfs, function(vcf){
+        vcf@fix[,1] <- gsub("chr", "", vcf@fix[,1])
+        return(vcf)
+    })
+
     cat('Genotyping...\n')
-    numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'), chr_prefix = TRUE)
+    numbat:::genotype(label, samples, vcfs, glue('{outdir}/phasing'), chr_prefix = TRUE, nchroms = nchroms)
+    
 } else {
     cat('Skipping genotyping...\n')
-    for (chr in 1:22) {
+    if (!file.exists(glue('{snpvcf}.csi'))) {
+        system(glue('bcftools index {snpvcf}'))
+    }
+    for (chr in 1:nchroms) {
         cmd = glue('bcftools view {snpvcf} -r {chr} -Oz -o {outdir}/phasing/{label}_chr{chr}.vcf.gz')
-        system2(cmd, stdout = glue("{outdir}/phasing.log"))
+        system(cmd)
     }
 }
 
@@ -236,7 +275,7 @@ if (phase) {
         sep = ' ')
     }
 
-    cmds = lapply(1:22, function(chr){eagle_cmd(chr)})
+    cmds = lapply(1:nchroms, function(chr){eagle_cmd(chr)})
 
     script = glue('{outdir}/run_phasing.sh')
 
@@ -252,34 +291,30 @@ if (phase) {
     })
 } else {
     cat('Skipping phasing, assuming the VCF is already phased...\n')
-    for (chr in 1:22) {
+    for (chr in 1:nchroms) {
         cmd = glue('cp {outdir}/phasing/{label}_chr{chr}.vcf.gz {outdir}/phasing/{label}_chr{chr}.phased.vcf.gz')
-        system2(cmd, stdout = glue("{outdir}/phasing.log"))
+        system(cmd)
     }
 }
 
 ## Generate allele count dataframe
 cat('Generating allele count dataframes\n')
 
-if (genome == 'hg19') {
-    gtf = gtf_hg19
-} else {
-    gtf = gtf_hg38
+if (!is.null(gmap)) {
+    genetic_map = fread(gmap) %>% 
+        setNames(c('CHROM', 'POS', 'rate', 'cM')) %>%
+        group_by(CHROM) %>%
+        mutate(
+            start = POS,
+            end = c(POS[2:length(POS)], POS[length(POS)])
+        ) %>%
+        ungroup()
 }
-
-genetic_map = fread(gmap) %>% 
-    setNames(c('CHROM', 'POS', 'rate', 'cM')) %>%
-    group_by(CHROM) %>%
-    mutate(
-        start = POS,
-        end = c(POS[2:length(POS)], POS[length(POS)])
-    ) %>%
-    ungroup()
 
 for (sample in samples) {
     
     # read in phased VCF
-    vcf_phased = lapply(1:22, function(chr) {
+    vcf_phased = lapply(1:nchroms, function(chr) {
             vcf_file = glue('{outdir}/phasing/{label}_chr{chr}.phased.vcf.gz')
             if (file.exists(vcf_file)) {
                 fread(vcf_file, skip = '#CHROM') %>%

@@ -8,7 +8,7 @@
 #' @param chr_prefix logical Whether to add chr prefix
 #' @return integer Status code
 #' @keywords internal
-genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE) {
+genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix = TRUE, nchroms = 22) {
 
     snps = lapply(
             vcfs, function(vcf){get_snps(vcf)}
@@ -34,7 +34,7 @@ genotype = function(label, samples, vcfs, outdir, het_only = FALSE, chr_prefix =
         mutate(POS = as.character(POS)) %>%
         as.matrix
 
-    for (chr in 1:22) {
+    for (chr in 1:nchroms) {
         make_vcf_chr(chr, snps, vcf_original, label, outdir, het_only = het_only, chr_prefix = chr_prefix)
     }
 
@@ -158,7 +158,7 @@ preprocess_allele = function(
     DP,
     barcodes,
     gtf,
-    gmap
+    gmap = NULL
 ) {
 
     # pileup VCF
@@ -250,37 +250,41 @@ preprocess_allele = function(
             by = c('snp_id')
         )
 
-    # annotate SNPs by genetic map
-    marker_map = GenomicRanges::findOverlaps(
-            vcf_phased %>% {GenomicRanges::GRanges(
-                seqnames = .$CHROM,
-                IRanges::IRanges(start = .$POS,
-                    end = .$POS)
-            )},
-            gmap %>% {GenomicRanges::GRanges(
-                seqnames = .$CHROM,
-                IRanges::IRanges(start = .$start,
-                    end = .$end)
-            )}
-        ) %>%
-        as.data.frame() %>%
-        setNames(c('marker_index', 'map_index')) %>%
-        left_join(
-            vcf_phased %>% mutate(marker_index = 1:n()) %>%
-                select(marker_index, snp_id),
-            by = c('marker_index')
-        ) %>%
-        left_join(
-            gmap %>% mutate(map_index = 1:n()),
-            by = c('map_index')
-        ) %>%
-        arrange(marker_index, -start) %>%
-        distinct(marker_index, `.keep_all` = TRUE) %>%
-        select(snp_id, cM)
+    if (!is.null(gmap)) {
+        # annotate SNPs by genetic map
+        marker_map = GenomicRanges::findOverlaps(
+                vcf_phased %>% {GenomicRanges::GRanges(
+                    seqnames = .$CHROM,
+                    IRanges::IRanges(start = .$POS,
+                        end = .$POS)
+                )},
+                gmap %>% {GenomicRanges::GRanges(
+                    seqnames = .$CHROM,
+                    IRanges::IRanges(start = .$start,
+                        end = .$end)
+                )}
+            ) %>%
+            as.data.frame() %>%
+            setNames(c('marker_index', 'map_index')) %>%
+            left_join(
+                vcf_phased %>% mutate(marker_index = 1:n()) %>%
+                    select(marker_index, snp_id),
+                by = c('marker_index')
+            ) %>%
+            left_join(
+                gmap %>% mutate(map_index = 1:n()),
+                by = c('map_index')
+            ) %>%
+            arrange(marker_index, -start) %>%
+            distinct(marker_index, `.keep_all` = TRUE) %>%
+            select(snp_id, cM)
 
-    vcf_phased = vcf_phased %>% 
-        left_join(marker_map, by = 'snp_id')
-
+        vcf_phased = vcf_phased %>% 
+            left_join(marker_map, by = 'snp_id')
+    } else {
+        vcf_phased = vcf_phased %>% mutate(cM = 0)
+    }
+    
     # add annotation to cell counts
     df = df %>% left_join(vcf_phased %>% select(snp_id, gene, GT, cM), by = 'snp_id')
     df = df %>% mutate(CHROM = factor(CHROM, unique(CHROM)))
