@@ -460,10 +460,6 @@ run_numbat = function(
             ) %>%
             ungroup()
 
-        fwrite(exp_post, glue('{out_dir}/exp_post_{i}_before.tsv'), sep = '\t')
-        fwrite(allele_post, glue('{out_dir}/allele_post_{i}_before.tsv'), sep = '\t')
-        fwrite(joint_post, glue('{out_dir}/joint_post_{i}_before.tsv'), sep = '\t')
-
         if (multi_allelic) {
             log_message('Expanding allelic states..', verbose = verbose)
             exp_post = expand_states(exp_post, segs_consensus)
@@ -582,11 +578,12 @@ run_numbat = function(
         clone_to_node = setNames(V(G_m)$id, V(G_m)$clone)
 
         subtrees = lapply(1:vcount(G_m), function(c) {
-            G_m %>%
-            as_tbl_graph %>% 
-            mutate(rank = dfs_rank(root = clone_to_node[[as.character(c)]])) %>%
-            filter(!is.na(rank)) %>%
-            data.frame() %>%
+
+            nodes = na.omit(igraph::dfs(G_m, root = c, unreachable = F)$order)
+            
+            G_m %>% 
+            igraph::as_data_frame('vertices') %>%
+            filter(id %in% nodes) %>%
             inner_join(clone_post, by = c('GT' = 'GT_opt')) %>%
             {list(sample = c, members = unique(.$GT), clones = unique(.$clone), cells = .$cell, size = length(.$cell))}
         })
@@ -1756,12 +1753,13 @@ expand_states = function(sc_post, segs_consensus) {
             ) %>%
             ungroup()
 
+        # note that *_x and *_y columns are not updated .. to fix
         sc_post = sc_post %>% filter(!seg %in% segs_multi$seg) %>%
             mutate(n_states = 1) %>%
             bind_rows(sc_post_multi) %>%
+            arrange(cell, CHROM, seg) %>%
             mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
-            mutate(seg_label = factor(seg_label, unique(seg_label))) %>%
-            select(-any_of(c('p_cnv_x', 'p_cnv_y', 'Z_cnv_x', 'Z_cnv_y', 'Z_n_x', 'Z_n_y')))
+            mutate(seg_label = factor(seg_label, unique(seg_label)))
 
     } else {
         log_message('No multi-allelic CNVs, skipping ..')
