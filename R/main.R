@@ -580,11 +580,12 @@ run_numbat = function(
         clone_to_node = setNames(V(G_m)$id, V(G_m)$clone)
 
         subtrees = lapply(1:vcount(G_m), function(c) {
-            G_m %>%
-            as_tbl_graph %>% 
-            mutate(rank = dfs_rank(root = clone_to_node[[as.character(c)]])) %>%
-            filter(!is.na(rank)) %>%
-            data.frame() %>%
+
+            nodes = na.omit(igraph::dfs(G_m, root = c, unreachable = F)$order)
+            
+            G_m %>% 
+            igraph::as_data_frame('vertices') %>%
+            filter(id %in% nodes) %>%
             inner_join(clone_post, by = c('GT' = 'GT_opt')) %>%
             {list(sample = c, members = unique(.$GT), clones = unique(.$clone), cells = .$cell, size = length(.$cell))}
         })
@@ -679,7 +680,6 @@ subtrees_equal = function(subtrees_1, subtrees_2) {
 
 #' Run smoothed expression-based hclust
 #' @param count_mat dgCMatrix Gene counts
-#' @param df_allele dataframe Alelle counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf dataframe Transcript GTF
 #' @param sc_refs named list Reference choices for single cells
@@ -1168,7 +1168,7 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
 }
 
 #' get the single cell expression likelihoods
-#' @param exp_counts dataframe Single-cell expression counts {CHROM, seg, cnv_state, gene, Y_obs, lambda_ref}
+#' @param exp_counts dataframe Single-cell expression counts (CHROM, seg, cnv_state, gene, Y_obs, lambda_ref)
 #' @param diploid_chroms character vector Known diploid chromosomes
 #' @param use_loh logical Whether to include CNLOH regions in baseline
 #' @return dataframe Single-cell CNV likelihood scores
@@ -1716,6 +1716,9 @@ test_multi_allelic = function(bulks, segs_consensus, min_LLR = 5, p_min = 0.999)
                 cnv_states = cnv_state
             )
     }
+
+    segs_consensus = segs_consensus %>%
+        mutate(cnv_states = unlist(purrr::map(cnv_states, function(x){paste0(x, collapse = ',')})))
     
     return(segs_consensus)
 }
@@ -1727,47 +1730,45 @@ test_multi_allelic = function(bulks, segs_consensus, min_LLR = 5, p_min = 0.999)
 #' @keywords internal 
 expand_states = function(sc_post, segs_consensus) {
 
+    segs_multi = segs_consensus %>% filter(n_states > 1) %>%
+        select(seg = seg_cons, cnv_states, n_states) %>%
+        tidyr::separate_longer_delim(cnv_states, ',') %>%
+        rename(cnv_state = cnv_states)
+
     if (any(segs_consensus$n_states > 1)) {
-        sc_post = sc_post %>%
-            left_join(
-                segs_consensus %>% select(seg = seg_cons, cnv_states, n_states),
-                by = 'seg'
-            ) %>%
-            as.data.table %>% 
-            data.table::melt(
-                measure.vars = c('p_amp', 'p_loh', 'p_del', 'p_bamp', 'p_bdel'),
-                variable.name = 'cnv_state_expand',
-                value.name = 'p_cnv_expand'
+
+        sc_post_multi = sc_post %>% 
+            select(-cnv_state) %>%
+            inner_join(
+                segs_multi,
+                by = 'seg',
+                relationship = "many-to-many"
             ) %>%
             mutate(
-                cnv_state_expand = c('p_amp' = 'amp', 'p_loh' = 'loh', 'p_del' = 'del', 'p_bamp' = 'bamp', 'p_bdel' = 'bdel')[cnv_state_expand]
+                seg = paste0(seg, '_', cnv_state), 
             ) %>%
             rowwise() %>%
-            filter(cnv_state_expand %in% cnv_states) %>%
-            ungroup() %>%
             mutate(
-                seg = ifelse(n_states > 1, paste0(seg, '_', cnv_state_expand), seg),
-                p_cnv = ifelse(n_states > 1, p_cnv_expand, p_cnv),
-                cnv_state = ifelse(n_states > 1, cnv_state_expand, cnv_state)
-            ) %>%
-            mutate(
-                Z_cnv = case_when(
-                    n_states <= 1 ~ Z_cnv,
-                    cnv_state == 'loh' ~ Z_loh,
-                    cnv_state == 'del' ~ Z_del,
-                    cnv_state == 'bamp' ~ Z_bamp,
-                    cnv_state == 'amp' ~ Z_amp,
-                    cnv_state == 'bdel' ~ Z_bdel
-                )
+                p_cnv = get(glue('p_{cnv_state}')),
+                p_n = 1 - p_cnv,
+                Z_cnv = get(glue('Z_{cnv_state}'))
             ) %>%
             ungroup()
+
+        # note that *_x and *_y columns are not updated .. to fix
+        sc_post = sc_post %>% filter(!seg %in% segs_multi$seg) %>%
+            mutate(n_states = 1) %>%
+            bind_rows(sc_post_multi) %>%
+            arrange(cell, CHROM, seg) %>%
+            mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
+            mutate(seg_label = factor(seg_label, unique(seg_label)))
+
     } else {
         log_message('No multi-allelic CNVs, skipping ..')
     }
 
     return(sc_post)
 }
-
 
 
 ## gtools is orphaned

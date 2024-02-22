@@ -37,7 +37,7 @@ mark_tumor_lineage = function(gtree) {
             ungroup() %>%
             mutate(seq = bfs_rank(root = node)) %>%
             data.frame %>%
-            filter(leaf & !is.na(seq)) %>%
+            filter(leaf & seq > 0) %>%
             pull(mut_burden) %>%
             sum
         }
@@ -49,7 +49,7 @@ mark_tumor_lineage = function(gtree) {
         activate(nodes) %>%
         mutate(
             seq = bfs_rank(root = tumor_root),
-            compartment = ifelse(is.na(seq), 'normal', 'tumor'),
+            compartment = ifelse(seq > 0, 'tumor', 'normal'),
             is_tumor_root = tumor_root == id
         )
 
