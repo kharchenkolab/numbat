@@ -460,6 +460,10 @@ run_numbat = function(
             ) %>%
             ungroup()
 
+        fwrite(exp_post, glue('{out_dir}/exp_post_{i}_before.tsv'), sep = '\t')
+        fwrite(allele_post, glue('{out_dir}/allele_post_{i}_before.tsv'), sep = '\t')
+        fwrite(joint_post, glue('{out_dir}/joint_post_{i}_before.tsv'), sep = '\t')
+
         if (multi_allelic) {
             log_message('Expanding allelic states..', verbose = verbose)
             exp_post = expand_states(exp_post, segs_consensus)
@@ -1713,6 +1717,9 @@ test_multi_allelic = function(bulks, segs_consensus, min_LLR = 5, p_min = 0.999)
                 cnv_states = cnv_state
             )
     }
+
+    segs_consensus = segs_consensus %>%
+        mutate(cnv_states = unlist(purrr::map(cnv_states, function(x){paste0(x, collapse = ',')})))
     
     return(segs_consensus)
 }
@@ -1724,47 +1731,44 @@ test_multi_allelic = function(bulks, segs_consensus, min_LLR = 5, p_min = 0.999)
 #' @keywords internal 
 expand_states = function(sc_post, segs_consensus) {
 
+    segs_multi = segs_consensus %>% filter(n_states > 1) %>%
+        select(seg = seg_cons, cnv_states, n_states) %>%
+        tidyr::separate_longer_delim(cnv_states, ',') %>%
+        rename(cnv_state = cnv_states)
+
     if (any(segs_consensus$n_states > 1)) {
-        sc_post = sc_post %>%
-            left_join(
-                segs_consensus %>% select(seg = seg_cons, cnv_states, n_states),
-                by = 'seg'
-            ) %>%
-            as.data.table %>% 
-            data.table::melt(
-                measure.vars = c('p_amp', 'p_loh', 'p_del', 'p_bamp', 'p_bdel'),
-                variable.name = 'cnv_state_expand',
-                value.name = 'p_cnv_expand'
+
+        sc_post_multi = sc_post %>% 
+            select(-cnv_state) %>%
+            inner_join(
+                segs_multi,
+                by = 'seg',
+                relationship = "many-to-many"
             ) %>%
             mutate(
-                cnv_state_expand = c('p_amp' = 'amp', 'p_loh' = 'loh', 'p_del' = 'del', 'p_bamp' = 'bamp', 'p_bdel' = 'bdel')[cnv_state_expand]
+                seg = paste0(seg, '_', cnv_state), 
             ) %>%
             rowwise() %>%
-            filter(cnv_state_expand %in% cnv_states) %>%
-            ungroup() %>%
             mutate(
-                seg = ifelse(n_states > 1, paste0(seg, '_', cnv_state_expand), seg),
-                p_cnv = ifelse(n_states > 1, p_cnv_expand, p_cnv),
-                cnv_state = ifelse(n_states > 1, cnv_state_expand, cnv_state)
-            ) %>%
-            mutate(
-                Z_cnv = case_when(
-                    n_states <= 1 ~ Z_cnv,
-                    cnv_state == 'loh' ~ Z_loh,
-                    cnv_state == 'del' ~ Z_del,
-                    cnv_state == 'bamp' ~ Z_bamp,
-                    cnv_state == 'amp' ~ Z_amp,
-                    cnv_state == 'bdel' ~ Z_bdel
-                )
+                p_cnv = get(glue('p_{cnv_state}')),
+                p_n = 1 - p_cnv,
+                Z_cnv = get(glue('Z_{cnv_state}'))
             ) %>%
             ungroup()
+
+        sc_post = sc_post %>% filter(!seg %in% segs_multi$seg) %>%
+            mutate(n_states = 1) %>%
+            bind_rows(sc_post_multi) %>%
+            mutate(seg_label = paste0(seg, '(', cnv_state, ')')) %>%
+            mutate(seg_label = factor(seg_label, unique(seg_label))) %>%
+            select(-any_of(c('p_cnv_x', 'p_cnv_y', 'Z_cnv_x', 'Z_cnv_y', 'Z_n_x', 'Z_n_y')))
+
     } else {
         log_message('No multi-allelic CNVs, skipping ..')
     }
 
     return(sc_post)
 }
-
 
 
 ## gtools is orphaned
