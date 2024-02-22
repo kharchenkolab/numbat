@@ -28,8 +28,6 @@ exp_hclust(
 \item{ncores}{integer Number of cores}
 
 \item{verbose}{logical Verbosity}
-
-\item{df_allele}{dataframe Alelle counts}
 }
 \description{
 Run smoothed expression-based hclust

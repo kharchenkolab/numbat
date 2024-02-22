@@ -677,7 +677,6 @@ subtrees_equal = function(subtrees_1, subtrees_2) {
 
 #' Run smoothed expression-based hclust
 #' @param count_mat dgCMatrix Gene counts
-#' @param df_allele dataframe Alelle counts
 #' @param lambdas_ref matrix Reference expression profiles
 #' @param gtf dataframe Transcript GTF
 #' @param sc_refs named list Reference choices for single cells
@@ -1166,7 +1165,7 @@ resolve_cnvs = function(segs_all, min_overlap = 0.5, debug = FALSE) {
 }
 
 #' get the single cell expression likelihoods
-#' @param exp_counts dataframe Single-cell expression counts {CHROM, seg, cnv_state, gene, Y_obs, lambda_ref}
+#' @param exp_counts dataframe Single-cell expression counts (CHROM, seg, cnv_state, gene, Y_obs, lambda_ref)
 #' @param diploid_chroms character vector Known diploid chromosomes
 #' @param use_loh logical Whether to include CNLOH regions in baseline
 #' @return dataframe Single-cell CNV likelihood scores
