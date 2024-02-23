@@ -100,9 +100,6 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/calc_phi_mle_lnpois.html</loc>
   </url>
   <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/calc_trans_mat.html</loc>
-  </url>
-  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/check_allele_df.html</loc>
   </url>
   <url>
@@ -154,19 +151,10 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/count_mat_ref.html</loc>
   </url>
   <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/dbbinom.html</loc>
-  </url>
-  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/detect_clonal_loh.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/df_allele_example.html</loc>
-  </url>
-  <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/dgpois.html</loc>
-  </url>
-  <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/dpoilog.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/exp_hclust.html</loc>
@@ -190,9 +178,6 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/fit_gamma.html</loc>
   </url>
   <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/fit_gpois.html</loc>
-  </url>
-  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/fit_lnpois.html</loc>
   </url>
   <url>
@@ -200,9 +185,6 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/fit_snp_rate.html</loc>
-  </url>
-  <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/forward_back_allele.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/gaps_hg19.html</loc>
@@ -283,9 +265,6 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/get_snps.html</loc>
   </url>
   <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/get_trans_probs.html</loc>
-  </url>
-  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/get_tree_post.html</loc>
   </url>
   <url>
@@ -310,22 +289,10 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/joint_post_example.html</loc>
   </url>
   <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/l_bbinom.html</loc>
-  </url>
-  <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/l_gpois.html</loc>
-  </url>
-  <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/l_lnpois.html</loc>
-  </url>
-  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/label_edges.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/label_genotype.html</loc>
-  </url>
-  <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/likelihood_allele.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/log_mem.html</loc>
@@ -403,13 +370,7 @@
     <loc>https://kharchenkolab.github.io/numbat/reference/return_missing_columns.html</loc>
   </url>
   <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/run_allele_hmm.html</loc>
-  </url>
-  <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/run_group_hmms.html</loc>
-  </url>
-  <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/run_joint_hmm.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/run_numbat.html</loc>
@@ -452,12 +413,6 @@
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/vcf_meta.html</loc>
-  </url>
-  <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/viterbi_allele.html</loc>
-  </url>
-  <url>
-    <loc>https://kharchenkolab.github.io/numbat/reference/viterbi_joint.html</loc>
   </url>
   <url>
     <loc>https://kharchenkolab.github.io/numbat/reference/viterbi_loh.html</loc>
