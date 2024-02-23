@@ -32,7 +32,7 @@ RUN cd /data && wget https://sourceforge.net/projects/cellsnp/files/SNPlist/geno
 
 
 # hg38
-RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip && unzip 1000G_hg38.zip 
+RUN cd /data && wget -q http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip && unzip 1000G_hg38.zip 
 
 # hg19
 ##RUN cd /data && wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip && unzip 1000G_hg19.zip
