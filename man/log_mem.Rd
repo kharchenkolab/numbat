@@ -6,9 +6,6 @@
 \usage{
 log_mem()
 }
-\arguments{
-\item{msg}{string Message to log}
-}
 \description{
 Log memory usage
 }

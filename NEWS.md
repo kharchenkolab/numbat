@@ -1,3 +1,9 @@
+# numbat 1.4.0 - 10/26/2023
+
+* Integration with hahmmr 
+
+* Better input checking for pileup_and_phase
+
 # numbat 1.3.3 - 08/15/2023
 
 * Fix plotting issue #135

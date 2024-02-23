@@ -956,7 +956,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
 
     p_tree = ggtree::ggtree(hc, size = 0.2)
 
-    cell_order = p_tree$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
+    cell_order = as.data.frame(p_tree$data) %>% filter(isTip) %>% arrange(y) %>% pull(label)
 
     chrom_labeller <- function(chr){
         chr[chr %in% c(18, 21)] = ''

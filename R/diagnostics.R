@@ -1,6 +1,5 @@
 
 #' Log memory usage
-#' @param msg string Message to log
 #' @return NULL
 #' @keywords internal
 log_mem = function() {

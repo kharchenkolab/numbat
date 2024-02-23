@@ -14,7 +14,7 @@ get_exp_likelihoods(
 )
 }
 \arguments{
-\item{exp_counts}{dataframe Single-cell expression counts {CHROM, seg, cnv_state, gene, Y_obs, lambda_ref}}
+\item{exp_counts}{dataframe Single-cell expression counts (CHROM, seg, cnv_state, gene, Y_obs, lambda_ref)}
 
 \item{diploid_chroms}{character vector Known diploid chromosomes}
 
