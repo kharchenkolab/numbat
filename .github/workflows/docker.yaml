@@ -3,7 +3,8 @@ name: Publish Docker image
 
 on:
   release:
-    types: [published, edited]
+    types: [published]
+  workflow_dispatch:
   # push:
   #   branches: [main, master]
 
