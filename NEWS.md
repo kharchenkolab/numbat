@@ -4,6 +4,8 @@
 
 * Better input checking for pileup_and_phase
 
+* Fix compatibility with igraph v2.0+ and tidygraph v1.3+ (#150, #146)
+
 # numbat 1.3.3 - 08/15/2023
 
 * Fix plotting issue #135
