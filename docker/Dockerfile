@@ -1,9 +1,9 @@
-FROM r-base:4.2.1
+FROM r-base:4.3.1
 
-LABEL authors="Evan Biederstedt <evan.biederstedt@gmail.com>, Teng Gao <tgao@g.harvard.edu>" \
+LABEL authors="Evan Biederstedt <evan.biederstedt@gmail.com>, Teng Gao <tgaoteng@gmail.com>" \
     version.image="0.1.3" \
     version.pagoda2="0.1.3" \
-    description="r-base image R 4.2.1 to run numbat with R"
+    description="r-base image R 4.3.1 to run numbat with R"
 
 
 RUN apt-get update --yes && apt-get install --yes build-essential \

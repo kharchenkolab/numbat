@@ -1,4 +1,4 @@
-# numbat 1.4.0 - 10/26/2023
+# numbat 1.4.0 - 02/23/2023
 
 * Integration with hahmmr 
 
