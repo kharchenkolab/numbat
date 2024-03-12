@@ -166,7 +166,7 @@ wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip</code></pre>
 </h3>
 <p>We provide a ready-to-run Docker container that includes the Numbat R
 package and all of its dependencies. You can launch it as follows:</p>
-<pre><code>docker run -v /work:/mnt/mydata -it pkharchenkolab/numbat-rbase:main /bin/bash</code></pre>
+<pre><code>docker run -v /work:/mnt/mydata -it pkharchenkolab/numbat-rbase:latest /bin/bash</code></pre>
 <p>where <code>/work</code> is a local data folder you would like to
 access and write to. Within the container, <code>cellsnp-lite</code>,
 <code>eagle2</code> and <code>samtools</code> are available in path and
