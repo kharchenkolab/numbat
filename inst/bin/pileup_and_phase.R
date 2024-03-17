@@ -187,12 +187,7 @@ list(cmds) %>% fwrite(script, sep = '\n')
 
 system(glue('chmod +x {script}'))
 
-tryCatch({
-    system(glue('sh {script}'), intern = TRUE)
-},
-warning = function(w){
-    stop('Pileup failed')
-})
+system(glue('sh {script} 2>&1 | tee {outdir}/pileup.log'), intern = FALSE)
 
 ## VCF creation
 cat('Creating VCFs\n')
@@ -203,6 +198,9 @@ vcfs = lapply(samples, function(sample) {
     if (file.exists(vcf_file)) {
         if (file.size(vcf_file) != 0) {
             vcf = vcfR::read.vcfR(vcf_file, verbose = F)
+            if (nrow(vcf@fix) == 0) {
+                stop(glue('Pileup VCF for sample {sample} has 0 variants'))
+            }
             return(vcf)
         } else {
             stop('Pileup VCF is empty')
@@ -309,3 +307,5 @@ for (sample in samples) {
     fwrite(df, glue('{outdir}/{sample}_allele_counts.tsv.gz'), sep = '\t')
     
 }
+
+cat('All done!\n')
