@@ -1,3 +1,13 @@
+# numbat 1.4.0 - 02/23/2023
+
+* Integration with hahmmr 
+
+* Better input checking for pileup_and_phase
+
+* Fix compatibility with igraph v2.0+ and tidygraph v1.3+ (#150)
+
+* Fix multiallelic CNV state probability reporting (#146)
+
 # numbat 1.3.3 - 08/15/2023
 
 * Fix plotting issue #135

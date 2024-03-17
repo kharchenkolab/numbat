@@ -11,12 +11,12 @@ parser = add_option(parser, '--gmap', default = NULL, type = "character", help =
 parser = add_option(parser, '--eagle', type = "character", default = 'eagle', help = "Path to Eagle2 binary file")
 parser = add_option(parser, '--snpvcf', default = NULL, type = "character", help = "SNP VCF for pileup")
 parser = add_option(parser, '--paneldir', default = NULL, type = "character", help = "Directory to phasing reference panel (BCF files)")
-parser = add_option(parser, '--outdir', default = './pileup_and_phase', type = "character", help = "Output directory")
+parser = add_option(parser, '--outdir', default = NULL, type = "character", help = "Output directory")
 parser = add_option(parser, '--ncores', default = 1, type = "integer", help = "Number of cores")
 parser = add_option(parser, '--UMItag', default = "Auto", type = "character", help = "UMI tag in bam; should be Auto for 10x and XM for Slide-seq")
 parser = add_option(parser, '--cellTAG', default = "CB", type = "character", help = "Cell tag in bam; should be CB for 10x and XC for Slide-seq")
 parser = add_option(parser, '--smartseq', default = FALSE, action = 'store_true', help = "Running with SMART-seq mode; Supply a txt file containing directories of BAM files to --bams and a txt file containing cell names to --barcodes (each entry on its own line for both; ordering must match).")
-parser = add_option(parser, '--bulk', default = FALSE, action = 'store_true', help = "Running with bulk RNA-seq mode")
+parser = add_option(parser, '--bulk', default = FALSE, action = 'store_true', help = "Running with bulk RNA-seq mode; supply --bams and --samples but not --barcodes.")
 args <- parse_args(parser)
 
 suppressPackageStartupMessages({
@@ -29,9 +29,25 @@ suppressPackageStartupMessages({
     library(numbat)
 })
 
-# required args
-if (any(is.null(c(args$bams, args$barcodes, args$gmap, args$snpvcf, args$paneldir)))) {
-    stop('Missing one or more required arguments: bams, barcodes, gmap, snpvcf, paneldir')
+if (any(sapply(list(args$bams, args$snpvcf, args$outdir, args$paneldir, args$gmap), is.null))) {
+    stop('Missing one or more always required arguments: --bams, --snpvcf, --outdir, --paneldir, --gmap')
+}
+
+if (args$smartseq) {
+    if (any(sapply(list(args$barcodes), is.null))) {
+        stop('Missing one or more required arguments for smartseq mode: --barcodes')
+    }
+    mode = 'SMART-Seq'
+} else if (args$bulk) {
+    if (any(sapply(list(args$samples), is.null))) {
+        stop('Missing one or more required arguments for bulk mode: --samples')
+    }
+    mode = 'Bulk'
+} else {
+    if (any(sapply(list(args$samples, args$barcodes), is.null))) {
+        stop('Missing one or more required arguments for 10x mode: --samples, --barcodes')
+    }
+    mode = '10X'
 }
 
 label = args$label
@@ -52,7 +68,38 @@ cellTAG = args$cellTAG
 smartseq = args$smartseq
 bulk = args$bulk
 genome = ifelse(str_detect(args$gmap, 'hg19'), 'hg19', 'hg38')
+
+message(paste0('Running in ', mode, ' mode'))
 message(paste0('Using genome version: ', genome))
+
+## check if files exist
+for (bam in bams) {
+    if (!file.exists(bam)) {
+        stop('BAM file not found')
+    }
+}
+
+if (!file.exists(snpvcf)) {
+    stop('SNP VCF not found')
+}
+
+
+if (!is.null(barcodes)) {
+    for (barcode in barcodes) {
+        if (!file.exists(barcode)) {
+            stop('Barcode file not found')
+        }
+    }
+}
+
+if (!file.exists(gmap)) {
+    stop('Genetic map not found')
+}
+
+if (!file.exists(paneldir)) {
+    stop('Phasing reference panel not found')
+}
+
 
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 dir.create(glue('{outdir}/pileup'), showWarnings = FALSE)

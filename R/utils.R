@@ -558,7 +558,7 @@ analyze_bulk = function(
         bulk = bulk %>% 
             group_by(CHROM) %>%
             mutate(state = 
-                run_joint_hmm(
+                run_joint_hmm_s15(
                     pAD = pAD,
                     DP = DP, 
                     p_s = p_s,
@@ -1128,7 +1128,7 @@ find_common_diploid = function(
             bulk %>% 
                 group_by(CHROM) %>%
                 mutate(state = 
-                    run_allele_hmm(
+                    run_allele_hmm_s5(
                         pAD = pAD,
                         DP = DP, 
                         p_s = p_s,
@@ -1355,17 +1355,6 @@ get_segs_neu = function(bulks) {
     return(segs_neu)
 }
 
-#' calculate joint likelihood of allele data
-#' @param AD numeric vector Variant allele depth
-#' @param DP numeric vector Total allele depth
-#' @param alpha numeric Alpha parameter of Beta-Binomial distribution
-#' @param beta numeric Beta parameter of Beta-Binomial distribution
-#' @return numeric Joint log likelihood
-#' @keywords internal
-l_bbinom = function(AD, DP, alpha, beta) {
-    sum(dbbinom(AD, DP, alpha, beta, log = TRUE))
-}
-
 #' fit a Beta-Binomial model by maximum likelihood
 #' @param AD numeric vector Variant allele depth
 #' @param DP numeric vector Total allele depth
@@ -1405,63 +1394,6 @@ fit_gamma = function(AD, DP, start = 20) {
     gamma = fit@coef[1]
 
     return(gamma)
-}
-
-#' Density function for a gamma-poisson distribution
-#' @keywords internal
-dgpois <- function(x, shape, rate, scale = 1/rate, log = FALSE) {
-  cpp_dgpois(x, shape, scale, log[1L])
-}
-
-
-#' calculate joint likelihood of a gamma-poisson model
-#' @param Y_obs numeric vector Gene expression counts
-#' @param lambda_ref numeric vector Reference expression levels
-#' @param d numeric Total library size
-#' @param alpha numeric Alpha parameter of Gamma-Poisson distribution
-#' @param beta numeric Beta parameter of Gamma-Poisson distribution
-#' @return numeric Joint log likelihood
-#' @keywords internal
-l_gpois = function(Y_obs, lambda_ref, d, alpha, beta, phi = 1) {
-    sum(dgpois(Y_obs, shape = alpha, rate = beta/(phi * d * lambda_ref), log = TRUE))
-}
-
-#' fit a Gamma-Poisson model by maximum likelihood
-#' @param Y_obs numeric vector Gene expression counts
-#' @param lambda_ref numeric vector Reference expression levels
-#' @param d numeric Total library size
-#' @return numeric MLE of alpha and beta
-#' @keywords internal
-fit_gpois = function(Y_obs, lambda_ref, d) {
-
-    Y_obs = Y_obs[lambda_ref > 0]
-    lambda_ref = lambda_ref[lambda_ref > 0]
-    
-    fit = stats4::mle(
-        minuslogl = function(alpha, beta) {
-            -l_gpois(Y_obs, lambda_ref, d, alpha, beta)
-        },
-        start = c(1, 1),
-        lower = c(0.01, 0.01),
-        control = list('trace' = FALSE)
-    )
-
-    alpha = fit@coef[1]
-    beta = fit@coef[2]
-    
-    return(fit)
-}
-
-#' calculate joint likelihood of a PLN model
-#' @param Y_obs numeric vector Gene expression counts
-#' @param lambda_ref numeric vector Reference expression levels
-#' @param d numeric Total library size
-#' @return numeric Joint log likelihood
-#' @keywords internal
-l_lnpois = function(Y_obs, lambda_ref, d, mu, sig, phi = 1) {
-    if (any(sig <= 0)) {stop(glue('negative sigma. value: {sig}'))}
-    if (length(sig) == 1) {sig = rep(sig, length(Y_obs))}
-    sum(log(dpoilog(Y_obs, mu + log(phi * d * lambda_ref), sig)))
 }
 
 #' fit a PLN model by maximum likelihood
