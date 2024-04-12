@@ -149,6 +149,12 @@ check_exp_ref = function(lambdas_ref) {
     if (!is.matrix(lambdas_ref)) {
         lambdas_ref = as.matrix(lambdas_ref) %>% magrittr::set_colnames('ref')
     }
+
+    if (any(is.na(lambdas_ref))) {
+        msg = "The reference expression matrix 'lambdas_ref' should not contain any NA values."
+        log_error(msg)
+        stop(msg)
+    }
     
     # check if all entries in the reference profile are integers
     if (all(lambdas_ref == as.integer(lambdas_ref))) {
