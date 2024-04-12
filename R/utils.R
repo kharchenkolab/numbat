@@ -1027,7 +1027,7 @@ smooth_segs = function(bulk, min_genes = 10) {
     return(bulk)
 }
 
-#' Annotate a consensus segments on a pseudobulk dataframe
+#' Annotate a set of segments on a pseudobulk dataframe
 #' @param bulk dataframe Pseudobulk profile
 #' @param segs_consensus datatframe Consensus segment dataframe
 #' @return dataframe Pseudobulk profile

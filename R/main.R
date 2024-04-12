@@ -1190,9 +1190,9 @@ get_exp_likelihoods = function(exp_counts, diploid_chroms = NULL, use_loh = FALS
     if (is.null(mu) | is.null(sigma)) {
 
         if (!is.null(diploid_chroms)) {
-            exp_counts_diploid = exp_counts %>% filter(CHROM %in% diploid_chroms)
+            exp_counts_diploid = exp_counts %>% filter(!loh) %>% filter(CHROM %in% diploid_chroms)
         } else {
-            exp_counts_diploid = exp_counts %>% filter(cnv_state %in% ref_states)
+            exp_counts_diploid = exp_counts %>% filter(!loh) %>% filter(cnv_state %in% ref_states)
         }
 
         fit = exp_counts_diploid %>% {fit_lnpois_cpp(.$Y_obs, .$lambda_ref, depth_obs)}
@@ -1273,39 +1273,41 @@ get_exp_sc = function(segs_consensus, count_mat, gtf, segs_loh = NULL) {
         ) %>%
         ungroup()
 
-    if (!is.null(segs_loh)) {
-        exp_sc = exclude_loh(exp_sc, segs_loh)
-    }
+    exp_sc = exclude_loh(exp_sc, segs_loh)
 
     return(exp_sc)
 }
 
 # exclude genes in clonal LOH regions
-exclude_loh = function(exp_sc, segs_loh) {
+exclude_loh = function(exp_sc, segs_loh = NULL) {
 
-    log_message('Excluding clonal LOH regions .. ')
-    
-    genes_loh = GenomicRanges::findOverlaps(
-            exp_sc %>% {GenomicRanges::GRanges(
-                seqnames = .$CHROM,
-                IRanges::IRanges(start = .$gene_start,
-                       end = .$gene_start)
-            )}, 
-            segs_loh %>% {GenomicRanges::GRanges(
-                seqnames = .$CHROM,
-                IRanges::IRanges(start = .$seg_start,
-                       end = .$seg_end)
-            )}
-        ) %>%
-        as.data.frame() %>% 
-        setNames(c('gene_index', 'seg_index')) %>%
-        left_join(
-            exp_sc %>% mutate(gene_index = 1:n()),
-            by = c('gene_index')
-        ) %>%
-        pull(gene)
-    
-    exp_sc = exp_sc %>% mutate(cnv_state = ifelse(gene %in% genes_loh, 'del', cnv_state)) 
+    if (is.null(segs_loh)) {
+        exp_sc = exp_sc %>% mutate(loh = FALSE)
+    } else {
+        log_message('Excluding clonal LOH regions .. ')
+        
+        genes_loh = GenomicRanges::findOverlaps(
+                exp_sc %>% {GenomicRanges::GRanges(
+                    seqnames = .$CHROM,
+                    IRanges::IRanges(start = .$gene_start,
+                        end = .$gene_start)
+                )}, 
+                segs_loh %>% {GenomicRanges::GRanges(
+                    seqnames = .$CHROM,
+                    IRanges::IRanges(start = .$seg_start,
+                        end = .$seg_end)
+                )}
+            ) %>%
+            as.data.frame() %>% 
+            setNames(c('gene_index', 'seg_index')) %>%
+            left_join(
+                exp_sc %>% mutate(gene_index = 1:n()),
+                by = c('gene_index')
+            ) %>%
+            pull(gene)
+        
+        exp_sc = exp_sc %>% mutate(loh = gene %in% genes_loh) 
+    }
     
     return(exp_sc)
     
@@ -1323,7 +1325,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
     exp_sc = get_exp_sc(segs_consensus, count_mat, gtf, segs_loh)
 
     if (is.null(use_loh)) {
-        if (mean(exp_sc$cnv_state == 'neu') < 0.05) {
+        if (mean(exp_sc$cnv_state == 'neu' & (!exp_sc$loh)) < 0.05) {
             use_loh = TRUE
             log_message('less than 5% genes are in neutral region - including LOH in baseline')
         } else {
@@ -1346,7 +1348,7 @@ get_exp_post = function(segs_consensus, count_mat, gtf, lambdas_ref, sc_refs = N
    
             ref = sc_refs[cell]
 
-            exp_sc = exp_sc[,c('gene', 'seg', 'CHROM', 'cnv_state', 'seg_start', 'seg_end', cell)] %>%
+            exp_sc = exp_sc[,c('gene', 'seg', 'CHROM', 'cnv_state', 'loh', 'seg_start', 'seg_end', cell)] %>%
                 rename(Y_obs = ncol(.))
 
             exp_sc %>%
@@ -1712,7 +1714,7 @@ test_multi_allelic = function(bulks, segs_consensus, min_LLR = 5, p_min = 0.999)
     } else {
         segs_consensus = segs_consensus %>% 
             mutate(
-                n_states = ifelse(cnv_state == 'neu', 1, 0),
+                n_states = ifelse(cnv_state == 'neu', 0, 1),
                 cnv_states = cnv_state
             )
     }
