@@ -2,20 +2,14 @@ version: 2
 jobs:
   build:
     docker:
-      - image: rocker/r-ver:4.3
+      - image: rocker/r-tidyverse:latest
     environment:
             _R_CHECK_FORCE_SUGGESTS_: false
     steps:
       - checkout
       - run: 
           name: Install matrixStats v0.61.0 
-          command: R -e "install.packages('https://cran.rstudio.com/src/contrib/matrixStats_0.61.0.tar.gz', repos=NULL, type='source')"  
-      - run:
-          name: Install package dependencies
-          command: |
-            Rscript \
-              -e 'if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")' \
-              -e 'devtools::install_deps(dependencies = TRUE)'
+          command: R -e "install.packages('https://cran.rstudio.com/src/contrib/matrixStats_0.61.0.tar.gz', repos=NULL, type='source')"
       - run:
           name: Build package
           command: R CMD build .
