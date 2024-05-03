@@ -9,7 +9,13 @@ jobs:
       - checkout
       - run: 
           name: Install matrixStats v0.61.0 
-          command: R -e "install.packages('https://cran.rstudio.com/src/contrib/matrixStats_0.61.0.tar.gz', repos=NULL, type='source')"
+          command: R -e "install.packages('https://cran.rstudio.com/src/contrib/matrixStats_0.61.0.tar.gz', repos=NULL, type='source')"  
+      - run:
+          name: Install package dependencies
+          command: |
+            Rscript \
+              -e 'if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")' \
+              -e 'devtools::install_deps(dependencies = TRUE)'
       - run:
           name: Build package
           command: R CMD build .
@@ -18,4 +24,3 @@ jobs:
           command: R CMD check --no-manual *tar.gz
       - store_test_results:
           path: tmp/tests
-
