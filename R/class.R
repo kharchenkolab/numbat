@@ -92,7 +92,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
 
         if (is.null(self$gexp_roll_wide)) {
 
-            self$gexp_roll_wide = read_file(inputfile=glue('{out_dir}/gexp_roll_wide.tsv.gz'), filetype="tsv")
+            self$gexp_roll_wide = read_file(inputfile=glue('{self$out_dir}/gexp_roll_wide.tsv.gz'), filetype="tsv")
             
             if (!is.null(self$gexp_roll_wide)) {
                 if ('V1' %in% colnames(self$gexp_roll_wide)) {
@@ -196,6 +196,7 @@ Numbat <- R6::R6Class("Numbat", lock_objects=FALSE,
             self$mut_graph = read_file(inputfile=glue('{out_dir}/mut_graph_{i}.rds'), filetype="rds")
             self$gtree = read_file(inputfile=glue('{out_dir}/tree_final_{i}.rds'), filetype="rds")
             self$clone_post = read_file(inputfile=glue('{out_dir}/clone_post_{i}.tsv'), filetype="tsv")
+            self$hc = read_file(inputfile=glue('{out_dir}/hc.rds'), filetype="rds")
 
     })
 )
