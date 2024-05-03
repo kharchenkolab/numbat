@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: rocker/tidyverse:4.3
+      - image: rocker/r-ver:4.2
     environment:
             _R_CHECK_FORCE_SUGGESTS_: false
     steps:
