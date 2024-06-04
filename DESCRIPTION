@@ -15,7 +15,7 @@ Imports:
     caTools,
     data.table,
     dendextend,
-    dplyr,
+    dplyr (>= 1.1.1),
     GenomicRanges,
     ggplot2,
     ggraph,
@@ -42,7 +42,7 @@ Imports:
     stringr,
     tibble,
     tidygraph,
-    tidyr,
+    tidyr (>= 1.3.0),
     vcfR,
     zoo
 Suggests: 
