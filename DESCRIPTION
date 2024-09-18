@@ -1,8 +1,8 @@
 Package: numbat
 Title: Haplotype-Aware CNV Analysis from scRNA-Seq
 URL: https://github.com/kharchenkolab/numbat/, https://kharchenkolab.github.io/numbat/
-Version: 1.4.1
-Authors@R: c(person("Teng","Gao", email="tgaoteng@gmail.com", role=c("cre", "aut")), person("Ruslan", "Soldatov", email="soldatr@mskcc.org", role="aut"), person("Hirak", "Sarkar", email="hirak_sarkar@hms.harvard.edu", role="aut"), person("Evan", "Biederstedt", email="evan.biederstedt@gmail.com", role="aut"), person("Peter", "Kharchenko", email = "peter_kharchenko@hms.harvard.edu", role = "aut"))
+Version: 1.4.2
+Authors@R: c(person("Teng","Gao", email="tgao@broadinstitute.org", role=c("cre", "aut")), person("Ruslan", "Soldatov", email="soldatr@mskcc.org", role="aut"), person("Hirak", "Sarkar", email="hirak_sarkar@hms.harvard.edu", role="aut"), person("Evan", "Biederstedt", email="evan.biederstedt@gmail.com", role="aut"), person("Peter", "Kharchenko", email = "peter_kharchenko@hms.harvard.edu", role = "aut"))
 Description: A computational method that infers copy number variations (CNVs) in cancer scRNA-seq data and reconstructs the tumor phylogeny. 'numbat' integrates signals from gene expression, allelic ratio, and population haplotype structures to accurately infer allele-specific CNVs in single cells and reconstruct their lineage relationship. 'numbat' can be used to: 1. detect allele-specific copy number variations from single-cells; 2. differentiate tumor versus normal cells in the tumor microenvironment; 3. infer the clonal architecture and evolutionary history of profiled tumors. 'numbat' does not require tumor/normal-paired DNA or genotype data, but operates solely on the donor scRNA-data data (for example, 10x Cell Ranger output). Additional examples and documentations are available at <https://kharchenkolab.github.io/numbat/>. For details on the method please see Gao et al. Nature Biotechnology (2022) <doi:10.1038/s41587-022-01468-y>.
 License: MIT + file LICENSE
 Encoding: UTF-8
