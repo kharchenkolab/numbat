@@ -1,3 +1,17 @@
+# numbat 1.4.2 - 09/18/2023
+
+* Fix pseudobulk plotting legend (#182)
+
+* Requirement for dplyr and tidyr versions (#189, #190)
+
+* Fix Numbat$plot_exp_roll (#169)
+
+* Fix CNV states reporting when `segs_loh` is provided (#183)
+
+* Fix `n_states` reporting (#178)
+
+* Improve error handling in `pileup_and_phase` (#179)
+
 # numbat 1.4.0 - 02/23/2023
 
 * Integration with hahmmr 
