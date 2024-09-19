@@ -162,7 +162,8 @@ plot_psbulk = function(
     p = p + geom_point(
             aes(shape = str_detect(state_post, '_2'), alpha = str_detect(state_post, '_2')),
             size = dot_size,
-            na.rm = TRUE
+            na.rm = TRUE,
+            show.legend = TRUE
         ) +
         geom_hline(
             data = data.frame(y = c(0,1), variable = 'pHF'),
