@@ -8,7 +8,7 @@ LABEL authors="Evan Biederstedt <evan.biederstedt@gmail.com>, Teng Gao <tgaoteng
 RUN apt-get update --yes && apt-get install --yes build-essential \
   libcurl4-gnutls-dev libxml2-dev libssl-dev libbz2-dev zlib1g-dev \
   libfontconfig1-dev libharfbuzz-dev libfribidi-dev \
-  libncurses5-dev libncursesw5-dev liblzma-dev \
+  libncurses5-dev libncursesw5-dev liblzma-dev libgit2-dev \
   libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev \
   libglpk-dev git autoconf gettext libtool automake  \
   samtools sudo
