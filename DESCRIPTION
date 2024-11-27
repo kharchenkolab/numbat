@@ -57,4 +57,4 @@ NeedsCompilation: yes
 SystemRequirements: GNU make
 Author: Teng Gao [cre, aut], Ruslan Soldatov [aut], Hirak Sarkar [aut], Evan Biederstedt [aut], Peter Kharchenko [aut]
 Maintainer: Teng Gao <tgaoteng@gmail.com>
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2

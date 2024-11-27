@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{annot_consensus}
 \alias{annot_consensus}
-\title{Annotate a consensus segments on a pseudobulk dataframe}
+\title{Annotate a set of segments on a pseudobulk dataframe}
 \usage{
 annot_consensus(bulk, segs_consensus, join_mode = "inner")
 }
@@ -15,6 +15,6 @@ annot_consensus(bulk, segs_consensus, join_mode = "inner")
 dataframe Pseudobulk profile
 }
 \description{
-Annotate a consensus segments on a pseudobulk dataframe
+Annotate a set of segments on a pseudobulk dataframe
 }
 \keyword{internal}

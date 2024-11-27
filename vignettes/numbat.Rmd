@@ -33,7 +33,7 @@ wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_
 wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
 ```
 
-5. 1000G Reference Panel
+5. 1000G Reference Panel (paste link in browser to download if `wget` isn't working)
 ```
 # hg38
 wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
