@@ -14,8 +14,8 @@
 <link rel="apple-touch-icon" type="image/png" sizes="60x60" href="../apple-touch-icon-60x60.png">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.4.2/css/all.min.css" rel="stylesheet">
-<link href="../deps/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Interpreting Numbat results">
 <meta name="description" content="Visualizing and interpreting Numbat outputs">
 <meta property="og:description" content="Visualizing and interpreting Numbat outputs">
@@ -72,7 +72,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Interpreting Numbat results</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/kharchenkolab/numbat/blob/v1.4.2/vignettes/results.Rmd" class="external-link"><code>vignettes/results.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/kharchenkolab/numbat/blob/main/vignettes/results.Rmd" class="external-link"><code>vignettes/results.Rmd</code></a></small>
       <div class="d-none name"><code>results.Rmd</code></div>
     </div>
 
@@ -138,9 +138,71 @@ parameters in <code>run_numbat</code> can be re-adjusted using
 <span>        <span class="va">nb</span><span class="op">$</span><span class="fu">cutree</span><span class="op">(</span>n_cut <span class="op">=</span> <span class="va">k</span><span class="op">)</span></span>
 <span>        <span class="va">nb</span><span class="op">$</span><span class="fu">plot_phylo_heatmap</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">ggtitle</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">'n_cut='</span>, <span class="va">k</span><span class="op">)</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://patchwork.data-imaginist.com/reference/wrap_plots.html" class="external-link">wrap_plots</a></span><span class="op">(</span><span class="va">plots</span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## INFO [2024-11-27 02:52:19] opt_move:6a-&gt;9a, cost=2.52</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:19] opt_move:13a-&gt;3c, cost=2.91</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:19] opt_move:7a-&gt;12c,22b,2a,3b,6c, cost=3.89</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:19] opt_move:10c-&gt;12c,22b,2a,3b,6c,7a, cost=1.96</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:19] opt_move:10a,6e-&gt;11b, cost=4.6</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:19] opt_move:10a,6e,11b-&gt;13a,3c, cost=3.39</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:19] opt_move:8b-&gt;18b,6b, cost=6.41</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:19] opt_move:17a,4a-&gt;14a,15c,19a,1a,20a,2b,5d,8a, cost=7.37</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:19] opt_move:1b-&gt;18b,6b,8b, cost=11.9</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:19] opt_move:22a-&gt;6a,9a, cost=26.2</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:20] opt_move:22a,6a,9a-&gt;10c,12c,22b,2a,3b,6c,7a, cost=58.1</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:20] opt_move:10a,6e,11b,13a,3c-&gt;14a,15c,19a,1a,20a,2b,5d,8a,17a,4a, cost=64.3</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:20] opt_move:16a_bamp-&gt;10c,12c,22b,2a,3b,6c,7a,22a,6a,9a, cost=194</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:20] opt_move:16a_amp-&gt;15a,4d,7b, cost=206</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:20] opt_move:18b,6b,8b,1b-&gt;10a,6e,11b,13a,3c,14a,15c,19a,1a,20a,2b,5d,8a,17a,4a, cost=257</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:20] opt_move:15a,4d,7b,16a_amp-&gt;10a,6e,11b,13a,3c,14a,15c,19a,1a,20a,2b,5d,8a,17a,4a,18b,6b,8b,1b, cost=5850</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:20] opt_move:10c,12c,22b,2a,3b,6c,7a,22a,6a,9a,16a_bamp-&gt;10a,6e,11b,13a,3c,14a,15c,19a,1a,20a,2b,5d,8a,17a,4a,18b,6b,8b,1b,15a,4d,7b,16a_amp, cost=21700</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:6a-&gt;9a, cost=2.52</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:13a-&gt;3c, cost=2.91</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:7a-&gt;12c,22b,2a,3b,6c, cost=3.89</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:10c-&gt;12c,22b,2a,3b,6c,7a, cost=1.96</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:10a,6e-&gt;11b, cost=4.6</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:10a,6e,11b-&gt;13a,3c, cost=3.39</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:8b-&gt;18b,6b, cost=6.41</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:17a,4a-&gt;14a,15c,19a,1a,20a,2b,5d,8a, cost=7.37</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:1b-&gt;18b,6b,8b, cost=11.9</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:22a-&gt;6a,9a, cost=26.2</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:22a,6a,9a-&gt;10c,12c,22b,2a,3b,6c,7a, cost=58.1</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:10a,6e,11b,13a,3c-&gt;14a,15c,19a,1a,20a,2b,5d,8a,17a,4a, cost=64.3</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:16a_bamp-&gt;10c,12c,22b,2a,3b,6c,7a,22a,6a,9a, cost=194</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:16a_amp-&gt;15a,4d,7b, cost=206</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:18b,6b,8b,1b-&gt;10a,6e,11b,13a,3c,14a,15c,19a,1a,20a,2b,5d,8a,17a,4a, cost=257</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:23] opt_move:15a,4d,7b,16a_amp-&gt;10a,6e,11b,13a,3c,14a,15c,19a,1a,20a,2b,5d,8a,17a,4a,18b,6b,8b,1b, cost=5850</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:6a-&gt;9a, cost=2.52</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:13a-&gt;3c, cost=2.91</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:7a-&gt;12c,22b,2a,3b,6c, cost=3.89</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:10c-&gt;12c,22b,2a,3b,6c,7a, cost=1.96</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:10a,6e-&gt;11b, cost=4.6</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:10a,6e,11b-&gt;13a,3c, cost=3.39</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:8b-&gt;18b,6b, cost=6.41</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:17a,4a-&gt;14a,15c,19a,1a,20a,2b,5d,8a, cost=7.37</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:1b-&gt;18b,6b,8b, cost=11.9</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:22a-&gt;6a,9a, cost=26.2</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:22a,6a,9a-&gt;10c,12c,22b,2a,3b,6c,7a, cost=58.1</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:10a,6e,11b,13a,3c-&gt;14a,15c,19a,1a,20a,2b,5d,8a,17a,4a, cost=64.3</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:16a_bamp-&gt;10c,12c,22b,2a,3b,6c,7a,22a,6a,9a, cost=194</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:26] opt_move:16a_amp-&gt;15a,4d,7b, cost=206</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:27] opt_move:18b,6b,8b,1b-&gt;10a,6e,11b,13a,3c,14a,15c,19a,1a,20a,2b,5d,8a,17a,4a, cost=257</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:29] opt_move:6a-&gt;9a, cost=2.52</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:29] opt_move:13a-&gt;3c, cost=2.91</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:29] opt_move:7a-&gt;12c,22b,2a,3b,6c, cost=3.89</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:29] opt_move:10c-&gt;12c,22b,2a,3b,6c,7a, cost=1.96</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:29] opt_move:10a,6e-&gt;11b, cost=4.6</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:29] opt_move:10a,6e,11b-&gt;13a,3c, cost=3.39</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:29] opt_move:8b-&gt;18b,6b, cost=6.41</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:30] opt_move:17a,4a-&gt;14a,15c,19a,1a,20a,2b,5d,8a, cost=7.37</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:30] opt_move:1b-&gt;18b,6b,8b, cost=11.9</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:30] opt_move:22a-&gt;6a,9a, cost=26.2</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:30] opt_move:22a,6a,9a-&gt;10c,12c,22b,2a,3b,6c,7a, cost=58.1</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:30] opt_move:10a,6e,11b,13a,3c-&gt;14a,15c,19a,1a,20a,2b,5d,8a,17a,4a, cost=64.3</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:30] opt_move:16a_bamp-&gt;10c,12c,22b,2a,3b,6c,7a,22a,6a,9a, cost=194</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:30] opt_move:16a_amp-&gt;15a,4d,7b, cost=206</span></span></code></pre>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://patchwork.data-imaginist.com/reference/wrap_plots.html" class="external-link">wrap_plots</a></span><span class="op">(</span><span class="va">plots</span><span class="op">)</span></span></code></pre></div>
 <p><img src="results_files/figure-html/unnamed-chunk-6-1.png" width="2500"></p>
 <p>In <code>cutree</code> one can either specify <code>n_cut</code> or
 <code>max_cost</code>, which work similarly as <code>k</code> and
@@ -151,16 +213,31 @@ tumor cells as a single clone, second cut gives two tumor subclones, and
 so on. Alternatively, one can specify a <code>max_cost</code>, which is
 the maximum likelihood cost threshold with which to reduce the phylogeny
 (higher <code>max_cost</code> leads to fewer clones).</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># restore to original number of cuts</span></span>
 <span><span class="va">nb</span><span class="op">$</span><span class="fu">cutree</span><span class="op">(</span>n_cut <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:6a-&gt;9a, cost=2.52</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:13a-&gt;3c, cost=2.91</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:7a-&gt;12c,22b,2a,3b,6c, cost=3.89</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:10c-&gt;12c,22b,2a,3b,6c,7a, cost=1.96</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:10a,6e-&gt;11b, cost=4.6</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:10a,6e,11b-&gt;13a,3c, cost=3.39</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:8b-&gt;18b,6b, cost=6.41</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:17a,4a-&gt;14a,15c,19a,1a,20a,2b,5d,8a, cost=7.37</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:1b-&gt;18b,6b,8b, cost=11.9</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:22a-&gt;6a,9a, cost=26.2</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:22a,6a,9a-&gt;10c,12c,22b,2a,3b,6c,7a, cost=58.1</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:10a,6e,11b,13a,3c-&gt;14a,15c,19a,1a,20a,2b,5d,8a,17a,4a, cost=64.3</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:16a_bamp-&gt;10c,12c,22b,2a,3b,6c,7a,22a,6a,9a, cost=194</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:16a_amp-&gt;15a,4d,7b, cost=206</span></span>
+<span><span class="co">## INFO [2024-11-27 02:52:43] opt_move:18b,6b,8b,1b-&gt;10a,6e,11b,13a,3c,14a,15c,19a,1a,20a,2b,5d,8a,17a,4a, cost=257</span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
 <h2 id="consensus-copy-number-segments">Consensus copy number segments<a class="anchor" aria-label="anchor" href="#consensus-copy-number-segments"></a>
 </h2>
 <p>Let’s take a look at the consensus segments.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nb</span><span class="op">$</span><span class="fu">plot_consensus</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p><img src="results_files/figure-html/unnamed-chunk-8-1.png" width="4200"></p>
 </div>
@@ -169,7 +246,7 @@ the maximum likelihood cost threshold with which to reduce the phylogeny
 </h2>
 <p>We can also visualize these CNV events in pseudobulks where the data
 is more rich, aggregating cells by clone:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nb</span><span class="op">$</span><span class="va">bulk_clones</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">n_cells</span> <span class="op">&gt;</span> <span class="fl">50</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="../reference/plot_bulks.html">plot_bulks</a></span><span class="op">(</span></span>
@@ -184,7 +261,7 @@ is more rich, aggregating cells by clone:</p>
 <p>Numbat probabilistically evaluates the presence/absence of CNVs in
 single cells. The cell-level CNV posteriors are stored in the
 <code>nb$joint_post</code> dataframe:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">nb</span><span class="op">$</span><span class="va">joint_post</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">cell</span>, <span class="va">CHROM</span>, <span class="va">seg</span>, <span class="va">cnv_state</span>, <span class="va">p_cnv</span>, <span class="va">p_cnv_x</span>, <span class="va">p_cnv_y</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##                        cell  CHROM    seg cnv_state        p_cnv     p_cnv_x</span></span>
 <span><span class="co">##                      &lt;char&gt; &lt;fctr&gt; &lt;char&gt;    &lt;char&gt;        &lt;num&gt;       &lt;num&gt;</span></span>
@@ -208,7 +285,7 @@ joint posterior probability of the CNV (<code>p_cnv</code>), the
 expression-based posterior (<code>p_cnv_x</code>), and the allele-based
 posterior (<code>p_cnv_y</code>). We can visualize the event-specific
 posteriors in a expression-based tSNE embedding:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">plist</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">muts</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'1a'</span>, <span class="st">'3b'</span>, <span class="st">'22b'</span><span class="op">)</span></span>
 <span><span class="va">cnv_type</span> <span class="op">=</span> <span class="va">nb</span><span class="op">$</span><span class="va">joint_post</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/distinct.html" class="external-link">distinct</a></span><span class="op">(</span><span class="va">seg</span>, <span class="va">cnv_state</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="op">{</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">.</span><span class="op">$</span><span class="va">cnv_state</span>, <span class="va">.</span><span class="op">$</span><span class="va">seg</span><span class="op">)</span><span class="op">}</span></span>
@@ -238,7 +315,7 @@ posteriors in a expression-based tSNE embedding:</p>
 probabilistically assign cells to subclones. The information regarding
 clonal assignments are contained in the <code>nb$clone_post</code>
 dataframe.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nb</span><span class="op">$</span><span class="va">clone_post</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">cell</span>, <span class="va">clone_opt</span>, <span class="va">p_1</span>, <span class="va">p_2</span>, <span class="va">p_3</span>, <span class="va">p_4</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##                       cell clone_opt           p_1          p_2          p_3</span></span>
 <span><span class="co">## 1 TNBC1_AAACCTGCACCTTGTC-1         4  1.162495e-72 2.105425e-20 3.478936e-29</span></span>
@@ -259,7 +336,7 @@ of a cell to a specific clone. <code>p_{1..4}</code> are the detailed
 breakdown of the posterior probability that the cell belongs to each
 clone, respectively. Let’s visualize the clonal decomposition in a tSNE
 embedding. Note that clone 1 is always the normal cells.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pagoda</span><span class="op">$</span><span class="fu">plotEmbedding</span><span class="op">(</span></span>
 <span>    alpha<span class="op">=</span><span class="fl">0.8</span>,</span>
 <span>    size<span class="op">=</span><span class="fl">1</span>, </span>
@@ -279,7 +356,7 @@ embedding. Note that clone 1 is always the normal cells.</p>
 probability for each cell to distinguish tumor versus normal cells. We
 can visualize the posterior aneuploidy probability based on expression
 evidence only, allele evidence only, and jointly:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">p_joint</span> <span class="op">=</span> <span class="va">pagoda</span><span class="op">$</span><span class="fu">plotEmbedding</span><span class="op">(</span></span>
 <span>    alpha<span class="op">=</span><span class="fl">0.8</span>,</span>
 <span>    size<span class="op">=</span><span class="fl">1</span>, </span>
@@ -321,7 +398,7 @@ cells.</p>
 </h2>
 <p>Let’s take a closer look at the inferred single cell phylogeny and
 where the mutations occurred.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nb</span><span class="op">$</span><span class="fu">plot_sc_tree</span><span class="op">(</span></span>
 <span>  label_size <span class="op">=</span> <span class="fl">3</span>, </span>
 <span>  branch_width <span class="op">=</span> <span class="fl">0.5</span>, </span>
@@ -332,7 +409,7 @@ where the mutations occurred.</p>
 <p><img src="results_files/figure-html/unnamed-chunk-15-1.png" width="1800">
 The mutational history can also be represented on the clone level, where
 cells with the same genotype are aggregated into one node.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nb</span><span class="op">$</span><span class="fu">plot_mut_history</span><span class="op">(</span>pal <span class="op">=</span> <span class="va">mypal</span><span class="op">)</span></span></code></pre></div>
 <p><img src="results_files/figure-html/unnamed-chunk-16-1.png" width="1800"></p>
 </div>
