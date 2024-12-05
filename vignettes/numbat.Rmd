@@ -36,9 +36,9 @@ wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_
 5. 1000G Reference Panel (paste link in browser to download if `wget` isn't working)
 ```
 # hg38
-wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
+wget https://pklab.org/teng/data/1000G_hg38.zip
 # hg19
-wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
+wget https://pklab.org/teng/data/1000G_hg19.zip
 ```
 
 You can install the numbat R package via CRAN:

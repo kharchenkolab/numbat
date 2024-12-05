@@ -58,7 +58,7 @@ plots = lapply(
         nb$cutree(n_cut = k)
         nb$plot_phylo_heatmap() + ggtitle(paste0('n_cut=', k))
     }
-)
+) %>% suppressMessages()
 
 wrap_plots(plots)
 ```
