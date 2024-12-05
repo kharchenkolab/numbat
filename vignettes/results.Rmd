@@ -51,21 +51,22 @@ In this visualization, the single-cell phylogeny (left) is juxtaposed with a hea
 ### Refine subclones on the phylogeny
 Note that the number of subclones determined by the initial run parameters in `run_numbat` can be re-adjusted using `nb$cutree()`:
 
-```{r, fig.width = 10, fig.height = 6, dpi=250}
+```{r, results='hide'}
 plots = lapply(
     1:4,
     function(k) {
         nb$cutree(n_cut = k)
         nb$plot_phylo_heatmap() + ggtitle(paste0('n_cut=', k))
     }
-) %>% suppressMessages()
-
+)
+```
+```{r, fig.width = 10, fig.height = 6, dpi=250}
 wrap_plots(plots)
 ```
 
 In `cutree` one can either specify `n_cut` or `max_cost`, which work similarly as `k` and `h` in `stats::cutree`. Note that `n` cuts should result in `n+1` clones (the top-level normal diploid clone is always included). First cut should separate out the tumor cells as a single clone, second cut gives two tumor subclones, and so on. Alternatively, one can specify a `max_cost`, which is the maximum likelihood cost threshold with which to reduce the phylogeny (higher `max_cost` leads to fewer clones).
 
-```{r}
+```{r, results='hide'}
 # restore to original number of cuts
 nb$cutree(n_cut = 3)
 ```
