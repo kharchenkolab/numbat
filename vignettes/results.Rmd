@@ -31,8 +31,8 @@ nb = Numbat$new(out_dir = './numbat_out')
 ```
 In this tutorial, let's start the analysis with the pre-saved Numbat and pagoda2 objects.
 ```{r}
-nb = readRDS(url('http://pklab.med.harvard.edu/teng/data/nb_TNBC1.rds'))
-pagoda = readRDS(url('http://pklab.med.harvard.edu/teng/data/con_TNBC1.rds'))
+nb = readRDS(url('http://pklab.org/teng/data/nb_TNBC1.rds'))
+pagoda = readRDS(url('http://pklab.org/teng/data/con_TNBC1.rds'))
 ```
 
 ## Copy number landscape and single-cell phylogeny
