@@ -70,6 +70,7 @@ In `cutree` one can either specify `n_cut` or `max_cost`, which work similarly a
 # restore to original number of cuts
 nb$cutree(n_cut = 3)
 ```
+After refining subclones in the phylogeny, you can recreate the clone pseduobulk profiles and visualize them (see issue [#220](https://github.com/kharchenkolab/numbat/issues/220)). 
 
 ## Consensus copy number segments
 Let's take a look at the consensus segments.
