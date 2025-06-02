@@ -26,3 +26,7 @@ For a complete guide, please see [Numbat User Guide](https://kharchenkolab.githu
 
 # Questions?
 We appreciate your feedback! Please raise a github [issue](https://github.com/kharchenkolab/numbat/issues) for bugs, questions and new feature requests. For bug reports, please attach full log, error message, input parameters, and ideally a reproducible example (if possible).
+
+
+
+# new features
