@@ -91,6 +91,8 @@ run_numbat = function(
     } else {
         stop('Genome version must be hg38, hg19, or mm10')
     } 
+    }else{
+        gtf = check_gtf_input(gtf)
     }
     
 
