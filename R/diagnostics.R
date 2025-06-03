@@ -92,6 +92,64 @@ check_allele_df = function(df) {
     return(df)
 
 }
+#' Check and format the GTF input
+#'
+#' This function validates the input GTF object, ensuring it is either a properly
+#' structured `GRanges` or `data.frame` that matches the expected Numbat GTF format.
+#' If a `GRanges` is provided, it will be processed into a standard GTF-like
+#' `data.frame` with gene coordinates and annotations.
+#'
+#' @param gtf_obj GRanges or data.frame; input GTF object
+#' @param reference_gtf_cols character vector; expected column names (default from numbat::gtf_hg38)
+#'
+#' @return data.frame Formatted GTF object with required structure
+#' @keywords internal
+check_gtf_input <- function(gtf_obj, reference_gtf_cols = colnames(gtf_hg38)) {
+
+  if (inherits(gtf_obj, "GRanges")) {
+    
+    gtf_obj$gene <- paste0(seqnames(gtf_obj), ":", start(gtf_obj), "-", end(gtf_obj))
+    gtf_obj$gene_length <- width(gtf_obj)
+    gtf_obj$gene_start <- start(gtf_obj)
+    gtf_obj$gene_end <- end(gtf_obj)
+    gtf_obj$CHROM <- gsub("^chr", "", as.character(seqnames(gtf_obj)))
+
+    gtf_df <- as.data.frame(gtf_obj) %>%
+      dplyr::filter(CHROM != "X") %>%
+      dplyr::select(-strand) %>%
+      dplyr::mutate(
+        gene_start = as.integer(gene_start),
+        gene_end = as.integer(gene_end),
+        gene_length = as.integer(gene_length)
+      )
+    
+    rownames(gtf_df) <- gtf_df$gene
+
+    if (!identical(colnames(gtf_df), reference_gtf_cols)) {
+      msg <- "The GRanges-derived GTF does not match the expected column structure."
+      log_error(msg)
+      stop(msg)
+    }
+
+    return(gtf_df[, reference_gtf_cols])
+
+  } else {
+    
+    if (!is.data.frame(gtf_obj)) {
+      msg <- "GTF must be a GRanges object or a data.frame with proper GTF structure."
+      log_error(msg)
+      stop(msg)
+    }
+
+    if (!identical(colnames(gtf_obj), reference_gtf_cols)) {
+      msg <- "Supplied GTF data.frame column names do not match the expected Numbat GTF."
+      log_error(msg)
+      stop(msg)
+    }
+
+    return(gtf_obj)
+  }
+}
 
 #' Annotate genes on allele dataframe
 #' @param df dataframe Allele count dataframe 

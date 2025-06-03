@@ -63,7 +63,8 @@ gmap = args$gmap
 eagle = args$eagle
 snpvcf = args$snpvcf
 paneldir = args$paneldir
-UMItag = args$UMItag
+# UMItag = args$UMItag
+UMItag = str_split(args$UMItag, ',')[[1]]
 cellTAG = args$cellTAG
 smartseq = args$smartseq
 bulk = args$bulk
@@ -169,7 +170,7 @@ if (bulk) {
             '-p {ncores}',
             '--minMAF 0',
             '--minCOUNT 2',
-            '--UMItag {UMItag}',
+            '--UMItag {UMItag[i]}',
             '--cellTAG {cellTAG}',
             .sep = ' ')
 
