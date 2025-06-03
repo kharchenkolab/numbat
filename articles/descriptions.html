@@ -29,7 +29,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -324,8 +324,12 @@ the cell (Poisson log-Normal)</p>
 distribution in the cell (Poisson log-Normal)</p>
 <p><code>ref</code>: character; Best-matching single-cell expression
 reference</p>
-<p><code>major</code>: integer; Major allele count</p>
-<p><code>minor</code>: integer; Minor allele count</p>
+<p><code>major</code>: integer; Major allele count; total SNP pileup
+counts deriving from the major haplotype in the CNV region for the given
+cell</p>
+<p><code>minor</code>: integer; Minor allele count; total SNP pileup
+counts deriving from the minor haplotype in the CNV region for the given
+cell</p>
 <p><code>total</code>: integer; Total allele count</p>
 <p><code>MAF</code>: numeric; Major allele frequency</p>
 </div>
@@ -446,8 +450,12 @@ allele belonging to the major haplotype</p>
 state assignment</p>
 <p><code>haplo_naive</code>: numeric; Naive haplotype state assignment
 (based on BAF)</p>
-<p><code>major_count</code>: integer; Major allele count</p>
-<p><code>minor_count</code>: integer; Minor allele count</p>
+<p><code>major_count</code>: integer; Major allele count; total SNP
+counts deriving from the major haplotype in the CNV region in the
+pseudobulk</p>
+<p><code>minor_count</code>: integer; Minor allele count; total SNP
+counts deriving from the minor haplotype in the CNV region in the
+pseudobulk</p>
 <p><code>theta_hat_roll</code>: numeric; Crude estimate haplotype
 frequency based on MAF (rolling window)</p>
 <p><code>phi_mle_roll</code>: numeric; Maximum likelihood of total copy

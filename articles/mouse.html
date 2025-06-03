@@ -29,7 +29,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -274,6 +274,12 @@ disable phase switch (because the phasing is perfect!).</p>
 <span>    genome <span class="op">=</span> <span class="st">"mm10"</span>,</span>
 <span>    nu <span class="op">=</span> <span class="fl">0</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<p><em>Note</em>: For an admix with C57BL/6 that is not 50/50, you’d
+create the VCF in the same way, and do a pileup also the same way. Since
+this mouse won’t have all the alternative strain SNPs, you’d filter the
+df_allele based on the bulk AF to only keep the het SNPs (VAF of ~50%)
+after pileup. Then you can run Numbat with the default switch rate (nu =
+1), since you’d expect recombination to create phase switches.</p>
 </div>
 <div class="section level2">
 <h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
