@@ -106,49 +106,49 @@ check_allele_df = function(df) {
 #' @keywords internal
 check_gtf_input <- function(gtf_obj, reference_gtf_cols = colnames(gtf_hg38)) {
 
-  if (inherits(gtf_obj, "GRanges")) {
-    
-    gtf_obj$gene <- paste0(seqnames(gtf_obj), ":", start(gtf_obj), "-", end(gtf_obj))
-    gtf_obj$gene_length <- width(gtf_obj)
-    gtf_obj$gene_start <- start(gtf_obj)
-    gtf_obj$gene_end <- end(gtf_obj)
-    gtf_obj$CHROM <- gsub("^chr", "", as.character(seqnames(gtf_obj)))
+    if (inherits(gtf_obj, "GRanges")) {
 
-    gtf_df <- as.data.frame(gtf_obj) %>%
-      dplyr::filter(CHROM != "X") %>%
-      dplyr::select(-strand) %>%
-      dplyr::mutate(
-        gene_start = as.integer(gene_start),
-        gene_end = as.integer(gene_end),
-        gene_length = as.integer(gene_length)
-      )
-    
-    rownames(gtf_df) <- gtf_df$gene
+        gtf_obj$gene <- paste0(seqnames(gtf_obj), ":", start(gtf_obj), "-", end(gtf_obj))
+        gtf_obj$gene_length <- width(gtf_obj)
+        gtf_obj$gene_start <- start(gtf_obj)
+        gtf_obj$gene_end <- end(gtf_obj)
+        gtf_obj$CHROM <- gsub("^chr", "", as.character(seqnames(gtf_obj)))
 
-    if (!identical(colnames(gtf_df), reference_gtf_cols)) {
-      msg <- "The GRanges-derived GTF does not match the expected column structure."
-      log_error(msg)
-      stop(msg)
-    }
+        gtf_df <- as.data.frame(gtf_obj) %>%
+            dplyr::filter(CHROM != "X") %>%
+            dplyr::select(-strand) %>%
+            dplyr::mutate(
+            gene_start = as.integer(gene_start),
+            gene_end = as.integer(gene_end),
+            gene_length = as.integer(gene_length)
+        )
 
-    return(gtf_df[, reference_gtf_cols])
+        rownames(gtf_df) <- gtf_df$gene
 
-  } else {
-    
-    if (!is.data.frame(gtf_obj)) {
-      msg <- "GTF must be a GRanges object or a data.frame with proper GTF structure."
-      log_error(msg)
-      stop(msg)
-    }
+        if (!identical(colnames(gtf_df), reference_gtf_cols)) {
+            msg <- "The GRanges-derived GTF does not match the expected column structure."
+            log_error(msg)
+            stop(msg)
+        }
 
-    if (!identical(colnames(gtf_obj), reference_gtf_cols)) {
-      msg <- "Supplied GTF data.frame column names do not match the expected Numbat GTF."
-      log_error(msg)
-      stop(msg)
-    }
+        return(gtf_df[, reference_gtf_cols])
+
+    } else {
+
+        if (!is.data.frame(gtf_obj)) {
+            msg <- "GTF must be a GRanges object or a data.frame with proper GTF structure."
+            log_error(msg)
+            stop(msg)
+        }
+
+        if (!identical(sort(colnames(gtf_obj)), sort(reference_gtf_cols))) {
+            msg <- "Supplied GTF data.frame column names do not match the expected Numbat GTF."
+            log_error(msg)
+            stop(msg)
+        }
 
     return(gtf_obj)
-  }
+    }
 }
 
 #' Annotate genes on allele dataframe

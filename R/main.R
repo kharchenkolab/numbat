@@ -26,7 +26,8 @@ NULL
 #' @param count_mat dgCMatrix Raw count matrices where rownames are genes and column names are cells
 #' @param lambdas_ref matrix Either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names
 #' @param df_allele dataframe Allele counts per cell, produced by preprocess_allele
-#' @param genome character Genome version (hg38, hg19, or mm10) 
+#' @param gtf dataframe Transcript GTF, if NULL will use the default GTF for the specified genome 
+#' @param genome character Genome version (hg38, hg19, or mm10)
 #' @param out_dir string Output directory
 #' @param gamma numeric Dispersion parameter for the Beta-Binomial allele model
 #' @param t numeric Transition probability
@@ -64,7 +65,7 @@ NULL
 #' @return a status code
 #' @export
 run_numbat = function(
-        count_mat, lambdas_ref, df_allele,gtf=NULL,genome = 'hg38', 
+        count_mat, lambdas_ref, df_allele, gtf = NULL, genome = 'hg38', 
         out_dir = tempdir(), max_iter = 2, max_nni = 100, t = 1e-5, gamma = 20, min_LLR = 5,
         alpha = 1e-4, eps = 1e-5, max_entropy = 0.5, init_k = 3, min_cells = 50, tau = 0.3, nu = 1,
         max_cost = ncol(count_mat) * tau, n_cut = 0, min_depth = 0, common_diploid = TRUE, min_overlap = 0.45, 
@@ -81,21 +82,20 @@ run_numbat = function(
     log_appender(appender_file(logfile))
 
     ######### Basic checks #########
-    if(is.null(gtf)){
+    if (is.null(gtf)) {
        if (genome == 'hg38') {
-        gtf = gtf_hg38
-    } else if (genome == 'hg19') {
-        gtf = gtf_hg19
-    } else if (genome == 'mm10') {
-        gtf = gtf_mm10
-    } else {
-        stop('Genome version must be hg38, hg19, or mm10')
-    } 
-    }else{
+            gtf = gtf_hg38
+        } else if (genome == 'hg19') {
+            gtf = gtf_hg19
+        } else if (genome == 'mm10') {
+            gtf = gtf_mm10
+        } else {
+            stop('Genome version must be hg38, hg19, or mm10')
+        } 
+    } else{
         gtf = check_gtf_input(gtf)
     }
     
-
     count_mat = check_matrix(count_mat)
     df_allele = annotate_genes(df_allele, gtf)
     df_allele = check_allele_df(df_allele)

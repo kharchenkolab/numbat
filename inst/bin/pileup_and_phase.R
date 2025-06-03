@@ -13,7 +13,7 @@ parser = add_option(parser, '--snpvcf', default = NULL, type = "character", help
 parser = add_option(parser, '--paneldir', default = NULL, type = "character", help = "Directory to phasing reference panel (BCF files)")
 parser = add_option(parser, '--outdir', default = NULL, type = "character", help = "Output directory")
 parser = add_option(parser, '--ncores', default = 1, type = "integer", help = "Number of cores")
-parser = add_option(parser, '--UMItag', default = "Auto", type = "character", help = "UMI tag in bam; should be Auto for 10x and XM for Slide-seq")
+parser = add_option(parser, '--UMItag', default = "Auto", type = "character", help = "UMI tag(s) in bam; should be 'Auto' or 'UB' for 10x scRNA-seq, 'None' for scATAC-seq, and XM for Slide-seq; comma delimited if multiple data modalities in different samples.")
 parser = add_option(parser, '--cellTAG', default = "CB", type = "character", help = "Cell tag in bam; should be CB for 10x and XC for Slide-seq")
 parser = add_option(parser, '--smartseq', default = FALSE, action = 'store_true', help = "Running with SMART-seq mode; Supply a txt file containing directories of BAM files to --bams and a txt file containing cell names to --barcodes (each entry on its own line for both; ordering must match).")
 parser = add_option(parser, '--bulk', default = FALSE, action = 'store_true', help = "Running with bulk RNA-seq mode; supply --bams and --samples but not --barcodes.")
@@ -29,6 +29,10 @@ suppressPackageStartupMessages({
     library(numbat)
 })
 
+for (arg in names(args)) {
+  message(paste0(arg, ": ", args[[arg]]))
+}
+
 if (any(sapply(list(args$bams, args$snpvcf, args$outdir, args$paneldir, args$gmap), is.null))) {
     stop('Missing one or more always required arguments: --bams, --snpvcf, --outdir, --paneldir, --gmap')
 }
@@ -43,6 +47,8 @@ if (args$smartseq) {
         stop('Missing one or more required arguments for bulk mode: --samples')
     }
     mode = 'Bulk'
+} else if (length(unique(str_split(args$UMItag, ',')[[1]])) > 1) {
+    mode = 'Mixed 10X'
 } else {
     if (any(sapply(list(args$samples, args$barcodes), is.null))) {
         stop('Missing one or more required arguments for 10x mode: --samples, --barcodes')
@@ -63,8 +69,20 @@ gmap = args$gmap
 eagle = args$eagle
 snpvcf = args$snpvcf
 paneldir = args$paneldir
-# UMItag = args$UMItag
-UMItag = str_split(args$UMItag, ',')[[1]]
+
+# parse UMI tags
+if (str_detect(args$UMItag, ',')) {
+    UMItag = str_split(args$UMItag, ',')[[1]]
+} else {
+    UMItag = rep(args$UMItag, n_samples)
+}
+
+# check that every UMI tag is valid
+valid_UMI_tags = c('Auto', 'UB', 'None', 'XM')
+if (!all(UMItag %in% valid_UMI_tags)) {
+    stop(glue('Invalid UMI tag(s) provided: {setdiff(UMItag, valid_UMI_tags)}. Valid options are: {paste(valid_UMI_tags, collapse = ", ")}'))
+}
+
 cellTAG = args$cellTAG
 smartseq = args$smartseq
 bulk = args$bulk
