@@ -8,6 +8,7 @@ run_numbat(
   count_mat,
   lambdas_ref,
   df_allele,
+  gtf = NULL,
   genome = "hg38",
   out_dir = tempdir(),
   max_iter = 2,
@@ -51,6 +52,8 @@ run_numbat(
 \item{lambdas_ref}{matrix Either a named vector with gene names as names and normalized expression as values, or a matrix where rownames are genes and columns are pseudobulk names}
 
 \item{df_allele}{dataframe Allele counts per cell, produced by preprocess_allele}
+
+\item{gtf}{dataframe Transcript GTF, if NULL will use the default GTF for the specified genome}
 
 \item{genome}{character Genome version (hg38, hg19, or mm10)}
 

@@ -157,6 +157,8 @@ run_numbat(
 )
 ```
 
+*Note*: For an admix with C57BL/6 that is not 50/50, you’d create the VCF in the same way, and do a pileup also the same way. Since this mouse won’t have all the alternative strain SNPs, you’d filter the df_allele based on the bulk AF to only keep the het SNPs (VAF of ~50%) after pileup. Then you can run Numbat with the default switch rate (nu = 1), since you’d expect recombination to create phase switches.
+
 # Results
 Let's look at the results for sample KPT_062521 (SRR20462475), where we see tumor subclones with distinct copy number profiles (the majority of the events are copy-neutral LOH). 
 

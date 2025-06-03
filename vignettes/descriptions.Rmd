@@ -188,9 +188,9 @@ Numbat generates a number of files in the output folder. The file names are post
 
 `ref`: character; Best-matching single-cell expression reference
 
-`major`: integer; Major allele count
+`major`: integer; Major allele count; total SNP pileup counts deriving from the major haplotype in the CNV region for the given cell 
 
-`minor`: integer; Minor allele count
+`minor`: integer; Minor allele count; total SNP pileup counts deriving from the minor haplotype in the CNV region for the given cell 
 
 `total`: integer; Total allele count
 
@@ -350,9 +350,9 @@ Numbat generates a number of files in the output folder. The file names are post
 
 `haplo_naive`: numeric; Naive haplotype state assignment (based on BAF)
 
-`major_count`: integer; Major allele count
+`major_count`: integer; Major allele count; total SNP counts deriving from the major haplotype in the CNV region in the pseudobulk
 
-`minor_count`: integer; Minor allele count
+`minor_count`: integer; Minor allele count; total SNP counts deriving from the minor haplotype in the CNV region in the pseudobulk
 
 `theta_hat_roll`: numeric; Crude estimate haplotype frequency based on MAF (rolling window)
 
