@@ -1,10 +1,10 @@
 ---
-title: "Preparing Inputs for Numbat-multiome"
+title: "Numbat-multiome"
 author: "Ruitong Li, Tina Keshavarzian and Teng Gao"
 date: "`r Sys.Date()`"
 ---
 
-# Introduction 
+# Introduction
 
 This vignette provides a guide to preparing input data for running Numbat-multiome. 
 

@@ -4,10 +4,11 @@ pkgdown_sha: ~
 articles:
   descriptions: descriptions.html
   mouse: mouse.html
+  numbat-multiome: numbat-multiome.html
   numbat: numbat.html
   results: results.html
   spatial-rna: spatial-rna.html
-last_built: 2025-03-19T13:55Z
+last_built: 2025-06-20T22:54Z
 urls:
   reference: https://kharchenkolab.github.io/numbat/reference
   article: https://kharchenkolab.github.io/numbat/articles
