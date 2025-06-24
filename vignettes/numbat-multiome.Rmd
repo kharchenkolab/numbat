@@ -52,6 +52,8 @@ Rscript pileup_and_phase.R \
 
 #### Generate gene-to-bin mapping
 
+You can download a premade genomic bin object here: [var220kb.rds](https://raw.githubusercontent.com/kharchenkolab/numbat/main/inst/extdata/var220kb.rds)
+
 ```bash
 binGR="var220kb.rds" # path to grange object containing genomic bins
 gtfF="gtf_hg38.gtf" # any version of gtf files you use or hg38, hg19 or mm10
