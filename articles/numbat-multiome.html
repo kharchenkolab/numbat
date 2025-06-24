@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Numbat-multiome • numbat</title>
+<title>Preparing Inputs for Numbat-multiome • numbat</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -15,7 +15,7 @@
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Numbat-multiome">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Preparing Inputs for Numbat-multiome">
 <meta name="google-site-verification" content="GE78cdBqx5YPEbHjqtohe_p51Ng8oEPXdcaSEIu2dP8">
 </head>
 <body>
@@ -43,7 +43,7 @@
 <li><a class="dropdown-item" href="../articles/results.html">Interpreting Numbat results</a></li>
     <li><a class="dropdown-item" href="../articles/mouse.html">Mouse tutorial</a></li>
     <li><a class="dropdown-item" href="../articles/spatial-rna.html">Spatial transcriptomics</a></li>
-    <li><a class="dropdown-item" href="../articles/numbat-multiome.html">Numbat-multiome</a></li>
+    <li><a class="dropdown-item" href="../articles/numbat-multiome.html">Preparing Inputs for Numbat-multiome</a></li>
     <li><a class="dropdown-item" href="../articles/descriptions.html">File descriptions</a></li>
   </ul>
 </li>
@@ -66,11 +66,11 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Numbat-multiome</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Preparing Inputs for Numbat-multiome</h1>
                         <h4 data-toc-skip class="author">Ruitong Li,
 Tina Keshavarzian and Teng Gao</h4>
             
-            <h4 data-toc-skip class="date">2025-06-20</h4>
+            <h4 data-toc-skip class="date">2025-06-24</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/kharchenkolab/numbat/blob/main/vignettes/numbat-multiome.Rmd" class="external-link"><code>vignettes/numbat-multiome.Rmd</code></a></small>
       <div class="d-none name"><code>numbat-multiome.Rmd</code></div>
@@ -82,7 +82,9 @@ Tina Keshavarzian and Teng Gao</h4>
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
 <p>This vignette provides a guide to preparing input data for running
-Numbat-multiome.</p>
+Numbat-multiome. which extends the capabilities of Numbat to perform CNV
+infer- ence from accessible chromatin profiles (through scATAC-seq data)
+alone, and combined with scRNA-seq in an integrated manner.</p>
 <p>The core inputs required are:</p>
 <ul>
 <li>
@@ -119,7 +121,7 @@ accessibility data.</li>
 </h3>
 <div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="va">nc</span><span class="op">=</span>8 <span class="co"># number of cores to use</span></span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="va">sample</span><span class="op">=</span><span class="st">"MM1"</span></span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co">## default to path in numbat image</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co">### default to path in numbat image</span></span>
 <span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="va">phase_panel</span><span class="op">=</span><span class="st">"/data/1000G_hg38"</span></span>
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="va">vcf_genome1k</span><span class="op">=</span><span class="st">"/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf"</span></span>
 <span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="va">gma_gz</span><span class="op">=</span><span class="st">"/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz"</span></span>
@@ -150,6 +152,10 @@ accessibility data.</li>
 <span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">--numbatGTFname</span> <span class="va">${gtfF}</span> <span class="dt">\ </span></span>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="ex">--binGR</span> <span class="va">${binGR}</span> <span class="dt">\</span></span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="at">--outfile</span> gene2bin_map.csv</span></code></pre></div>
+<p>Here, you can either supply a gtf-format file if you have a
+customized version, if you prefer using the default numbat gtf files,
+you can simply use <code>hg38</code>, <code>hg19</code> or
+<code>mm10</code> as the <code>numbatGTFname</code> argument.</p>
 </div>
 <div class="section level4">
 <h4 id="generate-binned-expression-counts">Generate binned expression counts<a class="anchor" aria-label="anchor" href="#generate-binned-expression-counts"></a>
@@ -160,6 +166,50 @@ accessibility data.</li>
 <span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">--outFile</span> <span class="va">${sample}</span>/<span class="va">${sample}</span>_rna_bin.rds <span class="dt">\</span></span>
 <span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">--barcodesKeep</span> <span class="va">${sample}</span>_barcodes.tsv <span class="dt">\</span></span>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">--geneBinMapCSVFile</span> gene2bin_map.csv</span></code></pre></div>
+<table class="table">
+<colgroup>
+<col width="13%">
+<col width="86%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Argument</th>
+<th align="left">Accepted types / format</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>--rnaCountsFile</code></td>
+<td align="left">
+<strong>.rds</strong> file containing either:<br> • a
+<strong>Seurat</strong> object (extracts
+<code>@assays[[1]]@counts</code>)<br> • a raw counts matrix
+(<code>dgCMatrix</code> etc.)<br> • <strong>.h5</strong> file from 10x
+(uses <code>Read10X_h5</code>)</td>
+</tr>
+<tr class="even">
+<td align="left"><code>--geneBinMapCSVFile</code></td>
+<td align="left">CSV with <strong>at least</strong> columns
+<code>gene_name</code> and <code>bingrp</code> (e.g. output of your
+<code>get_gene_binned_intersections.R</code>).</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>--barcodesKeep</code></td>
+<td align="left">- A <strong>TSV/CSV</strong> text file with one barcode
+per line (first column).<br>- Or an R data.frame containing one column
+of barcodes.</td>
+</tr>
+<tr class="even">
+<td align="left"><code>--outFile</code></td>
+<td align="left">Path for saving the binned-by-cell matrix (always as an
+RDS of a sparse <code>dgCMatrix</code>).</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>--generateAggRef</code></td>
+<td align="left">
+<em>(flag)</em> if included, also creates a
+Numbat-style aggregated reference matrix.</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level4">
 <h4 id="generate-binned-atac-counts">Generate binned ATAC counts<a class="anchor" aria-label="anchor" href="#generate-binned-atac-counts"></a>
@@ -169,14 +219,60 @@ accessibility data.</li>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">--frag</span> <span class="va">${sample}</span>_fragments.tsv.gz <span class="dt">\</span></span>
 <span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">--binGR</span> <span class="va">${binGR}</span> <span class="dt">\</span></span>
 <span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">--outFile</span> <span class="va">${sample}</span>/<span class="va">${sample}</span>_atac_bin.rds</span></code></pre></div>
+<table class="table">
+<colgroup>
+<col width="17%">
+<col width="82%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Argument</th>
+<th align="left">Accepted types / format</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code>--CB</code></td>
+<td align="left">TSV/CSV text file listing <strong>cell
+barcodes</strong> (one per line, first column).</td>
+</tr>
+<tr class="even">
+<td align="left"><code>--frag</code></td>
+<td align="left">Fragments file in <strong>BED-style</strong> TSV or
+<code>.gz</code>, with columns: chrom, start, end, barcode,
+duplicate-count.</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>--binGR</code></td>
+<td align="left">RDS file containing a <strong>GRanges</strong> object
+of genomic bins (e.g. <code>var220kb.rds</code>).</td>
+</tr>
+<tr class="even">
+<td align="left"><code>--outFile</code></td>
+<td align="left">Output path—if <code>.tsv</code>, writes a
+tab-delimited table; if <code>.rds</code>, saves as an RDS matrix.</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>--generateAggRef</code></td>
+<td align="left">
+<em>(flag)</em> if included, also runs Numbat’s
+<code>aggregate_counts</code> on the bin×cell matrix and writes that
+result.</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level4">
 <h4 id="generate-combined-count-matrix">Generate combined count matrix<a class="anchor" aria-label="anchor" href="#generate-combined-count-matrix"></a>
 </h4>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="fu">binCnt</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"${sample}/{sample}_rna_bin.rds"</span><span class="op">)</span>,</span>
-<span>        <span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"${sample}/{sample}_atac_bin.rds"</span><span class="op">)</span><span class="op">)</span>,<span class="fl">123</span><span class="op">)</span>,</span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"input_prep.R"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="fu">binCnt</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"${sample}/{sample}_rna_bin.rds"</span><span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"${sample}/{sample}_atac_bin.rds"</span><span class="op">)</span><span class="op">)</span>,seed<span class="op">=</span><span class="fl">123</span>,maxCB<span class="op">=</span><span class="fl">10000</span><span class="op">)</span>,</span>
 <span>        <span class="fu"><a href="https://glue.tidyverse.org/reference/glue.html" class="external-link">glue</a></span><span class="op">(</span><span class="st">"{sample}/{sample}_comb_bincnt.rds"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>You can load in an interactive R session in your terminal or open
+other IDEs to apply function <code>binCnt()</code> which combines the
+binned RNA and ATAC count matrices into a single matrix which also did a
+subsampling of cells to a maximum of 10,000 cells per modality, you can
+specify the seed and maximum allowed cell number in the parameters.</p>
 </div>
 </div>
 <div class="section level3">
@@ -242,7 +338,7 @@ combine them into a single reference.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">ref_comb</span>, <span class="st">"Reference/lambdas_comb_bincnt.rds"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="compile-and-run">4. Compile and run<a class="anchor" aria-label="anchor" href="#compile-and-run"></a>
+<h3 id="run-numbat-inference-with-prepared-inputs">Run numbat inference with prepared inputs<a class="anchor" aria-label="anchor" href="#run-numbat-inference-with-prepared-inputs"></a>
 </h3>
 <div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="va">binGR</span><span class="op">=</span><span class="st">"var220kb.rds"</span></span>
 <span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="va">parL</span><span class="op">=</span><span class="st">"par_numbatm.rds"</span> <span class="co"># a list of any run_numbat parameters you would like to optimize</span></span>
@@ -263,6 +359,77 @@ can simply use <code>lambdas_RNA_bincnt.rds</code> and
 <code>lambdas_ATAC_bincnt.rds</code> as the reference files.
 <code>${sample}_rna_bin.rds</code> and
 <code>${sample}_atac_bin.tsv</code> as the count matrix.</p>
+<div class="section level3">
+<h3 id="atac-bin-mode">ATAC-bin mode<a class="anchor" aria-label="anchor" href="#atac-bin-mode"></a>
+</h3>
+<p>In <strong>ATAC-bin</strong> mode you perform CNV inference using
+only the binned ATAC counts and the ATAC reference.</p>
+<ol style="list-style-type: decimal">
+<li>
+<p><strong>Inputs</strong></p>
+<ul>
+<li>
+<strong>Count matrix</strong>: <code>${sample}_atac_bin.rds</code>
+(or <code>.tsv</code>) from <code>get_binned_atac.R</code><br>
+</li>
+<li>
+<strong>Reference</strong>:
+<code>Reference/lambdas_ATAC_bincnt.rds</code> (generated via
+<code>get_binned_atac.R --generateAggRef</code> or
+<code>agg_refs()</code>)<br>
+</li>
+<li>
+<strong>Allele VCF</strong>:
+<code>${sample}/${sample}_comb_allele_counts.tsv.gz</code><br>
+</li>
+<li>
+<strong>Genomic bins</strong>: <code>var220kb.rds</code> GRanges
+object</li>
+</ul>
+</li>
+<li>
+<p><strong>Command</strong></p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="ex">Rscript</span> run_numbat_multiome.R <span class="dt">\</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>  <span class="at">--countmat</span>    <span class="va">${sample}</span>/<span class="va">${sample}</span>_atac_bin.rds <span class="dt">\</span></span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  <span class="at">--alleledf</span>     <span class="va">${sample}</span>/<span class="va">${sample}</span>_comb_allele_counts.tsv.gz <span class="dt">\</span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>  <span class="at">--out_dir</span>     <span class="va">${sample}</span>/atac_only/ <span class="dt">\</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>  <span class="at">--ref</span>         Reference/lambdas_ATAC_bincnt.rds <span class="dt">\</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>  <span class="at">--gtf</span>         var220kb.rds <span class="dt">\</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>  <span class="at">--parL</span>        par_numbatm.rds </span></code></pre></div>
+<ul>
+<li>
+<code>--mode ATAC-bin</code> skips RNA likelihoods and relies solely
+on ATAC signals.</li>
+</ul>
+</li>
+<li>
+<p><strong>Interpretation</strong></p>
+<ul>
+<li>CNV calls are driven by chromatin-accessibility patterns.<br>
+</li>
+<li>Ideal when RNA data is unavailable or as a comparison to
+Combined-bin.</li>
+</ul>
+</li>
+</ol>
+</div>
+<div class="section level3">
+<h3 id="rna-bin-mode">RNA-bin mode<a class="anchor" aria-label="anchor" href="#rna-bin-mode"></a>
+</h3>
+<p>In <strong>RNA-bin</strong> mode you leverage only the binned RNA
+counts plus the RNA reference:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="ex">Rscript</span> run_numbat_multiome.R <span class="dt">\</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="at">--countmat</span>    <span class="va">${sample}</span>/<span class="va">${sample}</span>_rna_bin.rds <span class="dt">\</span></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>  <span class="at">--alleledf</span>     <span class="va">${sample}</span>/<span class="va">${sample}</span>_comb_allele_counts.tsv.gz <span class="dt">\</span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">--out_dir</span>     <span class="va">${sample}</span>/rna_only/ <span class="dt">\</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="at">--ref</span>         Reference/lambdas_RNA_bincnt.rds <span class="dt">\</span></span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="at">--gtf</span>         var220kb.rds <span class="dt">\</span></span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="at">--parL</span>        par_numbatm.rds </span></code></pre></div>
+<ul>
+<li>Use when ATAC coverage is low or to benchmark RNA-only CNV
+calls.</li>
+</ul>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
