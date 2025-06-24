@@ -69,7 +69,6 @@ Here, you can either supply a gtf-format file if you have a customized version, 
 #### Generate binned expression counts
 
 ```bash
-binGR="var220kb.rds"
 Rscript get_binned_rna.R \
   --rnaCountsFile ${sample}_seu.rds \
   --outFile ${sample}/${sample}_rna_bin.rds \
@@ -87,6 +86,7 @@ Rscript get_binned_rna.R \
 #### Generate binned ATAC counts
 
 ```bash
+binGR="var220kb.rds"
 Rscript get_binned_atac.R \
   --CB ${sample}_atac_barcodes.tsv \
   --frag ${sample}_fragments.tsv.gz \
