@@ -6,8 +6,7 @@ date: "`r Sys.Date()`"
 
 ## Introduction 
 
-This vignette provides a guide to preparing input data for running Numbat-multiome. which extends the capabilities of Numbat to perform CNV infer-
-ence from accessible chromatin profiles (through scATAC-seq
+This vignette provides a guide to preparing input data for running Numbat-multiome. which extends the capabilities of Numbat to perform CNV inference from accessible chromatin profiles (through scATAC-seq
 data) alone, and combined with scRNA-seq in an integrated manner. 
 
 The core inputs required are:
