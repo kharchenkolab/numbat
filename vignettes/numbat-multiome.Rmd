@@ -6,7 +6,7 @@ date: "`r Sys.Date()`"
 
 ## Introduction 
 
-This vignette provides a guide to preparing input data for running Numbat-multiome. which extends the capabilities of Numbat to perform CNV inference from accessible chromatin profiles (through scATAC-seq
+This vignette provides a guide to preparing input data for running Numbat-multiome, which extends the capabilities of Numbat to perform CNV inference from accessible chromatin profiles (through scATAC-seq
 data) alone, as well as mixed modality (separate scRNA-seq and scATAC-seq datasets of the same sample) in an integrated manner. Note that joint multiome assays such as the [10x Multiome](https://www.10xgenomics.com/products/epi-multiome) (direct linkage of gene expression and open chromatin readouts from the same nucleus) is not yet fully supported (currently under development).
 
 The core inputs required are:
