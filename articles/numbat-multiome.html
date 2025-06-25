@@ -70,7 +70,7 @@
                         <h4 data-toc-skip class="author">Ruitong Li,
 Tina Keshavarzian and Teng Gao</h4>
             
-            <h4 data-toc-skip class="date">2025-06-24</h4>
+            <h4 data-toc-skip class="date">2025-06-25</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/kharchenkolab/numbat/blob/main/vignettes/numbat-multiome.Rmd" class="external-link"><code>vignettes/numbat-multiome.Rmd</code></a></small>
       <div class="d-none name"><code>numbat-multiome.Rmd</code></div>
@@ -84,7 +84,12 @@ Tina Keshavarzian and Teng Gao</h4>
 <p>This vignette provides a guide to preparing input data for running
 Numbat-multiome. which extends the capabilities of Numbat to perform CNV
 inference from accessible chromatin profiles (through scATAC-seq data)
-alone, and combined with scRNA-seq in an integrated manner.</p>
+alone, as well as mixed modality (separate scRNA-seq and scATAC-seq
+datasets of the same sample) in an integrated manner. Note that joint
+multiome assays such as the <a href="https://www.10xgenomics.com/products/epi-multiome" class="external-link">10x
+Multiome</a> (direct linkage of gene expression and open chromatin
+readouts from the same nucleus) is not yet fully supported (currently
+under development).</p>
 <p>The core inputs required are:</p>
 <ul>
 <li>
