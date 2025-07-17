@@ -6,9 +6,8 @@ date: "`r Sys.Date()`"
 
 ## Introduction 
 
-This vignette provides a guide to preparing input data for running Numbat-multiome. which extends the capabilities of Numbat to perform CNV infer-
-ence from accessible chromatin profiles (through scATAC-seq
-data) alone, and combined with scRNA-seq in an integrated manner. 
+This vignette provides a guide to preparing input data for running Numbat-multiome, which extends the capabilities of Numbat to perform CNV inference from accessible chromatin profiles (through scATAC-seq
+data) alone, as well as mixed modality (separate scRNA-seq and scATAC-seq datasets of the same sample) in an integrated manner. Note that joint multiome assays such as the [10x Multiome](https://www.10xgenomics.com/products/epi-multiome) (direct linkage of gene expression and open chromatin readouts from the same nucleus) is not yet fully supported (currently under development).
 
 The core inputs required are:
 
@@ -53,6 +52,8 @@ Rscript pileup_and_phase.R \
 
 #### Generate gene-to-bin mapping
 
+You can download a premade genomic bin object here: [var220kb.rds](https://raw.githubusercontent.com/kharchenkolab/numbat/main/inst/extdata/var220kb.rds)
+
 ```bash
 binGR="var220kb.rds" # path to grange object containing genomic bins
 gtfF="gtf_hg38.gtf" # any version of gtf files you use or hg38, hg19 or mm10
@@ -68,7 +69,6 @@ Here, you can either supply a gtf-format file if you have a customized version, 
 #### Generate binned expression counts
 
 ```bash
-binGR="var220kb.rds"
 Rscript get_binned_rna.R \
   --rnaCountsFile ${sample}_seu.rds \
   --outFile ${sample}/${sample}_rna_bin.rds \
@@ -86,6 +86,7 @@ Rscript get_binned_rna.R \
 #### Generate binned ATAC counts
 
 ```bash
+binGR="var220kb.rds"
 Rscript get_binned_atac.R \
   --CB ${sample}_atac_barcodes.tsv \
   --frag ${sample}_fragments.tsv.gz \
