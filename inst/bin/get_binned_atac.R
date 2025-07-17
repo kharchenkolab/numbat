@@ -11,6 +11,15 @@ suppressPackageStartupMessages({
   library(rtracklayer)
 })
 
+ensure_matrix <- function(x) {
+  if (inherits(x, "table")) {
+    x <- unclass(as.matrix(x))
+  } else if (inherits(x, "array")) {
+    x <- as.matrix(x)
+  }
+  x
+}
+
 message('Get cell x counts per supplied GRanges tiles. Saves as tsv file.')
 option_list = list(
   make_option('--CB', type = "character", default = NULL,
@@ -64,7 +73,7 @@ generate_bin_cell_matrix <- function(barcode_file, fragment_file, bin_file, outp
   colnames(mm) <- barcodes[as.numeric(colnames(mm))]
   bins <- paste0(as.character(seqnames(query)), ":", as.character(ranges(query)))
   rownames(mm) <- bins[as.numeric(rownames(mm))]
-  
+  mm <- as(ensure_matrix(mm), "dgCMatrix")
   if (args$generateAggRef) {
 	  message("Generating aggregated reference...\n")
 	   agg_ref_counts = numbat::aggregate_counts(as.matrix(mm), 
@@ -72,9 +81,9 @@ generate_bin_cell_matrix <- function(barcode_file, fragment_file, bin_file, outp
 						  normalized = TRUE, 
 						  verbose = TRUE)
 	  message("Saving aggregated count matrix.")
-	   if(endWith(output_file, ".rds")) {
+	   if(endsWith(output_file, ".rds")) {
 	     saveRDS(agg_ref_counts, output_file)
-	   }else if( endWith(output_file, ".tsv")) {
+	   }else if( endsWith(output_file, ".tsv")) {
 	     write.table(agg_ref_counts, output_file)
 	   }
 	  
@@ -82,9 +91,9 @@ generate_bin_cell_matrix <- function(barcode_file, fragment_file, bin_file, outp
 	  message("Proceeding with count matrix (not aggregated)\n")
 	  # Write output
 	  cat("Writing output to file...\n")
-	  if(endWith(output_file, ".rds")) {
+	  if(endsWith(output_file, ".rds")) {
 	    saveRDS(mm, output_file)
-	  }else if( endWith(output_file, ".tsv")) {
+	  }else if( endsWith(output_file, ".tsv")) {
 	    write.table(mm, output_file, sep = '\t', col.names = TRUE, row.names = TRUE, quote = FALSE)
 	  }
 	  
@@ -96,6 +105,3 @@ generate_bin_cell_matrix <- function(barcode_file, fragment_file, bin_file, outp
 
 # run function
 mat <- generate_bin_cell_matrix(CB,frag,binGR,outFile)
-
-# Uncomment to also save as sparse matrix
-# saveRDS(as(as.matrix(matrix), "dgCMatrix"), gsub("\\.tsv$", ".rds", args$outFile))

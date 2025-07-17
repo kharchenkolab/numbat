@@ -1,5 +1,5 @@
 #==== Parse arguments ====
-#packageVersion('numbat') ‘1.3.2.1’
+#packageVersion('numbat') ‘1.5.0’
 library(optparse)
 options(stringsAsFactors = F)
 option_list = list(make_option("--countmat", default = NULL),
@@ -13,8 +13,8 @@ args = parse_args(OptionParser(option_list = option_list))
 
 library(numbat)
 library(dplyr)
+library(GenomicRanges)
 print(packageVersion('numbat'))
-
 #==== Load GRanges file and turn to GTF ====
 # Load GTF and if it's IRanges, make it Numbat readable:
 gr_bins <- readRDS(args$gtf)
@@ -25,7 +25,8 @@ if (inherits(gr_bins, "GRanges")) {
 	gr_bins$gene_end = end(gr_bins)
 	gr_bins$CHROM = gsub("chr","",seqnames(gr_bins))
 
-	gr_bins_df = as.data.frame(gr_bins) %>% filter(CHROM!="X") |> 
+	gr_bins_df = as.data.frame(gr_bins) %>% 
+	  dplyr::filter(CHROM!="X") |> 
 	  dplyr::select(-strand) |>
 	  dplyr::mutate_at(c("gene_start","gene_end","gene_length"),as.integer)
 	rownames(gr_bins_df) = gr_bins_df$gene
@@ -41,7 +42,7 @@ if (inherits(gr_bins, "GRanges")) {
 }
 
 #####################################
-frac <- 0.6
+frac <- 1
 #==== Load Count Matrix ====
 cat('Loading data\n')
 if(endsWith(args$countmat,".rds")){
@@ -53,11 +54,13 @@ if(endsWith(args$countmat,".rds")){
 }
 
 ## load phasing and allele information
-df_allele = read.table(args$alleledf, header=TRUE, sep="\t")
+df_allele = data.table::fread(args$alleledf, header=TRUE,data.table = F)
 #==== Diagnosis Plots ====
 alleleCov <- df_allele %>% group_by(cell) %>% 
-  summarise(snp_idN = length(unique(snp_id)))
-pdf("allele_CB_coverage_hist.pdf",width=5,height=5)
+  dplyr::summarise(snp_idN = length(unique(snp_id)))
+saveRDS(alleleCov, file = file.path(args$out_dir, "alleleCov.rds"))
+saveRDS(alleleCov, file = file.path(args$out_dir, "alleleCov.rds"))
+pdf(file.path(args$out_dir, "allele_CB_coverage_hist.pdf"), width = 5, height = 5)
 hist(alleleCov$snp_idN,
      main = "Histogram of SNP coverage per CB", 
      xlab = "",
@@ -66,24 +69,13 @@ hist(alleleCov$snp_idN,
      col = "white")
 abline(v=quantile(alleleCov$snp_idN),col="darkred",lwd=2)
 dev.off()
-# write.table(alleleCov,"allele_CB_coverage.txt",row.names = F,quote = F)
-#==== Subset for initial debug ====
-sharedCB <- intersect(df_allele$cell,colnames(df_count))
-testMax= 10000
-if(length(sharedCB)>testMax){
-  set.seed(0)
-  CBs <- sample(sharedCB,testMax)
-  df_allele <- df_allele %>% filter(cell %in% CBs)
-  df_count <- df_count[,CBs]
-}
-cat('Supplied number of cells: ', ncol(df_count), '\n')
+
 #==== Run Numbat ====
 numbatPars <- formals(numbat::run_numbat)
 if(!is.null(args$parL)){
     selfPar <- readRDS(args$parL)
     numbatPars[names(selfPar)] <- selfPar
 }
-source("/build/scripts/gtf_fixed_Numbat.R")
 
 covs <- alleleCov %>% filter(cell %in% df_allele$cell) %>% pull(snp_idN)
 numbatPars$ncores <- min(numbatPars$ncores,13)
@@ -101,4 +93,4 @@ numbatPars$out_dir <- args$out_dir
 numbatPars$ncores_nni = numbatPars$ncores
 numbatPars$p_multi = 1-numbatPars$alpha
 numbatPars$max_cost = ncol(numbatPars$count_mat) * numbatPars$tau
-do.call(numbat:::run_numbat,numbatPars)
+do.call(numbat::run_numbat,numbatPars)
