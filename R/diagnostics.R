@@ -319,8 +319,12 @@ check_segs_fix = function(segs_consensus_fix) {
     }
 
     if (!all(c('CHROM', 'seg', 'seg_start', 'seg_end', 'cnv_state') %in% colnames(segs_consensus_fix))) {
-        stop('The consensus segment dataframe appears to be malformed. Please fix.')
+        stop('The consensus segment dataframe appears to be malformed; expected column names: CHROM, seg, seg_start, seg_end, cnv_state.')
     }
+
+    segs_consensus_fix = segs_consensus_fix %>% select(any_of(
+        c('CHROM', 'seg', 'seg_start', 'seg_end', 'cnv_state', 'p_amp', 'p_del', 'p_loh', 'p_bamp', 'p_bdel')
+    ))
 
     segs_consensus_fix = segs_consensus_fix %>% 
         relevel_chrom() %>%
@@ -330,16 +334,22 @@ check_segs_fix = function(segs_consensus_fix) {
         segs_consensus_fix = segs_consensus_fix %>% mutate(seg = paste0(CHROM, '_', seg))
     }
 
+    if (!all(c('p_amp', 'p_del', 'p_loh', 'p_bamp', 'p_bdel') %in% colnames(segs_consensus_fix))) {
+        segs_consensus_fix = segs_consensus_fix %>% 
+            mutate(
+                p_amp = ifelse(cnv_state == 'amp', 1, 0),
+                p_del = ifelse(cnv_state == 'del', 1, 0),
+                p_loh = ifelse(cnv_state == 'loh', 1, 0),
+                p_bamp = ifelse(cnv_state == 'bamp', 1, 0),
+                p_bdel = ifelse(cnv_state == 'bdel', 1, 0)
+            )
+    }
+
     segs_consensus_fix = segs_consensus_fix %>%
         arrange(CHROM) %>%
         mutate(
             cnv_state_post = cnv_state,
             seg_cons = seg,
-            p_amp = ifelse(cnv_state == 'amp', 1, 0),
-            p_del = ifelse(cnv_state == 'del', 1, 0),
-            p_loh = ifelse(cnv_state == 'loh', 1, 0),
-            p_bamp = ifelse(cnv_state == 'bamp', 1, 0),
-            p_bdel = ifelse(cnv_state == 'bdel', 1, 0),
             seg_length = seg_end - seg_start,
             LLR = ifelse(cnv_state == 'neu', NA, Inf)
         ) %>%
