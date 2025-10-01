@@ -322,6 +322,16 @@ check_segs_fix = function(segs_consensus_fix) {
         stop('The consensus segment dataframe appears to be malformed; expected column names: CHROM, seg, seg_start, seg_end, cnv_state.')
     }
 
+    # Check that provided cnv states are formatted properly (e.g. 'del' rather than 'deletion')
+    valid_states <- c("neu", "amp", "del", "loh", "bamp", "bdel")
+    if (!all(segs_consensus_fix$cnv_state %in% valid_states)) {
+        bad_vals <- unique(segs_consensus_fix$cnv_state[!segs_consensus_fix$cnv_state %in% valid_states])
+        stop(paste0(
+            "Invalid cnv_state values: ", paste(bad_vals, collapse = ", "),
+            "\n  Allowed values are: ", paste(valid_states, collapse = ", ")
+        ))
+    }
+
     segs_consensus_fix = segs_consensus_fix %>% select(any_of(
         c('CHROM', 'seg', 'seg_start', 'seg_end', 'cnv_state', 'p_amp', 'p_del', 'p_loh', 'p_bamp', 'p_bdel')
     ))
