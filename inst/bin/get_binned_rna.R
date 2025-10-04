@@ -14,8 +14,11 @@ suppressPackageStartupMessages({
 })
 options(stringsAsFactors = FALSE)
 
-if (sys.nframe() == 0) {
-  option_list = list(
+run_as_script <- sys.nframe() == 0
+args <- NULL
+
+if (run_as_script) {
+  option_list <- list(
     make_option('--rnaCountsFile', type = "character", default = NULL,
                 help = "rds file with RNA counts; if a seurat object is provided, it will retrieve seurat@assays[['RNA']]@counts. Also handles 10x .h5"),
     make_option('--geneBinMapCSVFile', type = "character", default = NULL,
@@ -28,20 +31,62 @@ if (sys.nframe() == 0) {
                 help = "Indicator for whether we are generating aggregated reference or just a count matrix")
   )
 
-  args = parse_args(OptionParser(option_list = option_list))
-  invisible(list2env(args,environment()))
+  args <- parse_args(OptionParser(option_list = option_list))
 }
 
 #####################################################################
 # gene2bin converts gene-level count data to genomic bin-level data
 #####################################################################
-gene2bin <- function(cnt, gene_binmap = geneBinMapCSVFile) {
+select_barcodes <- function(count_mat, barcodesKeep) {
+  if (is.null(barcodesKeep)) {
+    message("No barcodesKeep provided; keeping all cells in rnaCountsFile")
+    return(colnames(count_mat))
+  }
+
+  if (is.character(barcodesKeep)) {
+    message("barcodesKeep provided as file path; reading barcodes via data.table::fread")
+    barcodes <- as.list(data.table::fread(barcodesKeep)[[1]])
+  } else if (inherits(barcodesKeep, "data.frame")) {
+    message("barcodesKeep provided as data.frame; using first column as barcodes")
+    barcodes <- as.list(barcodesKeep[[1]])
+  } else {
+    stop("barcodesKeep must be NULL, a character path, or a data.frame")
+  }
+
+  count_colnames <- colnames(count_mat)
+  matched_cols <- character(0)
+
+  for (bc in barcodes) {
+    if (bc %in% count_colnames) {
+      matched_cols <- c(matched_cols, bc)
+    } else {
+      suffix_match <- grep(paste0("_", bc, "$"), count_colnames, value = TRUE)
+      if (length(suffix_match) > 0) {
+        matched_cols <- c(matched_cols, suffix_match)
+      } else {
+        warning(paste("Barcode", bc, "not found in count matrix"))
+      }
+    }
+  }
+
+  if (length(matched_cols) == 0) {
+    stop("No matching barcodes found in the count matrix")
+  }
+
+  message(paste("Found", length(matched_cols), "matching cells out of", length(barcodes), "requested"))
+  unique(matched_cols)
+}
+
+gene2bin <- function(cnt, gene_binmap_file) {
+  if (missing(gene_binmap_file) || is.null(gene_binmap_file)) {
+    stop("gene_binmap_file must be provided")
+  }
   # Load presto package for efficient sparse matrix operations
   if (!requireNamespace("presto", quietly = TRUE)) {
     stop("Package 'presto' is needed for this function to work. Please install it.")
   }
   # load gene to bin mapping
-  gene_binmap <- read.csv(geneBinMapCSVFile)
+  gene_binmap <- read.csv(gene_binmap_file)
   print(head(gene_binmap))
   print(head(rownames(cnt)))
   
@@ -107,7 +152,16 @@ read_rna_counts <- function(filepath){
 #####################################################################
 # sample_RNAbin porocesses RNA-seq data, bin gene counts, and save files
 #####################################################################
-sample_RNAbin <- function(rnaCountsFile, outFileName, barcodesKeep, save=TRUE) {
+sample_RNAbin <- function(rnaCountsFile, outFileName, gene_binmap_file, barcodesKeep = NULL, save = TRUE) {
+  if (missing(rnaCountsFile) || is.null(rnaCountsFile)) {
+    stop("rnaCountsFile must be provided")
+  }
+  if (missing(outFileName) || is.null(outFileName)) {
+    stop("outFileName must be provided")
+  }
+  if (missing(gene_binmap_file) || is.null(gene_binmap_file)) {
+    stop("gene_binmap_file must be provided")
+  }
   # Load RNA counts file
   message("Reading RNA counts file...")
   counts_data = read_rna_counts(rnaCountsFile)
@@ -120,75 +174,70 @@ sample_RNAbin <- function(rnaCountsFile, outFileName, barcodesKeep, save=TRUE) {
     count_mat <- counts_data
   }
   
-  # take only the barcodes in the barcodesKeep vector
-  if (is.character(barcodesKeep)) {
-     cat("It's a character string. Proceeding with string logic...\n")
-     barcodes = as.list(data.table::fread(barcodesKeep)[[1]])
-  } else if (inherits(barcodesKeep, "data.frame")) {
-     cat("Supplied barcodes is a data frame type. Taking the first column as barcode col \n")
-  	barcodes <- as.list(barcodesKeep[[1]])
-  } else {
-	  stop('Cant figure out the type of barcode names supplied...')
-  }
-  
-  # match barcodes to column names of the count matrix
-  # in case the count matrix has {sample_name}_barcode in the column name
-  count_colnames <- colnames(count_mat)
-  matched_cols <- c()
-  
-  for (bc in barcodes) {
-    # Check if barcode exists exactly as is
-    if (bc %in% count_colnames) {
-      matched_cols <- c(matched_cols, bc)
-    } else {
-      # Check for suffix match (e.g., sample_name_barcode format)
-      suffix_match <- grep(paste0("_", bc, "$"), count_colnames, value = TRUE)
-      if (length(suffix_match) > 0) {
-        matched_cols <- c(matched_cols, suffix_match)
-      } else {
-        warning(paste("Barcode", bc, "not found in count matrix"))
-      }
-    }
-  }
-  
-  if (length(matched_cols) == 0) {
-    stop("No matching barcodes found in the count matrix")
-  }
-  
-  message(paste("Found", length(matched_cols), "matching cells out of", length(barcodes), "requested"))
-  count_mat = count_mat[, matched_cols]
-  colnames(count_mat) = matched_cols 
-  binned_cnts <- gene2bin(count_mat)
-  if(save==TRUE){
+  # Derive the set of columns to keep
+  selected_cols <- select_barcodes(count_mat, barcodesKeep)
+  count_mat <- count_mat[, selected_cols, drop = FALSE]
+  colnames(count_mat) <- selected_cols
+  binned_cnts <- gene2bin(count_mat, gene_binmap_file)
+  if (isTRUE(save)) {
 	  saveRDS(binned_cnts, outFileName)
 	  message("Binned counts saved to ", outFileName)
-  }else{return(binned_cnts)}
+  } else {
+    return(binned_cnts)
+  }
 }
 
 
-sample_RNAbin_reference <- function(seuratFileName, outFileName, barcodesKeep, save = TRUE) {
-    CB_annot_df = data.table::fread(barcodesKeep)
+sample_RNAbin_reference <- function(rnaCountsFile, outFileName, gene_binmap_file, barcodesKeep, save = TRUE) {
+    if (is.null(barcodesKeep)) {
+		stop("barcodesKeep is required when generateAggRef is TRUE; supply a file with 'cell' and 'group' columns")
+	}
+    if (missing(rnaCountsFile) || is.null(rnaCountsFile)) {
+        stop("rnaCountsFile must be provided")
+    }
+    if (missing(outFileName) || is.null(outFileName)) {
+        stop("outFileName must be provided")
+    }
+    if (missing(gene_binmap_file) || is.null(gene_binmap_file)) {
+        stop("gene_binmap_file must be provided")
+    }
+
+    if (is.character(barcodesKeep)) {
+		CB_annot_df <- data.table::fread(barcodesKeep)
+	} else if (inherits(barcodesKeep, "data.frame")) {
+		CB_annot_df <- barcodesKeep
+	} else {
+		stop("barcodesKeep must be a path to a file or a data.frame with 'cell' and 'group' columns")
+	}
 
     # uses a barcodes cell x group matrix to then pseudobulk the counts 
-    binned_cnts = sample_RNAbin(rnaCountsFile, outFileName, CB_annot_df, save=FALSE)
+    binned_cnts <- sample_RNAbin(rnaCountsFile, outFileName, gene_binmap_file, CB_annot_df, save = FALSE)
     #generate an aggregated matrix for numbat reference
-    agg_ref_counts = numbat::aggregate_counts(as.matrix(binned_cnts), 
-						  CB_annot_df, 
-						  normalized = TRUE, 
-						  verbose = TRUE)
-    if(save==TRUE){
+    agg_ref_counts <- numbat::aggregate_counts(as.matrix(binned_cnts), 
+					  CB_annot_df, 
+					  normalized = TRUE, 
+					  verbose = TRUE)
+    if (isTRUE(save)) {
 	  saveRDS(agg_ref_counts, outFileName)
 	  message("Binned aggregated reference counts saved to ", outFileName)
+	  return(invisible(agg_ref_counts))
     }
+    agg_ref_counts
 }
 
 #####################################################################
 # Main Execution
 #####################################################################
-if (sys.nframe() == 0) {
-	if (generateAggRef) {
-		sample_RNAbin_reference(rnaCountsFile, outFile, barcodesKeep)
+if (run_as_script) {
+	if (isTRUE(args$generateAggRef)) {
+		sample_RNAbin_reference(args$rnaCountsFile,
+		                      args$outFile,
+		                      args$geneBinMapCSVFile,
+		                      args$barcodesKeep)
 	} else {
-		sample_RNAbin(rnaCountsFile, outFile, barcodesKeep)
+		sample_RNAbin(args$rnaCountsFile,
+		             args$outFile,
+		             args$geneBinMapCSVFile,
+		             args$barcodesKeep)
 	}
 }

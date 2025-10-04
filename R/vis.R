@@ -494,7 +494,7 @@ plot_phylo_heatmap = function(
         gtree, joint_post, segs_consensus, clone_post = NULL, p_min = 0.9, 
         annot = NULL, pal_annot = NULL, annot_title = 'Annotation', annot_scale = NULL,
         clone_dict = NULL, clone_bar = TRUE, clone_stack = TRUE, pal_clone = NULL, clone_title = 'Genotype', clone_legend = TRUE,
-        line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2,
+        line_width = 0.1, tree_height = 1, branch_width = 0.2, tip_length = 0.2, branch_length = TRUE,
         annot_bar_width = 0.25, clone_bar_width = 0.25, bar_label_size = 7, tvn_line = TRUE,
         clone_line = FALSE, exclude_gap = FALSE, root_edge = TRUE, raster = FALSE, show_phylo = TRUE
     ) {
@@ -526,7 +526,7 @@ plot_phylo_heatmap = function(
     } else {
         tree_obj = gtree
         tvn_line = FALSE
-        clone_bar = FALSE
+        clone_bar = ifelse(is.null(clone_dict), FALSE, TRUE)
     }
 
     cell_order = get_ordered_tips(tree_obj)
@@ -534,7 +534,7 @@ plot_phylo_heatmap = function(
     if (show_phylo) {
         p_tree = tryCatch(expr = {
             p_tree = tree_obj %>%
-                ggtree::ggtree(ladderize = FALSE, size = branch_width) +
+                ggtree::ggtree(ladderize = FALSE, size = branch_width, branch.length = if(isTRUE(branch_length)) "branch.length" else "none") +
                 theme(
                     plot.margin = margin(0,1,0,0, unit = 'mm'),
                     axis.title.x = element_blank(),
@@ -677,6 +677,9 @@ plot_phylo_heatmap = function(
                 data.frame %>%
                 filter(compartment == 'normal') %>%
                 pull(clone) %>% unique
+        } else {
+            clone_dict = factor(clone_dict)
+            normal_clones = 1
         }
 
         if (is.null(pal_clone)) {
@@ -702,7 +705,7 @@ plot_phylo_heatmap = function(
             ) %>%
             mutate(cell = factor(cell, cell_order)) %>%
             filter(!is.na(cell)) %>%
-            annot_bar(
+            numbat:::annot_bar(
                 transpose = TRUE, legend = clone_legend, pal_annot = pal_clone,
                 legend_title = clone_title, label_size = bar_label_size, size = size, raster = raster
             )
@@ -972,7 +975,7 @@ plot_exp_roll = function(gexp_roll_wide, hc, k, gtf, lim = 0.8, n_sample = 300, 
         mutate(cluster = factor(cluster, rev(unique(cluster)))) %>%
         mutate(cell_index = as.integer(cell)) %>%
         ggplot() +
-        geom_tile(aes(x = gene_index, y = cell, fill = exp_rollmean)) +
+        geom_raster(aes(x = gene_index, y = cell, fill = exp_rollmean)) +
         # geom_rect(aes(xmin = gene_start, xmax = gene_end, ymin = cell_index - 0.5, ymax = cell_index + 0.5, fill = exp_rollmean)) +
         scale_fill_gradient2(low = 'blue', high = 'red', mid = 'white', midpoint = 0, limits = c(-lim,lim), oob = scales::squish) +
         theme_void() +
