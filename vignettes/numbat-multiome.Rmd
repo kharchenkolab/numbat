@@ -34,9 +34,9 @@ phase_panel="/data/1000G_hg38"
 vcf_genome1k="/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf"
 gma_gz="/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz"
 
-Rscript pileup_and_phase.R \
+Rscript ${numbat_repo}/inst/bin/pileup_and_phase.R \
   --label ${sample} \
-  --samples ${sample} \
+  --samples ${sample}_rna,${sample}_atac \
   --bams ${sample}_rna.bam,${sample}_atac.bam \
   --barcodes ${sample}_rna_barcodes.tsv,${sample}_atac_barcodes.tsv \
   --gmap ${gma_gz} \
@@ -45,8 +45,9 @@ Rscript pileup_and_phase.R \
   --ncores ${nc} \
   --cellTAG CB \
   --UMItag Auto,None \
-  --outdir ${sample}/${sample}_comb_allele_counts.tsv.gz
+  --outdir ${outdir}
 ```
+The resulting RNA and ATAC allele count dataframes are saved in the `outdir` directory, as `${sample}_rna_allele_counts.tsv.gz` and `${sample}_atac_allele_counts.tsv.gz` respectively. You can combine them into a single dataframe using `dplyr::bind_rows()`.
 
 ### 2. Prepare binned RNA & ATAC inputs
 
@@ -58,7 +59,7 @@ You can download a premade genomic bin object here: [var220kb.rds](https://raw.g
 binGR="var220kb.rds" # path to grange object containing genomic bins
 gtfF="gtf_hg38.gtf" # any version of gtf files you use or hg38, hg19 or mm10
 
-Rscript get_gene_binned_intersections.R \
+Rscript ${numbat_repo}/inst/bin/get_gene_binned_intersections.R \
   --numbatGTFname ${gtfF} \ 
   --binGR ${binGR} \
   --outfile gene2bin_map.csv
@@ -69,7 +70,7 @@ Here, you can either supply a gtf-format file if you have a customized version, 
 #### Generate binned expression counts
 
 ```bash
-Rscript get_binned_rna.R \
+Rscript ${numbat_repo}/inst/bin/get_binned_rna.R \
   --rnaCountsFile ${sample}_seu.rds \
   --outFile ${sample}/${sample}_rna_bin.rds \
   --barcodesKeep ${sample}_barcodes.tsv \
@@ -87,7 +88,7 @@ Rscript get_binned_rna.R \
 
 ```bash
 binGR="var220kb.rds"
-Rscript get_binned_atac.R \
+Rscript ${numbat_repo}/inst/bin/get_binned_atac.R \
   --CB ${sample}_atac_barcodes.tsv \
   --frag ${sample}_fragments.tsv.gz \
   --binGR ${binGR} \
@@ -105,7 +106,7 @@ Rscript get_binned_atac.R \
 #### Generate combined count matrix
 
 ```r
-source("input_prep.R")
+source(glue("{numbat_repo}/inst/bin/input_prep.R"))
 saveRDS(binCnt(c(glue("${sample}/{sample}_rna_bin.rds"),
         glue("${sample}/{sample}_atac_bin.rds")),seed=123,maxCB=10000),
         glue("{sample}/{sample}_comb_bincnt.rds"))
@@ -122,14 +123,14 @@ We generated binned counts from scRNA-seq and scATAC-seq data of normal samples.
 binGR="var220kb.rds"
 refsample="normal1"
 
-Rscript get_binned_rna.R \
+Rscript ${numbat_repo}/inst/bin/get_binned_rna.R \
   --rnaCountsFile ref_seu.rds \
   --outFile Reference/lambdas_RNA_bincnt.rds \
   --barcodesKeep ref_barcodes.tsv \
   --geneBinMapCSVFile gene2bin_map.csv \
   --generateAggRef
   
-Rscript get_binned_atac.R \
+Rscript ${numbat_repo}/inst/bin/get_binned_atac.R \
   --CB ${refsample}_atac_barcodes.tsv \
   --frag ${refsample}_fragments.tsv.gz \
   --binGR $binGR \
@@ -152,7 +153,7 @@ binGR="var220kb.rds"
 for refsample in "${normal_samples[@]}"; do
   echo "Processing $refsample..."
 
-  Rscript get_binned_atac.R \
+  Rscript ${numbat_repo}/inst/bin/get_binned_atac.R \
     --CB "${refsample}_atac_barcodes.tsv" \
     --frag "${refsample}_fragments.tsv.gz" \
     --binGR "$binGR" \
@@ -164,7 +165,7 @@ Specify `refsamples` as a vector of normal sample names, e.g., `refsamples <- c(
 Then run the following R code to aggregate the references:
 
 ```r
-source("input_prep.R")
+source(glue("{numbat_repo}/inst/bin/input_prep.R"))
 ref_atac <- agg_refs(
   paste0(refsamples,"/",refsamples,"_atac_bin.rds") %>%
   set_names(refsamples)) %>% 
@@ -186,7 +187,7 @@ saveRDS(ref_comb, "Reference/lambdas_comb_bincnt.rds")
 ```bash
 binGR="var220kb.rds"
 parL="par_numbatm.rds" # a list of any run_numbat parameters you would like to optimize
-Rscript run_numbat_multiome.R  \
+Rscript ${numbat_repo}/inst/bin/run_numbat_multiome.R  \
 			--countmat ${sample}/${sample}_comb_bincnt.rds \
 			--alleledf ${sample}/${sample}_comb_allele_counts.tsv.gz \
 			--out_dir ${sample}/paired/ \
@@ -232,7 +233,7 @@ In **ATAC-bin** mode you perform CNV inference using only the binned ATAC counts
 In **RNA-bin** mode you leverage only the binned RNA counts plus the RNA reference:
 
 ```bash
-Rscript run_numbat_multiome.R \
+Rscript ${numbat_repo}/inst/bin/run_numbat_multiome.R \
   --countmat    ${sample}/${sample}_rna_bin.rds \
   --alleledf     ${sample}/${sample}_comb_allele_counts.tsv.gz \
   --out_dir     ${sample}/rna_only/ \

@@ -37,6 +37,14 @@ if (run_as_script) {
 #####################################################################
 # gene2bin converts gene-level count data to genomic bin-level data
 #####################################################################
+#' Select barcodes from a count matrix for downstream processing.
+#'
+#' @param count_mat Matrix-like object of counts with cell barcodes as column names.
+#' @param barcodesKeep Either `NULL`, a character path to a tabular file, or a
+#'   data.frame whose first column contains the barcodes to keep.
+#'
+#' @return Character vector of barcodes present in `count_mat` to retain. If
+#'   `barcodesKeep` is `NULL`, all barcodes in `count_mat` are returned.
 select_barcodes <- function(count_mat, barcodesKeep) {
   if (is.null(barcodesKeep)) {
     message("No barcodesKeep provided; keeping all cells in rnaCountsFile")
@@ -77,6 +85,13 @@ select_barcodes <- function(count_mat, barcodesKeep) {
   unique(matched_cols)
 }
 
+#' Convert gene-level counts to genomic bin-level counts.
+#'
+#' @param cnt Sparse or dense matrix of gene-by-cell counts.
+#' @param gene_binmap_file Path to a CSV containing the gene-to-bin mapping with
+#'   at least `gene_name` and `bingrp` columns.
+#'
+#' @return Sparse matrix (`dgCMatrix`) of bin-by-cell counts.
 gene2bin <- function(cnt, gene_binmap_file) {
   if (missing(gene_binmap_file) || is.null(gene_binmap_file)) {
     stop("gene_binmap_file must be provided")
@@ -134,6 +149,11 @@ gene2bin <- function(cnt, gene_binmap_file) {
   return(bin_sparse)
 }
 
+#' Load RNA counts from an RDS Seurat object or a 10x HDF5 file.
+#'
+#' @param filepath Path to an `.rds` or `.h5` file containing RNA counts.
+#'
+#' @return Count matrix or Seurat object extracted from `filepath`.
 read_rna_counts <- function(filepath){
 	# use tools to get the file extension
 	ext = tolower(tools::file_ext(filepath))
@@ -152,6 +172,16 @@ read_rna_counts <- function(filepath){
 #####################################################################
 # sample_RNAbin porocesses RNA-seq data, bin gene counts, and save files
 #####################################################################
+#' Generate binned RNA counts for a single sample.
+#'
+#' @param rnaCountsFile Path to the RNA count source (RDS Seurat object/matrix or
+#'   10x HDF5 file).
+#' @param outFileName Destination file for the binned counts RDS.
+#' @param gene_binmap_file CSV file describing gene-to-bin mapping.
+#' @param barcodesKeep Optional barcodes filter (file path or data.frame).
+#' @param save Logical indicating whether to write the binned counts to disk.
+#'
+#' @return Invisible `dgCMatrix` of binned counts when `save = FALSE`.
 sample_RNAbin <- function(rnaCountsFile, outFileName, gene_binmap_file, barcodesKeep = NULL, save = TRUE) {
   if (missing(rnaCountsFile) || is.null(rnaCountsFile)) {
     stop("rnaCountsFile must be provided")
@@ -188,6 +218,16 @@ sample_RNAbin <- function(rnaCountsFile, outFileName, gene_binmap_file, barcodes
 }
 
 
+#' Generate aggregated binned RNA reference counts by group.
+#'
+#' @param rnaCountsFile Path to RNA count source (as in `sample_RNAbin`).
+#' @param outFileName Destination file for the aggregated reference counts.
+#' @param gene_binmap_file CSV gene-to-bin mapping file.
+#' @param barcodesKeep File path or data.frame with barcode-to-group annotations.
+#' @param save Logical indicating whether to write the aggregated reference to disk.
+#'
+#' @return Invisible aggregated counts matrix when `save = TRUE`, otherwise the
+#'   aggregated counts object.
 sample_RNAbin_reference <- function(rnaCountsFile, outFileName, gene_binmap_file, barcodesKeep, save = TRUE) {
     if (is.null(barcodesKeep)) {
 		stop("barcodesKeep is required when generateAggRef is TRUE; supply a file with 'cell' and 'group' columns")
