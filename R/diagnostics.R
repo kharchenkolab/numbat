@@ -116,12 +116,12 @@ check_gtf_input <- function(gtf_obj, reference_gtf_cols = colnames(gtf_hg38)) {
 
         gtf_df <- as.data.frame(gtf_obj) %>%
             dplyr::filter(CHROM != "X") %>%
-            dplyr::select(-strand) %>%
+            dplyr::select(-any_of(c('strand'))) %>%
             dplyr::mutate(
-            gene_start = as.integer(gene_start),
-            gene_end = as.integer(gene_end),
-            gene_length = as.integer(gene_length)
-        )
+                gene_start = as.integer(gene_start),
+                gene_end = as.integer(gene_end),
+                gene_length = as.integer(gene_length)
+            )
 
         rownames(gtf_df) <- gtf_df$gene
 

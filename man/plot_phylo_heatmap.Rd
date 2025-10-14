@@ -24,6 +24,7 @@ plot_phylo_heatmap(
   tree_height = 1,
   branch_width = 0.2,
   tip_length = 0.2,
+  branch_length = TRUE,
   annot_bar_width = 0.25,
   clone_bar_width = 0.25,
   bar_label_size = 7,
@@ -73,6 +74,8 @@ plot_phylo_heatmap(
 \item{branch_width}{numeric Line width in the phylogeny}
 
 \item{tip_length}{numeric Length of tips in the phylogeny}
+
+\item{branch_length}{logical Whether to use branch length in the phylogeny}
 
 \item{annot_bar_width}{numeric Width of annotation bar}
 

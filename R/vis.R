@@ -473,6 +473,7 @@ plot_mut_history = function(
 #' @param line_width numeric Line width for CNV heatmap
 #' @param branch_width numeric Line width in the phylogeny
 #' @param tip_length numeric Length of tips in the phylogeny
+#' @param branch_length logical Whether to use branch length in the phylogeny
 #' @param annot_bar_width numeric Width of annotation bar
 #' @param clone_bar_width numeric Width of clone genotype bar
 #' @param bar_label_size numeric Size of sidebar text labels

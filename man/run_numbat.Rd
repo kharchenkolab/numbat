@@ -26,6 +26,7 @@ run_numbat(
   max_cost = ncol(count_mat) * tau,
   n_cut = 0,
   min_depth = 0,
+  plot_min_depth = 8,
   common_diploid = TRUE,
   min_overlap = 0.45,
   ncores = 1,
@@ -88,6 +89,8 @@ run_numbat(
 \item{n_cut}{integer Number of cuts on the phylogeny to define subclones}
 
 \item{min_depth}{integer Minimum allele depth}
+
+\item{plot_min_depth}{integer Minimum allele depth to plot in pseudobulk HMM}
 
 \item{common_diploid}{logical Whether to find common diploid regions in a group of peusdobulks}
 

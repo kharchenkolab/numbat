@@ -1,3 +1,11 @@
+# numbat 1.5.1 - 10/03/2025
+
+* Allow CNV probabilities in `segs_consensus_fix` parameter (#207)
+
+* Add multiome analysis helper functions and vignette
+
+* Improve input validation and error handling
+
 # numbat 1.4.2 - 09/18/2023
 
 * Fix pseudobulk plotting legend (#182)
