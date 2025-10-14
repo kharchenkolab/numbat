@@ -47,7 +47,7 @@ Rscript ${numbat_repo}/inst/bin/pileup_and_phase.R \
   --UMItag Auto,None \
   --outdir ${outdir}
 ```
-The resulting RNA and ATAC allele count dataframes are saved in the `outdir` directory, as `${sample}_rna_allele_counts.tsv.gz` and `${sample}_atac_allele_counts.tsv.gz` respectively. You can combine them into a single dataframe using `dplyr::bind_rows()`.
+The resulting RNA and ATAC allele count dataframes are saved in the `outdir` directory, as `${sample}_rna_allele_counts.tsv.gz` and `${sample}_atac_allele_counts.tsv.gz` respectively. You can combine them into a single combined dataframe using `dplyr::bind_rows()`.
 
 ### 2. Prepare binned RNA & ATAC inputs
 
