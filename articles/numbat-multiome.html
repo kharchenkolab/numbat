@@ -70,7 +70,7 @@
                         <h4 data-toc-skip class="author">Ruitong Li,
 Tina Keshavarzian and Teng Gao</h4>
             
-            <h4 data-toc-skip class="date">2025-10-14</h4>
+            <h4 data-toc-skip class="date">2025-10-21</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/kharchenkolab/numbat/blob/main/vignettes/numbat-multiome.Rmd" class="external-link"><code>vignettes/numbat-multiome.Rmd</code></a></small>
       <div class="d-none name"><code>numbat-multiome.Rmd</code></div>
@@ -353,7 +353,7 @@ combine them into a single reference.</p>
 <h3 id="run-numbat-inference-with-prepared-inputs">Run numbat inference with prepared inputs<a class="anchor" aria-label="anchor" href="#run-numbat-inference-with-prepared-inputs"></a>
 </h3>
 <div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="va">binGR</span><span class="op">=</span><span class="st">"var220kb.rds"</span></span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="va">parL</span><span class="op">=</span><span class="st">"par_numbatm.rds"</span> <span class="co"># a list of any run_numbat parameters you would like to optimize</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="va">parL</span><span class="op">=</span><span class="st">"par_numbatm.rds"</span> <span class="co"># a list of any run_numbat parameters</span></span>
 <span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="ex">Rscript</span> <span class="va">${numbat_repo}</span>/inst/bin/run_numbat_multiome.R  <span class="dt">\</span></span>
 <span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>            <span class="at">--countmat</span> <span class="va">${sample}</span>/<span class="va">${sample}</span>_comb_bincnt.rds <span class="dt">\</span></span>
 <span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>            <span class="at">--alleledf</span> <span class="va">${sample}</span>/<span class="va">${sample}</span>_comb_allele_counts.tsv.gz <span class="dt">\</span></span>
