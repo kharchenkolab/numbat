@@ -706,7 +706,7 @@ plot_phylo_heatmap = function(
             ) %>%
             mutate(cell = factor(cell, cell_order)) %>%
             filter(!is.na(cell)) %>%
-            numbat:::annot_bar(
+            annot_bar(
                 transpose = TRUE, legend = clone_legend, pal_annot = pal_clone,
                 legend_title = clone_title, label_size = bar_label_size, size = size, raster = raster
             )
