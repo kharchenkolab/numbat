@@ -1,5 +1,7 @@
 # numbat 1.5.1 - 10/03/2025
 
+* Allow users to input their own GTF (#174)
+
 * Allow CNV probabilities in `segs_consensus_fix` parameter (#207)
 
 * Add multiome analysis helper functions and vignette
