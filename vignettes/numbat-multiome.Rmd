@@ -186,7 +186,7 @@ saveRDS(ref_comb, "Reference/lambdas_comb_bincnt.rds")
 
 ```bash
 binGR="var220kb.rds"
-parL="par_numbatm.rds" # a list of any run_numbat parameters you would like to optimize
+parL="par_numbatm.rds" # a list of any run_numbat parameters
 Rscript ${numbat_repo}/inst/bin/run_numbat_multiome.R  \
 			--countmat ${sample}/${sample}_comb_bincnt.rds \
 			--alleledf ${sample}/${sample}_comb_allele_counts.tsv.gz \
