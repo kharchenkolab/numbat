@@ -13,6 +13,8 @@ RUN apt-get update --yes && apt-get install --yes build-essential \
   libglpk-dev git autoconf gettext libtool automake  \
   samtools sudo
 
+RUN apt-get update && apt-get install -y build-essential binutils gcc g++
+
 RUN cd /usr/bin && \
   wget https://github.com/samtools/htslib/releases/download/1.15.1/htslib-1.15.1.tar.bz2 && \
   tar -vxjf htslib-1.15.1.tar.bz2 && cd htslib-1.15.1 && make && sudo make install
