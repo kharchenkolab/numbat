@@ -13,7 +13,7 @@ The core inputs required are:
 
 - **Reference feature matrix**: feature (gene or genomic bin) by cell‑type normalized count matrix.
 - **GTF file**: annotation mapping features to genomic locations, used to connect SNPs and features.
-- **Feature count matrix**: raw count matrix (RNA: cell-by-gene/bin matrix filled with integer counts of UMI barcodes; ATAC: cell-by-bin matrix filled with aggregated integer counts of individual Tn5-accessible chromatin fragments, defined by unique combination of chromosome:start-end genomic coordinates).
+- **Feature count matrix**: raw count matrix (RNA: cell-by-gene/bin matrix filled with integer counts of UMI barcodes; ATAC: cell-by-bin matrix filled with aggregated integer counts of individual Tn5-accessible chromatin fragments falling into the defined bin, defined by unique combination of chromosome:start-end genomic coordinates).
 - **Phased SNP genotype data**: single‑cell phased genotype of SNP (TSV.GZ).
 
 This document covers two preparation modes:
