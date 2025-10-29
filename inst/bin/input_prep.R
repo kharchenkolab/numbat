@@ -221,8 +221,6 @@ binCnt_union <- function(bincntF, seed, maxCB = 10000,
 #' @return Character. Path to the output file
 combine_allele_counts <- function(alleleCounts_RNA,
                                   alleleCounts_ATAC,
-				  outAlleleCountsFile_RNA, 
-				  outAlleleCountsFile_ATAC, 
 				  output_file, 
 				  addBarcodeSuff = FALSE,
                                   compress = TRUE) {
