@@ -8,6 +8,7 @@ option_list = list(make_option("--countmat", default = NULL),
                    make_option("--ref", default = NULL),
                    make_option("--out_dir", default = NULL),
                    make_option("--parL", default = NULL)
+                   make_option("--runMultiomeAsPaired", default = FALSE)
                    )
 args = parse_args(OptionParser(option_list = option_list))
 
@@ -83,8 +84,17 @@ if(mean(covs)>150){
   df_allele <-  df_allele%>%sample_frac(frac)
 }
 
-#==== Parameter change ====
+#==== Quick check if we are running multiome data as paired ====
 cat('Running Numbat\n')
+if(args$runMultiomeAsPaired){
+  # check if suffix for count matrix / allele dataframe is present
+  if(!(any(endsWith(colnames(df_count), '_RNA')) && any(endsWith(colnames(df_count), '_ATAC')))){
+    stop("Suffix _RNA or _ATAC not found in count matrix column names")
+  }
+  if(!(any(endsWith(df_allele$cell, '_RNA')) && any(endsWith(colnames(df_allele$cell), '_ATAC')))){
+    stop("Suffix _RNA or _ATAC not found in allele dataframe cell names")
+  }
+}
 numbatPars$count_mat = df_count
 numbatPars$lambdas_ref =readRDS(args$ref) %>% as.matrix()
 numbatPars$df_allele =df_allele
