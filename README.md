@@ -21,8 +21,9 @@ Numbat does not require paired DNA or genotype data and operates solely on the d
 
 > [Teng Gao, Ruslan Soldatov, Hirak Sarkar, Adam Kurkiewicz, Evan Biederstedt, Po-Ru Loh, Peter Kharchenko. Haplotype-aware analysis of somatic copy number variations from single-cell transcriptomes. Nature Biotechnology (2022).](https://www.nature.com/articles/s41587-022-01468-y)
 
-## Numbat-multiome
+## Numbat-Paired (ATAC and RNA)
 Numbat was later extended to multi-modality (single-cell RNA and ATAC) data. Check out the [vignette](https://kharchenkolab.github.io/numbat/articles/numbat-multiome.html) and paper below:
+- 10X Multiome data can be ran with this version as well, treating each barcode separately based on modality. The Numbat-Multiome weighting CNV probabilities based on evidence from ATAC and RNA is currently under development.
 
 > [Ruitong Li, Jean-Baptiste Alberge, Tina Keshavarzian, Junko Tsuji, Johan Gustafsson, Mahshid Rahmat, Elizabeth D Lightbody, Stephanie L Deng, Santiago Riviero, Mendy Miller, F Naz Cemre Kalayci, Adrian Wiestner, Clare Sun, Mathieu Lupien, Irene Ghobrial, Erin Parry, Teng Gao, Gad Getz. Numbat-multiome: inferring copy number variations by combining RNA and chromatin accessibility information from single-cell data. Briefings in Bioinformatics (2025).](https://academic.oup.com/bib/article/26/5/bbaf516/8290422)
 
