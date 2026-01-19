@@ -22,3 +22,4 @@ index.md
 ^vignettes$
 vignettes
 ^\.github$
+^skills$
