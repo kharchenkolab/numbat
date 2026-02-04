@@ -1,0 +1,410 @@
+# 
+
+## Table of contents
+
+- [Installation](#installation)
+  - [Docker](#docker)
+- [Preparing data](#preparing-data)
+- [Running Numbat](#running-numbat)
+  - [Run parameters](#run-parameters)
+  - [Detecting clonal LOH](#detecting-clonal-loh)
+  - [Using existing CNV calls](#using-existing-cnv-calls)
+- [Understanding results](#understanding-results)
+- [Phasing options](#phasing-options)
+  - [Using prephased SNP profiles](#using-prephased-snp-profiles)
+- [Spatial data](#spatial-data)
+- [Mouse data](#mouse-data)
+- [FAQ](#faq)
+
+## Installation
+
+We now provide a ready-to-run Docker container that includes the package
+and all prerequisites (see section [Docker](#docker)). Alternatively,
+you can follow the installation procedure below.
+
+Numbat uses cellsnp-lite for generating SNP pileup data and eagle2 for
+phasing. Please follow their installation instructions and make sure
+their binary executables can be found in your \$PATH.
+
+1.  [cellsnp-lite](https://github.com/single-cell-genetics/cellsnp-lite)
+2.  [eagle2](https://alkesgroup.broadinstitute.org/Eagle/)
+3.  [samtools](http://www.htslib.org/)
+
+Additionally, Numbat needs a common SNP VCF and phasing reference panel.
+You can use the 1000 Genome reference below:
+
+4.  1000G SNP VCF
+
+&nbsp;
+
+    # hg38
+    wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
+    # hg19
+    wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg19.vcf.gz
+
+5.  1000G Reference Panel (paste link in browser to download if `wget`
+    isn’t working)
+
+&nbsp;
+
+    # hg38
+    wget http://pklab.med.harvard.edu/teng/data/1000G_hg38.zip
+    # hg19
+    wget http://pklab.med.harvard.edu/teng/data/1000G_hg19.zip
+
+You can install the numbat R package via CRAN:
+
+    install.packages('numbat', dependencies = TRUE)
+
+Alternatively, you can install the GitHub version:
+
+    devtools::install_github("https://github.com/kharchenkolab/numbat")
+
+### Docker
+
+We provide a ready-to-run Docker container that includes the Numbat R
+package and all of its dependencies. You can launch it as follows:
+
+    docker run -v /work:/mnt/mydata -it pkharchenkolab/numbat-rbase:latest /bin/bash
+
+where `/work` is a local data folder you would like to access and write
+to. Within the container, `cellsnp-lite`, `eagle2` and `samtools` are
+available in path and the 1000 Genome SNP VCF and phasing panel files
+(hg38) are stored under `/data`. You can also launch R and run
+interactive analysis using Numbat (or run an R script).
+
+## Preparing data
+
+1.  Prepare the allele data. Run the preprocessing script
+    (`numbat/inst/bin/pileup_and_phase.R`) to count alleles and phase
+    SNPs.
+
+&nbsp;
+
+    usage: pileup_and_phase.R [-h] --label LABEL --samples SAMPLES --bams BAMS
+                              [--barcodes BARCODES] --gmap GMAP [--eagle EAGLE]
+                              --snpvcf SNPVCF --paneldir PANELDIR --outdir OUTDIR
+                              --ncores NCORES [--UMItag UMITAG]
+                              [--cellTAG CELLTAG] [--smartseq] [--bulk]
+
+    Run SNP pileup and phasing with 1000G
+
+    Arguments:
+      -h, --help           show this help message and exit
+      --label LABEL        Individual label. One per run.
+      --samples SAMPLES    Sample name(s); comma delimited if multiple. 
+                           All samples must belong to the same individual.
+      --bams BAMS          BAM file(s); one per sample, comma delimited if multiple.
+      --barcodes BARCODES  Cell barcode file(s); one per sample, 
+                           comma delimited if multiple.
+      --gmap GMAP          Path to genetic map provided by Eagle2 (e.g.
+                           Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz)
+      --eagle EAGLE        Path to Eagle2 binary file
+      --snpvcf SNPVCF      SNP VCF for pileup
+      --paneldir PANELDIR  Directory to phasing reference panel (BCF files)
+      --outdir OUTDIR      Output directory
+      --ncores NCORES      Number of cores
+      --smartseq           Running with SMART-seq mode; Supply a txt file containing 
+                           directories of BAM files to --bams and a txt file 
+                           containing cell names to --barcodes (each entry on its 
+                           own line for both; ordering must match).
+
+For example, within the Numbat Docker [container](#docker) you can run
+the preprocessing script like this:
+
+    Rscript /numbat/inst/bin/pileup_and_phase.R \
+        --label {sample} \
+        --samples {sample} \
+        --bams /mnt/mydata/{sample}.bam \
+        --barcodes /mnt/mydata/{sample}_barcodes.tsv \
+        --outdir /mnt/mydata/{sample} \
+        --gmap /Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz \
+        --snpvcf /data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf \
+        --paneldir /data/1000G_hg38 \
+        --ncores ncores
+
+**Important**: If your 10x bam is *multiplexed* (containing cells from
+multiple individuals), please only provide cell barcodes for a single
+individual in each genotyping run.
+
+This will produce a file named `{sample}_allele_counts.tsv.gz` under the
+specified output directory, which contains cell-level phased allele
+counts. It contains columns `cell`, `snp_id`, `CHROM`, `POS`, `cM`
+(genetic distance in centimorgan), `REF`, `ALT`, `AD` (ALT allele
+count), `DP` (total allele count), `GT` (phased genotype), `gene`. If
+multiple samples from the same individual were provided, there will be
+one allele count file for each sample. Other outputs include phased vcfs
+under `phasing/` folder and raw pileup counts under `pileup/`.
+
+2.  Prepare the expression data. Numbat takes a gene by cell integer UMI
+    count matrix as input. You can directly use results from upstream
+    transcriptome quantification pipelines such as 10x CellRanger.
+
+3.  Prepare the expression reference, which is a gene by cell type
+    matrix of normalized expression values (raw gene counts divided by
+    total counts). For a quick start, you may use a our HCA collection
+    (`ref_hca`) that ships with the package. If you have matched normal
+    cells (ideally, of various cell type) from the same patient or
+    dataset and would like to make your own references, you may use this
+    utility function:
+
+&nbsp;
+
+    # count_mat is a gene x cell raw count matrices
+    # cell_annot is a dataframe with columns "cell" and "group"
+    ref_internal = aggregate_counts(count_mat, cell_annot)
+
+## Running Numbat
+
+In this example (ATC2 from [Gao et
+al](https://www.nature.com/articles/s41587-020-00795-2)), the gene
+expression count matrix and allele dataframe are already prepared for
+you.
+
+    library(numbat)
+
+    count_mat_ATC2 = readRDS(url('http://pklab.med.harvard.edu/teng/data/count_mat_ATC2.rds'))
+    df_allele_ATC2 = readRDS(url('http://pklab.med.harvard.edu/teng/data/df_allele_ATC2.rds'))
+
+    # run
+    out = run_numbat(
+        count_mat_ATC2, # gene x cell integer UMI count matrix 
+        ref_hca, # reference expression profile, a gene x cell type normalized expression level matrix
+        df_allele_ATC2, # allele dataframe generated by pileup_and_phase script
+        genome = "hg38",
+        t = 1e-5,
+        ncores = 4,
+        plot = TRUE,
+        out_dir = './test'
+    )
+
+**Note**: If you wish to use your own custom reference, please use the
+`aggregate_counts` function as per the example in [preparing
+data](#preparing-data). You do not need to include the reference cells
+in `count_mat` or `df_allele`; only provide them as `lambdas_ref`.
+
+### Run parameters
+
+There are a few parameters you can consider tuning to a specific
+dataset.
+
+*CNV detection*
+
+- `t`: the transition probability used in the HMM. A lower `t` is more
+  appropriate for tumors with more complex copy number landscapes (from
+  which you can expect more breakpoints) and is sometimes better for
+  detecting subclonal events. A higher `t` is more effective for
+  controlling false-positive rates of CNV calls.
+- `gamma`: Overdispersion in allele counts (default: 20). For 10x data,
+  20 is recommended. Non-UMI protocols (e.g. SMART-Seq) usually produce
+  noisier allele data, and a smaller value of gamma is recommended
+  (e.g. 5).
+- `min_cells`: minimum number of cells for which an pseudobulk HMM will
+  be run. If the allele coverage per cell is very sparse for a dataset,
+  then I would consider setting this threshold to be higher.
+- `multi_allelic`: Whether to enable calling of multiallelic CNVs
+
+*CNV filtering*
+
+- `min_LLR`: minimum log-likelihood ratio threshold to filter CNVs
+  (default: 5). To ensure quality of phylogeny inference, we only use
+  confident CNVs to reconstruct the phylogeny.
+- `max_entropy`: another criteria that we use to filter CNVs before
+  phylogeny construction (default: 0.5). The entropy of the binary
+  posterior quantifies the uncertainty of an event across single cells.
+  The value can be from 0 to 1 where 1 is the least stringent.
+
+*Phylogeny*
+
+- `n_cut`: Number of cuts on the phylogeny to define subclones. Note
+  that `n` cuts should result in `n+1` clones (the top-level normal
+  diploid clone is always included). Alternatively, one can specify
+  `max_cost` or `tau` to control the number of subclones.
+- `max_cost`: Likelihood threshold to collapse internal branches. Higher
+  `max_cost` generally leads to fewer clones.
+- `tau`: Stringency to simplify the mutational history. Basically sets
+  `max_cost` as `tau` times the number of cells.
+
+*Iterative optimization*
+
+- `init_k`: initial number of subclusters to use for the `hclust`
+  initialization. Numbat by default uses hierarchical clustering
+  (`hclust`) of smoothed expression values to approximate an initial
+  phylogeny. This will cut the initial tree into k clusters. More
+  clusters means more resolution at the initial stage for subclonal CNV
+  detection. By default, we set init_k to be 3.
+- `max_iter`: maximum number of iterations. Numbat iteratively optimizes
+  the phylogeny and copy number estimations. In practice, we find that
+  results after 2 iterations are usually stable.  
+- `check_convergence`: stop iterating if the results have converged
+  (based on consensus CNV segments).
+
+*Parallelization*
+
+- `ncores`: number of cores to use for single-cell CNV testing
+- `ncores_nni`: number of cores to use for phylogeny inference
+
+*Other run modes*
+
+- `call_clonal_loh`: whether to call clonal LOH regions. Recommended for
+  samples with high purity without matched normal cells. See [Detecting
+  clonal LOH](#detecting-clonal-loh) for details.
+- `segs_consensus_fix`: a dataframe of pre-determined consensus CNVs
+  (for example, from bulk WGS/WES analysis) that will stay fixed during
+  analysis. See [Using existing CNV calls](#using-existing-cnv-calls)
+  for details.
+
+### Detecting clonal LOH
+
+In samples with high tumor purity (e.g., tumor cell lines) without
+matched normal cells, heterozygous SNPs are challenging to identify in
+regions of LoH, leading to decreased power of CNV detection. Regions of
+clonal LoH have decreased SNP density and can be identified by a
+specialized HMM (see `detect_clonal_loh` in function reference). You can
+set `call_clonal_loh = TRUE` to automatically identify and exclude
+regions of clonal deletions/LoH in the main workflow. Alternatively, you
+can manually run `detect_clonal_loh` and provide the detected segments
+as a dataframe (with columns `CHROM`, `seg`, `seg_start`, `seg_end`) via
+the `segs_loh` argument.
+
+In addition, if you have matched DNA data (e.g. WGS/WES) of the same
+individual, you can directly use the SNP profile genotyped from DNA,
+which should avoid the above problem. See [Using prephased SNP
+profiles](#using-prephased-snp-profiles) for details.
+
+### Using existing CNV calls
+
+Sometimes users already have CNV calls from bulk WGS, WES, or array
+analysis. In this case, you can supply the existing CNV profile via
+`segs_consensus_fix` parameter to fix the CNV boundaries and states. To
+do so, you may provide a dataframe with the following columns:
+
+- `CHROM`: integer; chromosome (1-22)
+- `seg`: character; segment ID (e.g. 1a, 1b, 2a, 2b, etc.)
+- `seg_start`: integer; segment start position
+- `seg_end`: integer; segment end position
+- `cnv_state`: character; copy number state (neu, del, amp, loh, bamp,
+  bdel)
+
+Please note that diploid segments (`cnv_state = "neu"`) should also be
+included (i.e. `segs_consensus_fix` should be a complete copy number
+profile including all chromosomes).
+
+## Understanding results
+
+A detailed vignette on how to interpret and visualize Numbat results is
+available:
+
+- [Interpreting Numbat
+  results](https://kharchenkolab.github.io/numbat/articles/results.html)
+
+For a full list of output files and column descriptions, please see:
+
+- [Output
+  descriptions](https://kharchenkolab.github.io/numbat/articles/descriptions.html)
+
+## Phasing options
+
+The CNV detection power of Numbat can be further enhanced by conducting
+population-based phasing with a larger and more diverse reference panel
+(i.e. reference haplotypes). The default pipeline above uses the [1000
+Genome](https://www.internationalgenome.org) panel, which contains
+genotypes from 2,504 individuals. Larger reference panels include:
+
+- gnomAD HGDP + 1KG panel (n=4,099). You can download the reference
+  files using [gsutil](https://cloud.google.com/storage/docs/gsutil):
+  `gs://gcp-public-data--gnomad/resources/hgdp_1kg/phased_haplotypes`.
+
+- TOPMed panel (n=97,256). You can upload your VCF to the [TOPMed
+  imputation server](https://imputation.biodatacatalyst.nhlbi.nih.gov).
+
+### Using prephased SNP profiles
+
+Using DNA-derived genotype information is another way to improve SNP
+density and phasing. If you have SNP calls from DNA genotyping
+(e.g. WGS/WES), you can first perform phasing on the DNA-derived VCF.
+Then run `cellsnp-lite` on scRNA-seq BAMs against the DNA-derived VCF to
+generate allele counts (only include heterozygous SNPs). Finally, merge
+the phased GT fields (from phased DNA-derived VCF) with the obtained
+allele counts to produce an allele dataframe in the format of
+`df_allele` (see section [Preparing data](#preparing-data)).
+
+## Spatial data
+
+Numbat can also be used to analyze spatial transcriptomics (e.g. 10x
+Visium) data. Please see the [spatial
+tutorial](https://kharchenkolab.github.io/numbat/articles/spatial-rna.html)
+for details.
+
+## Mouse data
+
+Numbat (v1.2.0) now works for a F1 hybrid mouse bred from two known lab
+mice strains. More details are available in the [mouse
+tutorial](https://kharchenkolab.github.io/numbat/articles/mouse.html).
+
+## FAQ
+
+**Q**: What is the expression reference for and how does it impact
+analysis?
+
+**A**: The expression reference (`lambdas_ref`) is used to regress out
+any cell-type-specific expression differences that are unrelated to
+CNVs. It is used in both single-cell testing and pseudobulk CNV calling
+using HMM. Ideally, expression reference should be created from a normal
+(non-tumor) dataset closely matching the biological and technical
+conditions of the target dataset (e.g., same tissue types, cell types,
+sequencing platforms). A closely matching reference can help reduce the
+noise in the expression-based CNV signal (logFC) during pseudobulk and
+single-cell analysis.
+
+**Q**: We expect a certain CNV to be in a particular sample, but it is
+not detected by Numbat.
+
+**A**: In general, there are three scenarios that a CNV is not called.
+
+1.  The CNV is not called in pseudobulk HMM. You can check
+    `bulk_subtrees_*.png` to see if the event was called. If it was not,
+    I would suggest trying to find a better expression reference to
+    reduce the noise in logFC, or changing the parameters used to
+    configure the HMM (`gamma`, `t`, etc). Sometimes the CNV is very
+    subclonal and was not isolated as a pseudobulk by the initial
+    clustering. You can see if this was the case by looking at the
+    `exp_roll_clust.png` and if so, try increasing `k_init`.
+
+2.  CNV is called in pseudobulks but did not appear in
+    `segs_consensus_*.tsv` and `joint_post_*tsv`. This is because the
+    event is filtered out due to low LLR. Lowering `min_LLR` threshold
+    will help.
+
+3.  CNV is called in pseudobulks, is present in `segs_consensus_*.tsv`
+    and `joint_post_*tsv`, but did not appear in phylogeny. This is
+    because the event is filtered out due to high entropy (weak
+    evidence) in single cells. Raising `max_entropy` threshold will
+    help. You can check the entropy of specific events in
+    `joint_post_*tsv` in the column `avg_entropy`.
+
+**Q**: Numbat predicts most of the genome to be amplified, and there are
+gaps in the pseudobulk allele profile with no heterozygous SNPs.
+
+**A**: This is a sign that the sample consists mostly of tumor (with
+very few normal cells), and clonal deletions are present. The
+heterozygous SNPs cannot be identified in these regions, therefore
+leaving gaps. You can identify these clonally deleted regions via the
+SNP-density HMM prior to running the main `run_numbat` workflow (see
+section [Detecting Clonal LOH](#detecting-clonal-loh)).
+
+**Q**: There seems to be a global baseline shift in the CNV profile
+produced by Numbat as compared to my other CNV callers; specifically,
+Numbat calls gains for the segments that appear to be neutral in other
+analyses, and neutral for segments that appear to be losses.
+
+**A**: Many existing methods (e.g. InferCNV/CopyKAT) infer copy number
+variations relative to the median ploidy, which can dilute signals of
+aberrant regions or mistake neutral regions for aberrant due to baseline
+shifts caused by hyperdiploidy or hypodiploidy. Instead, Numbat first
+tries to identify diploid regions based on allele evidence (balanced
+allelic frequencies), and uses these regions as baseline for CNV
+calling. For more information, please refer to the publications
+describing [Numbat](https://www.nature.com/articles/s41587-022-01468-y)
+and
+[FACETS](https://academic.oup.com/nar/article/44/16/e131/2460163?login=false).

@@ -29,7 +29,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">numbat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -115,7 +115,7 @@ their evolutionary relationships in an integrated plot panel:</p>
 <span>  p_min <span class="op">=</span> <span class="fl">0.9</span>,</span>
 <span>  pal_clone <span class="op">=</span> <span class="va">mypal</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="results_files/figure-html/unnamed-chunk-5-1.png" width="2400">
+<p><img src="results_files/figure-html/unnamed-chunk-5-1.png" class="r-plt" alt="" width="2400">
 In this visualization, the single-cell phylogeny (left) is juxtaposed
 with a heatmap of single-cell CNV calls (right). The CNV calls are
 colored by the type of alterations (AMP, amplification, BAMP, balanced
@@ -141,7 +141,7 @@ parameters in <code>run_numbat</code> can be re-adjusted using
 <span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://patchwork.data-imaginist.com/reference/wrap_plots.html" class="external-link">wrap_plots</a></span><span class="op">(</span><span class="va">plots</span><span class="op">)</span></span></code></pre></div>
-<p><img src="results_files/figure-html/unnamed-chunk-7-1.png" width="2500"></p>
+<p><img src="results_files/figure-html/unnamed-chunk-7-1.png" class="r-plt" alt="" width="2500"></p>
 <p>In <code>cutree</code> one can either specify <code>n_cut</code> or
 <code>max_cost</code>, which work similarly as <code>k</code> and
 <code>h</code> in <code><a href="https://rdrr.io/r/stats/cutree.html" class="external-link">stats::cutree</a></code>. Note that <code>n</code>
@@ -164,7 +164,7 @@ pseduobulk profiles and visualize them (see issue <a href="https://github.com/kh
 <p>Let’s take a look at the consensus segments.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nb</span><span class="op">$</span><span class="fu">plot_consensus</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="results_files/figure-html/unnamed-chunk-9-1.png" width="4200"></p>
+<p><img src="results_files/figure-html/unnamed-chunk-9-1.png" class="r-plt" alt="" width="4200"></p>
 </div>
 <div class="section level2">
 <h2 id="bulk-cnv-profiles">Bulk CNV profiles<a class="anchor" aria-label="anchor" href="#bulk-cnv-profiles"></a>
@@ -178,7 +178,7 @@ is more rich, aggregating cells by clone:</p>
 <span>    min_LLR <span class="op">=</span> <span class="fl">10</span>, <span class="co"># filtering CNVs by evidence</span></span>
 <span>    legend <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p><img src="results_files/figure-html/unnamed-chunk-10-1.png" width="3900"></p>
+<p><img src="results_files/figure-html/unnamed-chunk-10-1.png" class="r-plt" alt="" width="3900"></p>
 </div>
 <div class="section level2">
 <h2 id="single-cell-cnv-calls">Single-cell CNV calls<a class="anchor" aria-label="anchor" href="#single-cell-cnv-calls"></a>
@@ -231,7 +231,7 @@ posteriors in a expression-based tSNE embedding:</p>
 <span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_gradient.html" class="external-link">scale_color_gradient2</a></span><span class="op">(</span>low <span class="op">=</span> <span class="st">'royalblue'</span>, mid <span class="op">=</span> <span class="st">'white'</span>, high <span class="op">=</span> <span class="st">'red3'</span>, midpoint <span class="op">=</span> <span class="fl">0.5</span>, limits <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">1</span><span class="op">)</span>, name <span class="op">=</span> <span class="st">'Posterior'</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="fu"><a href="https://patchwork.data-imaginist.com/reference/wrap_plots.html" class="external-link">wrap_plots</a></span><span class="op">(</span><span class="va">plist</span>, guides <span class="op">=</span> <span class="st">'collect'</span><span class="op">)</span></span></code></pre></div>
-<p><img src="results_files/figure-html/unnamed-chunk-12-1.png" width="2700"></p>
+<p><img src="results_files/figure-html/unnamed-chunk-12-1.png" class="r-plt" alt="" width="2700"></p>
 </div>
 <div class="section level2">
 <h2 id="clonal-assignments">Clonal assignments<a class="anchor" aria-label="anchor" href="#clonal-assignments"></a>
@@ -272,7 +272,7 @@ embedding. Note that clone 1 is always the normal cells.</p>
 <span>    title <span class="op">=</span> <span class="st">'Genotypes'</span>,</span>
 <span>    pal <span class="op">=</span> <span class="va">mypal</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="results_files/figure-html/unnamed-chunk-14-1.png" width="900"></p>
+<p><img src="results_files/figure-html/unnamed-chunk-14-1.png" class="r-plt" alt="" width="900"></p>
 </div>
 <div class="section level2">
 <h2 id="tumor-versus-normal-probability">Tumor versus normal probability<a class="anchor" aria-label="anchor" href="#tumor-versus-normal-probability"></a>
@@ -314,7 +314,7 @@ evidence only, allele evidence only, and jointly:</p>
 <span><span class="op">)</span> <span class="op">+</span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_gradient.html" class="external-link">scale_color_gradient2</a></span><span class="op">(</span>low <span class="op">=</span> <span class="st">'royalblue'</span>, mid <span class="op">=</span> <span class="st">'white'</span>, high <span class="op">=</span> <span class="st">'red3'</span>, midpoint <span class="op">=</span> <span class="fl">0.5</span>, name <span class="op">=</span> <span class="st">'Posterior'</span><span class="op">)</span></span>
 <span><span class="op">(</span><span class="va">p_expr</span> <span class="op">|</span> <span class="va">p_allele</span> <span class="op">|</span> <span class="va">p_joint</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://patchwork.data-imaginist.com/reference/plot_layout.html" class="external-link">plot_layout</a></span><span class="op">(</span>guides <span class="op">=</span> <span class="st">'collect'</span><span class="op">)</span></span></code></pre></div>
-<p><img src="results_files/figure-html/unnamed-chunk-15-1.png" width="2700">
+<p><img src="results_files/figure-html/unnamed-chunk-15-1.png" class="r-plt" alt="" width="2700">
 Both expression and allele signal clearly separate the tumor and normal
 cells.</p>
 </div>
@@ -331,12 +331,12 @@ where the mutations occurred.</p>
 <span>  pal_clone <span class="op">=</span> <span class="va">mypal</span>, </span>
 <span>  tip <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="results_files/figure-html/unnamed-chunk-16-1.png" width="1800">
+<p><img src="results_files/figure-html/unnamed-chunk-16-1.png" class="r-plt" alt="" width="1800">
 The mutational history can also be represented on the clone level, where
 cells with the same genotype are aggregated into one node.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nb</span><span class="op">$</span><span class="fu">plot_mut_history</span><span class="op">(</span>pal <span class="op">=</span> <span class="va">mypal</span><span class="op">)</span></span></code></pre></div>
-<p><img src="results_files/figure-html/unnamed-chunk-17-1.png" width="1800"></p>
+<p><img src="results_files/figure-html/unnamed-chunk-17-1.png" class="r-plt" alt="" width="1800"></p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -349,7 +349,7 @@ cells with the same genotype are aggregated into one node.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer>

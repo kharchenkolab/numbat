@@ -1,0 +1,290 @@
+# Mouse tutorial
+
+## Introduction
+
+The mouse is a major model system for studying cancer and many other
+areas of biology. According to the 10x
+[website](https://www.10xgenomics.com/resources/publications?refinementList%5BproductGroups%5D%5B0%5D=Single%20Cell%20Gene%20Expression&refinementList%5Btags%5D%5B0%5D=Cancer%20Research&page=1),
+there are almost as many cancer single-cell studies on mouse subjects as
+on humans.
+
+Previously, we have shown that with prior haplotype information, Numbat
+can detect allele-specific CNVs at a much higher accuracy
+[\[1\]](#references). Although we don’t usually know the haplotype of a
+given human subject *a priori*, it can be “guessed” statistically using
+[population-based
+phasing](https://en.wikipedia.org/wiki/Haplotype_estimation). The
+resulting haplotypes are reasonably accurate within short blocks
+(\<1Mb), but are subject to switch errors over a longer range. The mouse
+is a special case because the haplotypes of most common laboratory
+strains are fully known (thanks to the mouse genome projects
+[\[2,3\]](#references)). This means that all heterozygous SNPs in a F1
+hybrid mouse of two inbred strains are *fully phased* at whole-genome
+level. In addition, the SNP density in a F1 hybrid mouse can be many
+times higher than in humans [\[2\]](#references). As we will see, these
+factors provide a huge advantage for haplotype-aware CNV analysis.
+
+The most updated version of Numbat (v1.2.0) now accepts (F1 hybrid)
+mouse data. The input format is the same as usual (expression counts in
+a matrix, allele counts in a long dataframe), but some bioinformatics is
+required to prepare the phased allele counts. This tutorial will walk
+through data prepration to analyze a mouse PDAC scRNA-seq dataset
+provided by [Pitter et
+al](https://doi.org/10.1158/0008-5472.CAN-22-1742) [\[4\]](#references).
+
+## Preparing input
+
+### 1. Prepare the VCF
+
+First, find out the parental strains of your F1 mouse. In the case of
+Pitter et al, the mice are of C57BL/6 x Sv129 mixed genetic background.
+This is convenient because the genome of C57BL/6 (aka
+[Eve](https://www.jax.org/news-and-insights/2019/june/the-genome-of-eve-the-mouse)
+the mouse) *is* the mm10 reference genome. This means that all
+heterozygous SNPs in the F1 are the homozygous SNPs in Sv129. To create
+the F1 VCF, we just need to take the Sv129 VCF and change the genotype
+of homozygous SNPs (1/1) to heterozygous (1/0).
+
+The VCFs of common lab mouse strains are available on [UCSC
+portal](http://hgdownload.soe.ucsc.edu/gbdb/mm10/mouseStrains/). I
+downloaded the all-strain VCF (`mgpV5MergedSNPsAlldbSNP142.vcf.gz`) and
+extracted the passed homozygous sites for Sv129 using `bcftools`:
+
+``` shell
+bcftools view mgpV5MergedSNPsAlldbSNP142.vcf.gz -c1 -s 129S1_SvImJ \
+    -i "%FILTER='PASS'" | \
+    bcftools annotate -Oz -x INFO,^FORMAT/GT > 129S1_SvImJ.sites.vcf.gz
+```
+
+We can then use `129S1_SvImJ.sites.vcf.gz` as the VCF for our F1 mouse
+(except that all GT has to be changed to `1/0`).
+
+*Note*: This is slightly more complicated if neither parental strain is
+C57BL/6. One would have to find the SNPs that are homozygous only in one
+parent but not both.
+
+### 2. Run pileup
+
+For samples in this study, I downloaded raw FASTQs from the
+[SRA](https://www.ebi.ac.uk/ena/browser/view/PRJNA861311) and processed
+them by `cellranger`. Now we can generate single-cell allele counts for
+the SNP positions in the above VCF using `cellsnp-lite`.
+
+``` shell
+cellsnp-lite \
+    -s $cellrangerout/outs/possorted_genome_bam.bam \
+    -b $cellrangerout/outs/filtered_feature_bc_matrix/barcodes.tsv.gz \
+    -O ./pileup \
+    -R ./129S1_SvImJ.sites.vcf.gz \
+    -p 25 \
+    --minMAF 0 \
+    --minCOUNT 1
+```
+
+where `$cellrangerout` is the cellranger output folder for a specific
+sample.
+
+### 3. Prepare allele dataframe
+
+Let’s now read in the pileup output in R.
+
+``` r
+library(dplyr)
+library(data.table)
+library(stringr)
+library(glue)
+library(Matrix)
+
+pu_dir = './pileup'
+
+vcf_pu = fread(glue('{pu_dir}/cellSNP.base.vcf'), skip = '#CHROM') %>% 
+    rename(CHROM = `#CHROM`) %>%
+    mutate(snp_id = paste(CHROM, POS, REF, ALT, sep = '_')) %>%
+    mutate(CHROM = str_remove(CHROM, 'chr')) %>%
+    mutate(CHROM = factor(CHROM, unique(CHROM))) %>%
+    filter(CHROM != 'X')
+
+vcf_phased = vcf_pu %>% mutate(GT = '1|0', cM = 0)
+```
+
+where the last line is because one of the parental genotypes is the mm10
+reference genome, all the alternative alleles in the VCF are already *in
+phase*, so all GT should be `1|0`. In addition, since there is no
+recombination, we set the genetic distance `cM` to be a constant value
+for all sites.
+
+*Note*: Again, if neither parental strain is C57BL/6, one has to assign
+GT to be `1|0` or `0|1` based on which parent the variant came from.
+
+Next, we can read in the allele counts and convert it into a long
+dataframe.
+
+``` r
+# pileup count matrices
+AD = readMM(glue('{pu_dir}/cellSNP.tag.AD.mtx'))
+DP = readMM(glue('{pu_dir}/cellSNP.tag.DP.mtx'))
+barcodes = fread(glue('{pu_dir}/cellSNP.samples.tsv'), header = F)$V1
+
+# convert to dataframe
+DP = as.data.frame(Matrix::summary(DP)) %>%
+    mutate(
+        cell = barcodes[j],
+        snp_id = vcf_pu$snp_id[i]
+    ) %>%
+    select(-i, -j) %>%
+    rename(DP = x) %>%
+    select(cell, snp_id, DP)
+
+AD = as.data.frame(Matrix::summary(AD)) %>%
+    mutate(
+        cell = barcodes[j],
+        snp_id = vcf_pu$snp_id[i]
+    ) %>%
+    select(-i, -j) %>%
+    rename(AD = x) %>%
+    select(cell, snp_id, AD)
+
+df_allele = DP %>% left_join(AD, by = c("cell", "snp_id")) %>%
+    mutate(AD = ifelse(is.na(AD), 0, AD))
+
+# attach genotype info
+df_allele = df_allele %>% inner_join(
+    vcf_phased %>% select(snp_id, CHROM, POS, REF, ALT, GT, cM),
+    by = 'snp_id')
+```
+
+### 4. Prepare the expression reference
+
+Because these are pancreatic tumors (PDAC), I downloaded the expression
+counts for a mouse normal pancreas scRNA-seq dataset
+([GSE159343](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE159343)),
+ran clustering using `pagoda2`, and used it to construct the reference
+expression profile (`ref_pancreas`).
+
+    count_mat = readMM('~/GSE159343_RAW/GSM4826923_C57BL6J_matrix.mtx.gz')
+    cells = fread('~/GSE159343_RAW/GSM4826923_C57BL6J_cells.tsv.gz', header = F)$V1
+    genes = fread('~/GSE159343_RAW/GSM4826923_C57BL6J_genes.tsv.gz', header = F)$V2
+    colnames(count_mat) = cells
+    rownames(count_mat) = genes
+    count_mat = as.matrix(count_mat)
+    count_mat = rowsum(count_mat, rownames(count_mat))
+    count_mat = as(count_mat, "dgCMatrix")
+    count_mat_ref = count_mat
+
+    p2 = pagoda2::basicP2proc(count_mat_ref, n.cores = 30)
+
+    clusters = p2$clusters$PCA$multilevel
+
+    ref_annot = data.frame(
+        cell = names(clusters),
+        group = unname(clusters)
+    )
+
+    ref_pancreas = numbat::aggregate_counts(
+        count_mat_ref,
+        ref_annot %>% group_by(group) %>% filter(n() > 100)
+    )
+
+The expression count matrices for the tumor samples are prepared from
+the cellranger output as usual.
+
+## Run Numbat
+
+Finally, let’s run CNV analysis using the prepared data. To let Numbat
+know this is mouse data, we set the genome build as `mm10` and set phase
+switch rate `nu = 0` to disable phase switch (because the phasing is
+perfect!).
+
+``` r
+run_numbat(
+    count_mat_tumor, 
+    ref_pancreas, 
+    df_allele,
+    t = 1e-5,
+    ncores = 20,
+    skip_nj = TRUE,
+    min_LLR = 30,
+    out_dir = './results',
+    # mouse specific settings
+    genome = "mm10",
+    nu = 0
+)
+```
+
+*Note*: For an admix with C57BL/6 that is not 50/50, you’d create the
+VCF in the same way, and do a pileup also the same way. Since this mouse
+won’t have all the alternative strain SNPs, you’d filter the df_allele
+based on the bulk AF to only keep the het SNPs (VAF of ~50%) after
+pileup. Then you can run Numbat with the default switch rate (nu = 1),
+since you’d expect recombination to create phase switches.
+
+## Results
+
+Let’s look at the results for sample KPT_062521 (SRR20462475), where we
+see tumor subclones with distinct copy number profiles (the majority of
+the events are copy-neutral LOH).
+
+``` r
+nb = Numbat$new(glue('./results/{sample}'))
+```
+
+``` r
+options(repr.plot.width = 8, repr.plot.height = 4, repr.plot.res = 200)
+
+clone_pal = c(`1` = 'gray', `2` = "#E41A1C", `3` = "#377EB8",
+    `4` = "#4DAF4A", `5` = "#984EA3", `6` = 'bisque3')
+
+nb$plot_phylo_heatmap(pal_clone = clone_pal, clone_stack = TRUE, p_min = 0.9)
+```
+
+![](https://i.imgur.com/UWuz9MT.png)
+
+Let’s compare the copy number profiles of the two major subclones (clone
+4 and 5) in a pseudobulk HMM view.
+
+    options(repr.plot.width = 10, repr.plot.height = 4.5, repr.plot.res = 200)
+
+    nb$bulk_clones %>% filter(sample %in% c(4,5)) %>% 
+    filter(CHROM %in% c(3, 4, 9)) %>%
+    plot_bulks(min_depth = 15, use_pos = F, exp_limit = 2.5, min_LLR = 20)
+
+![](https://i.imgur.com/tdtW7DY.png)
+
+We see haplotype-specific differences with remarkable resolution. For
+example, the subclonal copy number profiles for chr3 largely agree,
+whereas chr4 and chr9 have distinct breakpoints and mirorred CNLOH
+(chr4, middle segment). All alleles collapse to one side in a CNV
+region, thanks to the perfect phasing.
+
+## Conclusion
+
+Haplotype-aware CNV analysis is espcially powerful for model systems
+(the mouse in particular) where the haplotypes are fully known. Luckily,
+the logic in Numbat are written generically enough such that minimal
+tweaking to the algorithm is required (simply setting phase switch rate
+to be zero is sufficient, making it a special case). The main limitation
+is that Numbat is only applicable to F1 hybrid mice with mixed genetic
+backgrounds, whereas many mouse tumor models are conducted on a inbred
+(pure) genetic background, which lacks heterozygous SNPs. Nonetheless,
+this extension opens up many oppurtunities for integrative single-cell
+analysis in a genetically manipulatable mammalian system.
+
+## References
+
+1.  Gao, T., Soldatov, R., Sarkar, H. et al. Haplotype-aware analysis of
+    somatic copy number variations from single-cell transcriptomes. Nat
+    Biotechnol (2022). <https://doi.org/10.1038/s41587-022-01468-y>
+
+2.  Keane, T., Goodstadt, L., Danecek, P. et al. Mouse genomic variation
+    and its effect on phenotypes and gene regulation. Nature 477,
+    289–294 (2011). <https://doi.org/10.1038/nature10413>
+
+3.  Lilue, J., Doran, A.G., Fiddes, I.T. et al. Sixteen diverse
+    laboratory mouse reference genomes define strain-specific haplotypes
+    and novel functional loci. Nat Genet 50, 1574–1583 (2018).
+    <https://doi.org/10.1038/s41588-018-0223-8>
+
+4.  Kenneth L. Pitter, et al. Systematic Comparison of Pancreatic Ductal
+    Adenocarcinoma Models Identifies a Conserved Highly Plastic Basal
+    Cell State. Cancer Res 1 October 2022; 82 (19): 3549–3560.
+    <https://doi.org/10.1158/0008-5472.CAN-22-1742>

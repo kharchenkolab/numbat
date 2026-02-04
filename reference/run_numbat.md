@@ -1,0 +1,227 @@
+# Run workflow to decompose tumor subclones
+
+Run workflow to decompose tumor subclones
+
+## Usage
+
+``` r
+run_numbat(
+  count_mat,
+  lambdas_ref,
+  df_allele,
+  gtf = NULL,
+  genome = "hg38",
+  out_dir = tempdir(),
+  max_iter = 2,
+  max_nni = 100,
+  t = 1e-05,
+  gamma = 20,
+  min_LLR = 5,
+  alpha = 1e-04,
+  eps = 1e-05,
+  max_entropy = 0.5,
+  init_k = 3,
+  min_cells = 50,
+  tau = 0.3,
+  nu = 1,
+  max_cost = ncol(count_mat) * tau,
+  n_cut = 0,
+  min_depth = 0,
+  plot_min_depth = 8,
+  common_diploid = TRUE,
+  min_overlap = 0.45,
+  ncores = 1,
+  ncores_nni = ncores,
+  random_init = FALSE,
+  segs_loh = NULL,
+  call_clonal_loh = FALSE,
+  verbose = TRUE,
+  diploid_chroms = NULL,
+  segs_consensus_fix = NULL,
+  use_loh = NULL,
+  min_genes = 10,
+  skip_nj = FALSE,
+  multi_allelic = TRUE,
+  p_multi = 1 - alpha,
+  plot = TRUE,
+  check_convergence = FALSE,
+  exclude_neu = TRUE
+)
+```
+
+## Arguments
+
+- count_mat:
+
+  dgCMatrix Raw count matrices where rownames are genes and column names
+  are cells
+
+- lambdas_ref:
+
+  matrix Either a named vector with gene names as names and normalized
+  expression as values, or a matrix where rownames are genes and columns
+  are pseudobulk names
+
+- df_allele:
+
+  dataframe Allele counts per cell, produced by preprocess_allele
+
+- gtf:
+
+  dataframe Transcript GTF, if NULL will use the default GTF for the
+  specified genome
+
+- genome:
+
+  character Genome version (hg38, hg19, or mm10)
+
+- out_dir:
+
+  string Output directory
+
+- max_iter:
+
+  integer Maximum number of iterations to run the phyologeny
+  optimization
+
+- max_nni:
+
+  integer Maximum number of iterations to run NNI in the ML phylogeny
+  inference
+
+- t:
+
+  numeric Transition probability
+
+- gamma:
+
+  numeric Dispersion parameter for the Beta-Binomial allele model
+
+- min_LLR:
+
+  numeric Minimum LLR to filter CNVs
+
+- alpha:
+
+  numeric P value cutoff for diploid finding
+
+- eps:
+
+  numeric Convergence threshold for ML tree search
+
+- max_entropy:
+
+  numeric Entropy threshold to filter CNVs
+
+- init_k:
+
+  integer Number of clusters in the initial clustering
+
+- min_cells:
+
+  integer Minimum number of cells to run HMM on
+
+- tau:
+
+  numeric Factor to determine max_cost as a function of the number of
+  cells (0-1)
+
+- nu:
+
+  numeric Phase switch rate
+
+- max_cost:
+
+  numeric Likelihood threshold to collapse internal branches
+
+- n_cut:
+
+  integer Number of cuts on the phylogeny to define subclones
+
+- min_depth:
+
+  integer Minimum allele depth
+
+- plot_min_depth:
+
+  integer Minimum allele depth to plot in pseudobulk HMM
+
+- common_diploid:
+
+  logical Whether to find common diploid regions in a group of
+  peusdobulks
+
+- min_overlap:
+
+  numeric Minimum CNV overlap threshold
+
+- ncores:
+
+  integer Number of threads to use
+
+- ncores_nni:
+
+  integer Number of threads to use for NNI
+
+- random_init:
+
+  logical Whether to initiate phylogney using a random tree (internal
+  use only)
+
+- segs_loh:
+
+  dataframe Segments of clonal LOH to be excluded
+
+- call_clonal_loh:
+
+  logical Whether to call segments with clonal LOH
+
+- verbose:
+
+  logical Verbosity
+
+- diploid_chroms:
+
+  vector Known diploid chromosomes
+
+- segs_consensus_fix:
+
+  dataframe Pre-determined segmentation of consensus CNVs
+
+- use_loh:
+
+  logical Whether to include LOH regions in the expression baseline
+
+- min_genes:
+
+  integer Minimum number of genes to call a segment
+
+- skip_nj:
+
+  logical Whether to skip NJ tree construction and only use UPGMA
+
+- multi_allelic:
+
+  logical Whether to call multi-allelic CNVs
+
+- p_multi:
+
+  numeric P value cutoff for calling multi-allelic CNVs
+
+- plot:
+
+  logical Whether to plot results
+
+- check_convergence:
+
+  logical Whether to terminate iterations based on consensus CNV
+  convergence
+
+- exclude_neu:
+
+  logical Whether to exclude neutral segments from CNV retesting
+  (internal use only)
+
+## Value
+
+a status code

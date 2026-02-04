@@ -1,0 +1,292 @@
+# Preparing Inputs for Numbat-multiome
+
+## Introduction
+
+This vignette provides a guide to preparing input data for running
+Numbat-multiome, which extends the capabilities of Numbat to perform CNV
+inference from accessible chromatin profiles (through scATAC-seq data)
+alone, as well as mixed modality (separate scRNA-seq and scATAC-seq
+datasets of the same sample) in an integrated manner. Note that joint
+multiome assays such as the [10x
+Multiome](https://www.10xgenomics.com/products/epi-multiome) (direct
+linkage of gene expression and open chromatin readouts from the same
+nucleus) is not yet fully supported (currently under development).
+
+The core inputs required are:
+
+- **Reference feature matrix**: feature (gene or genomic bin) by
+  cell‑type normalized count matrix.
+- **GTF file**: annotation mapping features to genomic locations, used
+  to connect SNPs and features.
+- **Feature count matrix**: raw count matrix (RNA: cell-by-gene/bin
+  matrix filled with integer counts of UMI barcodes; ATAC: cell-by-bin
+  matrix filled with aggregated integer counts of individual
+  Tn5-accessible chromatin fragments falling into the defined bin,
+  defined by unique combination of chromosome:start-end genomic
+  coordinates).
+- **Phased SNP genotype data**: single‑cell phased genotype of SNP
+  (TSV.GZ).
+
+This document covers two preparation modes:
+
+- `Combined-bin`: Joint RNA and ATAC CNV analysis using binned inputs.
+- `ATAC-bin`: ATAC‑based CNV analysis using binned accessibility data.
+
+## Combined-bin: Combined RNA and ATAC CNV analysis
+
+### 1. Prepare SNP allele data for both modalities
+
+``` bash
+nc=8 # number of cores to use
+sample="MM1"
+### default to path in numbat image
+phase_panel="/data/1000G_hg38"
+vcf_genome1k="/data/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf"
+gma_gz="/Eagle_v2.4.1/tables/genetic_map_hg38_withX.txt.gz"
+
+Rscript ${numbat_repo}/inst/bin/pileup_and_phase.R \
+  --label ${sample} \
+  --samples ${sample}_rna,${sample}_atac \
+  --bams ${sample}_rna.bam,${sample}_atac.bam \
+  --barcodes ${sample}_rna_barcodes.tsv,${sample}_atac_barcodes.tsv \
+  --gmap ${gma_gz} \
+  --snpvcf ${vcf_genome1k} \
+  --paneldir ${phase_panel} \
+  --ncores ${nc} \
+  --cellTAG CB \
+  --UMItag Auto,None \
+  --outdir ${outdir}
+```
+
+The resulting RNA and ATAC allele count dataframes are saved in the
+`outdir` directory, as `${sample}_rna_allele_counts.tsv.gz` and
+`${sample}_atac_allele_counts.tsv.gz` respectively. You can combine them
+into a single combined dataframe using
+[`dplyr::bind_rows()`](https://dplyr.tidyverse.org/reference/bind_rows.html).
+
+### 2. Prepare binned RNA & ATAC inputs
+
+#### Generate gene-to-bin mapping
+
+You can download a premade genomic bin object here:
+[var220kb.rds](https://raw.githubusercontent.com/kharchenkolab/numbat/main/inst/extdata/var220kb.rds)
+
+``` bash
+binGR="var220kb.rds" # path to grange object containing genomic bins
+gtfF="gtf_hg38.gtf" # any version of gtf files you use or hg38, hg19 or mm10
+
+Rscript ${numbat_repo}/inst/bin/get_gene_binned_intersections.R \
+  --numbatGTFname ${gtfF} \ 
+  --binGR ${binGR} \
+  --outfile gene2bin_map.csv
+```
+
+Here, you can either supply a gtf-format file if you have a customized
+version, if you prefer using the default numbat gtf files, you can
+simply use `hg38`, `hg19` or `mm10` as the `numbatGTFname` argument.
+
+#### Generate binned expression counts
+
+``` bash
+Rscript ${numbat_repo}/inst/bin/get_binned_rna.R \
+  --rnaCountsFile ${sample}_seu.rds \
+  --outFile ${sample}/${sample}_rna_bin.rds \
+  --barcodesKeep ${sample}_barcodes.tsv \
+  --geneBinMapCSVFile gene2bin_map.csv
+```
+
+[TABLE]
+
+#### Generate binned ATAC counts
+
+``` bash
+binGR="var220kb.rds"
+Rscript ${numbat_repo}/inst/bin/get_binned_atac.R \
+  --CB ${sample}_atac_barcodes.tsv \
+  --frag ${sample}_fragments.tsv.gz \
+  --binGR ${binGR} \
+  --outFile ${sample}/${sample}_atac_bin.rds
+```
+
+| Argument           | Accepted types / format                                                                                    |
+|:-------------------|:-----------------------------------------------------------------------------------------------------------|
+| `--CB`             | TSV/CSV text file listing **cell barcodes** (one per line, first column).                                  |
+| `--frag`           | Fragments file in **BED-style** TSV or `.gz`, with columns: chrom, start, end, barcode, duplicate-count.   |
+| `--binGR`          | RDS file containing a **GRanges** object of genomic bins (e.g. `var220kb.rds`).                            |
+| `--outFile`        | Output path—if `.tsv`, writes a tab-delimited table; if `.rds`, saves as an RDS matrix.                    |
+| `--generateAggRef` | *(flag)* if included, also runs Numbat’s `aggregate_counts` on the bin×cell matrix and writes that result. |
+
+#### Generate combined count matrix
+
+``` r
+source(glue("{numbat_repo}/inst/bin/input_prep.R"))
+saveRDS(binCnt(c(glue("${sample}/{sample}_rna_bin.rds"),
+        glue("${sample}/{sample}_atac_bin.rds")),seed=123,maxCB=10000),
+        glue("{sample}/{sample}_comb_bincnt.rds"))
+```
+
+You can load in an interactive R session in your terminal or open other
+IDEs to apply function `binCnt()` which combines the binned RNA and ATAC
+count matrices into a single matrix which also did a subsampling of
+cells to a maximum of 10,000 cells per modality, you can specify the
+seed and maximum allowed cell number in the parameters.
+
+### 3. Generate combined reference
+
+We generated binned counts from scRNA-seq and scATAC-seq data of normal
+samples.
+
+``` bash
+binGR="var220kb.rds"
+refsample="normal1"
+
+Rscript ${numbat_repo}/inst/bin/get_binned_rna.R \
+  --rnaCountsFile ref_seu.rds \
+  --outFile Reference/lambdas_RNA_bincnt.rds \
+  --barcodesKeep ref_barcodes.tsv \
+  --geneBinMapCSVFile gene2bin_map.csv \
+  --generateAggRef
+  
+Rscript ${numbat_repo}/inst/bin/get_binned_atac.R \
+  --CB ${refsample}_atac_barcodes.tsv \
+  --frag ${refsample}_fragments.tsv.gz \
+  --binGR $binGR \
+  --outFile  Reference/lambdas_RNA_bincnt.rds \
+  --generateAggRef
+```
+
+If you have relatively high number of cells for multiple normal samples,
+you may consider running `agg_refs`, a wrapper function of the original
+`aggrerate_count()` function in numbat but with subsampling max number
+of cells from each normal sample.
+
+First we can set up an array of normal samples to iterate through bash
+array
+
+``` bash
+# Define array of normal sample names
+normal_samples=("normal1" "normal2" "normal3")  # <-- Replace with your sample names
+
+# Path to shared binGR file
+binGR="var220kb.rds"
+
+# Loop through each sample
+for refsample in "${normal_samples[@]}"; do
+  echo "Processing $refsample..."
+
+  Rscript ${numbat_repo}/inst/bin/get_binned_atac.R \
+    --CB "${refsample}_atac_barcodes.tsv" \
+    --frag "${refsample}_fragments.tsv.gz" \
+    --binGR "$binGR" \
+    --outFile "${refsample}/${refsample}_atac_bin.rds"
+done
+```
+
+Specify `refsamples` as a vector of normal sample names, e.g.,
+`refsamples <- c("normal1", "normal2", "normal3")`. Then run the
+following R code to aggregate the references:
+
+``` r
+source(glue("{numbat_repo}/inst/bin/input_prep.R"))
+ref_atac <- agg_refs(
+  paste0(refsamples,"/",refsamples,"_atac_bin.rds") %>%
+  set_names(refsamples)) %>% 
+  saveRDS("Reference/lambdas_ATAC_bincnt.rds")
+```
+
+After separately generating binned RNA and ATAC reference, we can
+combine them into a single reference.
+
+``` r
+ref_rna <- readRDS("Reference/lambdas_RNA_bincnt.rds")
+ref_atac <- readRDS("Reference/lambdas_ATAC_bincnt.rds")
+shared <- intersect(rownames(ref_rna), rownames(ref_atac))
+ref_comb <- cbind(ref_rna[shared, ], ref_atac[shared, ])
+saveRDS(ref_comb, "Reference/lambdas_comb_bincnt.rds")
+```
+
+### Run numbat inference with prepared inputs
+
+``` bash
+binGR="var220kb.rds"
+parL="par_numbatm.rds" # a list of any run_numbat parameters
+Rscript ${numbat_repo}/inst/bin/run_numbat_multiome.R  \
+            --countmat ${sample}/${sample}_comb_bincnt.rds \
+            --alleledf ${sample}/${sample}_comb_allele_counts.tsv.gz \
+            --out_dir ${sample}/paired/ \
+            --ref Reference/lambdas_comb_bincnt.rds \
+            --gtf  ${binGR}\
+            --parL ${parL}
+```
+
+## ATAC-bin and RNA-bin modes
+
+If you want to run Numbat-multiome in RNA bin and ATAC bin modes, you
+can simply use `lambdas_RNA_bincnt.rds` and `lambdas_ATAC_bincnt.rds` as
+the reference files. `${sample}_rna_bin.rds` and
+`${sample}_atac_bin.tsv` as the count matrix.
+
+### ATAC-bin mode
+
+In **ATAC-bin** mode you perform CNV inference using only the binned
+ATAC counts and the ATAC reference.
+
+1.  **Inputs**
+
+    - **Count matrix**: `${sample}_atac_bin.rds` (or `.tsv`) from
+      `get_binned_atac.R`  
+    - **Reference**: `Reference/lambdas_ATAC_bincnt.rds` (generated via
+      `get_binned_atac.R --generateAggRef` or `agg_refs()`)  
+    - **Allele VCF**: `${sample}/${sample}_comb_allele_counts.tsv.gz`  
+    - **Genomic bins**: `var220kb.rds` GRanges object
+
+2.  **Command**
+
+    ``` bash
+    Rscript run_numbat_multiome.R \
+      --countmat    ${sample}/${sample}_atac_bin.rds \
+      --alleledf     ${sample}/${sample}_comb_allele_counts.tsv.gz \
+      --out_dir     ${sample}/atac_only/ \
+      --ref         Reference/lambdas_ATAC_bincnt.rds \
+      --gtf         var220kb.rds \
+      --parL        par_numbatm.rds 
+    ```
+
+    - `--mode ATAC-bin` skips RNA likelihoods and relies solely on ATAC
+      signals.
+
+3.  **Interpretation**
+
+    - CNV calls are driven by chromatin-accessibility patterns.  
+    - Ideal when RNA data is unavailable or as a comparison to
+      Combined-bin.
+
+### RNA-bin mode
+
+In **RNA-bin** mode you leverage only the binned RNA counts plus the RNA
+reference:
+
+``` bash
+Rscript ${numbat_repo}/inst/bin/run_numbat_multiome.R \
+  --countmat    ${sample}/${sample}_rna_bin.rds \
+  --alleledf     ${sample}/${sample}_comb_allele_counts.tsv.gz \
+  --out_dir     ${sample}/rna_only/ \
+  --ref         Reference/lambdas_RNA_bincnt.rds \
+  --gtf         var220kb.rds \
+  --parL        par_numbatm.rds 
+```
+
+- Use when ATAC coverage is low or to benchmark RNA-only CNV calls.
+
+## References
+
+For more details, please consult the Numbat-Multiome publication:
+
+[Ruitong Li, Jean-Baptiste Alberge, Tina Keshavarzian, Junko Tsuji,
+Johan Gustafsson, Mahshid Rahmat, Elizabeth D Lightbody, Stephanie L
+Deng, Santiago Riviero, Mendy Miller, F Naz Cemre Kalayci, Adrian
+Wiestner, Clare Sun, Mathieu Lupien, Irene Ghobrial, Erin Parry, Teng
+Gao, Gad Getz. Numbat-multiome: inferring copy number variations by
+combining RNA and chromatin accessibility information from single-cell
+data. Briefings in Bioinformatics
+(2025).](https://academic.oup.com/bib/article/26/5/bbaf516/8290422)
