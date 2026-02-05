@@ -9,6 +9,10 @@ date: "`r Sys.Date()`"
 This vignette provides a guide to preparing input data for running Numbat-multiome, which extends the capabilities of Numbat to perform CNV inference from accessible chromatin profiles (through scATAC-seq
 data) alone, as well as mixed modality (separate scRNA-seq and scATAC-seq datasets of the same sample) in an integrated manner. Note that joint multiome assays such as the [10x Multiome](https://www.10xgenomics.com/products/epi-multiome) (direct linkage of gene expression and open chromatin readouts from the same nucleus) is not yet fully supported (currently under development).
 
+- Note: Currently, the paired ATAC and RNA version can be utilized for multiome data. Multiome data can simply be prepared in a way where the algorithm treats RNA and ATAC read-outs from the same cells in Multiome as independent cells. Please skip to [Run Multiome with Paired Version](#multiome) section for guidance.
+
+- The multiome version, where the CNV calls are weighted based on signal from both ATAC and RNA read-outs is currently under development.
+
 The core inputs required are:
 
 - **Reference feature matrix**: feature (gene or genomic bin) by cell‑type normalized count matrix.
@@ -24,7 +28,7 @@ This document covers two preparation modes:
 
 ## Combined-bin: Combined RNA and ATAC CNV analysis 
 
-### 1. Prepare SNP allele data for both modalities
+### 1. Prepare SNP allele data for both modalities {#prep-snp}
 
 ```bash
 nc=8 # number of cores to use
@@ -49,7 +53,7 @@ Rscript ${numbat_repo}/inst/bin/pileup_and_phase.R \
 ```
 The resulting RNA and ATAC allele count dataframes are saved in the `outdir` directory, as `${sample}_rna_allele_counts.tsv.gz` and `${sample}_atac_allele_counts.tsv.gz` respectively. You can combine them into a single combined dataframe using `dplyr::bind_rows()`.
 
-### 2. Prepare binned RNA & ATAC inputs
+### 2. Prepare binned RNA & ATAC inputs {#prep-count}
 
 #### Generate gene-to-bin mapping
 
@@ -103,7 +107,8 @@ Rscript ${numbat_repo}/inst/bin/get_binned_atac.R \
 | `--outFile`             | Output path—if `.tsv`, writes a tab-delimited table; if `.rds`, saves as an RDS matrix.                               |
 | `--generateAggRef`      | *(flag)* if included, also runs Numbat’s `aggregate_counts` on the bin×cell matrix and writes that result.            |
 
-#### Generate combined count matrix
+#### Generate combined count matrix {#gen-comb}
+Note: This step differs when running Multiome as Paired, please see [here](#multiome).
 
 ```r
 source(glue("{numbat_repo}/inst/bin/input_prep.R"))
@@ -183,7 +188,7 @@ saveRDS(ref_comb, "Reference/lambdas_comb_bincnt.rds")
 ```
 
 ### Run numbat inference with prepared inputs
-
+Note: This step differs when running Multiome as Paired, please see [here](#multiome).
 ```bash
 binGR="var220kb.rds"
 parL="par_numbatm.rds" # a list of any run_numbat parameters
@@ -243,6 +248,103 @@ Rscript ${numbat_repo}/inst/bin/run_numbat_multiome.R \
 ```
 
 - Use when ATAC coverage is low or to benchmark RNA-only CNV calls.
+
+
+# Running Multiome Data As Paired {#multiome}
+There are two ways that the current mixed-modality Numbat extension can indirectly support multiome data: [Multiome as Paired](#multi-pair) or [Multiome as Summed](#multi-sum)
+
+Each modality is still required to have the same feature space, thus, follow the [step 1 fully](#prep-snp)  and [step 2](#prep-count) **until** [generating the combined count matrix](#gen-comb) then proceed as follows:
+
+
+## Multiome as paired {#multi-pair}
+One way is for each cell to be treated independently for its ATAC and RNA modality, therefore, the combined count matrix and allele counts will include an _RNA or _ATAC suffix for each cell.
+
+#### Generate multiome as paired count matrix
+```r
+source(glue("{numbat_repo}/inst/bin/input_prep.R"))
+saveRDS(binCnt(
+        c(glue("${sample}/{sample}_rna_bin.rds"),
+        glue("${sample}/{sample}_atac_bin.rds")),
+        seed=123,maxCB=10000,
+        add_suffix = TRUE, 
+        suffix_tag = c('_RNA', '_ATAC')
+        ),
+        glue("{sample}/{sample}_comb_bincnt.rds"))
+```
+
+#### Generate multiome as paired combined allele dataframes
+```r
+source(glue("{numbat_repo}/inst/bin/input_prep.R"))
+combine_allele_counts(
+        alleleCounts_RNA = glue("${sample}/{sample}_rna_bin.rds"),
+        alleleCounts_ATAC = glue("${sample}/{sample}_rna_bin.rds"),
+        output_file = glue(${sample}/{sample}_comb_allele_counts.tsv.gz) ,
+        
+        addBarcodeSuff = TRUE
+)
+```
+
+#### Run Numbat with the --runMultiomeAsPaired tag
+```bash
+binGR="var220kb.rds"
+parL="par_numbatm.rds" # a list of any run_numbat parameters
+Rscript ${numbat_repo}/inst/bin/run_numbat_multiome.R  \
+			--countmat ${sample}/${sample}_comb_bincnt.rds \
+			--alleledf ${sample}/${sample}_comb_allele_counts.tsv.gz \
+			--out_dir ${sample}/paired/ \
+			--ref Reference/lambdas_comb_bincnt.rds \
+			--gtf  ${binGR}\
+			--runMultiomeAsPaired TRUE \
+			--parL ${parL}
+```
+
+
+
+## Multiome as summed  {#multi-sum}
+The second way, is for each cell to have a unionized feature space for all modalities. This can include summing the counts across ATAC and RNA.
+PS. We have gotten results through some experimentation, but this has not yet been benchmarked. We recommend your references to also be summed multiome data. 
+
+
+#### Generate multiome as summed count matrix
+```r
+source(glue("{numbat_repo}/inst/bin/input_prep.R"))
+saveRDS(binCnt(
+        c(glue("${sample}/{sample}_rna_bin.rds"),
+        glue("${sample}/{sample}_atac_bin.rds")),
+        seed=123,maxCB=10000,
+        add_suffix = FALSE, 
+        runMultiomeAsSummed = TRUE
+        ),
+        glue("{sample}/{sample}_comb_bincnt.rds"))
+```
+
+#### Generate combined allele dataframes, such that repeated SNPs from different modalities are harmonized.
+```r
+source(glue("{numbat_repo}/inst/bin/input_prep.R"))
+combine_allele_counts(
+        alleleCounts_RNA = glue("${sample}/{sample}_rna_bin.rds"),
+        alleleCounts_ATAC = glue("${sample}/{sample}_rna_bin.rds"),
+        output_file = glue(${sample}/{sample}_comb_allele_counts.tsv.gz) ,
+        addBarcodeSuff = FALSE
+)
+```
+
+
+#### Running Numbat Paired Mode: 
+No edits required
+```bash
+binGR="var220kb.rds"
+parL="par_numbatm.rds" # a list of any run_numbat parameters
+Rscript ${numbat_repo}/inst/bin/run_numbat_multiome.R  \
+			--countmat ${sample}/${sample}_comb_bincnt.rds \
+			--alleledf ${sample}/${sample}_comb_allele_counts.tsv.gz \
+			--out_dir ${sample}/paired/ \
+			--ref Reference/lambdas_comb_bincnt.rds \
+			--gtf  ${binGR}\
+			--parL ${parL}
+```
+
+
 
 
 ## References
